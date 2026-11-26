@@ -36,8 +36,10 @@ class LoreRecordRegistryTest {
     void typesNowAreSprintTaskAdrSpec() {
         // S5-DOC-PASSPORT: документ — после спеки (группа «Знания»), правится (не READ_ONLY).
         assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "track", "release",
-            "component", "tech", "feature", "product", "user", "agent",
-            "actor", "pain", "gain", "job", "runbook", "quality_gate", "repository", "organization", "pr", "project"), LoreRecordRegistry.TYPES);
+            "component", "tech", "feature", "product", "user", "agent", "machine",
+            "actor", "pain", "gain", "job", "runbook", "quality_gate", "repository", "organization", "pr",
+            // KREG-13: типы выпуска 1.19.1 — описаны только в модели.
+            "skill", "tag", "kind", "agent_session", "project"), LoreRecordRegistry.TYPES);
         // Kit 09.11: решение и вопрос заведены — пока только чтение (READ_ONLY).
         assertNotNull(LoreRecordRegistry.get("decision"));
         assertTrue(LoreRecordRegistry.READ_ONLY.containsAll(List.of("decision", "question")));
@@ -246,9 +248,10 @@ class LoreRecordRegistryTest {
         Map<String, Object> viewer = LoreRecordPerms.of("decision", "viewer", true, null, 0);
         assertEquals(false, viewer.get("can_edit"));
         assertEquals(LoreRecordPerms.NO_RIGHTS, viewer.get("reason"), "без роли — «нет прав», а не «только чтение»");
-        Map<String, Object> feature = LoreRecordPerms.of("feature", "admin", true, null, 0);
-        assertEquals(false, feature.get("can_edit"), "у фичи правимых полей нет");
-        assertEquals(LoreRecordPerms.READ_ONLY_REASON, feature.get("reason"));
+        // AP-PASSPORT-EDIT (волна 1): фича теперь правится; тип без правимых полей — технология.
+        Map<String, Object> tech = LoreRecordPerms.of("tech", "admin", true, null, 0);
+        assertEquals(false, tech.get("can_edit"), "у технологии правимых полей нет");
+        assertEquals(LoreRecordPerms.READ_ONLY_REASON, tech.get("reason"));
     }
 
     /**

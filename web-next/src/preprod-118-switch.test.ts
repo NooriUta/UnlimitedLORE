@@ -2,8 +2,10 @@
 // собранную из модели.
 //
 //   1. Шаг CD «Migrate schema» (lore.migrate=true + only) на базе из модели получал отказ старта — CD краснел.
-//      Теперь бэкенд пропускает шаги V строкой «шаги V пропущены», а .github/scripts/migrate-schema.sh
-//      принимает её как законный исход. На старой базе — прежняя строка «схема накатана».
+//      Потом бэкенд пропускал шаги V строкой «шаги V пропущены: накатывать нечего» — и всё, что после 1.18
+//      делалось шагами V (V94–V100), до прода молча не доезжало. С 25.11.2026 бэкенд ДОВОДИТ схему до кода
+//      (LoreSchemaAdditive) и пишет строку «… доводка схемы кода vN …»; migrate-schema.sh подтверждает
+//      накатку только по ней, прежняя строка — красный. На старой базе — прежняя строка «схема накатана».
 //   2. Имя новой базы migration_dst_preprod проходит оба сторожа: ворота препрода (*_preprod) и перенос
 //      (migration_dst*). Сторожа не ослаблены: прод и замороженные копии по-прежнему красные.
 //   3. Перенос на ci-server (lore-migration-snapshot.yml, action=migrate): файл решений по умолчанию,
@@ -51,7 +53,13 @@ const RUNNER = 'backend/src/main/java/studio/seer/heimdall/lore/LoreSchemaMigrat
 // ── 1. шаг накатки CD ────────────────────────────────────────────────────────
 describe.skipIf(!bashBin)('MIG-01: шаг CD «Migrate schema» на базе 1.18 не краснеет', { timeout: SPAWN_TIMEOUT }, () => {
   const S = '.github/scripts/migrate-schema.sh';
-  const SKIP_LINE = /MODEL_SKIP_LINE = "([^"]+)"\s*\+\s*"([^"]+)"/.exec(read(RUNNER));
+  const MARK = /ADDITIVE_MARK = "([^"]+)"/.exec(read(RUNNER));
+  // строка, которую печатает modelAdditiveLine раннера (форма сверяется с исходником ниже)
+  const ADDITIVE_LINE = '[LORE MIGRATE] lore.migrate.only=true — схема собрана из модели (LoreModelSchema), шаги V не применяются; '
+    + 'доводка схемы кода v1 (54761523d90deed8): типов +6, свойств +27, индексов +5, посеяно 18 — записи [know_skill]; '
+    + 'процесс завершается (шаг накатки CD)';
+  const OLD_SKIP_LINE = '[LORE MIGRATE] lore.migrate.only=true — схема собрана из модели (LoreModelSchema), '
+    + 'шаги V пропущены: накатывать нечего, процесс завершается (шаг накатки CD)';
 
   /** docker-заглушка: `compose run …` печатает $STUB_OUT и выходит с $STUB_RC. */
   function migrate(out: string, rc = 0) {
@@ -61,17 +69,26 @@ describe.skipIf(!bashBin)('MIG-01: шаг CD «Migrate schema» на базе 1.
     return run(S, { STUB_OUT: out, STUB_RC: String(rc), MIGRATE_LOG: log, MIGRATE_TIMEOUT: '60' }, d);
   }
 
-  it('строка пропуска — та, что печатает бэкенд', () => {
-    expect(SKIP_LINE, 'MODEL_SKIP_LINE в раннере').not.toBeNull();
-    expect(SKIP_LINE![1] + SKIP_LINE![2]).toContain('шаги V пропущены');
-    expect(read(S)).toContain('шаги V пропущены');
+  it('строка доводки — та, что печатает бэкенд', () => {
+    expect(MARK, 'ADDITIVE_MARK в раннере').not.toBeNull();
+    expect(MARK![1]).toBe('доводка схемы кода');
+    expect(ADDITIVE_LINE).toContain(MARK![1]);
+    expect(read(RUNNER)).toContain('схема собрана из модели (LoreModelSchema), шаги V не применяются; "');
+    expect(read(S)).toContain('схема собрана из модели (LoreModelSchema), шаги V не применяются; доводка схемы кода');
   });
 
-  it('база из модели: шаги V пропущены — зелёный', () => {
-    const r = migrate(SKIP_LINE![1] + SKIP_LINE![2]);
+  it('база из модели: схема доведена до кода — зелёный, что сделано — в выводе', () => {
+    const r = migrate(ADDITIVE_LINE);
     expect(r.code).toBe(0);
     expect(r.out).toMatch(/из модели/);
+    expect(r.out).toMatch(/типов \+6, свойств \+27, индексов \+5, посеяно 18/);
     expect(r.out).not.toMatch(/::error::/);
+  });
+
+  it('база из модели: «шаги V пропущены: накатывать нечего» (образ без доводки) — красный', () => {
+    const r = migrate(OLD_SKIP_LINE);
+    expect(r.code).toBe(1);
+    expect(r.out).toMatch(/::error::.*доводки схемы кода нет/);
   });
 
   it('старая база: «схема накатана» — зелёный, как раньше', () => {

@@ -150,7 +150,7 @@ class WorkQualityTest {
     @Test
     void полностьюЗаполненныйСпринтНабираетМаксимум() {
         var r = WorkQuality.evaluateSprint("🟢 ACTIVE", List.of("proj"), List.of("OMILORE"),
-            "2026-08-01", "2026-08-14", List.of("MS-1"));
+            "2026-08-01", "2026-08-14", List.of("MS-1"), true);
         assertEquals(r.max(), r.score());
         assertEquals("sprint", r.kind());
     }
@@ -160,16 +160,88 @@ class WorkQualityTest {
         // Одна дата не даёт ни длительности, ни места на доске плана —
         // а ради доски они и заполняются.
         var r = WorkQuality.evaluateSprint("🟢 ACTIVE", List.of("proj"), List.of("OMILORE"),
-            "2026-08-01", null, null);
+            "2026-08-01", null, null, true);
         assertFalse(find(r, "planned_dates").ok());
     }
 
     @Test
     void вехаУСпринтаТолькоПодсказка() {
         var r = WorkQuality.evaluateSprint("🟢 ACTIVE", List.of("proj"), List.of("OMILORE"),
-            "2026-08-01", "2026-08-14", null);
+            "2026-08-01", "2026-08-14", null, true);
         assertFalse(find(r, "milestone").required());
         assertEquals(r.max(), r.score(), "отсутствие вехи не снижает счёт");
+    }
+
+    // ── спринт: компонент только при технических задачах (RM-P3, слово владельца 25.11.2026) ──
+    //
+    // «Зачем нам спринты все к компонентам привязывать, у нас есть атрибут —
+    // не технический спринт/задача». Компонент — это адрес в коде; спринт из
+    // одних planning/research/docs кода не трогает, и ему достаточно проекта.
+
+    @Test
+    void техническийСпринтБезКомпонентаНеПроходит() {
+        var r = WorkQuality.evaluateSprint("🟢 ACTIVE", List.of("proj"), null,
+            "2026-08-01", "2026-08-14", null, WorkQuality.hasTechnicalTasks(List.of("dev", "test")));
+        assertTrue(find(r, "component").required(), "есть код — компонент обязателен");
+        assertFalse(find(r, "component").ok());
+        assertEquals(r.max() - 1, r.score());
+    }
+
+    @Test
+    void нетехническийСпринтБезКомпонентаТолькоПодсказка() {
+        var r = WorkQuality.evaluateSprint("🟢 ACTIVE", List.of("proj"), null,
+            "2026-08-01", "2026-08-14", null,
+            WorkQuality.hasTechnicalTasks(List.of("planning", "research", "analytics", "docs", "content")));
+        assertFalse(find(r, "component").required(), "без кода компонент — подсказка");
+        assertFalse(find(r, "component").ok(), "подсказка всё равно называет пропуск");
+        assertEquals(r.max(), r.score(), "отсутствие компонента не снижает счёт");
+    }
+
+    @Test
+    void смешанныйСпринтБезКомпонентаНеПроходит() {
+        var r = WorkQuality.evaluateSprint("🟢 ACTIVE", List.of("proj"), null,
+            "2026-08-01", "2026-08-14", null, WorkQuality.hasTechnicalTasks(List.of("docs", "design", "research")));
+        assertTrue(find(r, "component").required(), "одна техническая задача делает спринт техническим");
+        assertEquals(r.max() - 1, r.score());
+    }
+
+    @Test
+    void пустойСпринтБезЗадачКомпонентТолькоПодсказка() {
+        var r = WorkQuality.evaluateSprint("🟢 ACTIVE", List.of("proj"), null,
+            "2026-08-01", "2026-08-14", null, WorkQuality.hasTechnicalTasks(List.of()));
+        assertFalse(find(r, "component").required());
+        assertEquals(r.max(), r.score());
+        assertFalse(WorkQuality.hasTechnicalTasks(null), "null-траверс = задач нет");
+    }
+
+    @Test
+    void технические_типы_по_ADR_LORE_015() {
+        assertEquals(java.util.Set.of("dev", "ops", "test", "design"), WorkQuality.TECHNICAL_TASK_TYPES);
+        // Тип не проставлен — судим как о технической: тихо освободить спринт
+        // от компонента из-за незаполненного поля значило бы наградить пропуск.
+        assertTrue(WorkQuality.hasTechnicalTasks(java.util.Arrays.asList("docs", null)));
+        assertTrue(WorkQuality.isTechnical(""));
+        assertFalse(WorkQuality.isTechnical("analytics"));
+        // Траверс выронил null-тип: задач 2, типов 1 → одна без типа → техническая.
+        assertTrue(WorkQuality.hasTechnicalTasks(List.of("docs"), 2));
+        assertFalse(WorkQuality.hasTechnicalTasks(List.of("docs", "research"), 2));
+        assertFalse(WorkQuality.hasTechnicalTasks(List.of(), 0), "пустой спринт");
+    }
+
+    @Test
+    void нетехническаяЗадачаБезКомпонентаТолькоПодсказка() {
+        var r = WorkQuality.evaluateTask("📋 PLANNED", 1.0, "jtd", "research",
+            null, List.of("proj"), null, null, null);
+        assertFalse(find(r, "component").required(), "то же правило, что у спринта");
+        assertEquals(r.max(), r.score());
+    }
+
+    @Test
+    void техническаяЗадачаБезКомпонентаНеПроходит() {
+        var r = WorkQuality.evaluateTask("📋 PLANNED", 1.0, "jtd", "dev",
+            null, List.of("proj"), null, null, null);
+        assertTrue(find(r, "component").required());
+        assertFalse(find(r, "component").ok());
     }
 
     // ── релиз ────────────────────────────────────────────────────────────────
@@ -388,7 +460,7 @@ class WorkQualityTest {
 
     @Test
     void пустойСпринтКраснеетПоВсемОбязательным() {
-        var r = WorkQuality.evaluateSprint(null, null, null, null, null, null);
+        var r = WorkQuality.evaluateSprint(null, null, null, null, null, null, true);
         assertEquals(0, r.score());
         for (String code : List.of("status", "project", "component", "planned_dates")) {
             assertFalse(find(r, code).ok(), code + " обязан покраснеть");

@@ -22,9 +22,13 @@ final class LoreModelWorkflow {
     /** Тип доказательства done и его подпись. */
     record Evidence(String type, String label) {}
 
-    /** Вид работы. {@code failed} — как называется отрицательный исход, null — у вида его нет. */
+    /**
+     * Вид работы. {@code failed} — как называется отрицательный исход, null — у вида его нет.
+     * {@code moves} — свои переходы вида (UW-L0-SPEC, вариант 1а, владелец 26.11): подмножество
+     * {@code workflow.moves}; null — вид наследует общие переходы. Статусы у всех видов одни и те же.
+     */
     record Kind(String label, List<String> types, List<String> stages, List<String> review_stages,
-                List<Evidence> evidence, String failed) {}
+                List<Evidence> evidence, String failed, Map<String, List<String>> moves) {}
 
     record Workflow(Map<String, List<String>> moves, Map<String, Kind> kinds) {
         /** Вид работы по типу задачи; null — тип не отнесён ни к одному виду. */
@@ -33,6 +37,12 @@ final class LoreModelWorkflow {
             for (Map.Entry<String, Kind> e : kinds.entrySet())
                 if (e.getValue().types().contains(taskType)) return e.getKey();
             return null;
+        }
+
+        /** Переходы вида: свои, если заданы, иначе общие (неизвестный вид — общие). */
+        Map<String, List<String>> movesFor(String kind) {
+            Kind k = kind == null ? null : kinds.get(kind);
+            return k == null || k.moves() == null ? moves : k.moves();
         }
     }
 
@@ -67,6 +77,17 @@ final class LoreModelWorkflow {
         Map<String, String> owner = new TreeMap<>();
         w.kinds().forEach((k, kind) -> {
             if (kind.evidence().isEmpty()) out.add("workflow.kinds." + k + ": нет доказательства done");
+            if (kind.moves() != null) kind.moves().forEach((from, to) -> {
+                String where = "workflow.kinds." + k + ".moves";
+                if (!LoreWorkflowCore.CORE.contains(from)) { out.add(where + ": «" + from + "» не статус ядра"); return; }
+                List<String> allowed = w.moves().getOrDefault(from, List.of());
+                for (String t : to) {
+                    if (!LoreWorkflowCore.CORE.contains(t)) out.add(where + "." + from + ": «" + t + "» не статус ядра");
+                    else if ("done".equals(t) && !"review".equals(from)) out.add(where + "." + from + ": done ставится только из review");
+                    else if (!allowed.contains(t)) out.add(where + "." + from + ": переход " + from + " → " + t
+                        + " вне общих переходов ядра — вид может только сузить их, не расширить");
+                }
+            });
             for (String t : kind.types()) {
                 String prev = owner.put(t, k);
                 if (prev != null) out.add("workflow: тип задачи «" + t + "» в двух видах — " + prev + " и " + k);

@@ -1,2 +1,27 @@
 /* S6-04: блок lore-graph в тексте — что граф НЕ показывает, словами под графом. */
 .lore-graph-block-notes { margin: 6px 0 0; padding-left: 18px; font-size: var(--fs-xs); color: var(--t2); }
+
+/* MD-05: шапка паспорта PR — ветки «откуда → куда» и вид словом; плашка — sk-banner--warn kit. */
+.pr-head { display: grid; gap: 6px; margin: 0 0 8px; }
+.pr-head__branches { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; font-family: var(--mono); font-size: var(--fs-sm); color: var(--t2); }
+.pr-head__branches b { color: var(--t1); font-weight: 600; overflow-wrap: anywhere; }
+.pr-head__kind { font-family: var(--font); font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; }
+.pr-head__note { margin: 0; font-size: var(--fs-sm); color: var(--t2); }
+
+/* AP-PEOPLE-PAGE: шапка карточки агента вне админки — «оболочка · профиль · машина» и «чей он». */
+.agent-head { display: grid; gap: 4px; margin: 0 0 8px; }
+.agent-head__who { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; font-size: var(--fs-sm); color: var(--t1); }
+.agent-head__who b { font-weight: 600; overflow-wrap: anywhere; }
+.agent-head__owner { margin: 0; font-size: var(--fs-sm); color: var(--t2); }
+.agent-head__owner a { color: var(--acc); }
+.agent-head__k { font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; }
+.agent-head__muted { color: var(--t3); }
+.agent-head__err { color: var(--dng); }
+
+/* AP-PEOPLE-PAGE (3а): цифры шапки человека и агента — в работе, на приёмке, закрыто за 30 дней, медиана цикла. */
+.person-stats { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 8px; }
+.person-stats__cell { display: flex; flex-direction: column-reverse; gap: 0; margin: 0; }
+.person-stats__v { margin: 0; font-family: var(--mono); font-size: var(--fs-lg); color: var(--t1); font-weight: 600; }
+.person-stats__k { font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; }
+.person-stats--err { color: var(--dng); font-size: var(--fs-sm); }
+.person-stats--loading { color: var(--t3); font-size: var(--fs-sm); }

@@ -178,6 +178,10 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         Map.entry("canvas",    Set.of("full", "architect", "pm", "product-analyst", "analyst")),
         // ── Прочее из README, чего тоже не было ──────────────────────────────
         Map.entry("component", Set.of("full", "architect")),
+        // skill — SPRINT_LORE_KNOW_REGISTRY/SKILL-01 (SPEC-SKILLS-TAGS-062 §5): навыки ролей (skill:*) создают и
+        // меняют только full и architect, по образцу RBAC ADR-LORE-060. Отказ — кодом FORBIDDEN_FOR_ROLE
+        // конверта SPEC-AGENT-SURFACE-061 §5 (denialEntity), список — SkillRules.WRITERS.
+        Map.entry("skill",     Set.copyOf(SkillRules.WRITERS)),
         // tech СНЯТ (AL-47, тем же гвардом): tech_set пишет через существующий
         // spec-upsert путь (/lore/spec, spec_id="SPEC-TECH-..."), не заводит
         // отдельного /lore/tech — семейство "spec" уже покрывает этот путь.
@@ -251,6 +255,12 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         // Отделить merge подпутём нельзя: subPathOf берёт два сегмента, и
         // forgejo/pr/{n}/merge сворачивается в forgejo/pr вместе с созданием PR.
         Map.entry("forgejo",   Set.of("full")),
+        // forgejo-app (SPRINT_FORGEJO_MINIAPP/FJ-02, ADR-LORE-060 R2): исполнитель маршрутов миниаппа. Вход открыт
+        // всем профилям, а решение принимает исполнитель по roles[] маршрута в реестре (forgejo-routes.json) —
+        // ДО разбора args и с отказом в конверте (FORBIDDEN_FOR_ROLE + роли-допуски). Строкой, а не пропуском
+        // «неизвестного семейства», чтобы решение было видно; второго списка прав здесь нет.
+        Map.entry("forgejo-app", Set.of("full", "architect", "developer", "pm", "marketer",
+                                        "analyst", "product-analyst", "tester")),
         // asset: POST /lore/asset/upload, единственный вызывающий — asset_up.
         Map.entry("asset",     Set.of("full")),
         // quality-gate: СОЗДАНИЕ гейта. В таблице был только "qg" — прогоны и
@@ -578,9 +588,21 @@ public class AgentScopeFilter implements ContainerRequestFilter {
         LOG.warnf("[agent-scope] отказ: профиль '%s' → семейство '%s' (%s)", scope, family, why);
         ctx.abortWith(Response.status(Response.Status.FORBIDDEN)
             .type(MediaType.APPLICATION_JSON)
-            .entity(new LoreResourceBase.LoreError("AGENT_SCOPE_FORBIDDEN",
-                "профиль agent-" + scope + " не пишет в '" + family + "': " + why))
+            .entity(denialEntity(scope, family, why))
             .build());
+    }
+
+    /** Семейства, чей отказ говорит кодом конверта SPEC-AGENT-SURFACE-061 §5 (FORBIDDEN_FOR_ROLE + allowed). */
+    private static final Set<String> SPEC_061_FAMILIES = Set.of("skill");
+
+    /**
+     * Тело отказа. Семейства 061 (skill:* — SKILL-01) — {@code FORBIDDEN_FOR_ROLE} с {@code allowed}; прочие —
+     * прежний {@code AGENT_SCOPE_FORBIDDEN}: его клиенты уже разбирают, менять код им незачем.
+     */
+    static Object denialEntity(String scope, String family, String why) {
+        if (SPEC_061_FAMILIES.contains(family)) return SkillRules.forbiddenForRole(scope);
+        return new LoreResourceBase.LoreError("AGENT_SCOPE_FORBIDDEN",
+            "профиль agent-" + scope + " не пишет в '" + family + "': " + why);
     }
 
     /** Заголовок заявки профиля на действии (AO-07, путь «full заявляет роль»). */

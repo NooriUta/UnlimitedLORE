@@ -142,7 +142,7 @@ class LoreScd2AndRollbackLiveDbTest {
 
         given().header("X-Seer-Role", "admin").contentType("application/json")
             .body("{\"dict_type\":\"" + dictType + "\",\"code\":\"" + code
-                + "\",\"label_ru\":\"Альфа\",\"color\":\"#ABCDEF\",\"sort_order\":10}")
+                + "\",\"label_ru\":\"Альфа\",\"color\":\"var(--acc)\",\"sort_order\":10}")
         .when().post("/lore/dict/entry")
         .then().statusCode(200);
 
@@ -155,7 +155,7 @@ class LoreScd2AndRollbackLiveDbTest {
         assertEquals(code, rows.get(0).get("code"));
         assertEquals("Альфа", rows.get(0).get("label_ru"),
             "dictionary slice must reflect exactly what dict/entry wrote");
-        assertEquals("#ABCDEF", rows.get(0).get("color"));
+        assertEquals("var(--acc)", rows.get(0).get("color"));
     }
 
     // ── AL-48 item 4 / AL-43: KnowDictEntry SCD2 history — every edit opens a

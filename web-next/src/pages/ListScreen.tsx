@@ -38,7 +38,7 @@ import { sliceToKitData, sliceWarnings } from '../lists/records';
 import { loreValueIcon } from '../lists/loreFilters';
 import { paintRecords, productIndex, productValueIcon, withProductColumn, type ProductIndex } from '../lists/productPaint';
 import { appliedCollapseNavOnRead, appliedPassportPlace } from '../settings/applied';
-import { NEW_RECORD_ID, fetchCanCreate, isCreateType } from '../record/recordCreate';
+import { NEW_RECORD_ID, fetchCanCreate, isCreateType, type CreateLink, type CreateType } from '../record/recordCreate';
 import { useProjectScope } from '../scope/ProjectScope';
 import { useProductScope } from '../scope/ProductScope';
 import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses';
@@ -56,6 +56,8 @@ import './ListScreen.css';
 // Паспорт из живого списка (просьба владелицы 08.11: «подключить паспорта как есть»):
 // до этого заголовок строки вёл в никуда (href по умолчанию «#id»). Свой чанк — MD-элементы.
 const ListPassport = lazyChunk(() => import('../record/ListPassport'));
+// Паспорт записи в ленте (BP-01-FULL-PASSPORT-FEED): тот же источник и компоненты, свой чанк.
+const FeedPassport = lazyChunk(() => import('../record/FeedPassport'));
 // Черновик новой записи (S4-24) — тоже свой чанк: в нём TipTap.
 const RecordCreate = lazyChunk(() => import('../record/RecordCreateDock'));
 /**
@@ -218,7 +220,14 @@ function useCalendarDate(win: UrlWindow | undefined) {
 }
 
 export interface ListScreenProps {
-  screen: ListScreenId;
+  /** Свой экран приложения (lists/screens.ts). Нет — экран типа модели: modelType + modelDef (KREG-13). */
+  screen?: ListScreenId;
+  /**
+   * KREG-13 (владелец 26.11.2026: «сделай, чтобы мы всё же модель использовали, а не она валялась отдельно»):
+   * тип модели без своего экрана — описание экрана собрано из контракта модели (surfaces.list), паспорт — общий.
+   */
+  modelType?: string;
+  modelDef?: ListScreenDef;
   /** Подмена сети (тесты); по умолчанию — window.fetch. */
   fetchImpl?: typeof fetch;
   /** Состояние списка в URL (по умолчанию window); false — в памяти. */
@@ -270,8 +279,12 @@ function withModelStatuses(baseConfig: KitConfig, modelStatuses: TypeStatuses | 
   return { ...withDisplay, statuses: { ...withDisplay.statuses, items } };
 }
 
-export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleId, manage = false }: ListScreenProps) {
-  const baseDef: ListScreenDef = LIST_SCREENS[screen];
+export function ListScreen({ screen: ownScreen, modelType, modelDef, fetchImpl, urlState, heading = true, titleId, manage = false }: ListScreenProps) {
+  // KREG-13: ключ экрана — свой экран приложения или тип модели; карты по экранам для типа модели пусты (undefined).
+  const screen = (ownScreen ?? modelType ?? "") as ListScreenId;
+  const baseDef: ListScreenDef = modelDef ?? LIST_SCREENS[screen];
+  const passportOfScreen: string | undefined = modelType ?? PASSPORT_OF[screen];
+  const passportTypeOf = (kind: string | null | undefined): string | undefined => (modelType ? modelType : passportTypeFor(screen, kind));
   // Статусная ось раздела — ИЗ МОДЕЛИ (K-14 п. 4, S4-STATUS-AXIS-CONFIG).
   //
   // Перечень статусов в `lists/screens.ts` остаётся умолчанием: пока модель не
@@ -341,7 +354,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   const expand = useMemo(() => (nested ? buildExpand({
     nested, client, childRows, lang,
     // PU-29: паспорт ребёнка — в ЭТОМ разделе (?open=<id>&okind=<вид>), левая часть остаётся двухуровневой.
-    childHref: (kind: string, id: string) => (urlWin ? urlStateHref(urlWin, { open: id, okind: kind === PASSPORT_OF[screen] ? null : kind, place: null }, { anchor: null }) : undefined),
+    childHref: (kind: string, id: string) => (urlWin ? urlStateHref(urlWin, { open: id, okind: kind === passportOfScreen ? null : kind, place: null }, { anchor: null }) : undefined),
     childConfigOf: kind => (kind === nested.children?.kind && childConfig
       ? childConfig
       : (() => { const id = childScreenOf(kind); return id ? LIST_SCREENS[id].config(lang) : undefined; })()),
@@ -567,7 +580,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   useEffect(() => {
     if (open.id && open.id !== NEW_RECORD_ID) {
       const rec = data?.records.find(r => r.id === open.id)
-        ?? { id: open.id, kind: PASSPORT_OF[screen] ?? screen, title: open.id, status: '', fields: {} };
+        ?? { id: open.id, kind: passportOfScreen ?? screen, title: open.id, status: '', fields: {} };
       setPaletteTarget({ type: 'record', record: rec });
     } else {
       setPaletteTarget(selection.length > 0 ? { type: 'selection', ids: selection } : null);
@@ -605,9 +618,23 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // не грузится на всю ленту — паспорт и задачи спринта идут по раскрытию
   // одной записи (слово владелицы 10.11: «первые 3 абзаца, остальное при раскрытии»).
   const feed = useFeed({
-    spec: def.feed, passportType: PASSPORT_OF[screen], rows: body?.rows,
+    spec: def.feed, passportType: passportOfScreen, rows: body?.rows,
     records: data?.records ?? NO_RECORDS, map: def.map, client, fetchImpl, t,
   });
+  // Лента паспортов (SPRINT_LORE_BOARD_PASSPORTS/BP-01-FULL-PASSPORT-FEED, прототип принят
+  // 25.11.2026): kit зовёт это только для ВИДИМЫХ записей — паспорт невидимой не грузится.
+  // Раздел без паспорта — переключателя «Полные паспорта» нет: обещать нечего.
+  const feedPassport = useMemo(() => {
+    if (!passportOfScreen) return undefined;
+    return (r: KitRecord) => {
+      const type = passportTypeOf(r.kind) ?? passportOfScreen!;
+      return (
+        <Suspense fallback={<Skeleton lines={4} label={t('pp.loading')} />}>
+          <FeedPassport type={type} id={r.id} fetchImpl={fetchImpl} />
+        </Suspense>
+      );
+    };
+  }, [screen, fetchImpl, t]);
   const viewData = useMemo(() => {
     const base = shownData ?? data;
     if (!base || feed.edges.length === 0) return base;
@@ -619,7 +646,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // «+ Новая» (S4-24): только у типов с путём создания и только при праве
   // (perms.can_create паспорта `_new`). Не смогли спросить — кнопки нет:
   // кнопка, которая откажет после заполнения формы, хуже её отсутствия.
-  const passportOf = PASSPORT_OF[screen];
+  const passportOf = passportOfScreen;
   const createType = managed && isCreateType(passportOf) ? passportOf : null;
   const [canCreate, setCanCreate] = useState(false);
   useEffect(() => {
@@ -628,6 +655,11 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     fetchCanCreate(createType, fetchImpl).then(r => { if (live) setCanCreate(r.can); });
     return () => { live = false; };
   }, [createType, fetchImpl]);
+  // AP-PASSPORT-EDIT (1б): «+ боль» из вкладки паспорта — черновик другого типа в том же доке; после записи
+  // связь ставится сама, и док возвращается к паспорту-источнику (он перечитается).
+  const [linkedCreate, setLinkedCreate] = useState<{ type: CreateType; link: CreateLink } | null>(null);
+  // Ушли к другой записи — черновик «+ боль» остаётся у своей и не всплывает при возврате.
+  useEffect(() => { setLinkedCreate(c => (c && c.link.id !== open.id ? null : c)); }, [open.id]);
   const newAction = createType && canCreate ? (
     <button type="button" className="sk-btn sk-btn--primary" data-testid="list-new" title={t('create.newHint')}
       onClick={() => setOpen({ ...open, id: NEW_RECORD_ID })}>
@@ -714,6 +746,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
         onFeedBody={feed.onFeedBody}
         feedUnder={feed.feedUnder}
         onFeedUnder={feed.onFeedUnder}
+        feedPassport={feedPassport}
         urlState={urlState}
         quickIcons={def.quickIcons}
         // Свежие сверху по умолчанию (D-2026-UXR-LISTS-DEFAULT-SORT-FRESHNESS): это
@@ -770,11 +803,16 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   // (ListWithRecord, K5-LIST-WITH-RECORD), здесь — только чем рисовать запись LORE.
   // modal={false} внутри оболочки: «во весь экран» накрывает область содержимого, шапка и меню
   // остаются видимыми и рабочими (замечание владелицы по v1.17.4), поэтому aria-modal был бы ложью.
-  const passportType = open.id ? passportTypeFor(screen, open.kind) : undefined;
+  const passportType = open.id ? passportTypeOf(open.kind) : undefined;
   content = (
     <ListWithRecord list={content} open={open} onOpen={setOpen} ready={ready} modal={shell == null} controls="bar"
       collapseNavOnRead={collapseOnRead} defaultPlace={defaultPlace()}
-      record={slot => (slot.id === NEW_RECORD_ID && createType ? (
+      record={slot => (linkedCreate && slot.id === linkedCreate.link.id ? (
+        <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
+          <RecordCreate key={`${linkedCreate.type}:${linkedCreate.link.rel}`} type={linkedCreate.type} link={linkedCreate.link} fetchImpl={fetchImpl}
+            onCreated={() => setLinkedCreate(null)} onCancel={() => setLinkedCreate(null)} />
+        </Suspense>
+      ) : slot.id === NEW_RECORD_ID && createType ? (
         // Черновик новой — в ТОМ ЖЕ доке и месте, что запись; сохранили — в
         // доке открывается сама запись (то, что открывает «Читать целиком»).
         <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
@@ -791,6 +829,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
             // MP2-11: место меняет экран — и состояние, и адрес одним путём (setOpen пишет ?place=).
             onPlace={slot.setPlace}
             readOnly={!managed}
+            onCreateLinked={managed ? setLinkedCreate : undefined}
             onClose={slot.close} />
         </Suspense>
       ) : (

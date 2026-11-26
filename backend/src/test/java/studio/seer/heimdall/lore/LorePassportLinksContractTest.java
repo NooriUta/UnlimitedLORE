@@ -175,7 +175,11 @@ class LorePassportLinksContractTest {
         Map.entry("FORMALIZED_AS", "объявлено DDL, ни записи, ни чтения в коде нет"),
         Map.entry("INCLUDES", "объявлено DDL, ни записи, ни чтения в коде нет (сценарии — UC_INCLUDES)"),
         Map.entry("RELEASED_IN", "объявлено DDL, ни записи, ни чтения в коде нет (релиз — IMPLEMENTED_IN_RELEASE)"),
-        Map.entry("VALIDATES", "объявлено DDL, ни записи, ни чтения в коде нет"));
+        Map.entry("VALIDATES", "объявлено DDL, ни записи, ни чтения в коде нет"),
+        // SKILL-01/02 (V96): у вида skill:* паспорта v2 ещё нет (KnowSkill вне модели 1.18) — связи навыка читаются
+        // колонками срезов skills/skills_full и карточкой describe skill:*, а не связью паспорта
+        Map.entry("APPLIES_TO_ROLE", "навык → роль агента (skill:*, V96): паспорта у навыка нет, колонка roles среза skills"),
+        Map.entry("SKILL_EXTENDS", "навык → навык (skill:*, V96): паспорта у навыка нет, колонка extends_ids среза skills"));
 
     /**
      * Сущности графа без паспорта v2: их конец ребра не показывается — причина здесь, одна на
@@ -190,7 +194,7 @@ class LorePassportLinksContractTest {
         Map.entry("qg_metric", "метрика гейта — служебная запись QG"),
         Map.entry("file", "файл репозитория — без паспорта"),
         Map.entry("phase", "фаза — только ребёнок спринта (CHILD_ONLY)"),
-        Map.entry("tag", "тег — справочник"),
+        // KREG-13: у супертега паспорт есть (тип tag модели, только отображение) — запись «нет паспорта» снята.
         Map.entry("area", "область — словарь (KnowDictEntry area)"),
         Map.entry("tech_ref", "LoreTechnology — метка стека (tech_id), не паспорт"),
         Map.entry("insight", "инсайт BRAGI — без паспорта v2"),
@@ -218,6 +222,10 @@ class LorePassportLinksContractTest {
      * который ребро не показывает.
      */
     static final Map<String, String> NOT_SHOWN = Map.ofEntries(
+        // KREG-13: паспорт супертега — только отображение (владелец 26.11); записи с тегом — срез tag_entities, вкладка — долг KREG-13.
+        Map.entry("adr|TAGGED_WITH|tag", "паспорт супертега только для чтения; записи с тегом — срез tag_entities (вкладка — KREG-13)"),
+        Map.entry("decision|TAGGED_WITH|tag", "паспорт супертега только для чтения; записи с тегом — срез tag_entities (вкладка — KREG-13)"),
+        Map.entry("use_case|TAGGED_WITH|tag", "паспорт супертега только для чтения; записи с тегом — срез tag_entities (вкладка — KREG-13)"),
         Map.entry("spec|BELONGS_TO|component", LorePassportLinksContractTest.ALIAS),
         Map.entry("tech|BELONGS_TO|component", LorePassportLinksContractTest.ALIAS),
         // Легаси NM-02: задачам достроено BELONGS_TO по полю component_id, а канон задачи — TAGGED_WITH
@@ -637,6 +645,15 @@ class LorePassportLinksContractTest {
      * Без поля — только с причиной.
      */
     static final Map<String, String> NO_CHIP_FIELD = Map.ofEntries(
+        // KREG-13: типы выпуска 1.19.1 — чипов проекта и компонента пока нет (долг KREG-13: проект скилла — BELONGS_TO_PROJECT).
+        Map.entry("skill|projects", "проекты скилла — SKILL_LINK_COLS среза skills; поле — долг KREG-13"),
+        Map.entry("skill|components", "у скилла компонентов нет"),
+        Map.entry("tag|projects", "супертег общий, без проекта"),
+        Map.entry("tag|components", "супертег общий, без компонента"),
+        Map.entry("kind|projects", "вид реестра — установки, не проекта"),
+        Map.entry("kind|components", "вид реестра — установки, не компонента"),
+        Map.entry("agent_session|projects", "проект сессии — строка project (имя папки), не ребро"),
+        Map.entry("agent_session|components", "у сессии компонентов нет"),
         Map.entry("spec|components", "компонент спеки один — поле component (syncSpecComponent ставит одно ребро)"),
         Map.entry("user|components", "у человека компонентов нет: ни ребра, ни наследования (S9-05)"),
         Map.entry("agent|components", "у агента компонентов нет: ни ребра, ни наследования (S9-05)"),
@@ -666,7 +683,10 @@ class LorePassportLinksContractTest {
         Map.entry("track|projects", "трек — справочник студии, проекта нет (MDL-13)"),
         Map.entry("track|components", "трек — справочник студии, компонента нет (MDL-13)"),
         // MD-05: у PR компонентов нет — ни ребра, ни наследования; работа PR видна через задачи (вкладка «Закрывает задачи»).
-        Map.entry("pr|components", "у PR компонентов нет: ни ребра, ни наследования; компоненты — у задач PR (MD-05)"));
+        Map.entry("pr|components", "у PR компонентов нет: ни ребра, ни наследования; компоненты — у задач PR (MD-05)"),
+        // AP-MACHINE-PASSPORT: машина — вершина-наблюдение, проектов и компонентов у неё нет; проекты — у допусков шлюза.
+        Map.entry("machine|projects", "у машины проектов нет: проекты — у допусков её шлюза (MACHINE_ACCESS, админка)"),
+        Map.entry("machine|components", "у машины компонентов нет: ни ребра, ни наследования"));
 
     @Test
     void chipValuesHaveADeclaredField() {
@@ -685,7 +705,10 @@ class LorePassportLinksContractTest {
      * Исключение, которое больше не объявлено в модели, — протухло и тоже красное.
      */
     static final Map<String, String> DERIVED_REF = Map.of(
-        "pr.sprints", "спринты PR — через задачи: CLOSED_BY (задача → PR) и PART_OF (задача → спринт), MD-05");
+        "pr.sprints", "спринты PR — через задачи: CLOSED_BY (задача → PR) и PART_OF (задача → спринт), MD-05",
+        // AP-MACHINE-PASSPORT: владелец и шлюз — у актора-шлюза minilore-link-<имя> (ADR-MINILORE-007 В4), не ребро KnowMachine.
+        "machine.owner", "владелец машины — OWNED_BY её шлюза minilore-link-<имя> (срез machine_by_id)",
+        "machine.gateway", "шлюз машины — актор с client_id minilore-link-<имя> (срез machine_by_id)");
 
     /** Поле-ссылка без ребра — только унаследованные чипы (своего ребра у типа нет) или выводной путь из DERIVED_REF. */
     @Test

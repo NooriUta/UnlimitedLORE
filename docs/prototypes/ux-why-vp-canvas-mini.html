@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Зачем · VP-канва (мини-прототип) · LORE · 08.11.2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+:root{
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-base:13px;--fs-md:14px;--fs-lg:16px;--fs-xl:19px;--fs-2xl:22px;
+  --font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif;
+}
+[data-theme=dark]{--bg0:#13100b;--bg1:#1a160f;--bg2:#221d14;--bg3:#2c2519;--bd:#3d3424;--t1:#eee5d2;--t2:#bcae90;--t3:#91836a;--acc:#e3a336;--suc:#78b866;--wrn:#dc9a3a;--dng:#e2604f;--inf:#62aca2}
+[data-theme=light]{--bg0:#f5f3ee;--bg1:#faf8f3;--bg2:#f1ece2;--bg3:#eee9df;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#6f6249;--acc:#8a560a;--suc:#3d7a38;--wrn:#a06010;--dng:#c03030;--inf:#3a7060}
+:root{--pain:var(--dng);--gain:var(--suc);--job:var(--inf);--do:var(--acc)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg0);color:var(--t1);font:400 var(--fs-sm)/1.45 var(--font)}
+button{font:inherit;color:inherit}
+.wrap{max-width:1320px;margin:0 auto;padding:12px 12px 48px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h1{font:800 var(--fs-lg)/1.2 var(--head);margin:0;color:var(--acc);letter-spacing:.01em}
+.demo{font:600 var(--fs-2xs)/1 var(--mono);color:var(--wrn);border:1px dashed var(--wrn);border-radius:999px;padding:3px 7px;text-transform:uppercase}
+.sp{flex:1}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden}
+.seg button{background:transparent;border:0;padding:6px 11px;min-height:32px;cursor:pointer;color:var(--t2);display:inline-flex;gap:5px;align-items:center;font-size:var(--fs-sm)}
+.seg button[aria-pressed=true]{background:var(--bg3);color:var(--t1);font-weight:700}
+.ib{background:transparent;border:1px solid var(--bd);border-radius:999px;min-width:32px;min-height:32px;cursor:pointer;color:var(--t2);display:inline-flex;align-items:center;justify-content:center}
+.lbl{font:700 var(--fs-2xs)/1.3 var(--font);text-transform:uppercase;letter-spacing:.07em;color:var(--t3)}
+.mono{font-family:var(--mono)}
+/* навигатор фич */
+.feats{display:flex;gap:8px;overflow-x:auto;padding:8px 0 6px;scrollbar-width:thin}
+.feat{flex:0 0 auto;width:210px;text-align:left;background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:7px 10px;cursor:pointer}
+.feat[aria-pressed=true]{border-color:var(--acc);background:var(--bg2)}
+.feat .id{font:600 var(--fs-2xs)/1.2 var(--mono);color:var(--acc)}
+.feat .tt{font-size:var(--fs-sm);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.9em}
+.bar{height:4px;border-radius:2px;background:var(--bg3);overflow:hidden;margin-top:5px}.bar i{display:block;height:100%;background:var(--suc)}
+.feat .meta{display:flex;justify-content:space-between;font:var(--fs-2xs)/1.3 var(--mono);color:var(--t3);margin-top:3px}
+/* строка-вердикт */
+.verdict{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;background:var(--bg1);border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:8px;margin:4px 0 8px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-xs);padding:2px 9px;border-radius:999px;border:1px solid color-mix(in srgb,var(--c,var(--t2)) 45%,transparent);background:color-mix(in srgb,var(--c,var(--t2)) 10%,transparent);color:var(--c,var(--t2));white-space:nowrap}
+.honest{display:flex;gap:8px;align-items:flex-start;font-size:var(--fs-xs);color:var(--wrn);border:1px solid color-mix(in srgb,var(--wrn) 45%,transparent);background:color-mix(in srgb,var(--wrn) 8%,transparent);border-radius:8px;padding:6px 10px;margin:0 0 8px}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
+.pill{background:transparent;border:1px solid var(--bd);border-radius:999px;padding:3px 10px;min-height:30px;cursor:pointer;font-size:var(--fs-sm);color:var(--t2)}
+.pill[aria-pressed=true]{border-color:var(--acc);color:var(--t1);background:var(--bg2)}
+/* канва */
+.stage{position:relative}
+.canvas{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
+.fig-h{display:flex;align-items:baseline;gap:8px;margin:0 0 6px}
+.fig-h b{font:800 var(--fs-sm)/1 var(--head);text-transform:uppercase;letter-spacing:.04em}
+.fig-h span{font-size:var(--fs-xs);color:var(--t3)}
+.square{aspect-ratio:1;border:1.5px solid var(--bd);border-radius:6px;background:var(--bg1);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;overflow:hidden}
+.square .sec{border:0;padding:8px;overflow:auto;min-height:0}
+.square .ps{grid-row:1/3;border-right:1px solid var(--bd)}
+.square .gc{border-bottom:1px solid var(--bd)}
+.circleWrap{position:relative;aspect-ratio:1}
+.circle{position:absolute;inset:0;border:1.5px solid var(--bd);border-radius:50%;background:var(--bg1)}
+.circle svg.div{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+/* вписанный квадрат: содержимое никогда не выходит за круг */
+.inscr{position:absolute;inset:14.65%;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:0 10px}
+.inscr .sec{min-height:0;overflow:auto;padding:2px 2px 4px}
+.inscr .jobs{grid-column:2;grid-row:1/3}
+.inscr .gains{grid-column:1;grid-row:1}
+.inscr .pains{grid-column:1;grid-row:2}
+.ring-l{position:absolute;font:700 var(--fs-2xs)/1 var(--font);text-transform:uppercase;letter-spacing:.07em;color:var(--t3);display:flex;gap:4px;align-items:center}
+.sec-h{display:flex;align-items:center;gap:5px;margin:0 0 5px;position:sticky;top:0;background:var(--bg1);padding:2px 0;z-index:1}
+.sec-h .n{margin-left:auto;font:var(--fs-2xs)/1 var(--mono);color:var(--t3)}
+.it{display:flex;gap:6px;align-items:flex-start;width:100%;text-align:left;background:var(--bg0);border:1px solid var(--bd);border-left:3px solid var(--k);border-radius:6px;padding:5px 7px;margin:0 0 5px;cursor:pointer;min-height:36px}
+.it .tx{flex:1;min-width:0}
+.it .c{font:600 var(--fs-2xs)/1.2 var(--mono);color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it .t{font-size:var(--fs-xs);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.it .rk{font:700 var(--fs-2xs)/1 var(--font);text-transform:uppercase;color:var(--k);white-space:nowrap}
+.it.sel{outline:2px solid var(--acc);outline-offset:1px}
+.it.rel{background:color-mix(in srgb,var(--acc) 10%,var(--bg0))}
+.it.dim{opacity:.32}
+.glyph{flex:0 0 auto;width:14px;height:14px;border-radius:50%;margin-top:2px}
+.g-claimed{border:2px dashed var(--wrn)}
+.g-done{background:var(--t3)}
+.g-metric{border:3px solid var(--suc)}
+.g-measured{background:var(--suc);box-shadow:0 0 0 2px color-mix(in srgb,var(--suc) 35%,transparent)}
+.g-none{border:1px solid var(--bd)}
+svg.links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--t2);font-size:var(--fs-xs);margin:10px 0 0}
+.legend span{display:inline-flex;gap:5px;align-items:center}
+/* панель выбранного */
+.detail{margin-top:10px;background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:9px 11px}
+.detail h3{font:800 var(--fs-sm)/1.3 var(--head);margin:2px 0 6px}
+.detail ul{list-style:none;margin:0;padding:0}
+.detail li{display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px solid var(--bd);font-size:var(--fs-xs);flex-wrap:wrap}
+.detail a{color:var(--acc)}
+/* матрица */
+.mx{overflow-x:auto;border:1px solid var(--bd);border-radius:8px;background:var(--bg1)}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-xs)}
+th{font:700 var(--fs-2xs)/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px;border-bottom:1px solid var(--bd);background:var(--bg3);white-space:nowrap}
+th.ucc{text-transform:none;font-family:var(--mono);letter-spacing:0}
+td{padding:5px 6px;border-bottom:1px solid var(--bd);vertical-align:middle}
+td.cell{text-align:center}
+td.cell .glyph{display:inline-block;margin:0}
+tr.grp td{background:var(--bg2);font:700 var(--fs-2xs)/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3)}
+.rowt{max-width:340px}
+/* карта историй */
+.sm{overflow-x:auto;border:1px solid var(--bd);border-radius:8px;background:var(--bg1)}
+.smg{display:grid;gap:6px;padding:8px;min-width:max-content}
+.bb{background:color-mix(in srgb,var(--job) 14%,var(--bg0));border:1px solid color-mix(in srgb,var(--job) 45%,transparent);border-radius:6px;padding:6px 8px;width:170px}
+.slice-h{grid-column:1/-1;display:flex;gap:8px;align-items:center;border-top:2px dashed var(--bd);padding-top:6px;margin-top:4px}
+.uc{background:var(--bg0);border:1px solid var(--bd);border-left:3px solid var(--do);border-radius:6px;padding:5px 7px;width:170px;font-size:var(--fs-xs)}
+.uc .c{font:600 var(--fs-2xs)/1.2 var(--mono);color:var(--t3)}
+.uc.ship{border-left-color:var(--suc)}
+.uc.unk{border-left-style:dashed}
+/* Völva */
+.volva{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-top:8px}
+.q{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;cursor:pointer;text-align:left}
+.q[aria-pressed=true]{border-color:var(--acc)}
+.q .n{font:800 var(--fs-xl)/1 var(--head);color:var(--c,var(--t1))}
+.q pre{margin:6px 0 0;font:var(--fs-2xs)/1.4 var(--mono);color:var(--t3);white-space:pre-wrap;word-break:break-word}
+.qres{margin-top:8px}
+.foot{color:var(--t3);font-size:var(--fs-xs);margin-top:16px}
+h2{font:800 var(--fs-md)/1.3 var(--head);margin:20px 0 4px}
+/* узкий экран: фигуры стопкой, без линий, связь = подсветка + список */
+@media (max-width:640px){.top .seg{order:9;flex:1 0 100%;display:flex}.top .seg button{flex:1;justify-content:center}.demo{white-space:normal}}
+@media (max-width:860px){
+  .canvas{grid-template-columns:1fr;gap:14px}
+  .circleWrap{aspect-ratio:auto}
+  .circle{position:static;border-radius:14px;padding:8px}
+  .circle svg.div,.ring-l{display:none}
+  .inscr{position:static;display:block}
+  .square{aspect-ratio:auto;display:block}
+  .square .ps{border-right:0;border-bottom:1px solid var(--bd)}
+  .sec{max-height:none}
+  .fig-h span{display:none}
+  svg.links{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <iconify-icon icon="game-icons:scales" width="20" style="color:var(--acc)"></iconify-icon>
+    <h1>Зачем · VP-канва</h1>
+    <span class="demo" title="Данные — реальные срезы LORE от 07.11.2026, вшиты в файл; синтетика помечена отдельно">прототип · данные LORE 07.11</span>
+    <span class="sp"></span>
+    <div class="seg" role="group" aria-label="Вид">
+      <button data-v="canvas"><iconify-icon icon="game-icons:cube"></iconify-icon>Канва</button>
+      <button data-v="matrix"><iconify-icon icon="game-icons:checkerboard"></iconify-icon>Матрица</button>
+      <button data-v="story"><iconify-icon icon="game-icons:treasure-map"></iconify-icon>Карта историй</button>
+    </div>
+    <button class="ib" id="theme" title="Тема" aria-label="Сменить тему"><iconify-icon icon="game-icons:sun"></iconify-icon></button>
+  </div>
+
+  <div class="feats" id="feats" role="group" aria-label="Фичи (канвы)"></div>
+  <div id="verdict" class="verdict" aria-live="polite"></div>
+  <div id="honest"></div>
+  <div class="row" id="actors"></div>
+
+  <section id="vCanvas">
+    <div class="stage" id="stage">
+      <div class="canvas">
+        <div>
+          <div class="fig-h"><b>Карта ценности</b><span>что делаем мы · квадрат</span></div>
+          <div class="square">
+            <div class="sec ps" id="s-ps"></div>
+            <div class="sec gc" id="s-gc"></div>
+            <div class="sec pr" id="s-pr"></div>
+          </div>
+        </div>
+        <div>
+          <div class="fig-h"><b>Профиль клиента</b><span id="whose">все сегменты</span></div>
+          <div class="circleWrap">
+            <div class="circle">
+              <svg class="div" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <line x1="50" y1="0.8" x2="50" y2="99.2" stroke="var(--bd)" stroke-width=".35"/>
+                <line x1="0.8" y1="50" x2="50" y2="50" stroke="var(--bd)" stroke-width=".35"/>
+              </svg>
+                            <div class="inscr">
+                <div class="sec gains" id="s-gains"></div>
+                <div class="sec pains" id="s-pains"></div>
+                <div class="sec jobs" id="s-jobs"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <svg class="links" id="links" aria-hidden="true"></svg>
+    </div>
+    <div class="legend">
+      <span><i class="glyph g-claimed"></i>только заявлено</span>
+      <span><i class="glyph g-done"></i>закрыто сценарием</span>
+      <span><i class="glyph g-metric"></i>метрика описана, замера нет</span>
+      <span><i class="glyph g-measured"></i>замер снят</span>
+      <span style="color:var(--t3)">линии рисуются только у выбранной карточки (касание / наведение)</span>
+    </div>
+    <div class="detail" id="detail"></div>
+  </section>
+
+  <section id="vMatrix" hidden>
+    <div class="mx"><table id="mx"></table></div>
+    <div class="legend"><span>строка — ценность клиента (порядок: острота / ранг), столбец — сценарий; пустая строка = дыра fit</span></div>
+  </section>
+
+  <section id="vStory" hidden>
+    <div class="honest"><iconify-icon icon="game-icons:hazard-sign"></iconify-icon><div>Хребет (работы клиента) и вехи — реальные. Статус <b>отдельного</b> сценария срез не отдал (см. «не смогли проверить» выше), поэтому выпущенность показана по фиче: зелёная полоса — фича выпущена, пунктир — статус сценария неизвестен. Это <b>не</b> «не выпущено».</div></div>
+    <div class="sm"><div class="smg" id="sm"></div></div>
+  </section>
+
+  <h2><iconify-icon icon="game-icons:crystal-ball" style="color:var(--acc)"></iconify-icon> Вопросы Völva по слою «Зачем»</h2>
+  <div class="lbl">в продукте — сохранённые вопросы Völva с фильтром от контекста; здесь посчитаны локально по тем же данным · клик = фильтр канвы/матрицы</div>
+  <div class="volva" id="volva"></div>
+  <div class="qres" id="qres"></div>
+
+  <div class="foot">Источник данных: срезы actors, pains, gains, jobs, features, feature_vp_analytics, uc_actors, search (MCP aida-lore, 07.11.2026), только проект NooriUta/UnlimitedLORE. Разметка «замер снят / метрика описана» выведена из текста metric_md (у LORE явно снят один замер — GAIN-LORE-HONEST-VERDICT, «3 из 4»).</div>
+</div>
+
+<script>
+const D={
+actors:{"ACT-LORE-AGENT-SESSION":"Агент сессии","ACT-LORE-ANALYST":"Бизнес-аналитик","ACT-LORE-ARCHITECT":"Архитектор","ACT-LORE-DEV":"Разработчик","ACT-LORE-DEVOPS":"DevOps","ACT-LORE-ORCHESTRATOR":"Оркестратор контейнеров","ACT-LORE-PM":"Менеджер продукта","ACT-LORE-PRODUCT-OWNER":"Владелец продукта","ACT-LORE-MARKETER":"Маркетолог"},
+pains:{
+"PAIN-LORE-RAW-TOKEN":{t:"Агенту нужен сырой git-токен, чтобы пройти границу",sev:"high",a:["ACT-LORE-AGENT-SESSION"],j:["JOB-SHIP-CHANGE"]},
+"PAIN-LORE-MANUAL-HANDOFF":{t:"PR и merge требуют ручного хендоффа — сессия не автономна",sev:"high",a:["ACT-LORE-AGENT-SESSION"],j:["JOB-SHIP-CHANGE"]},
+"PAIN-LORE-BROKEN-LINKS":{t:"Релизы уезжают с пустыми связями (prs_linked:0)",sev:"normal",a:["ACT-LORE-AGENT-SESSION"],j:["JOB-KEEP-CORPUS-TRUE"]},
+"PAIN-LORE-SILENT-HALF":{t:"Система отвечает неполно, не говоря об этом — «не найдено» неотличимо от «сломалось»",sev:"high",a:["ACT-LORE-AGENT-SESSION"],j:["JOB-TRUST-OUTPUT"]},
+"PAIN-LORE-LOST-WHY":{t:"Причина решения живёт в переписке и теряется вместе с ней",sev:"high",a:["ACT-LORE-AGENT-SESSION"],j:["JOB-RECALL-WHY"]},
+"PAIN-LORE-FIT-BLIND":{t:"По канве не видно, чем закрыта ценность и доказано ли это",sev:"high",a:["ACT-LORE-PRODUCT-OWNER"],j:["JOB-DECIDE-SCOPE"]},
+"PAIN-LORE-PLAN-BLIND":{t:"Состояние работ приходится собирать по кускам, и к моменту сборки оно устаревает",sev:"normal",a:[],j:["JOB-DECIDE-SCOPE"]},
+"PAIN-LORE-SCOPE-MANUAL":{t:"Периметр держится на внимательности: видно чужое или не видно своего",sev:"normal",a:["ACT-LORE-ARCHITECT"],j:["JOB-SEE-OWN-SCOPE"]},
+"PAIN-LORE-TOOLS-COST-CONTEXT":{t:"Инструменты съедают контекст раньше, чем агент дойдёт до работы",sev:"high",a:["ACT-LORE-ARCHITECT"],j:[],rb:1},
+"PAIN-LORE-QUALITY-UNSEEN":{t:"Требования к качеству записаны, но никто не знает, выполняются ли они сейчас",sev:"normal",a:[],j:[],rb:0}},
+gains:{
+"GAIN-LORE-LINKED-RELEASES":{t:"Каждый релиз связан с PR и спринтом автоматически",rank:"expected",m:"metric",a:["ACT-LORE-AGENT-SESSION"],j:["JOB-KEEP-CORPUS-TRUE"]},
+"GAIN-LORE-SAFE-MERGE":{t:"Merge мимо красного CI невозможен",rank:"essential",m:"metric",a:["ACT-LORE-AGENT-SESSION"],j:["JOB-SHIP-CHANGE"]},
+"GAIN-LORE-HONEST-VERDICT":{t:"Система сама называет, какой части своего ответа нельзя верить",rank:"essential",m:"measured",mv:"3 из 4, снято 03.08",a:["ACT-LORE-AGENT-SESSION"],j:["JOB-TRUST-OUTPUT"]},
+"GAIN-LORE-WHY-TRACEABLE":{t:"Причина решения находится за один запрос и не зависит от того, кто её помнит",rank:"essential",m:"metric",a:["ACT-LORE-AGENT-SESSION"],j:["JOB-RECALL-WHY"]},
+"GAIN-LORE-FIT-EVIDENCE":{t:"Решение по фиче принимается по канве, без обхода реестров",rank:"essential",m:"metric",a:["ACT-LORE-PRODUCT-OWNER"],j:["JOB-DECIDE-SCOPE"]},
+"GAIN-LORE-PLAN-ONE-SCREEN":{t:"Состояние работ читается с одного экрана и не требует сборки по кускам",rank:"expected",m:"metric",a:[],j:[]},
+"GAIN-LORE-SCOPE-AUTO":{t:"Периметр применяется сам и одинаково к человеку и к его агенту",rank:"expected",m:"metric",a:[],j:["JOB-SEE-OWN-SCOPE"]},
+"GAIN-LORE-TOOLS-LAZY":{t:"Полный инструментарий доступен, а контекст тратится только на использованное",rank:"essential",m:"metric",a:[],j:[]}},
+jobs:{
+"JOB-DECIDE-SCOPE":{t:"Решить, что берём в спринт, а что ждёт",imp:"high",a:["ACT-LORE-PRODUCT-OWNER"]},
+"JOB-SHIP-CHANGE":{t:"Провести изменение от ветки до релиза, не покидая сессии",imp:"high",a:["ACT-LORE-DEV","ACT-LORE-AGENT-SESSION"]},
+"JOB-KEEP-CORPUS-TRUE":{t:"Держать корпус в согласии с тем, что реально сделано",imp:"high",a:["ACT-LORE-PM","ACT-LORE-AGENT-SESSION"]},
+"JOB-RECALL-WHY":{t:"Вспомнить, почему решение принято именно так",imp:"high",a:["ACT-LORE-DEV","ACT-LORE-ARCHITECT","ACT-LORE-AGENT-SESSION"]},
+"JOB-TRUST-OUTPUT":{t:"Понять, можно ли верить тому, что показала система",imp:"high",a:["ACT-LORE-ANALYST","ACT-LORE-PRODUCT-OWNER","ACT-LORE-AGENT-SESSION"]},
+"JOB-SEE-OWN-SCOPE":{t:"Работать со своим проектом, не задевая чужой",imp:"normal",a:["ACT-LORE-DEV","ACT-LORE-AGENT-SESSION"]},
+"JOB-AGENT-WORK-IN-GRAPH":{t:"Вести работу в графе проекта, не выходя из сессии",imp:"high",a:["ACT-LORE-DEV","ACT-LORE-ARCHITECT","ACT-LORE-AGENT-SESSION"]}},
+ucs:{
+"UC-GIT-PR":"Агент открывает PR с телом из релиза","UC-GIT-MERGE":"Merge по зелёному CI одним вызовом","UC-GIT-WATCH":"Слежение за CI-статусом ветки в словаре §10",
+"UC-HONEST-DEPLOY-VERIFIED":"Пайплайн доказывает, что деплой и миграция схемы реально прошли","UC-HONEST-SELFCHECK":"Владелец нажимает «Самопроверка» и видит вердикт по всему корпусу","UC-HONEST-READY":"Оркестратор снимает экземпляр из ротации, когда база не отвечает именно нам","UC-HONEST-INDEX-VERDICT":"Оператор узнаёт, какие индексы непригодны, раньше пользователя","UC-HONEST-SCAN":"Поиск отвечает сканом и говорит об этом, когда индексу верить нельзя",
+"UC-KNOW-FIND":"Участник находит причину по теме, не зная точного названия решения","UC-KNOW-ADR":"Архитектор фиксирует решение вместе с причиной и последствиями","UC-KNOW-DECISION":"Архитектор разбирает решение на отдельные правила","UC-KNOW-QUESTION":"Участник фиксирует нерешённое вопросом, а не молчанием",
+"UC-VP-RANK":"Владелец видит, какие боли острые, и снято ли существенное","UC-VP-EVIDENCE":"Владелец отличает заявленное от подтверждённого замером","UC-VP-PROFILE":"Владелец видит, какая работа клиента страдает от скольких болей","UC-VP-BALANCE":"Владелец замечает перекос «лечим, но не радуем»","UC-VP-SEGMENTS":"Владелец видит, скольким сегментам служит фича",
+"UC-PLAN-BOARD":"Владелец видит на доске, что в работе и к какой цели ведёт","UC-ACCESS-READ-SCOPE":"Участник получает артефакты своих проектов и не получает чужих","UC-TOOLS-LAZY-NAMES":"Ленивые короткие имена инструментов (FEAT-LORE-AGENT-TOOLS)"},
+ucActors:{"UC-GIT-PR":["ACT-LORE-AGENT-SESSION"],"UC-GIT-MERGE":["ACT-LORE-AGENT-SESSION"],"UC-GIT-WATCH":["ACT-LORE-AGENT-SESSION"],"UC-HONEST-DEPLOY-VERIFIED":["ACT-LORE-DEVOPS"],"UC-HONEST-SELFCHECK":["ACT-LORE-PRODUCT-OWNER","ACT-LORE-AGENT-SESSION"],"UC-HONEST-READY":["ACT-LORE-ORCHESTRATOR"],"UC-HONEST-INDEX-VERDICT":["ACT-LORE-ARCHITECT"],"UC-HONEST-SCAN":["ACT-LORE-AGENT-SESSION"],"UC-KNOW-FIND":["ACT-LORE-AGENT-SESSION"],"UC-KNOW-ADR":["ACT-LORE-ARCHITECT","ACT-LORE-DEV","ACT-LORE-AGENT-SESSION"],"UC-KNOW-DECISION":["ACT-LORE-ARCHITECT","ACT-LORE-AGENT-SESSION"],"UC-KNOW-QUESTION":["ACT-LORE-ARCHITECT","ACT-LORE-AGENT-SESSION"],"UC-VP-RANK":["ACT-LORE-PRODUCT-OWNER"],"UC-VP-EVIDENCE":["ACT-LORE-PRODUCT-OWNER","ACT-LORE-ANALYST","ACT-LORE-AGENT-SESSION"],"UC-VP-PROFILE":["ACT-LORE-PRODUCT-OWNER","ACT-LORE-ANALYST","ACT-LORE-AGENT-SESSION"],"UC-VP-BALANCE":["ACT-LORE-PRODUCT-OWNER"],"UC-VP-SEGMENTS":["ACT-LORE-PRODUCT-OWNER"],"UC-PLAN-BOARD":["ACT-LORE-PRODUCT-OWNER","ACT-LORE-PM"],"UC-ACCESS-READ-SCOPE":["ACT-LORE-AGENT-SESSION","ACT-LORE-ARCHITECT"]},
+/* фичи: claimed p/g/j + связи [uc, target]; kind выводится из типа цели */
+feats:[
+{id:"FEAT-GITCYCLE",t:"Полный git-цикл сессии без токена у агента",st:"active",ms:"M-LORE-CLIENT-SAFE",ucT:3,ucS:0,uc:["UC-GIT-PR","UC-GIT-MERGE","UC-GIT-WATCH"],p:["PAIN-LORE-RAW-TOKEN","PAIN-LORE-MANUAL-HANDOFF","PAIN-LORE-BROKEN-LINKS"],g:["GAIN-LORE-LINKED-RELEASES","GAIN-LORE-SAFE-MERGE"],j:["JOB-KEEP-CORPUS-TRUE","JOB-SHIP-CHANGE"],
+ l:[["UC-GIT-PR","PAIN-LORE-BROKEN-LINKS"],["UC-GIT-PR","PAIN-LORE-MANUAL-HANDOFF"],["UC-GIT-MERGE","PAIN-LORE-MANUAL-HANDOFF"],["UC-GIT-MERGE","PAIN-LORE-RAW-TOKEN"],["UC-GIT-MERGE","GAIN-LORE-SAFE-MERGE"],["UC-GIT-MERGE","GAIN-LORE-LINKED-RELEASES"],["UC-GIT-PR","JOB-KEEP-CORPUS-TRUE"],["UC-GIT-MERGE","JOB-SHIP-CHANGE"]]},
+{id:"FEAT-LORE-HONEST",t:"Отказ не маскируется под ответ: система называет, чему в ней нельзя верить",st:"in_rework",ms:null,ucT:5,ucS:3,uc:["UC-HONEST-DEPLOY-VERIFIED","UC-HONEST-SELFCHECK","UC-HONEST-READY","UC-HONEST-INDEX-VERDICT","UC-HONEST-SCAN"],p:["PAIN-LORE-SILENT-HALF"],g:["GAIN-LORE-HONEST-VERDICT"],j:["JOB-TRUST-OUTPUT"],
+ l:[["UC-HONEST-DEPLOY-VERIFIED","PAIN-LORE-SILENT-HALF"],["UC-HONEST-SELFCHECK","PAIN-LORE-SILENT-HALF"],["UC-HONEST-READY","PAIN-LORE-SILENT-HALF"],["UC-HONEST-INDEX-VERDICT","PAIN-LORE-SILENT-HALF"],["UC-HONEST-SCAN","PAIN-LORE-SILENT-HALF"],["UC-HONEST-DEPLOY-VERIFIED","GAIN-LORE-HONEST-VERDICT"],["UC-HONEST-SELFCHECK","GAIN-LORE-HONEST-VERDICT"],["UC-HONEST-READY","GAIN-LORE-HONEST-VERDICT"],["UC-HONEST-SCAN","GAIN-LORE-HONEST-VERDICT"],["UC-HONEST-DEPLOY-VERIFIED","JOB-TRUST-OUTPUT"],["UC-HONEST-SELFCHECK","JOB-TRUST-OUTPUT"],["UC-HONEST-SCAN","JOB-TRUST-OUTPUT"]]},
+{id:"FEAT-LORE-KNOW",t:"Решения проекта переживают тех, кто их принимал",st:"in_rework",ms:null,ucT:4,ucS:2,uc:["UC-KNOW-FIND","UC-KNOW-ADR","UC-KNOW-DECISION","UC-KNOW-QUESTION"],p:["PAIN-LORE-LOST-WHY"],g:["GAIN-LORE-WHY-TRACEABLE"],j:["JOB-RECALL-WHY"],
+ l:[["UC-KNOW-QUESTION","PAIN-LORE-LOST-WHY"],["UC-KNOW-DECISION","PAIN-LORE-LOST-WHY"],["UC-KNOW-ADR","PAIN-LORE-LOST-WHY"],["UC-KNOW-FIND","GAIN-LORE-WHY-TRACEABLE"],["UC-KNOW-ADR","GAIN-LORE-WHY-TRACEABLE"],["UC-KNOW-FIND","JOB-RECALL-WHY"],["UC-KNOW-ADR","JOB-RECALL-WHY"]]},
+{id:"FEAT-VP-FIT",t:"Владелец продукта видит по канве, чем закрыты ценности клиента",st:"shipped",ms:"M-PRODUCT-UI",ucT:5,ucS:5,ucSliceEmpty:true,uc:["UC-VP-RANK","UC-VP-EVIDENCE","UC-VP-PROFILE","UC-VP-BALANCE","UC-VP-SEGMENTS"],p:["PAIN-LORE-FIT-BLIND"],g:["GAIN-LORE-FIT-EVIDENCE"],j:["JOB-DECIDE-SCOPE"],
+ l:[["UC-VP-BALANCE","PAIN-LORE-FIT-BLIND"],["UC-VP-EVIDENCE","PAIN-LORE-FIT-BLIND"],["UC-VP-EVIDENCE","GAIN-LORE-FIT-EVIDENCE"],["UC-VP-EVIDENCE","JOB-DECIDE-SCOPE"],["UC-VP-BALANCE","JOB-DECIDE-SCOPE"]]},
+{id:"FEAT-LORE-PLAN",t:"Состояние работ читается с одного экрана: спринты, вехи, задачи, релизы",st:"shipped",ms:null,ucT:1,ucS:1,uc:["UC-PLAN-BOARD"],p:["PAIN-LORE-PLAN-BLIND"],g:["GAIN-LORE-PLAN-ONE-SCREEN"],j:["JOB-DECIDE-SCOPE"],
+ l:[["UC-PLAN-BOARD","PAIN-LORE-PLAN-BLIND"],["UC-PLAN-BOARD","GAIN-LORE-PLAN-ONE-SCREEN"],["UC-PLAN-BOARD","JOB-DECIDE-SCOPE"]]},
+{id:"FEAT-LORE-ACCESS",t:"Проект как единица доступа: периметр применяется сам",st:null,ms:null,ucT:1,ucS:0,uc:["UC-ACCESS-READ-SCOPE"],p:["PAIN-LORE-SCOPE-MANUAL"],g:["GAIN-LORE-SCOPE-AUTO"],j:["JOB-SEE-OWN-SCOPE"],
+ l:[["UC-ACCESS-READ-SCOPE","PAIN-LORE-SCOPE-MANUAL"],["UC-ACCESS-READ-SCOPE","GAIN-LORE-SCOPE-AUTO"],["UC-ACCESS-READ-SCOPE","JOB-SEE-OWN-SCOPE"]]}
+],
+/* карта историй: хребет = работы клиента, под ними сценарии, которые их выполняют (jobs.performed_by_ucs) */
+story:{
+"JOB-DECIDE-SCOPE":["UC-VP-EVIDENCE","UC-VP-BALANCE","UC-PLAN-BOARD"],"JOB-SHIP-CHANGE":["UC-GIT-MERGE"],"JOB-KEEP-CORPUS-TRUE":["UC-GIT-PR"],"JOB-RECALL-WHY":["UC-KNOW-FIND","UC-KNOW-ADR"],"JOB-TRUST-OUTPUT":["UC-HONEST-DEPLOY-VERIFIED","UC-HONEST-SELFCHECK","UC-HONEST-SCAN"],"JOB-SEE-OWN-SCOPE":["UC-ACCESS-READ-SCOPE"],"JOB-AGENT-WORK-IN-GRAPH":["UC-TOOLS-LAZY-NAMES"]},
+ucFeat:{"UC-TOOLS-LAZY-NAMES":"FEAT-LORE-AGENT-TOOLS"}
+};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const kindOf=id=>id.startsWith('PAIN-')?'pain':id.startsWith('GAIN-')?'gain':id.startsWith('JOB-')?'job':'uc';
+const titleOf=id=>(D.pains[id]||D.gains[id]||D.jobs[id]||{}).t||D.ucs[id]||id;
+const short=id=>id.replace(/^(PAIN|GAIN|JOB|UC|FEAT)-(LORE-)?/,'');
+const sevW={high:0,normal:1},rankW={essential:0,expected:1,desired:2,unexpected:3};
+const params=new URLSearchParams(location.search);
+const S={f:params.get('f')||'FEAT-GITCYCLE',v:params.get('v')||'canvas',sel:params.get('sel')||null,actor:params.get('a')||'',q:null};
+function syncUrl(){const p=new URLSearchParams();p.set('f',S.f);p.set('v',S.v);if(S.sel)p.set('sel',S.sel);if(S.actor)p.set('a',S.actor);history.replaceState(null,'','?'+p.toString());}
+const feat=()=>D.feats.find(f=>f.id===S.f)||D.feats[0];
+
+function model(f){
+  const by={};f.l.forEach(([u,t])=>{(by[t]=by[t]||[]).push(u)});
+  const actorOk=id=>{if(!S.actor)return true;const a=(D.pains[id]||D.gains[id]||D.jobs[id]||{}).a||[];return a.includes(S.actor)};
+  const P=f.p.filter(actorOk).sort((a,b)=>sevW[D.pains[a].sev]-sevW[D.pains[b].sev]);
+  const G=f.g.filter(actorOk).sort((a,b)=>rankW[D.gains[a].rank]-rankW[D.gains[b].rank]);
+  const J=f.j.filter(actorOk);
+  const level=id=>{if(!(by[id]||[]).length)return'claimed';if(kindOf(id)==='gain'){const m=D.gains[id].m;return m==='measured'?'measured':m==='metric'?'metric':'done'}return'done'};
+  const relievers=f.uc.filter(u=>f.l.some(([x,t])=>x===u&&kindOf(t)==='pain'));
+  const creators=f.uc.filter(u=>f.l.some(([x,t])=>x===u&&kindOf(t)==='gain'));
+  // авто-раскладка: «снимают» в порядке болей, которые снимают — пары оказываются на одной высоте
+  const ord=(list,targets)=>list.slice().sort((a,b)=>{const ia=targets.findIndex(t=>f.l.some(([x,y])=>x===a&&y===t)),ib=targets.findIndex(t=>f.l.some(([x,y])=>x===b&&y===t));return(ia<0?99:ia)-(ib<0?99:ib)});
+  const segs=new Set();[...f.p,...f.g,...f.j].forEach(id=>((D.pains[id]||D.gains[id]||D.jobs[id]).a||[]).forEach(a=>segs.add(a)));
+  return{by,P,G,J,level,relievers:ord(relievers,P),creators:ord(creators,G),segs:[...segs]};
+}
+
+function renderFeats(){
+  $('#feats').innerHTML=D.feats.map(f=>{const m=model(f);const all=[...f.p,...f.g,...f.j];const done=all.filter(id=>(m.by[id]||[]).length).length;
+    return`<button class="feat" aria-pressed="${f.id===S.f}" data-f="${f.id}"><div class="id">${f.id}</div><div class="tt">${esc(f.t)}</div><div class="bar"><i style="width:${all.length?100*done/all.length:0}%"></i></div><div class="meta"><span>fit ${done}/${all.length}</span><span>UC ${f.ucS}/${f.ucT}</span></div><div class="meta"><span>${f.ms||'вне вехи'}</span><span>${f.st||'статус не задан'}</span></div></button>`}).join('');
+  $('#feats').querySelectorAll('.feat').forEach(b=>b.onclick=()=>{S.f=b.dataset.f;S.sel=null;S.actor='';S.q=null;render()});
+}
+function renderVerdict(f,m){
+  const all=[...f.p,...f.g,...f.j];const closed=all.filter(id=>(m.by[id]||[]).length).length;
+  const sharp=f.p.filter(id=>D.pains[id].sev==='high');const sharpDone=sharp.filter(id=>(m.by[id]||[]).length).length;
+  const gm=f.g.filter(id=>D.gains[id].m!=='none').length,gmeas=f.g.filter(id=>D.gains[id].m==='measured').length;
+  const c=(txt,col,title)=>`<span class="chip" style="--c:${col}" title="${esc(title)}">${txt}</span>`;
+  $('#verdict').innerHTML=`<span class="lbl">вердикт</span>`
+   +c(`закрыто ${closed}/${all.length}`,closed===all.length?'var(--suc)':'var(--wrn)','у ценности есть сценарий, который её закрывает (problem–solution fit)')
+   +(sharp.length?c(`острых снято ${sharpDone}/${sharp.length}`,sharpDone===sharp.length?'var(--suc)':'var(--pain)','существенное раньше мелочей'):'')
+   +(f.g.length?c(`метрика описана ${gm}/${f.g.length}`,'var(--t2)','у выгоды есть metric_md'):'')
+   +(f.g.length?c(`замер снят ${gmeas}/${f.g.length}`,gmeas===f.g.length?'var(--suc)':'var(--wrn)','значение реально измерено — а не только описано, как мерить'):'')
+   +c(`снимаем : радуем ${m.relievers.length} : ${m.creators.length}`,m.creators.length?'var(--t2)':'var(--wrn)','перекос в обезболивающие')
+   +c(`сегментов ${m.segs.length}`,m.segs.length>1?'var(--wrn)':'var(--t2)','несколько сегментов — повод разделить фичу')
+   +`<span class="sp"></span><span class="mono" style="font-size:var(--fs-2xs);color:var(--t3)" title="свежесть ответа">проверено: срез 07.11 · NooriUta/UnlimitedLORE</span>`;
+  $('#honest').innerHTML=f.ucSliceEmpty?`<div class="honest" role="status"><iconify-icon icon="game-icons:hazard-sign"></iconify-icon><div><b>Не смогли проверить состав сценариев.</b> Срез <span class="mono">use_cases_of_feature</span> вернул 0 строк, а <span class="mono">features</span> говорит uc_total=5. Квадрат собран из поиска и связей ценностей — это не «сценариев нет». <a href="#" style="color:var(--acc)">Inspect</a> · <a href="#" style="color:var(--acc)">Повторить</a></div></div>`:'';
+}
+function renderActors(m){
+  $('#actors').innerHTML=`<span class="lbl">чей профиль</span>`+['',...m.segs].map(a=>`<button class="pill" aria-pressed="${a===S.actor}" data-a="${a}">${a?esc(D.actors[a]||a):'все сегменты'}</button>`).join('')
+    +(m.segs.length?'':`<span class="chip" style="--c:var(--wrn)">сегмент не задан</span>`);
+  $('#actors').querySelectorAll('.pill').forEach(b=>b.onclick=()=>{S.actor=b.dataset.a;S.sel=null;render()});
+  $('#whose').textContent=S.actor?(D.actors[S.actor]||S.actor):'все сегменты';
+}
+function item(id,k,m,extra){
+  const lv=k==='uc'?'none':m.level(id);const col={pain:'var(--pain)',gain:'var(--gain)',job:'var(--job)',uc:'var(--do)'}[k];
+  const rk=k==='pain'?(D.pains[id].sev==='high'?'остро':''):k==='gain'?{essential:'must',expected:'ждут',desired:'хотят',unexpected:'вау'}[D.gains[id].rank]:k==='job'&&D.jobs[id].imp==='high'?'важно':'';
+  return`<button class="it" data-id="${id}" style="--k:${col}" aria-pressed="${S.sel===id}">${k==='uc'?'':`<i class="glyph g-${lv}" title="${{claimed:'только заявлено',done:'закрыто сценарием',metric:'метрика описана, замера нет',measured:'замер снят'}[lv]}"></i>`}<span class="tx"><span class="c">${short(id)}${extra||''}</span><span class="t">${esc(titleOf(id))}</span></span>${rk?`<span class="rk">${rk}</span>`:''}</button>`;
+}
+const secH=(icon,title,n,col)=>`<div class="sec-h"><iconify-icon icon="${icon}" style="color:${col}"></iconify-icon><span class="lbl" style="color:var(--t2)">${title}</span><span class="n">${n}</span></div>`;
+const emptyS=t=>`<div style="color:var(--t3);font-size:var(--fs-xs);padding:4px 0">${t}</div>`;
+function renderCanvas(f,m){
+  const holes=k=>[...(k==='pain'?m.P:k==='gain'?m.G:m.J)].filter(id=>!(m.by[id]||[]).length).length;
+  $('#s-ps').innerHTML=secH('game-icons:gears','Продукты · сценарии',f.uc.length,'var(--do)')+f.uc.map(u=>item(u,'uc',m)).join('')+(holes('job')?`<div class="chip" style="--c:var(--wrn)">+ завести сценарий · ${holes('job')} работ без исполнителя</div>`:'');
+  $('#s-gc').innerHTML=secH('game-icons:sparkles','Создают выгоды',m.creators.length,'var(--gain)')+(m.creators.map(u=>item(u,'uc',m,` → ${f.l.filter(([x,t])=>x===u&&kindOf(t)==='gain').length}`)).join('')||emptyS('пусто (проверено) — выгоды никто не создаёт'))+(holes('gain')?`<div class="chip" style="--c:var(--wrn)">+ ${holes('gain')} выгод без сценария</div>`:'');
+  $('#s-pr').innerHTML=secH('game-icons:healing','Снимают боль',m.relievers.length,'var(--pain)')+(m.relievers.map(u=>item(u,'uc',m,` → ${f.l.filter(([x,t])=>x===u&&kindOf(t)==='pain').length}`)).join('')||emptyS('пусто (проверено)'))+(holes('pain')?`<div class="chip" style="--c:var(--wrn)">+ ${holes('pain')} болей без сценария</div>`:'');
+  $('#s-gains').innerHTML=secH('game-icons:sparkles','Выгоды',m.G.length,'var(--gain)')+(m.G.map(id=>item(id,'gain',m)).join('')||emptyS(S.actor?'у сегмента нет выгод · + добавить':'пусто (проверено)'));
+  $('#s-pains').innerHTML=secH('game-icons:broken-heart','Боли',m.P.length,'var(--pain)')+(m.P.map(id=>item(id,'pain',m)).join('')||emptyS(S.actor?'у сегмента нет болей · + добавить':'пусто (проверено)'));
+  $('#s-jobs').innerHTML=secH('game-icons:anvil-impact','Работы',m.J.length,'var(--job)')+(m.J.map(id=>item(id,'job',m)).join('')||emptyS(S.actor?'у сегмента нет работ · + добавить':'пусто (проверено)'));
+  document.querySelectorAll('#vCanvas .it').forEach(b=>{
+    b.onclick=()=>{S.sel=S.sel===b.dataset.id?null:b.dataset.id;highlight(f,m);syncUrl()};
+    b.onmouseenter=()=>{if(matchMedia('(hover:hover)').matches&&!S.sel)highlight(f,m,b.dataset.id)};
+    b.onmouseleave=()=>{if(matchMedia('(hover:hover)').matches&&!S.sel)highlight(f,m)};
+  });
+  highlight(f,m);
+}
+function neighbours(f,m,id){
+  const k=kindOf(id),out=[];
+  if(k==='uc')f.l.filter(([u])=>u===id).forEach(([u,t])=>out.push({a:u,b:t,lv:m.level(t)}));
+  else{f.l.filter(([,t])=>t===id).forEach(([u])=>out.push({a:u,b:id,lv:m.level(id)}));
+    if(!(m.by[id]||[]).length)out.push({a:null,b:id,lv:'claimed'});}
+  // связи внутри круга: боль мешает работе, выгода — успех работы
+  const inner=[];const P=D.pains[id],G=D.gains[id];
+  if(P)P.j.filter(j=>f.j.includes(j)).forEach(j=>inner.push({a:id,b:j,rel:'мешает'}));
+  if(G)G.j.filter(j=>f.j.includes(j)).forEach(j=>inner.push({a:id,b:j,rel:'успех'}));
+  if(k==='job'){f.p.filter(p=>D.pains[p].j.includes(id)).forEach(p=>inner.push({a:p,b:id,rel:'мешает'}));f.g.filter(g=>D.gains[g].j.includes(id)).forEach(g=>inner.push({a:g,b:id,rel:'успех'}));}
+  return{out,inner};
+}
+function highlight(f,m,preview){
+  const id=preview||S.sel;const svg=$('#links');svg.innerHTML='';
+  const items=[...document.querySelectorAll('#vCanvas .it')];
+  items.forEach(b=>{b.classList.remove('sel','rel','dim');});
+  if(!id){renderDetail(f,m,null);return}
+  const {out,inner}=neighbours(f,m,id);
+  const rel=new Set([id]);out.forEach(e=>{if(e.a)rel.add(e.a);rel.add(e.b)});inner.forEach(e=>{rel.add(e.a);rel.add(e.b)});
+  items.forEach(b=>{const x=b.dataset.id;if(x===id)b.classList.add('sel');else if(rel.has(x))b.classList.add('rel');else b.classList.add('dim')});
+  if(getComputedStyle(svg).display!=='none'){
+    const box=$('#stage').getBoundingClientRect();
+    const r=(x,side,tk)=>{let els=items.filter(b=>b.dataset.id===x);if(!els.length)return null;const pref=tk&&els.filter(b=>b.closest('#'+({pain:'s-pr',gain:'s-gc',job:'s-ps'}[tk])));if(pref&&pref.length)els=pref;
+      // сценарий может стоять в нескольких секциях — берём ближайший к профилю
+      const e=els.sort((a,b)=>b.getBoundingClientRect().right-a.getBoundingClientRect().right)[0].getBoundingClientRect();
+      return{x:(side==='r'?e.right:e.left)-box.left,y:e.top+e.height/2-box.top,l:e.left-box.left,rr:e.right-box.left}};
+    const path=(p,q,st,arc)=>{const dx=Math.max(40,(q.x-p.x)/2);if(arc){const top=Math.max(4,Math.min(p.y,q.y)-90);return`<path d="M${p.x},${p.y} C${p.x+dx},${top} ${q.x-dx},${top} ${q.x},${q.y}" fill="none" ${st}/>`}return`<path d="M${p.x},${p.y} C${p.x+dx},${p.y} ${q.x-dx},${q.y} ${q.x},${q.y}" fill="none" ${st}/>`};
+    let h='';
+    out.forEach(e=>{if(!e.a)return;const p=r(e.a,'r',kindOf(e.b)),q=r(e.b,'l');if(!p||!q)return;
+      const st=e.lv==='claimed'?'stroke="var(--wrn)" stroke-width="2" stroke-dasharray="5 4"':e.lv==='measured'?'stroke="var(--suc)" stroke-width="3"':e.lv==='metric'?'stroke="var(--suc)" stroke-width="2"':'stroke="var(--t2)" stroke-width="2"';
+      h+=path(p,q,st,kindOf(e.b)==='job')});
+    inner.forEach(e=>{const p=r(e.a,'r'),q=r(e.b,'l');if(!p||!q)return;h+=path(p,q,'stroke="var(--t3)" stroke-width="1.2" stroke-dasharray="2 3"')});
+    svg.innerHTML=h;
+  }
+  if(!preview)renderDetail(f,m,id);
+}
+function renderDetail(f,m,id){
+  const el=$('#detail');
+  if(!id){el.innerHTML=`<span class="lbl">выбор</span> <span style="color:var(--t2)">Коснитесь карточки — покажем её пары fit (линии на широком экране, подсветка и список на телефоне). Пары не хранят координат: раскладка всегда одна и та же.</span>`;return}
+  const {out,inner}=neighbours(f,m,id);const k=kindOf(id);
+  const lvT={claimed:'только заявлено',done:'закрыто',metric:'метрика описана, замера нет',measured:'замер снят'};
+  const lvC={claimed:'var(--wrn)',done:'var(--t2)',metric:'var(--suc)',measured:'var(--suc)'};
+  let rows=out.map(e=>`<li><span class="chip" style="--c:${lvC[e.lv]}">${lvT[e.lv]}</span><span class="mono">${e.a?short(e.a):'— никто'}</span><span style="color:var(--t3)">${kindOf(e.b)==='pain'?'снимает':kindOf(e.b)==='gain'?'создаёт':'выполняет'}</span><span class="mono">${short(e.b)}</span>${D.gains[e.b]&&D.gains[e.b].mv?`<span class="chip" style="--c:var(--suc)">${esc(D.gains[e.b].mv)}</span>`:''}</li>`).join('');
+  rows+=inner.map(e=>`<li><span class="chip">внутри клиента</span><span class="mono">${short(e.a)}</span><span style="color:var(--t3)">${e.rel}</span><span class="mono">${short(e.b)}</span></li>`).join('');
+  if(k==='uc'&&!out.length)rows+=`<li><span class="chip" style="--c:var(--wrn)">сценарий не связан ни с одной ценностью</span><span style="color:var(--t3)">+ связать</span></li>`;
+  const acts=k==='uc'?(D.ucActors[id]||[]):((D.pains[id]||D.gains[id]||D.jobs[id]).a||[]);
+  el.innerHTML=`<div class="lbl">${{pain:'боль',gain:'выгода',job:'работа клиента',uc:'сценарий (UC)'}[k]} · <span class="mono">${id}</span></div><h3>${esc(titleOf(id))}</h3>
+   <div class="row">${acts.length?acts.map(a=>`<span class="chip">${esc(D.actors[a]||a)}</span>`).join(''):`<span class="chip" style="--c:var(--wrn)">сегмент не задан</span>`}
+   <a href="#" class="chip" style="--c:var(--acc)">паспорт ↗</a>${k==='uc'?`<a href="#" class="chip" style="--c:var(--acc)">задачи и спринты ↗</a>`:''}<a href="#" class="chip" style="--c:var(--acc)">граф глубины 1 ↗</a></div><ul>${rows}</ul>`;
+}
+function renderMatrix(f,m){
+  const cols=f.uc;const groups=[['Работы',m.J,'job'],['Боли',m.P,'pain'],['Выгоды',m.G,'gain']];
+  const qset=S.q?new Set(Q.find(x=>x.id===S.q).rows()):null;
+  let h=`<thead><tr><th>ценность клиента</th>${cols.map(u=>`<th class="ucc" title="${esc(D.ucs[u])}">${short(u)}</th>`).join('')}<th>fit</th></tr></thead><tbody>`;
+  groups.forEach(([g,ids,k])=>{if(!ids.length)return;h+=`<tr class="grp"><td colspan="${cols.length+2}">${g}</td></tr>`;
+    ids.forEach(id=>{const lv=m.level(id);const on=!qset||qset.has(id);
+      h+=`<tr style="${on?'':'opacity:.35'}"><td class="rowt"><span class="mono" style="color:var(--t3);font-size:var(--fs-2xs)">${short(id)}</span><br>${esc(titleOf(id))}</td>${cols.map(u=>`<td class="cell">${f.l.some(([x,t])=>x===u&&t===id)?`<i class="glyph g-${lv}" title="${short(u)} → ${short(id)}"></i>`:''}</td>`).join('')}<td><span class="chip" style="--c:${lv==='claimed'?'var(--wrn)':'var(--suc)'}">${{claimed:'дыра',done:'закрыто',metric:'без замера',measured:'замер'}[lv]}</span></td></tr>`})});
+  $('#mx').innerHTML=h+'</tbody>';
+}
+function renderStory(){
+  const jobs=Object.keys(D.story);const featOf=u=>D.ucFeat[u]||(D.feats.find(f=>f.uc.includes(u))||{}).id;
+  const fs=id=>D.feats.find(f=>f.id===id);
+  const slices=[['M-PRODUCT-UI','веха · продуктовый UI'],['M-LORE-CLIENT-SAFE','веха · безопасно для клиента'],[null,'вне вехи (у 5 фич LORE веха не задана — product_hygiene)']];
+  let h=`<div style="display:grid;grid-template-columns:repeat(${jobs.length},170px);gap:6px;grid-column:1/-1">`+jobs.map(j=>`<div class="bb"><div class="mono" style="font-size:var(--fs-2xs);color:var(--job)">${short(j)}</div><div style="font-size:var(--fs-xs)">${esc(D.jobs[j].t)}</div></div>`).join('')+`</div>`;
+  slices.forEach(([ms,lab])=>{
+    h+=`<div class="slice-h"><span class="lbl">${ms?ms+' · ':''}${lab}</span></div><div style="display:grid;grid-template-columns:repeat(${jobs.length},170px);gap:6px">`;
+    jobs.forEach(j=>{h+=`<div>`+D.story[j].filter(u=>{const f=fs(featOf(u));return(f?f.ms:null)===ms}).map(u=>{const f=fs(featOf(u));const ship=f&&f.st==='shipped';
+      return`<div class="uc ${ship?'ship':'unk'}" style="margin-bottom:6px"><div class="c">${short(u)} · ${f?short(f.id):'AGENT-TOOLS'}</div>${esc(D.ucs[u])}<div class="c" style="margin-top:3px">${ship?'фича выпущена':f?`статус UC ? · фича ${f.ucS}/${f.ucT}`:'фича вне среза features'}</div></div>`}).join('')+`</div>`});
+    h+=`</div>`});
+  $('#sm').innerHTML=h;
+}
+/* Völva: вопросы */
+const LORE_P=Object.keys(D.pains),LORE_G=Object.keys(D.gains);
+const relievedAny=id=>D.pains[id].rb!==undefined?D.pains[id].rb>0:D.feats.some(f=>f.l.some(([,t])=>t===id));
+const Q=[
+ {id:'q1',t:'Боли без сценария',c:'var(--pain)',sql:"select pain_id from pains\nwhere relieved_by = 0",rows:()=>LORE_P.filter(p=>!relievedAny(p))},
+ {id:'q2',t:'Выгоды «с метрикой», но без снятого замера',c:'var(--wrn)',sql:"select gain_id from gains\nwhere metric_md is not null\n  and measured_value is null  -- поля нет: открытый вопрос",rows:()=>LORE_G.filter(g=>D.gains[g].m==='metric')},
+ {id:'q3',t:'Ценности без сегмента',c:'var(--wrn)',sql:"select id from pains ∪ gains\nwhere actor_ids = []",rows:()=>[...LORE_P.filter(p=>!D.pains[p].a.length),...LORE_G.filter(g=>!D.gains[g].a.length)]},
+ {id:'q4',t:'Сценарии, не связанные с ценностью',c:'var(--t2)',sql:"select uc_id from use_cases u\nwhere not exists RELIEVES|DELIVERS|PERFORMS",rows:()=>D.feats.flatMap(f=>f.uc.filter(u=>!f.l.some(([x])=>x===u)))}
+];
+function renderVolva(){
+  $('#volva').innerHTML=Q.map(q=>`<button class="q" data-q="${q.id}" aria-pressed="${S.q===q.id}" style="--c:${q.c}"><div class="n">${q.rows().length}</div><div style="font-weight:700">${q.t}</div><pre>${esc(q.sql)}</pre></button>`).join('');
+  $('#volva').querySelectorAll('.q').forEach(b=>b.onclick=()=>{S.q=S.q===b.dataset.q?null:b.dataset.q;renderVolva();renderQres();if(S.v==='matrix')renderMatrix(feat(),model(feat()))});
+  renderQres();
+}
+function renderQres(){
+  if(!S.q){$('#qres').innerHTML='';return}const q=Q.find(x=>x.id===S.q);const rows=q.rows();
+  $('#qres').innerHTML=`<div class="mx"><table><thead><tr><th>id</th><th>что</th><th>в какой фиче</th></tr></thead><tbody>${rows.map(id=>`<tr><td class="mono">${id}</td><td>${esc(titleOf(id))}</td><td class="mono">${(D.feats.filter(f=>[...f.p,...f.g,...f.j,...f.uc].includes(id)).map(f=>f.id).join(', '))||'<span style="color:var(--wrn)">ни в одной</span>'}</td></tr>`).join('')||'<tr><td colspan="3">пусто (проверено)</td></tr>'}</tbody></table></div><div class="legend"><span>Таблица ⇄ визуализация, «Закрепить в текст» → блок <span class="mono">lore-query</span> — в продукте делает Völva</span></div>`;
+}
+function render(){
+  const f=feat(),m=model(f);
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===S.v));
+  $('#vCanvas').hidden=S.v!=='canvas';$('#vMatrix').hidden=S.v!=='matrix';$('#vStory').hidden=S.v!=='story';
+  renderFeats();renderVerdict(f,m);renderActors(m);
+  if(S.v==='canvas')renderCanvas(f,m);if(S.v==='matrix')renderMatrix(f,m);if(S.v==='story')renderStory();
+  renderVolva();syncUrl();
+}
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{S.v=b.dataset.v;render()});
+$('#theme').onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'};
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(S.v==='canvas')highlight(feat(),model(feat()))},80)});
+render();
+</script>
+</body>
+</html>

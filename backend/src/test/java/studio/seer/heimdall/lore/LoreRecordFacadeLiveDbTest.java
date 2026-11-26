@@ -524,10 +524,11 @@ class LoreRecordFacadeLiveDbTest {
             .post("/lore/feature").then().statusCode(200);
         admin().body(Map.of("uc_id", "UC-REC-PASS-1", "title", "сценарий фичи", "parent_uc_id", "FEAT-REC-PASS",
             "goal_level", "sea-level")).post("/lore/uc").then().statusCode(200);
-        JsonPath f = readOnlyContract("feature", "FEAT-REC-PASS");
+        // AP-PASSPORT-EDIT волна 1 (#1829): фича правится из паспорта (название, описание, контекст), статус — нет.
+        JsonPath f = readOnlyContract("feature", "FEAT-REC-PASS", true);
         assertEquals("фича для паспорта", f.getString("values.title"));
         // Паспорт фичи открывает и сценарий любого уровня — US разделом тоже щёлкаются.
-        JsonPath u = readOnlyContract("feature", "UC-REC-PASS-1");
+        JsonPath u = readOnlyContract("feature", "UC-REC-PASS-1", true);
         assertEquals("sea-level", u.getString("values.goal_level"));
         assertEquals("FEAT-REC-PASS", u.getString("values.parent"));
     }

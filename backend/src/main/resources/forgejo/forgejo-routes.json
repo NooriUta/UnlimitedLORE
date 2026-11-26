@@ -1,0 +1,5121 @@
+{
+  "format": "forgejo-routes/1",
+  "about": "Реестр маршрутов Forgejo-миниаппа (ADR-LORE-060 R1, SPEC-FORGEJO-APP-060 §3, §7; SPRINT_FORGEJO_MINIAPP/FJ-01). 107 маршрутов извлечены механически из AIDA/forgejo-mcp (src/tools/*.ts), get_job_log/get_pr_diff/delete_file сверены вручную; маршрут с origin=lore — добавлен записью. roles[] — источник RBAC (allowlist), group — строка матрицы §7, risk=high — гейт подтверждения. Новый маршрут — запись сюда, релиз MCP не нужен.",
+  "source": "AIDA/forgejo-mcp@e7d57deeb14044b20ad36fe38e09b7d043b88411 (develop, 2026-11-22)",
+  "forgejo_mcp_tools": 107,
+  "routes": [
+    {
+      "name": "add_collaborator",
+      "method": "PUT",
+      "pathTemplate": "/repos/{owner}/{repo}/collaborators/{collaborator}",
+      "desc": "Add a collaborator to a repository",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "collaborator": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "permission": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "read",
+            "write",
+            "admin"
+          ],
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "add_issue_labels",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/issues/{index}/labels",
+      "desc": "Add labels to an issue",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "labels": {
+          "required": true,
+          "type": "array",
+          "items": "int",
+          "desc": "Array of label IDs to add",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "add_team_member",
+      "method": "PUT",
+      "pathTemplate": "/teams/{id}/members/{username}",
+      "desc": "Add a member to a team",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "ID of the team",
+          "in": "path"
+        },
+        "username": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Username of the user to add",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "admin_create_user",
+      "method": "POST",
+      "pathTemplate": "/admin/users",
+      "desc": "Create a new user (requires admin privileges)",
+      "group": "repo-destructive",
+      "roles": [
+        "full"
+      ],
+      "risk": "high",
+      "origin": "forgejo-mcp",
+      "params": {
+        "username": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Username for the new user",
+          "in": "body"
+        },
+        "email": {
+          "required": true,
+          "type": "string",
+          "desc": "Email address for the new user",
+          "in": "body"
+        },
+        "password": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Password for the new user",
+          "in": "body"
+        },
+        "must_change_password": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether the user must change password on first login",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "admin_delete_user",
+      "method": "DELETE",
+      "pathTemplate": "/admin/users/{username}",
+      "desc": "Delete a user (requires admin privileges)",
+      "group": "repo-destructive",
+      "roles": [
+        "full"
+      ],
+      "risk": "high",
+      "origin": "forgejo-mcp",
+      "params": {
+        "username": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Username of the user to delete",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "admin_edit_user",
+      "method": "PATCH",
+      "pathTemplate": "/admin/users/{username}",
+      "desc": "Edit an existing user (requires admin privileges)",
+      "group": "repo-destructive",
+      "roles": [
+        "full"
+      ],
+      "risk": "high",
+      "origin": "forgejo-mcp",
+      "params": {
+        "username": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Username of the user to edit",
+          "in": "path"
+        },
+        "email": {
+          "required": false,
+          "type": "string",
+          "desc": "New email address for the user",
+          "in": "body"
+        },
+        "active": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether the user account is active",
+          "in": "body"
+        },
+        "admin": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether the user has admin privileges",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "admin_list_cron_jobs",
+      "method": "GET",
+      "pathTemplate": "/admin/cron",
+      "desc": "List all cron jobs (requires admin privileges)",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {}
+    },
+    {
+      "name": "admin_list_hooks",
+      "method": "GET",
+      "pathTemplate": "/admin/hooks",
+      "desc": "List system webhooks (requires admin privileges)",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {}
+    },
+    {
+      "name": "admin_list_users",
+      "method": "GET",
+      "pathTemplate": "/admin/users",
+      "desc": "List all users (requires admin privileges)",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "admin_run_cron_job",
+      "method": "POST",
+      "pathTemplate": "/admin/cron/{task}",
+      "desc": "Run a cron task by name (requires admin privileges)",
+      "group": "repo-destructive",
+      "roles": [
+        "full"
+      ],
+      "risk": "high",
+      "origin": "forgejo-mcp",
+      "params": {
+        "task": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the cron task to run",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "create_branch",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/branches",
+      "desc": "Create a new branch in a repository",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "new_branch_name": {
+          "required": true,
+          "type": "string",
+          "format": "branch",
+          "max": 255,
+          "in": "body"
+        },
+        "old_branch_name": {
+          "required": false,
+          "type": "string",
+          "format": "branch",
+          "max": 255,
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "create_file",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/contents/{filepath}",
+      "desc": "Create a new file in a repository",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "filepath": {
+          "required": true,
+          "type": "string",
+          "format": "filepath",
+          "max": 4096,
+          "in": "path"
+        },
+        "content": {
+          "required": true,
+          "type": "string",
+          "desc": "Base64 encoded file content",
+          "in": "body"
+        },
+        "message": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Commit message for creating the file",
+          "in": "body"
+        },
+        "branch": {
+          "required": false,
+          "type": "string",
+          "format": "branch",
+          "max": 255,
+          "in": "body"
+        },
+        "new_branch": {
+          "required": false,
+          "type": "string",
+          "format": "branch",
+          "max": 255,
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "create_issue",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/issues",
+      "desc": "Create a new issue in a repository",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "title": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Issue title",
+          "in": "body"
+        },
+        "body": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "desc": "Issue body",
+          "in": "body"
+        },
+        "labels": {
+          "required": false,
+          "type": "array",
+          "items": "int",
+          "desc": "Array of label IDs",
+          "in": "body"
+        },
+        "milestone": {
+          "required": false,
+          "type": "number",
+          "desc": "Milestone ID",
+          "in": "body"
+        },
+        "assignees": {
+          "required": false,
+          "type": "array",
+          "items": "string",
+          "desc": "Array of assignee usernames",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "create_issue_comment",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/issues/{index}/comments",
+      "desc": "Add a comment to an issue",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "body": {
+          "required": true,
+          "type": "string",
+          "max": 65536,
+          "desc": "Comment body",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "create_label",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/labels",
+      "desc": "Create a label in a repository",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "name": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Label name",
+          "in": "body"
+        },
+        "color": {
+          "required": true,
+          "type": "string",
+          "desc": "Label color as hex string without #",
+          "in": "body"
+        },
+        "description": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "desc": "Label description",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "create_milestone",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/milestones",
+      "desc": "Create a milestone in a repository",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "title": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Milestone title",
+          "in": "body"
+        },
+        "description": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "desc": "Milestone description",
+          "in": "body"
+        },
+        "due_on": {
+          "required": false,
+          "type": "string",
+          "desc": "Due date in ISO 8601 format",
+          "in": "body"
+        },
+        "state": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "open",
+            "closed",
+            "all"
+          ],
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "create_org",
+      "method": "POST",
+      "pathTemplate": "/orgs",
+      "desc": "Create a new organization",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "username": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Username for the organization",
+          "in": "body"
+        },
+        "full_name": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "Full display name of the organization",
+          "in": "body"
+        },
+        "description": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "desc": "Description of the organization",
+          "in": "body"
+        },
+        "visibility": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "public",
+            "limited",
+            "private"
+          ],
+          "desc": "Visibility of the organization: public, limited, or private",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "create_org_repo",
+      "method": "POST",
+      "pathTemplate": "/orgs/{org}/repos",
+      "desc": "Create a new repository in an organization",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "org": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "name": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Name of the new repository",
+          "in": "body"
+        },
+        "description": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "in": "body"
+        },
+        "private": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether the repository is private",
+          "in": "body"
+        },
+        "auto_init": {
+          "required": false,
+          "type": "bool",
+          "desc": "Initialize the repository with a README",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "create_pr_review",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/pulls/{index}/reviews",
+      "desc": "Create a review on a pull request",
+      "group": "PR",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "Pull request number",
+          "in": "path"
+        },
+        "body": {
+          "required": true,
+          "type": "string",
+          "max": 65536,
+          "desc": "Review body/comment",
+          "in": "body"
+        },
+        "event": {
+          "required": true,
+          "type": "enum",
+          "values": [
+            "APPROVED",
+            "REQUEST_CHANGES",
+            "COMMENT"
+          ],
+          "desc": "Review event: APPROVED, REQUEST_CHANGES, or COMMENT",
+          "in": "body"
+        },
+        "comments": {
+          "required": false,
+          "type": "array",
+          "items": "int",
+          "desc": "Inline comments on specific files",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "create_pull_request",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/pulls",
+      "desc": "Create a new pull request",
+      "group": "PR",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "title": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "PR title",
+          "in": "body"
+        },
+        "body": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "desc": "PR description",
+          "in": "body"
+        },
+        "head": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Source branch",
+          "in": "body"
+        },
+        "base": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Target branch",
+          "in": "body"
+        },
+        "assignees": {
+          "required": false,
+          "type": "array",
+          "items": "string",
+          "desc": "Assignee usernames",
+          "in": "body"
+        },
+        "labels": {
+          "required": false,
+          "type": "array",
+          "items": "int",
+          "desc": "Label IDs",
+          "in": "body"
+        },
+        "milestone": {
+          "required": false,
+          "type": "number",
+          "desc": "Milestone ID",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "create_release",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/releases",
+      "desc": "Create a new release for a repository",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "tag_name": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Tag name for the release",
+          "in": "body"
+        },
+        "name": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "Title of the release",
+          "in": "body"
+        },
+        "body": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "in": "body"
+        },
+        "draft": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether this is a draft release",
+          "in": "body"
+        },
+        "prerelease": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether this is a pre-release",
+          "in": "body"
+        },
+        "target_commitish": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "Branch or commit SHA to tag",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "create_repo",
+      "method": "POST",
+      "pathTemplate": "/user/repos",
+      "desc": "Create a new repository for the authenticated user",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Name of the new repository",
+          "in": "body"
+        },
+        "description": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "in": "body"
+        },
+        "private": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether the repository is private",
+          "in": "body"
+        },
+        "auto_init": {
+          "required": false,
+          "type": "bool",
+          "desc": "Initialize the repository with a README",
+          "in": "body"
+        },
+        "default_branch": {
+          "required": false,
+          "type": "string",
+          "format": "branch",
+          "max": 255,
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "create_tag",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/tags",
+      "desc": "Create a tag (v* release tag — full only, with human approval)",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "tag_name": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "in": "body"
+        },
+        "target": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "in": "body",
+          "desc": "branch or commit sha"
+        },
+        "message": {
+          "required": false,
+          "type": "string",
+          "in": "body"
+        }
+      },
+      "rules": [
+        {
+          "kind": "escalate",
+          "param": "tag_name",
+          "pattern": "^v[0-9]",
+          "risk": "high",
+          "roles": [
+            "full"
+          ],
+          "reason": "тег релиза v* — только по слову владельца (CLAUDE.md проекта: релиз preprod → main + тег)"
+        }
+      ]
+    },
+    {
+      "name": "create_team",
+      "method": "POST",
+      "pathTemplate": "/orgs/{org}/teams",
+      "desc": "Create a new team in an organization",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "org": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the organization",
+          "in": "path"
+        },
+        "name": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Name of the team",
+          "in": "body"
+        },
+        "description": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "desc": "Description of the team",
+          "in": "body"
+        },
+        "permission": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "read",
+            "write",
+            "admin"
+          ],
+          "desc": "Permission level for the team: read, write, or admin",
+          "in": "body"
+        },
+        "units": {
+          "required": false,
+          "type": "array",
+          "items": "string",
+          "desc": "List of unit types the team has access to (e.g. repo.code, repo.issues)",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "delete_branch",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}/branches/{branch}",
+      "desc": "Delete a branch from a repository",
+      "group": "repo-destructive",
+      "roles": [
+        "full"
+      ],
+      "risk": "high",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "branch": {
+          "required": true,
+          "type": "string",
+          "format": "branch",
+          "max": 255,
+          "in": "path"
+        }
+      },
+      "rules": [
+        {
+          "kind": "refuse",
+          "param": "branch",
+          "values": [
+            "develop",
+            "preprod",
+            "main"
+          ],
+          "reason": "защищённая ветка (develop → preprod → main, CLAUDE.md проекта) — удаляется только владельцем в Forgejo, не агентом"
+        }
+      ]
+    },
+    {
+      "name": "delete_file",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}/contents/{filepath}",
+      "desc": "Delete a file from a repository",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "manual",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "filepath": {
+          "required": true,
+          "type": "string",
+          "format": "filepath",
+          "max": 4096,
+          "in": "path"
+        },
+        "sha": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{4,64}$",
+          "desc": "Blob SHA of the file to delete",
+          "in": "body"
+        },
+        "message": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Commit message for the deletion",
+          "in": "body"
+        },
+        "branch": {
+          "required": false,
+          "type": "string",
+          "format": "branch",
+          "max": 255,
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "delete_issue_comment",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}/issues/comments/{id}",
+      "desc": "Delete a comment on an issue",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "delete_label",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}/labels/{id}",
+      "desc": "Delete a label from a repository",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "delete_milestone",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}/milestones/{id}",
+      "desc": "Delete a milestone from a repository",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "delete_org",
+      "method": "DELETE",
+      "pathTemplate": "/orgs/{org}",
+      "desc": "Delete an organization",
+      "group": "repo-destructive",
+      "roles": [
+        "full"
+      ],
+      "risk": "high",
+      "origin": "forgejo-mcp",
+      "params": {
+        "org": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the organization to delete",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "delete_release_asset",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}/releases/{id}/assets/{attachment_id}",
+      "desc": "Delete a release attachment",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "attachment_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "delete_repo",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}",
+      "desc": "Delete a repository by owner and name",
+      "group": "repo-destructive",
+      "roles": [
+        "full"
+      ],
+      "risk": "high",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "delete_tag",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}/tags/{tag}",
+      "desc": "Delete a tag",
+      "group": "repo-destructive",
+      "roles": [
+        "full"
+      ],
+      "risk": "high",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "tag": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "in": "path",
+          "format": "branch"
+        }
+      }
+    },
+    {
+      "name": "dispatch_workflow",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/workflows/{workflow_file}/dispatches",
+      "desc": "Manually trigger a workflow_dispatch run for a workflow file",
+      "group": "dispatch",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "high",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "workflow_file": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Workflow filename, e.g. lore-cd.yml",
+          "in": "path"
+        },
+        "ref": {
+          "required": true,
+          "type": "string",
+          "format": "branch",
+          "max": 255,
+          "in": "body"
+        },
+        "inputs": {
+          "required": false,
+          "type": "object",
+          "desc": "workflow_dispatch inputs, if the workflow defines any",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "edit_issue",
+      "method": "PATCH",
+      "pathTemplate": "/repos/{owner}/{repo}/issues/{index}",
+      "desc": "Edit an existing issue",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "title": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "New title",
+          "in": "body"
+        },
+        "body": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "desc": "New body",
+          "in": "body"
+        },
+        "state": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "open",
+            "closed",
+            "all"
+          ],
+          "in": "body"
+        },
+        "labels": {
+          "required": false,
+          "type": "array",
+          "items": "int",
+          "desc": "Array of label IDs",
+          "in": "body"
+        },
+        "milestone": {
+          "required": false,
+          "type": "number",
+          "desc": "Milestone ID",
+          "in": "body"
+        },
+        "assignees": {
+          "required": false,
+          "type": "array",
+          "items": "string",
+          "desc": "Array of assignee usernames",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "edit_issue_comment",
+      "method": "PATCH",
+      "pathTemplate": "/repos/{owner}/{repo}/issues/comments/{id}",
+      "desc": "Edit a comment on an issue",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "body": {
+          "required": true,
+          "type": "string",
+          "max": 65536,
+          "desc": "New comment body",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "edit_label",
+      "method": "PATCH",
+      "pathTemplate": "/repos/{owner}/{repo}/labels/{id}",
+      "desc": "Edit an existing label",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "name": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "New label name",
+          "in": "body"
+        },
+        "color": {
+          "required": false,
+          "type": "string",
+          "desc": "New label color as hex string without #",
+          "in": "body"
+        },
+        "description": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "desc": "New label description",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "edit_milestone",
+      "method": "PATCH",
+      "pathTemplate": "/repos/{owner}/{repo}/milestones/{id}",
+      "desc": "Edit an existing milestone",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "title": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "New title",
+          "in": "body"
+        },
+        "description": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "desc": "New description",
+          "in": "body"
+        },
+        "due_on": {
+          "required": false,
+          "type": "string",
+          "desc": "New due date in ISO 8601 format",
+          "in": "body"
+        },
+        "state": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "open",
+            "closed",
+            "all"
+          ],
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "edit_org",
+      "method": "PATCH",
+      "pathTemplate": "/orgs/{org}",
+      "desc": "Edit an organization's properties",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "org": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the organization to edit",
+          "in": "path"
+        },
+        "full_name": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "Full display name of the organization",
+          "in": "body"
+        },
+        "description": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "desc": "Description of the organization",
+          "in": "body"
+        },
+        "visibility": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "public",
+            "limited",
+            "private"
+          ],
+          "desc": "Visibility of the organization: public, limited, or private",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "edit_pull_request",
+      "method": "PATCH",
+      "pathTemplate": "/repos/{owner}/{repo}/pulls/{index}",
+      "desc": "Update an existing pull request",
+      "group": "PR",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "Pull request number",
+          "in": "path"
+        },
+        "title": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "New title",
+          "in": "body"
+        },
+        "body": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "desc": "New description",
+          "in": "body"
+        },
+        "state": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "open",
+            "closed",
+            "all"
+          ],
+          "in": "body"
+        },
+        "base": {
+          "required": false,
+          "type": "string",
+          "desc": "New target branch",
+          "in": "body"
+        },
+        "assignees": {
+          "required": false,
+          "type": "array",
+          "items": "string",
+          "desc": "Assignee usernames",
+          "in": "body"
+        },
+        "labels": {
+          "required": false,
+          "type": "array",
+          "items": "int",
+          "desc": "Label IDs",
+          "in": "body"
+        },
+        "milestone": {
+          "required": false,
+          "type": "number",
+          "desc": "Milestone ID",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "edit_repo",
+      "method": "PATCH",
+      "pathTemplate": "/repos/{owner}/{repo}",
+      "desc": "Edit a repository's settings",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "name": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "New name for the repository",
+          "in": "body"
+        },
+        "description": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "in": "body"
+        },
+        "website": {
+          "required": false,
+          "type": "string",
+          "max": 1024,
+          "desc": "Website URL for the repository",
+          "in": "body"
+        },
+        "default_branch": {
+          "required": false,
+          "type": "string",
+          "format": "branch",
+          "max": 255,
+          "in": "body"
+        },
+        "private": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether the repository is private",
+          "in": "body"
+        },
+        "archived": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether the repository is archived",
+          "in": "body"
+        },
+        "has_issues": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether the issue tracker is enabled",
+          "in": "body"
+        },
+        "has_pull_requests": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether pull requests are enabled",
+          "in": "body"
+        },
+        "has_wiki": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether the wiki is enabled",
+          "in": "body"
+        },
+        "has_projects": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether projects are enabled",
+          "in": "body"
+        },
+        "has_releases": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether releases are enabled",
+          "in": "body"
+        },
+        "has_packages": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether packages are enabled",
+          "in": "body"
+        },
+        "has_actions": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether actions are enabled",
+          "in": "body"
+        },
+        "allow_merge_commits": {
+          "required": false,
+          "type": "bool",
+          "desc": "Allow merge commits",
+          "in": "body"
+        },
+        "allow_rebase": {
+          "required": false,
+          "type": "bool",
+          "desc": "Allow rebase merges",
+          "in": "body"
+        },
+        "allow_rebase_explicit": {
+          "required": false,
+          "type": "bool",
+          "desc": "Allow rebase with merge commits",
+          "in": "body"
+        },
+        "allow_squash_merge": {
+          "required": false,
+          "type": "bool",
+          "desc": "Allow squash merges",
+          "in": "body"
+        },
+        "ignore_whitespace_conflicts": {
+          "required": false,
+          "type": "bool",
+          "desc": "Ignore whitespace in conflicts",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "fork_repo",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/forks",
+      "desc": "Fork a repository",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "organization": {
+          "required": false,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "body"
+        },
+        "name": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "Name for the forked repository",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "get_authenticated_user",
+      "method": "GET",
+      "pathTemplate": "/user",
+      "desc": "Get the currently authenticated user",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {}
+    },
+    {
+      "name": "get_branch",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/branches/{branch}",
+      "desc": "Get details of a specific branch",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "branch": {
+          "required": true,
+          "type": "string",
+          "format": "branch",
+          "max": 255,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "get_commit_status",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/commits/{sha}/status",
+      "desc": "Get the combined CI status for a commit (e.g. a PR's head SHA) — the overall state plus the latest status per check context",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "sha": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{4,64}$",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "get_file_contents",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/contents/{filepath}",
+      "desc": "Get the contents of a file in a repository",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "filepath": {
+          "required": true,
+          "type": "string",
+          "format": "filepath",
+          "max": 4096,
+          "in": "path"
+        },
+        "ref": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "Branch, tag, or commit SHA to get the file from",
+          "in": "query"
+        }
+      }
+    },
+    {
+      "name": "get_gitignore_template",
+      "method": "GET",
+      "pathTemplate": "/gitignore/templates/{name}",
+      "desc": "Get a specific gitignore template by name",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the gitignore template",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "get_issue",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/issues/{index}",
+      "desc": "Get a single issue by index",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "get_job",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/jobs/{job_id}",
+      "desc": "Get a workflow run job with its steps, Forgejo >= 17",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "job_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path",
+          "desc": "id from list_run_jobs (jobs[].id)"
+        }
+      }
+    },
+    {
+      "name": "get_job_log",
+      "method": "GET",
+      "pathTemplate": null,
+      "desc": "Read the full step-by-step log text for a CI/CD job. Forgejo has no REST endpoint for this (only the web UI renders it), so this reads the raw .log.zst file directly from the Forgejo data volume and decompresses it with zstd. task_id is the numeric `id` field from a list_workflow_runs entry (NOT the run_number shown in the web UI — they're different Forgejo-internal sequences).",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "manual",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "task_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "The `id` field from list_workflow_runs, not run_number",
+          "in": "capability"
+        },
+        "tail_lines": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 5000,
+          "desc": "Only return the last N lines (default: full log)",
+          "in": "capability"
+        }
+      },
+      "capability": "actions-log-volume",
+      "note": "капабилити «том журналов» не подключена: на Forgejo 17 журнал отдаёт REST — маршрут get_job_logs (job_id из list_run_jobs)"
+    },
+    {
+      "name": "get_job_logs",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/jobs/{job_id}/logs",
+      "desc": "Plain-text log of a job via Forgejo REST (>= 17). In the dialogue: tail + error lines with meta.log; full log only with truncate=false",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "response": "log",
+      "note": "замена get_job_log (том .log.zst) на REST Forgejo 17; job_id — из list_run_jobs, не task_id. Читает ли журналы из базы (log_in_storage=f) — проверить живым прогоном",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "job_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path",
+          "desc": "id from list_run_jobs (jobs[].id)"
+        },
+        "step": {
+          "required": false,
+          "type": "int",
+          "min": 0,
+          "in": "query",
+          "desc": "only this step"
+        }
+      }
+    },
+    {
+      "name": "get_label",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/labels/{id}",
+      "desc": "Get a single label by ID",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "get_label_template",
+      "method": "GET",
+      "pathTemplate": "/label/templates/{name}",
+      "desc": "Get a specific label template by name",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the label template",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "get_license_template",
+      "method": "GET",
+      "pathTemplate": "/licenses/{name}",
+      "desc": "Get a specific license template by name",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "name": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the license template",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "get_milestone",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/milestones/{id}",
+      "desc": "Get a single milestone by ID",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "get_nodeinfo",
+      "method": "GET",
+      "pathTemplate": "/nodeinfo",
+      "desc": "Get the Forgejo instance NodeInfo",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {}
+    },
+    {
+      "name": "get_org",
+      "method": "GET",
+      "pathTemplate": "/orgs/{org}",
+      "desc": "Get details of an organization",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "org": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the organization",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "get_pr_diff",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/pulls/{index}.diff",
+      "desc": "Get the diff of a pull request",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "manual",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "Pull request number",
+          "in": "path"
+        }
+      },
+      "response": "text"
+    },
+    {
+      "name": "get_pull_request",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/pulls/{index}",
+      "desc": "Get details of a single pull request",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "Pull request number",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "get_release_asset",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/releases/{id}/assets/{attachment_id}",
+      "desc": "Get one attachment (asset) of a release",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "required": true,
+          "in": "path",
+          "desc": "Owner/username"
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "required": true,
+          "in": "path",
+          "desc": "Repository name"
+        },
+        "id": {
+          "type": "int",
+          "min": 1,
+          "required": true,
+          "in": "path",
+          "desc": "Release ID"
+        },
+        "attachment_id": {
+          "type": "int",
+          "min": 1,
+          "required": true,
+          "in": "path",
+          "desc": "Attachment ID"
+        }
+      }
+    },
+    {
+      "name": "get_repo",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}",
+      "desc": "Get details of a repository by owner and name",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "get_runner_registration_token",
+      "method": "GET",
+      "pathTemplate": "/admin/runners/registration-token",
+      "desc": "Get a runner registration token (requires admin privileges)",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {}
+    },
+    {
+      "name": "get_server_version",
+      "method": "GET",
+      "pathTemplate": "/version",
+      "desc": "Get the Forgejo server version",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {}
+    },
+    {
+      "name": "get_team",
+      "method": "GET",
+      "pathTemplate": "/teams/{id}",
+      "desc": "Get a team by its ID",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "ID of the team",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "get_user",
+      "method": "GET",
+      "pathTemplate": "/users/{username}",
+      "desc": "Get a user's profile by username",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "username": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Username of the user",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "list_action_runners_jobs",
+      "method": "GET",
+      "pathTemplate": "/admin/runners/jobs",
+      "desc": "List action runner jobs (requires admin privileges)",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_branches",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/branches",
+      "desc": "List branches of a repository",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_collaborators",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/collaborators",
+      "desc": "List collaborators of a repository",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "list_followers",
+      "method": "GET",
+      "pathTemplate": "/users/{username}/followers",
+      "desc": "List a user's followers",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "username": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Username of the user",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_following",
+      "method": "GET",
+      "pathTemplate": "/users/{username}/following",
+      "desc": "List who a user is following",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "username": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Username of the user",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_forks",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/forks",
+      "desc": "List forks of a repository",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_gitignore_templates",
+      "method": "GET",
+      "pathTemplate": "/gitignore/templates",
+      "desc": "List all available gitignore templates",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {}
+    },
+    {
+      "name": "list_issue_comments",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/issues/{index}/comments",
+      "desc": "List comments on an issue",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_issues",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/issues",
+      "desc": "List issues for a repository",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "state": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "open",
+            "closed",
+            "all"
+          ],
+          "in": "query"
+        },
+        "labels": {
+          "required": false,
+          "type": "string",
+          "desc": "Comma-separated list of label names",
+          "in": "query"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        },
+        "type": {
+          "required": false,
+          "type": "string",
+          "desc": "Filter by type: issues or pulls",
+          "in": "query"
+        },
+        "milestones": {
+          "required": false,
+          "type": "string",
+          "desc": "Comma-separated list of milestone names",
+          "in": "query"
+        },
+        "sort": {
+          "required": false,
+          "type": "string",
+          "desc": "Sort order",
+          "in": "query"
+        }
+      }
+    },
+    {
+      "name": "list_label_templates",
+      "method": "GET",
+      "pathTemplate": "/label/templates",
+      "desc": "List all available label templates",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {}
+    },
+    {
+      "name": "list_labels",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/labels",
+      "desc": "List labels for a repository",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_license_templates",
+      "method": "GET",
+      "pathTemplate": "/licenses",
+      "desc": "List all available license templates",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {}
+    },
+    {
+      "name": "list_milestones",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/milestones",
+      "desc": "List milestones for a repository",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "state": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "open",
+            "closed",
+            "all"
+          ],
+          "in": "query"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_my_notifications",
+      "method": "GET",
+      "pathTemplate": "/notifications",
+      "desc": "List notifications for the authenticated user",
+      "group": "notifications",
+      "roles": [
+        "full",
+        "architect",
+        "pm",
+        "marketer"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        },
+        "status_types": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "unread",
+            "read",
+            "pinned"
+          ],
+          "desc": "Filter by status type: unread, read, or pinned",
+          "in": "query"
+        }
+      }
+    },
+    {
+      "name": "list_my_starred",
+      "method": "GET",
+      "pathTemplate": "/user/starred",
+      "desc": "List repositories starred by the authenticated user",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_org_hooks",
+      "method": "GET",
+      "pathTemplate": "/orgs/{org}/hooks",
+      "desc": "List webhooks for an organization",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "org": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the organization",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_org_labels",
+      "method": "GET",
+      "pathTemplate": "/orgs/{org}/labels",
+      "desc": "List labels for an organization",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "org": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the organization",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_org_members",
+      "method": "GET",
+      "pathTemplate": "/orgs/{org}/members",
+      "desc": "List members of an organization",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "org": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the organization",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_org_repos",
+      "method": "GET",
+      "pathTemplate": "/orgs/{org}/repos",
+      "desc": "List repositories belonging to an organization",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "org": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the organization",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_org_teams",
+      "method": "GET",
+      "pathTemplate": "/orgs/{org}/teams",
+      "desc": "List teams in an organization",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "org": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Name of the organization",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_orgs",
+      "method": "GET",
+      "pathTemplate": "/orgs",
+      "desc": "List all organizations on the Forgejo instance",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_pr_commits",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/pulls/{index}/commits",
+      "desc": "List commits in a pull request",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "Pull request number",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_pr_files",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/pulls/{index}/files",
+      "desc": "List changed files in a pull request",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "Pull request number",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_pr_reviews",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/pulls/{index}/reviews",
+      "desc": "List reviews on a pull request",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "Pull request number",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_pull_requests",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/pulls",
+      "desc": "List pull requests for a repository",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "state": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "open",
+            "closed",
+            "all"
+          ],
+          "in": "query"
+        },
+        "sort": {
+          "required": false,
+          "type": "string",
+          "desc": "Sort field",
+          "in": "query"
+        },
+        "labels": {
+          "required": false,
+          "type": "string",
+          "desc": "Comma-separated label names",
+          "in": "query"
+        },
+        "milestone": {
+          "required": false,
+          "type": "string",
+          "desc": "Milestone name or ID",
+          "in": "query"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_release_assets",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/releases/{id}/assets",
+      "desc": "List attachments (assets) of a release",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "required": true,
+          "in": "path",
+          "desc": "Owner/username"
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "required": true,
+          "in": "path",
+          "desc": "Repository name"
+        },
+        "id": {
+          "type": "int",
+          "min": 1,
+          "required": true,
+          "in": "path",
+          "desc": "Release ID"
+        }
+      }
+    },
+    {
+      "name": "list_releases",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/releases",
+      "desc": "List releases of a repository",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_repo_commits",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/commits",
+      "desc": "List commits in a repository",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "sha": {
+          "required": false,
+          "type": "string",
+          "desc": "SHA or branch name to list commits from",
+          "in": "query"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_repo_topics",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/topics",
+      "desc": "Get the list of topics for a repository",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "list_run_jobs",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/runs/{run_id}/jobs",
+      "desc": "List jobs of a workflow run (job ids for get_job_logs), Forgejo >= 17",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "run_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path",
+          "desc": "id from list_runs (workflow_runs[].id)"
+        }
+      }
+    },
+    {
+      "name": "list_runs",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/runs",
+      "desc": "List workflow runs of a repository (run ids for list_run_jobs), Forgejo >= 17",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_tags",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/tags",
+      "desc": "List tags of a repository",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_user_orgs",
+      "method": "GET",
+      "pathTemplate": "/users/{username}/orgs",
+      "desc": "List organizations a user belongs to",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "username": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Username of the user",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_user_repos",
+      "method": "GET",
+      "pathTemplate": "/users/{username}/repos",
+      "desc": "List repositories owned by a user",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "username": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Username of the user",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_user_starred",
+      "method": "GET",
+      "pathTemplate": "/users/{username}/starred",
+      "desc": "List repositories starred by a user",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "username": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Username of the user",
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "list_workflow_runs",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/tasks",
+      "desc": "List CI/CD workflow runs (jobs) for a repository, most recent first",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "mark_notifications_read",
+      "method": "PUT",
+      "pathTemplate": "/notifications",
+      "desc": "Mark all notifications as read for the authenticated user",
+      "group": "notifications",
+      "roles": [
+        "full",
+        "architect",
+        "pm",
+        "marketer"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {}
+    },
+    {
+      "name": "merge_pull_request",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/pulls/{index}/merge",
+      "desc": "Merge a pull request",
+      "group": "PR",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "Pull request number",
+          "in": "path"
+        },
+        "merge_method": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "merge",
+            "rebase",
+            "rebase-merge",
+            "squash"
+          ],
+          "desc": "Merge method: merge, rebase, rebase-merge, or squash",
+          "in": "body",
+          "wire": "Do"
+        },
+        "message": {
+          "required": false,
+          "type": "string",
+          "max": 65536,
+          "desc": "Merge commit message",
+          "in": "body",
+          "wire": "MergeMessageField"
+        },
+        "title": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "Merge commit title",
+          "in": "body",
+          "wire": "MergeTitleField"
+        }
+      },
+      "via": "forgejo_pr_merge"
+    },
+    {
+      "name": "remove_issue_label",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}/issues/{index}/labels/{id}",
+      "desc": "Remove a label from an issue",
+      "group": "issues-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "remove_team_member",
+      "method": "DELETE",
+      "pathTemplate": "/teams/{id}/members/{username}",
+      "desc": "Remove a member from a team",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "ID of the team",
+          "in": "path"
+        },
+        "username": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "desc": "Username of the user to remove",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "render_markdown",
+      "method": "POST",
+      "pathTemplate": "/markdown",
+      "desc": "Render markdown text to HTML",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "text": {
+          "required": true,
+          "type": "string",
+          "desc": "Markdown text to render",
+          "in": "body",
+          "wire": "Text"
+        },
+        "mode": {
+          "required": false,
+          "type": "enum",
+          "values": [
+            "gfm",
+            "comment",
+            "plain"
+          ],
+          "desc": "Render mode: gfm, comment, or plain",
+          "in": "body",
+          "wire": "Mode"
+        },
+        "context": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "Context for resolving relative links (e.g. owner/repo)",
+          "in": "body",
+          "wire": "Context"
+        }
+      }
+    },
+    {
+      "name": "render_markup",
+      "method": "POST",
+      "pathTemplate": "/markup",
+      "desc": "Render markup text to HTML",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "params": {
+        "text": {
+          "required": true,
+          "type": "string",
+          "desc": "Markup text to render",
+          "in": "body",
+          "wire": "Text"
+        },
+        "mode": {
+          "required": false,
+          "type": "string",
+          "max": 50,
+          "desc": "Render mode",
+          "in": "body",
+          "wire": "Mode"
+        },
+        "context": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "desc": "Context for resolving relative links",
+          "in": "body",
+          "wire": "Context"
+        },
+        "wiki": {
+          "required": false,
+          "type": "bool",
+          "desc": "Whether the content is wiki content",
+          "in": "body",
+          "wire": "Wiki"
+        }
+      }
+    },
+    {
+      "name": "request_pr_review",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/pulls/{index}/requested_reviewers",
+      "desc": "Request review from users on a pull request",
+      "group": "PR",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "Pull request number",
+          "in": "path"
+        },
+        "reviewers": {
+          "required": true,
+          "type": "array",
+          "items": "string",
+          "desc": "Usernames of requested reviewers",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "search_repos",
+      "method": "GET",
+      "pathTemplate": "/repos/search",
+      "desc": "Search for repositories on the Forgejo instance",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "q": {
+          "required": false,
+          "type": "string",
+          "max": 256,
+          "in": "query"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "search_users",
+      "method": "GET",
+      "pathTemplate": "/users/search",
+      "desc": "Search for users on the Forgejo instance",
+      "group": "read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm",
+        "analyst",
+        "marketer"
+      ],
+      "risk": "low",
+      "origin": "forgejo-mcp",
+      "list": true,
+      "params": {
+        "q": {
+          "required": true,
+          "type": "string",
+          "max": 256,
+          "desc": "Search query string",
+          "in": "query"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
+        }
+      }
+    },
+    {
+      "name": "star_repo",
+      "method": "PUT",
+      "pathTemplate": "/user/starred/{owner}/{repo}",
+      "desc": "Star a repository for the authenticated user",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "transfer_repo",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/transfer",
+      "desc": "Transfer a repository to a new owner",
+      "group": "repo-destructive",
+      "roles": [
+        "full"
+      ],
+      "risk": "high",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "new_owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "body"
+        },
+        "team_ids": {
+          "required": false,
+          "type": "array",
+          "items": "int",
+          "desc": "Team IDs to add to the repository after transfer",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "unstar_repo",
+      "method": "DELETE",
+      "pathTemplate": "/user/starred/{owner}/{repo}",
+      "desc": "Unstar a repository for the authenticated user",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "update_file",
+      "method": "PUT",
+      "pathTemplate": "/repos/{owner}/{repo}/contents/{filepath}",
+      "desc": "Update an existing file in a repository",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "filepath": {
+          "required": true,
+          "type": "string",
+          "format": "filepath",
+          "max": 4096,
+          "in": "path"
+        },
+        "content": {
+          "required": true,
+          "type": "string",
+          "desc": "Base64 encoded new file content",
+          "in": "body"
+        },
+        "sha": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{4,64}$",
+          "desc": "Blob SHA of the existing file (for conflict detection)",
+          "in": "body"
+        },
+        "message": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "desc": "Commit message for the update",
+          "in": "body"
+        },
+        "branch": {
+          "required": false,
+          "type": "string",
+          "format": "branch",
+          "max": 255,
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "update_pr_branch",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/pulls/{index}/update",
+      "desc": "Update a pull request branch by rebasing on the base branch",
+      "group": "PR",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester",
+        "pm"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "index": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "desc": "Pull request number",
+          "in": "path"
+        }
+      }
+    },
+    {
+      "name": "update_repo_topics",
+      "method": "PUT",
+      "pathTemplate": "/repos/{owner}/{repo}/topics",
+      "desc": "Set the topics for a repository (replaces all existing topics)",
+      "group": "admin",
+      "roles": [
+        "full"
+      ],
+      "risk": "medium",
+      "origin": "forgejo-mcp",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "topics": {
+          "required": true,
+          "type": "array",
+          "items": "string",
+          "desc": "List of topic names to set",
+          "in": "body"
+        }
+      }
+    },
+    {
+      "name": "upload_release_asset",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/releases/{id}/assets",
+      "desc": "Upload a release attachment (multipart — not supported by the miniapp yet)",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "lore",
+      "capability": "multipart-upload",
+      "note": "исполнитель шлёт только JSON; загрузка файла (multipart) — отдельная capability, пока не подключена",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "name": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "in": "query"
+        }
+      }
+    }
+  ]
+}

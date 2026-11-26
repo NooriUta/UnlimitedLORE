@@ -546,7 +546,9 @@
             "ru": "Критический",
             "en": "Critical",
             "pl": "Krytyczny"
-          }
+          },
+          "icon": "dice-fire",
+          "color": "var(--dng)"
         },
         {
           "code": "high",
@@ -554,7 +556,8 @@
             "ru": "Высокий",
             "en": "High",
             "pl": "Wysoki"
-          }
+          },
+          "color": "var(--wrn)"
         },
         {
           "code": "normal",
@@ -562,7 +565,8 @@
             "ru": "Средний",
             "en": "Normal",
             "pl": "Średni"
-          }
+          },
+          "color": "var(--inf)"
         },
         {
           "code": "low",
@@ -570,7 +574,8 @@
             "ru": "Низкий",
             "en": "Low",
             "pl": "Niski"
-          }
+          },
+          "color": "var(--t3)"
         }
       ],
       "synonyms": {
@@ -716,6 +721,240 @@
       "synonyms": {
         "hard": "blocks"
       }
+    },
+    "task_type": {
+      "_about": "SPRINT_LORE_EXT_ISSUES_W2/ISS-02-DICT-SEED-GUARD: вид задачи по ADR-LORE-015; UI (v1-чипы, web-next taskDicts) читает словарь. Решение владельца 25.11.2026: «словари сеять каких нет». Подписи и иконки — как на проде, цвета — токены темы (AUD-AREA-COLORS 6а); те же статьи сеет доводка схемы кода (UiDictSeed.java).",
+      "kind": "other",
+      "codes": [
+        {
+          "code": "planning",
+          "labels": {
+            "ru": "Планирование",
+            "en": "Planning",
+            "pl": "Planowanie"
+          },
+          "icon": "compass",
+          "color": "var(--t2)"
+        },
+        {
+          "code": "design",
+          "labels": {
+            "ru": "Дизайн",
+            "en": "Design",
+            "pl": "Projektowanie"
+          },
+          "icon": "scroll-quill",
+          "color": "color-mix(in srgb,var(--inf) 50%,var(--dng))"
+        },
+        {
+          "code": "dev",
+          "labels": {
+            "ru": "Разработка",
+            "en": "Development",
+            "pl": "Programowanie"
+          },
+          "icon": "gears",
+          "color": "var(--suc)"
+        },
+        {
+          "code": "test",
+          "labels": {
+            "ru": "Тестирование",
+            "en": "Testing",
+            "pl": "Testowanie"
+          },
+          "icon": "checkered-flag",
+          "color": "var(--wrn)"
+        },
+        {
+          "code": "ops",
+          "labels": {
+            "ru": "Релиз/Ops",
+            "en": "Release/Ops",
+            "pl": "Wydanie/Ops"
+          },
+          "icon": "cog",
+          "color": "var(--dng)"
+        },
+        {
+          "code": "research",
+          "labels": {
+            "ru": "Исследование",
+            "en": "Research",
+            "pl": "Badania"
+          },
+          "icon": "magnifying-glass",
+          "color": "var(--inf)"
+        },
+        {
+          "code": "analytics",
+          "labels": {
+            "ru": "Аналитика",
+            "en": "Analytics",
+            "pl": "Analityka"
+          },
+          "icon": "pie-chart",
+          "color": "color-mix(in srgb,var(--dng) 55%,var(--inf))"
+        },
+        {
+          "code": "docs",
+          "labels": {
+            "ru": "Документация",
+            "en": "Docs",
+            "pl": "Dokumentacja"
+          },
+          "icon": "spell-book",
+          "color": "color-mix(in srgb,var(--inf) 55%,var(--suc))"
+        },
+        {
+          "code": "content",
+          "labels": {
+            "ru": "Контент",
+            "en": "Content",
+            "pl": "Treści"
+          },
+          "icon": "quill-ink",
+          "color": "var(--acc)"
+        }
+      ]
+    },
+    "agent_profile": {
+      "_about": "SPRINT_LORE_EXT_ISSUES_W2/ISS-02-DICT-SEED-GUARD: профили агентов модели (mcp-server/agent-profiles); их читает админка «Агенты/Роли». Подписи — как на проде; цвета на проде нет — нейтральный токен. Справочник расширяемый: профили заводит админ установки. Те же статьи сеет доводка схемы кода (UiDictSeed.java).",
+      "kind": "other",
+      "codes": [
+        {
+          "code": "full",
+          "labels": {
+            "ru": "full (Claude, основной)",
+            "en": "full (Claude, primary)",
+            "pl": "full (Claude, główny)"
+          },
+          "color": "var(--t3)"
+        },
+        {
+          "code": "architect",
+          "labels": {
+            "ru": "архитектор",
+            "en": "architect",
+            "pl": "architekt"
+          },
+          "color": "var(--t3)"
+        },
+        {
+          "code": "developer",
+          "labels": {
+            "ru": "разработчик",
+            "en": "developer",
+            "pl": "programista"
+          },
+          "color": "var(--t3)"
+        },
+        {
+          "code": "tester",
+          "labels": {
+            "ru": "тестировщик",
+            "en": "tester",
+            "pl": "tester"
+          },
+          "color": "var(--t3)"
+        },
+        {
+          "code": "pm",
+          "labels": {
+            "ru": "РП",
+            "en": "pm",
+            "pl": "kierownik projektu"
+          },
+          "color": "var(--t3)"
+        },
+        {
+          "code": "analyst",
+          "labels": {
+            "ru": "аналитик",
+            "en": "analyst",
+            "pl": "analityk"
+          },
+          "color": "var(--t3)"
+        },
+        {
+          "code": "marketer",
+          "labels": {
+            "ru": "маркетолог",
+            "en": "marketer",
+            "pl": "marketingowiec"
+          },
+          "color": "var(--t3)"
+        },
+        {
+          "code": "product-analyst",
+          "labels": {
+            "ru": "продуктовый аналитик",
+            "en": "product analyst",
+            "pl": "analityk produktowy"
+          },
+          "color": "var(--t3)"
+        }
+      ]
+    },
+    "palette": {
+      "_about": "SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS (решение владельца 25.11.2026, 5а): подписи шести наших палитр (kit/src/tokens/prefs.ts PALETTES) — без статьи экран настроек показывает код. Цвет — образец палитры токеном --swatch-*. Справочник расширяемый: в нём же свои стили установки own-… (SPRINT_LORE_ADMIN_POLISH/AP-APPEARANCE). Те же статьи сеет доводка схемы кода (PaletteDictSeed.java).",
+      "kind": "other",
+      "codes": [
+        {
+          "code": "amber-forest",
+          "labels": {
+            "ru": "янтарный лес",
+            "en": "amber forest",
+            "pl": "bursztynowy las"
+          },
+          "color": "var(--swatch-amber-forest)"
+        },
+        {
+          "code": "lichen",
+          "labels": {
+            "ru": "лишайник",
+            "en": "lichen",
+            "pl": "porost"
+          },
+          "color": "var(--swatch-lichen)"
+        },
+        {
+          "code": "slate",
+          "labels": {
+            "ru": "сланец",
+            "en": "slate",
+            "pl": "łupek"
+          },
+          "color": "var(--swatch-slate)"
+        },
+        {
+          "code": "juniper",
+          "labels": {
+            "ru": "можжевельник",
+            "en": "juniper",
+            "pl": "jałowiec"
+          },
+          "color": "var(--swatch-juniper)"
+        },
+        {
+          "code": "warm-dark",
+          "labels": {
+            "ru": "тёплая тёмная",
+            "en": "warm dark",
+            "pl": "ciepła ciemna"
+          },
+          "color": "var(--swatch-warm-dark)"
+        },
+        {
+          "code": "mono",
+          "labels": {
+            "ru": "приглушённая (mono)",
+            "en": "muted (mono)",
+            "pl": "stonowana (mono)"
+          },
+          "color": "var(--swatch-mono)"
+        }
+      ]
     }
   },
   "_sources": "Где в источнике лежит статус. required: пустое значение — строка диалога (правило владелицы 16.11.2026: пустого статуса нет, предложение — первый статус справочника).",

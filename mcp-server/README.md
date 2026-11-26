@@ -18,7 +18,7 @@ new/set/del/mv/get/log/search, plus `<cat>_link(rel, ...)` for edges). A represe
 | `task_new` | write | `POST /lore/task` (+ optional `phase_uid` → IN_PHASE) |
 | `task_set` | write | `POST /lore/task/edit` |
 | `sprint_phase_new` | write | `POST /lore/phase` (KnowPhase + PART_OF + hist) |
-| `task_link` | write | `POST /lore/task/phase` or `/lore/task/component` (`rel` picks the edge) |
+| `task_link` | write | `POST /lore/task/phase`, `/lore/task/component`, `/lore/task/adr`, `/lore/task/pr`, `/lore/task/file`, `/lore/task/dep` (`rel` picks the edge; `dep` = DEPENDS_ON task→task, kind/reason) |
 | `machine_acl` | read | `GET /lore/slice/machine_acl` — `machine_id` (→ `client_id` `minilore-link-<id>`) \| `client_id` \| `kc_sub` |
 | `harness_list` | read | `GET /lore/slice/dictionary?dict_type=harness` (write via `dict_set`) |
 | `machine_access_set` | write | `POST /lore/user/machine-access` — `machine_id, kc_sub, action grant\|revoke, role viewer\|actor, projects[], harnesses[], dry_run`; owner/admin only, an agent gets the server's 403 as is |
@@ -58,6 +58,23 @@ mandatory, otherwise the secret headers go to `/.well-known` and `/register`):
     "X-Lore-Mcp-Profile": "full", "X-Lore-Harness": "opencode", "X-Lore-Machine": "{env:LORE_MACHINE_ID}",
     "X-Lore-Session-Id": "opencode-{env:OPENCODE_PID}" } } } }
 ```
+
+HTTP-mode settings (issue #4): `LORE_MCP_HOST` (default `127.0.0.1`; the `lore-mcp`
+image sets `0.0.0.0`), `LORE_MCP_PORT` (default `9200`), `LORE_MCP_TOKEN` — gateway token
+for clients without Keycloak (Llama Chat and other web UIs): when set, every `/mcp` request
+must carry it as `Authorization: Bearer <token>` or `X-Lore-Mcp-Token: <token>`, else 401;
+the gateway token is never forwarded to the backend. `LORE_MCP_CORS_ORIGINS` — comma list
+of allowed browser origins (preflight 204, foreign origin 403; empty = CORS off).
+`GET /health` and `GET /mcp/health` answer 200 without auth. No token on a non-loopback
+host → loud warning at start. Writing without Keycloak over HTTP is closed by design (owner
+decision 25.11.2026): the HTTP mode does not send `X-Seer-Role`, and a 403 on a write without a
+Keycloak token comes back as «Запись по HTTP без входа Keycloak закрыта: включите вход (OIDC) или
+подключите MCP через stdio на машине агента».
+
+Every CUD tool (create/update/delete/link/status) whose backend answer says nothing changed
+(`outcome` = `noop` or `unchanged`) returns `isError: true`; the first line explains why and what
+to do, the backend JSON follows unchanged. Read tools are not affected. Each tool is marked
+read|cud in `src/tools/toolKinds.ts` (decision D-2026-LORE-MCP-LINK-NOOP-IS-ERROR, ADR-LORE-043).
 
 Full configs, the OpenCode 1.19.6 probe and error codes:
 [docs/runbooks/mcp-hosted.md](../docs/runbooks/mcp-hosted.md).

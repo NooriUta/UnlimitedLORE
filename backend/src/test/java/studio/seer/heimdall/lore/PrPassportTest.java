@@ -92,9 +92,9 @@ class PrPassportTest {
         row.put("release_uids", List.of("NooriUta/UnlimitedLORE#v1.18.0"));
         List<String> got = LoreRecordValues.rowLinks("pr", row).stream()
             .map(m -> m.get("rel") + ":" + m.get("dir") + ":" + m.get("type") + ":" + m.get("id")).toList();
-        assertEquals(List.of(
-            "CLOSED_BY:in:task:SPRINT_LORE_MODEL_DOCS_TIDY/MD-05",
-            "SHIPPED_IN:out:release:NooriUta/UnlimitedLORE#v1.18.0"), got);
+        // 23.11 (прототип md05-pr-passport, «да» владельца): задачи PR — отдельным срезом pr_tasks с названием и
+        // статусом, а не голыми кодами из строки; в строке остаются только релизы.
+        assertEquals(List.of("SHIPPED_IN:out:release:NooriUta/UnlimitedLORE#v1.18.0"), got);
         Map<String, String[]> want = Map.of(
             "tasks", new String[]{"CLOSED_BY", "in", "task"},
             "releases", new String[]{"SHIPPED_IN", "out", "release"});
@@ -105,6 +105,28 @@ class PrPassportTest {
             assertEquals(List.of(e.getValue()[0], e.getValue()[1], e.getValue()[2], "link_tab"),
                 List.of(r.rel(), r.dir(), r.targetType(), r.place()));
         }
+    }
+
+    /** Вкладка «Закрывает задачи» — срез pr_tasks: название (нет — код) и статус задачи, ребро CLOSED_BY in. */
+    @Test
+    void задачи_pr_срезом_с_названием_и_статусом() {
+        LoreRecordFrom.SliceLink sl = LoreRecordFrom.sliceLinkDef("pr", "tasks");
+        assertNotNull(sl, "вкладка задач PR — отдельным срезом");
+        assertEquals(List.of("pr_tasks", "CLOSED_BY", "in", "task"), List.of(sl.slice(), sl.rel(), sl.dir(), sl.type()));
+        LoreSlices.SliceDef d = LoreSlices.get("pr_tasks");
+        assertNotNull(d, "pr_tasks не зарегистрирован");
+        assertEquals(List.of(sl.param()), d.required());
+        assertTrue(d.baseSql().contains("out('CLOSED_BY').pr_uid CONTAINS :" + sl.param()), d.baseSql());
+        Map<String, Object> row = new HashMap<>();
+        row.put("task_uid", "SPRINT_LORE_MODEL_DOCS_TIDY/MD-05");
+        row.put("title", "Модель PR и мост Forgejo");
+        row.put("status_raw", "🔄 IN PROGRESS");
+        Map<String, Object> link = LoreRecordFrom.sliceLink(sl, row);
+        assertEquals("SPRINT_LORE_MODEL_DOCS_TIDY/MD-05", link.get("id"));
+        assertEquals("Модель PR и мост Forgejo", link.get("title"));
+        assertEquals("active", link.get("status"));
+        row.remove("title");
+        assertEquals("SPRINT_LORE_MODEL_DOCS_TIDY/MD-05", LoreRecordFrom.sliceLink(sl, row).get("title"), "нет названия — код");
     }
 
     /** С обратной стороны: у задачи и релиза связь «PR» ведёт на тип pr, у которого теперь есть паспорт. */

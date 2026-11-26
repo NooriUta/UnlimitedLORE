@@ -6,6 +6,7 @@ import { useMemo, useRef, type ComponentType } from 'react';
 import { setUrlParams, useKitShell } from '@seidr/kit';
 import { v2Auth } from '../auth/session';
 import { ActionsScreen } from './ActionsScreen';
+import { AppearanceScreen } from './AppearanceScreen';
 import { AgentsScreen } from './AgentsScreen';
 import { DictsScreen } from './DictsScreen';
 import { FlagsScreen } from './FlagsScreen';
@@ -20,6 +21,7 @@ import { TidyScreen } from './TidyScreen';
 import { WhoWhereScreen } from './WhoWhereScreen';
 import { WizardsScreen } from './WizardsScreen';
 import { ListScreen } from '../pages/ListScreen';
+import { ModelListScreen } from '../pages/ModelListScreen';
 import { AdminForbidden, WhoamiBarView, adminDenied, useWhoami } from './WhoamiBar';
 import { AdminNavProvider, type AdminNav } from './adminNav';
 import { useTableCardLabels } from './tableCards';
@@ -37,8 +39,13 @@ const SCREENS: Record<AdminSection, ComponentType> = {
   // Решение владелицы 19.11.2026: организации — список, создание и связи (проекты, продукты, люди) в паспорте.
   // Тот же экран, что в «Системе», но с правом управления; пишет только super-admin (can_create / can_edit сервера).
   'adm-orgs': () => <ListScreen screen="organizations" manage />,
+  // KREG-13 (владелец 26.11.2026: «agent_session — только в админке»; «используй модель»): экран и паспорт — из модели.
+  'adm-sessions': () => <ModelListScreen type="agent_session" manage />,
+  'adm-kinds': () => <ModelListScreen type="kind" manage />,
   'adm-roles': () => <RolesScreen />,
   'adm-dicts': () => <DictsScreen />,
+  // AP-APPEARANCE: наши стили обязательные, свои — загрузкой; умолчание и набор палитр и шрифтов установки.
+  'adm-appearance': () => <AppearanceScreen />,
   // MC-06: модель LORE — типы, поля, меню и видимость; правка версией с dry_run и откатом.
   'adm-model': () => <ModelScreen />,
   'adm-rules': () => <RulesScreen />,

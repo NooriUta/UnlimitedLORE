@@ -10,7 +10,7 @@ import type { KitConfig, KitLang } from '@seidr/kit';
 export const ADMIN_MODULE = 'admin';
 
 /** Разделы админки — они же id пунктов меню и значения sec. */
-export const ADMIN_SECTIONS = ['adm-home', 'adm-wiz', 'adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-orgs', 'adm-roles', 'adm-dicts', 'adm-model', 'adm-rules', 'adm-tidy', 'adm-migration', 'adm-flags', 'adm-mcp', 'adm-log'] as const;
+export const ADMIN_SECTIONS = ['adm-home', 'adm-wiz', 'adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-orgs', 'adm-sessions', 'adm-kinds', 'adm-roles', 'adm-dicts', 'adm-appearance', 'adm-model', 'adm-rules', 'adm-tidy', 'adm-migration', 'adm-flags', 'adm-mcp', 'adm-log'] as const;
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];
 
 export function isAdminSection(id: string | null): id is AdminSection {
@@ -26,8 +26,12 @@ const TITLE: Record<AdminSection, AppKey> = {
   'adm-who': 'admin.who.title',
   'adm-projects': 'admin.projects.title',
   'adm-orgs': 'admin.orgs.title',
+  // KREG-13: сессии агентов и реестр видов — типы модели (audience admin), экран — из контракта модели.
+  'adm-sessions': 'shell.sec.agent_session',
+  'adm-kinds': 'shell.sec.kind',
   'adm-roles': 'admin.roles.title',
   'adm-dicts': 'admin.dicts.title',
+  'adm-appearance': 'admin.appearance.title',
   'adm-model': 'admin.model.title',
   'adm-rules': 'admin.rules.title',
   'adm-tidy': 'admin.tidy.title',
@@ -45,8 +49,11 @@ const ICON: Record<AdminSection, string> = {
   'adm-who': 'person',
   'adm-projects': 'tree-branch',
   'adm-orgs': 'castle',
+  'adm-sessions': 'conversation',
+  'adm-kinds': 'card-pick',
   'adm-roles': 'key',
   'adm-dicts': 'spell-book',
+  'adm-appearance': 'palette',
   'adm-model': 'cubes',
   'adm-rules': 'scroll-quill',
   'adm-tidy': 'broom',
@@ -71,6 +78,7 @@ export function adminSectionTitle(lang: KitLang, id: AdminSection): string {
  *   • «Язык графа» — словари (S7B-31) и правила CLAUDE. Тон риска, как у «Доступа»:
  *     правка справочника меняет подписи, цвета и иконки на каждом экране, канон-словари
  *     зашиты в статусы всего корпуса — это меняет язык всей системы, а не одну запись;
+ *     там же «Оформление» (AP-APPEARANCE): умолчание и набор палитр и шрифтов меняет вид у всех на установке;
  *     там же «Привести в порядок» (PU-20): пачка правит ссылки в текстах всего корпуса, и «Перенос
  *     на новую модель» (MIG-02): правило решает судьбу значения у всех записей при переносе;
  *   • «Система» — флаги и версия, MCP, журнал действий.
@@ -82,9 +90,9 @@ export function adminMenu(lang: KitLang): KitConfig['menu'] {
     recent: false,
     groups: [
       { id: 'adm-start', title: appT(lang, 'shell.grp.admStart'), tone: 'var(--acc)', items: [item('adm-home'), item('adm-wiz')] },
-      { id: 'adm-people', title: appT(lang, 'shell.grp.admPeople'), tone: 'var(--acc)', items: [item('adm-agents'), item('adm-machines'), item('adm-who'), item('adm-projects'), item('adm-orgs')] },
+      { id: 'adm-people', title: appT(lang, 'shell.grp.admPeople'), tone: 'var(--acc)', items: [item('adm-agents'), item('adm-machines'), item('adm-who'), item('adm-projects'), item('adm-orgs'), item('adm-sessions')] },
       { id: 'adm-access', title: appT(lang, 'shell.grp.admAccess'), tone: 'var(--wrn)', items: [item('adm-roles')] },
-      { id: 'adm-lang', title: appT(lang, 'shell.grp.admLang'), tone: 'var(--wrn)', items: [item('adm-dicts'), item('adm-model'), item('adm-rules'), item('adm-tidy'), item('adm-migration')] },
+      { id: 'adm-lang', title: appT(lang, 'shell.grp.admLang'), tone: 'var(--wrn)', items: [item('adm-dicts'), item('adm-appearance'), item('adm-model'), item('adm-kinds'), item('adm-rules'), item('adm-tidy'), item('adm-migration')] },
       { id: 'adm-system', title: appT(lang, 'shell.grp.admSystem'), tone: 'var(--inf)', items: [item('adm-flags'), item('adm-mcp'), item('adm-log')] },
     ],
   };

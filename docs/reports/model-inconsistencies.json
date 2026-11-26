@@ -1,0 +1,69 @@
+{
+  "about": "SPRINT_LORE_KNOW_REGISTRY/KREG-08 — вход для KREG-02/KREG-10. Категории: факта 24.11.2026.",
+  "generatedFrom": {
+    "model": "backend\\src\\main\\resources\\lore-model\\lore-model.json",
+    "schema": "docs\\reports\\model-schema-prod-2026-11-24.json"
+  },
+  "summary": {
+    "modelVersion": 1,
+    "schema": "provided",
+    "fieldsWithoutLabelKey": 0,
+    "modelSchemaEdgesNotInModel": 0,
+    "listTypesWithIssues": 0,
+    "unclassified": 6,
+    "writtenWithoutSchema": 0
+  },
+  "fieldsWithoutLabelKey": [],
+  "modelSchemaEdgesNotInModel": [],
+  "listTypes": [
+    {
+      "type": "organization",
+      "issues": []
+    },
+    {
+      "type": "pr",
+      "issues": []
+    },
+    {
+      "type": "repository",
+      "issues": []
+    },
+    {
+      "type": "track",
+      "issues": []
+    }
+  ],
+  "unclassified": [
+    {
+      "type": "agent",
+      "vertex": "KnowActor",
+      "property": "body_md"
+    },
+    {
+      "type": "agent",
+      "vertex": "KnowActor",
+      "property": "kind"
+    },
+    {
+      "type": "agent",
+      "vertex": "KnowActor",
+      "property": "machine_id"
+    },
+    {
+      "type": "agent",
+      "vertex": "KnowActor",
+      "property": "session_id"
+    },
+    {
+      "type": "project",
+      "vertex": "KnowGitProject",
+      "property": "full_name"
+    },
+    {
+      "type": "project",
+      "vertex": "KnowGitProject",
+      "property": "repo_url"
+    }
+  ],
+  "writtenWithoutSchema": []
+}

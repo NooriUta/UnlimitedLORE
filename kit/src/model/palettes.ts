@@ -24,8 +24,22 @@ export interface ModelPaletteEntry {
   titleEn?: string;
   order?: number;
   inDictionary: boolean;
-  /** Токен образца, если тема его знает; иначе null — рисовать нечем. */
+  /** Токен образца, если тема его знает; иначе null — рисовать нечем. У своего стиля — его акцент. */
   swatch: string | null;
+  /**
+   * AP-APPEARANCE: наша палитра (в бандле, обязательная) или свой стиль установки. Старый сервер флага не шлёт —
+   * тогда всё, что пришло, считается нашим: своих стилей до него не было.
+   */
+  builtin: boolean;
+  /** Токены своего стиля (сервер их проверил); у наших палитр нет — их значения в seidr.css. */
+  tokens?: OwnStyleTokens;
+}
+
+/** Пары шрифтов бандла и набор установки (AP-APPEARANCE, 2в и 4а). */
+export interface ModelFonts {
+  entries: string[];
+  default: string | null;
+  allowed: string[];
 }
 
 export interface ModelPalettes {
@@ -35,11 +49,16 @@ export interface ModelPalettes {
   /** Умолчание сервера; null — не прислали. */
   default: string | null;
   source: string | null;
+  /** Разрешённый набор палитр установки; null — сервер набора не шлёт (всё разрешено). */
+  allowed: string[] | null;
+  /** Пары шрифтов и их набор; null — сервер их не шлёт. */
+  fonts: ModelFonts | null;
   /** Честные оговорки для экрана; пусто — сказать нечего. */
   notes: string[];
 }
 
 import { kitT, type KitLang } from '../i18n';
+import type { OwnStyleTokens } from '../tokens/ownStyle';
 
 export interface PalettesFromModelOptions {
   /** Язык оговорок (проверка 11.11.2026: были русским текстом в коде). По умолчанию ru. */
@@ -68,13 +87,13 @@ export function palettesFromModel(model: unknown, opts: PalettesFromModelOptions
   const absent = !root || !section || Object.keys(section).length === 0 || missing.includes('palettes');
   if (absent) {
     notes.push(t('kit.pal.absent'));
-    return { sent: false, entries: [], default: null, source: null, notes };
+    return { sent: false, entries: [], default: null, source: null, allowed: null, fonts: null, notes };
   }
 
   const rows = Array.isArray(section.entries) ? section.entries : null;
   if (!rows) {
     notes.push(t('kit.pal.notList'));
-    return { sent: false, entries: [], default: null, source: str(section.source) || null, notes };
+    return { sent: false, entries: [], default: null, source: str(section.source) || null, allowed: null, fonts: null, notes };
   }
 
   const noTitle: string[] = [];
@@ -87,10 +106,14 @@ export function palettesFromModel(model: unknown, opts: PalettesFromModelOptions
     // Пункт без кода в выбор не ставим: пустая кнопка хуже отсутствующей.
     if (!code) continue;
     const inDict = r.in_dictionary === true;
+    const builtin = r.builtin !== false;
+    const tokens = builtin ? undefined : tokensOf(r.tokens);
+    // свой стиль без годных токенов рисовать нечем — в выбор не ставим (сервер такие и не шлёт)
+    if (!builtin && !tokens) continue;
     const title = str(r.title);
     if (!inDict || !title) noTitle.push(code);
     const known = opts.known;
-    const hasTheme = known ? known.includes(code) : true;
+    const hasTheme = !builtin || (known ? known.includes(code) : true);
     if (!hasTheme) noTheme.push(code);
     entries.push({
       code,
@@ -98,7 +121,9 @@ export function palettesFromModel(model: unknown, opts: PalettesFromModelOptions
       ...(str(r.title_en) ? { titleEn: str(r.title_en) } : {}),
       ...(num(r.order) !== undefined ? { order: num(r.order) } : {}),
       inDictionary: inDict,
-      swatch: hasTheme ? `var(--swatch-${code})` : null,
+      swatch: tokens ? (tokens.root['--acc'] ?? null) : hasTheme ? `var(--swatch-${code})` : null,
+      builtin,
+      ...(tokens ? { tokens } : {}),
     });
   }
 
@@ -113,5 +138,34 @@ export function palettesFromModel(model: unknown, opts: PalettesFromModelOptions
     notes.push(t('kit.pal.defaultMissing', { def }));
   }
 
-  return { sent: true, entries, default: def, source: str(section.source) || null, notes };
+  return {
+    sent: true, entries, default: def, source: str(section.source) || null,
+    allowed: Array.isArray(section.allowed) ? (section.allowed as unknown[]).map(str).filter(Boolean) : null,
+    fonts: fontsOf(section.fonts),
+    notes,
+  };
+}
+
+function strMap(v: unknown): Record<string, string> | null {
+  const o = obj(v);
+  if (!o) return null;
+  const out: Record<string, string> = {};
+  for (const [k, x] of Object.entries(o)) if (typeof x === 'string') out[k] = x;
+  return out;
+}
+
+function tokensOf(v: unknown): OwnStyleTokens | undefined {
+  const o = obj(v);
+  const root = strMap(o?.root);
+  if (!root || !Object.keys(root).length) return undefined;
+  const light = strMap(o?.light);
+  return light && Object.keys(light).length ? { root, light } : { root };
+}
+
+function fontsOf(v: unknown): ModelFonts | null {
+  const o = obj(v);
+  if (!o || !Array.isArray(o.entries)) return null;
+  const list = (x: unknown) => (Array.isArray(x) ? x.map(str).filter(Boolean) : []);
+  const entries = list(o.entries);
+  return { entries, default: str(o.default) || null, allowed: Array.isArray(o.allowed) ? list(o.allowed) : entries };
 }

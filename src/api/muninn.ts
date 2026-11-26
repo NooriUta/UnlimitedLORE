@@ -47,7 +47,8 @@ async function parseError(res: Response): Promise<never> {
   }
   if (code === 'BENCH_ROOT_MISSING') throw new MuninnRootMissingError(detail);
   if (code === 'MART_DISABLED') throw new MartDisabledError();
-  if (code === 'MART_UPSTREAM') throw new MartUpstreamError(detail);
+  // ISS-03: MART_UNREACHABLE (503) — витрина задана, но не поднята; detail называет переменную.
+  if (code === 'MART_UPSTREAM' || code === 'MART_UNREACHABLE') throw new MartUpstreamError(detail);
   throw new Error(`${res.status} ${code || res.statusText}${detail ? `: ${detail}` : ''}`);
 }
 

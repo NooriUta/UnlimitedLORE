@@ -65,6 +65,8 @@ final class LoreModel {
         "decision", "decision_status",
         // MD-04: состояние гейта качества — словарь qg_status (V93); цикл правится путём записи гейта.
         "quality_gate", "qg_status",
+        // KREG-13: статус скилла — словарь skill_status (сеет skill_seed доводки схемы).
+        "skill", "skill_status",
         // Владелица 16.11.2026: у каждого типа со статусом — справочник, иначе подписи не локализуются.
         // Справочники заведены тогда же; цикла переходов у этих типов нет (статус фичи вычисляется).
         "feature", "feature_status",
@@ -153,7 +155,7 @@ final class LoreModel {
         content.put("create", create);
         // WK-05: ядро статусов, синонимы, переходы и виды работы — для паспорта и окна смены статуса.
         content.put("workflow", LoreModelWorkflow.surface(LoreModelFile.content().workflow()));
-        content.put("palettes", paletteBlock(byType.getOrDefault("palette", List.of()), warnings));
+        content.put("palettes", paletteBlock(byType.getOrDefault("palette", List.of()), byType.getOrDefault("app_setting", List.of()), warnings));
         content.put("dictionaries", dictionaries);
         // MDL-02: счётчик текстов полей — сколько полей в модели и у скольких нет определения.
         content.put("field_texts", LoreModelFile.fieldTextsCount(LoreModelFile.content()));
@@ -179,7 +181,13 @@ final class LoreModel {
      * Подписи — из справочника {@code palette}; кода без статьи не прячем: подпись = код,
      * {@code in_dictionary:false} и строка в warnings.
      */
-    private static Map<String, Object> paletteBlock(List<Map<String, Object>> dictRows, List<String> warnings) {
+    /*
+     * AP-APPEARANCE (решения 1а, 2в): наши палитры — все и всегда (builtin, обязательные); за ними — включённые свои
+     * стили установки (код own-…, токены из tokens_json); default и allowed — набор установки (app_setting appearance.*),
+     * fonts — пары шрифтов бандла с тем же набором. Выключенный или битый свой стиль в выбор не попадает.
+     */
+    private static Map<String, Object> paletteBlock(List<Map<String, Object>> dictRows, List<Map<String, Object>> settings,
+                                                    List<String> warnings) {
         LoreMePrefs.SettingSpec spec = LoreMePrefs.SETTINGS.get("palette");
         Map<String, Map<String, Object>> byCode = new LinkedHashMap<>();
         for (Map<String, Object> r : dictRows) byCode.putIfAbsent(str(r.get("code")), r);
@@ -199,10 +207,41 @@ final class LoreModel {
                 warnings.add("palette: палитра «" + code + "» без статьи в справочнике — подпись = код");
             order++;
         }
+        entries.forEach(e -> e.put("builtin", true));
+        List<String> own = new ArrayList<>();
+        for (Map<String, Object> d : dictRows) {
+            String code = str(d.get("code"));
+            if (!LoreAppearance.isOwn(code) || !active(d)) continue;
+            Map<String, Map<String, String>> tokens = LoreAppearance.parseStored(d.get("tokens_json"));
+            if (tokens.isEmpty()) {
+                warnings.add("palette: свой стиль «" + code + "» без годных токенов — в выбор не попал");
+                continue;
+            }
+            Map<String, Object> e = new LinkedHashMap<>();
+            e.put("code", code);
+            String title = str(d.get("label_ru"));
+            e.put("title", title.isEmpty() ? code : title);
+            e.put("title_en", nullIfEmpty(d.get("label_en")));
+            e.put("order", d.get("sort_order") != null ? d.get("sort_order") : (order + 1) * 10);
+            e.put("in_dictionary", true);
+            e.put("builtin", false);
+            e.put("tokens", tokens);
+            entries.add(e);
+            own.add(code);
+            order++;
+        }
+        LoreAppearance.Install inst = LoreAppearance.install(settings, own);
+        inst.notes().forEach(n -> warnings.add("appearance: " + n));
         Map<String, Object> block = new LinkedHashMap<>();
         block.put("source", "settings:palette");
-        block.put("default", spec.def());
+        block.put("default", inst.paletteDefault());
+        block.put("allowed", inst.palettesAllowed());
         block.put("entries", entries);
+        Map<String, Object> fonts = new LinkedHashMap<>();
+        fonts.put("entries", LoreAppearance.FONT_PAIRS);
+        fonts.put("default", inst.fontDefault());
+        fonts.put("allowed", inst.fontsAllowed());
+        block.put("fonts", fonts);
         return block;
     }
 

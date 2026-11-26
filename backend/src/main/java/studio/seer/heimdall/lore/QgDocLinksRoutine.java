@@ -84,12 +84,12 @@ public class QgDocLinksRoutine implements QgRoutine {
             String key = "doc_broken_refs_" + f.key().replaceFirst("^Know", "").toLowerCase(Locale.ROOT);
             if (!(f.value() instanceof Number n)) {
                 out.add(new LoreQgResource.QGMetricEntry(key, null, "count", 0.0, "NOT_MEASURED",
-                    f.source(), "source_unreachable", null));
+                    f.source(), "source_unreachable", null, null));
                 continue;
             }
             double v = n.doubleValue();
             out.add(new LoreQgResource.QGMetricEntry(key, v, "count", 0.0, v == 0 ? "PASS" : "WARN",
-                f.source(), null, null));
+                f.source(), null, null, null));
         }
         return out;
     }

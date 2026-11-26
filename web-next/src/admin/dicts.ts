@@ -32,6 +32,8 @@ export interface DictRow {
    * у продукта tech, service или оба; пусто — не задан. Прежняя строка — набор из одного.
    */
   kind: string[];
+  /** AP-APPEARANCE (1а): токены своего стиля — только у статьи palette с кодом own-…; у прочих поля нет. */
+  tokens_json?: string;
 }
 
 /** То, что правится в форме: код (только у нового), метки, вид, порядок, активность. */
@@ -115,6 +117,7 @@ export function parseDictRows(rows: readonly unknown[]): DictRow[] {
     is_active: r.is_active !== false,
     is_extensible: r.is_extensible === true,
     kind: kindList(r.kind),
+    ...(typeof r.tokens_json === 'string' && r.tokens_json !== '' ? { tokens_json: r.tokens_json } : {}),
   }));
 }
 

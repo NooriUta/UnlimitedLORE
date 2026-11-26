@@ -238,7 +238,8 @@ public class AidaLoreResource extends LoreResourceBase {
         List<SliceInfo> infos = LoreSlices.ids().stream()
             .map(id -> {
                 LoreSlices.SliceDef def = LoreSlices.get(id);
-                return new SliceInfo(id, def.required(), List.copyOf(def.optionalFilters().keySet()));
+                // GC-05: у проектного среза project объявлен всегда — MCP выводит из реестра подстановку проекта.
+                return new SliceInfo(id, def.required(), SliceProjectParam.catalogOptional(id));
             })
             .toList();
         return noStore(Response.ok(Map.of("slices", infos)));
@@ -1067,13 +1068,23 @@ public class AidaLoreResource extends LoreResourceBase {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
         ModelSchemaAdapter.canonicalProjects(given); // D-2026-MIG-PROJECTS-REGROUP: старое имя проекта → его группа
+        // GC-05: одно имя параметра проекта (project) у всех проектных срезов; scope_projects — с _warning.
+        final String projectWarning = SliceProjectParam.normalize(id, given, projectKeys());
 
         LoreSlices.Composed composed;
         final SlicePage page;
+        final List<Object> where;
         java.util.Set<String> rowScope;
         java.util.Set<String> callerScope;
         SliceProjectNarrowing.Result narrowing;
         try {
+            // KREG-12 шаг 2 (ADR-LORE-061): where — JSON-список условий над строками среза; вынимается до compose.
+            try {
+                where = SliceQuery.parseWhere(given.remove("where"));
+            } catch (SliceQuery.Refusal r) {
+                return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new LoreError(r.code(), r.getMessage()))));
+            }
             // SE-01: limit/offset — страница для любого слайса; вынимаются до compose.
             page = SlicePage.extract(given);
             callerScope = allowedProjectsOrNull(role);
@@ -1114,6 +1125,7 @@ public class AidaLoreResource extends LoreResourceBase {
             Map<String, Object> empty = new LinkedHashMap<>();
             empty.put("rows", List.of());
             empty.put(SliceProjectNarrowing.PARAM, narrowing.meta());
+            if (projectWarning != null) empty.put("_warning", projectWarning);
             return Uni.createFrom().item(noStore(Response.ok(empty)));
         }
         final Map<String, Object> narrowMarker = narrowing.meta();
@@ -1145,6 +1157,8 @@ public class AidaLoreResource extends LoreResourceBase {
             new java.util.concurrent.atomic.AtomicReference<>();
         // S7B-ACL-3: machine_acl — проекты, harness и can_write машины. Вызывающий снимается здесь,
         // до асинхронной цепочки (личность — request-scoped); не прочитался — can_write: null.
+        // AP-PEOPLE-PAGE (1б): служебный читатель miniLORE опознаётся по токену до асинхронной цепочки (личность — request-scoped).
+        final boolean svcReader = LoreFieldAudience.serviceReader(callerClientId(), readAllClients);
         final boolean machineAcl = MACHINE_ACL.equals(id);
         final MachineAccess.Caller aclCaller = machineAcl ? machineAclCaller(role) : null;
         final java.util.concurrent.atomic.AtomicReference<Map<String, List<String>>> aclOwnerProjects =
@@ -1307,7 +1321,31 @@ public class AidaLoreResource extends LoreResourceBase {
                 }
                 if (scopeMarker != null) out.put("scope", scopeMarker);
                 if (narrowMarker != null) out.put(SliceProjectNarrowing.PARAM, narrowMarker);
+                if (projectWarning != null) out.put("_warning", projectWarning);
                 if (outside != null) out.put("outside_scope", outside);
+                // AP-PEOPLE-PAGE: колонки полей уровня admin (учётка агента) не-админу не уходят — до страницы и fields.
+                out.put("rows", LoreFieldAudience.stripRows(id, castRows(out.get("rows")), role, svcReader));
+                // KREG-12 шаг 2: отбор where — после всех обогащений и прав, до страницы (total — после отбора).
+                if (where != null) {
+                    List<Map<String, Object>> rows = castRows(out.get("rows"));
+                    java.util.Set<String> fields = new java.util.TreeSet<>(KnowRegistry.selectColumns(LoreSlices.get(id).baseSql()));
+                    for (Map<String, Object> r : rows) fields.addAll(r.keySet());
+                    try {
+                        SliceQuery.Filtered f = SliceQuery.filter(rows, where, fields);
+                        out.put("rows", f.rows());
+                        Map<String, Object> wm = new LinkedHashMap<>();
+                        wm.put("applied", true);
+                        wm.put("matched", f.matched());
+                        wm.put("complete", f.complete());
+                        out.put("where", wm);
+                    } catch (SliceQuery.Refusal r) {
+                        Map<String, Object> err = new LinkedHashMap<>();
+                        err.put("error", r.code());
+                        err.put("detail", r.getMessage());
+                        if (!r.allowed().isEmpty()) err.put("allowed", r.allowed());
+                        return noStore(Response.status(Response.Status.BAD_REQUEST).entity(err));
+                    }
+                }
                 try {
                     SlicePage.apply(out, page);
                 } catch (IllegalArgumentException e) {
@@ -1356,6 +1394,7 @@ public class AidaLoreResource extends LoreResourceBase {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
         ModelSchemaAdapter.canonicalProjects(given); // D-2026-MIG-PROJECTS-REGROUP: старое имя проекта → его группа
+        final String countProjectWarning = SliceProjectParam.normalize(id, given, projectKeys()); // GC-05
         LoreSlices.Composed composed;
         java.util.Set<String> rowScope;
         java.util.Set<String> callerScope;
@@ -1401,6 +1440,7 @@ public class AidaLoreResource extends LoreResourceBase {
                         .entity(new LoreError("BAD_PARAMS", e.getMessage())));
                 }
                 if (countNarrowMarker != null) counted.put(SliceProjectNarrowing.PARAM, countNarrowMarker);
+                if (countProjectWarning != null) counted.put("_warning", countProjectWarning);
                 return noStore(Response.ok(counted));
             })
             .onFailure().recoverWithItem(ex -> {
@@ -1440,6 +1480,7 @@ public class AidaLoreResource extends LoreResourceBase {
             if (v != null && !v.isEmpty()) given.put(k, v.get(0));
         });
         ModelSchemaAdapter.canonicalProjects(given); // D-2026-MIG-PROJECTS-REGROUP: старое имя проекта → его группа
+        final String facetsProjectWarning = SliceProjectParam.normalize(id, given, projectKeys()); // GC-05
         final List<String> axes;
         final String groupBy;
         final Map<String, String> filters;
@@ -1475,6 +1516,15 @@ public class AidaLoreResource extends LoreResourceBase {
             return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
                 .entity(new LoreError("SCOPE_EMPTY", "проектный скоуп: у вызывающего нет ни одного разрешённого "
                     + "проекта — фасеты среза " + id + " не отдаются нулями"))));
+        }
+        // AP-PEOPLE-PAGE: ось или фильтр по полю уровня admin выдали бы его значения счётом — отказ словами.
+        java.util.List<String> asked = new ArrayList<>(axes);
+        asked.addAll(filters.keySet());
+        if (groupBy != null) asked.add(groupBy);
+        String closedField = LoreFieldAudience.closedParam(id, asked, role);
+        if (closedField != null) {
+            return Uni.createFrom().item(noStore(Response.status(Response.Status.FORBIDDEN)
+                .entity(new LoreError("FIELD_ADMIN_ONLY", "поле " + closedField + " среза " + id + " — только админке: фасеты и фильтры по нему не отдаются"))));
         }
         // Срезы, подмешивающие записи без проекта вторым запросом (ScopeExemptRows), здесь
         // этого не делают — число разошлось бы со списком. Честный отказ вместо тихой недостачи.
@@ -1538,6 +1588,7 @@ public class AidaLoreResource extends LoreResourceBase {
                     }
                 }
                 if (narrowMarker != null) out.put(SliceProjectNarrowing.PARAM, narrowMarker);
+                if (facetsProjectWarning != null) out.put("_warning", facetsProjectWarning);
                 return noStore(Response.ok(out));
             })
             .onFailure().recoverWithItem(ex -> {
@@ -1714,6 +1765,27 @@ public class AidaLoreResource extends LoreResourceBase {
             "SELECT code, out('BELONGS_TO_PROJECT').slug AS projects, out('PARENT_PRODUCT').code AS parent_code "
                 + "FROM KnowDictEntry WHERE dict_type = 'product'", Map.of());
         return SliceProjectNarrowing.expandProducts(given, productProjects(rows), productParents(rows));
+    }
+
+    /** GC-05: ключи проекта (короткий код, aliases, slug) → slug базы; кэш на минуту — проектов единицы. */
+    private volatile Map<String, String> projectKeysCache;
+    private volatile long projectKeysAt;
+
+    Map<String, String> projectKeys() {
+        long now = System.currentTimeMillis();
+        Map<String, String> cached = projectKeysCache;
+        if (cached != null && now - projectKeysAt < 60_000) return cached;
+        try {
+            Map<String, String> keys = SliceProjectParam.keys(ingestService.queryPublic(
+                "SELECT slug, short_code, aliases FROM KnowGitProject", Map.of()));
+            projectKeysCache = keys;
+            projectKeysAt = now;
+            return keys;
+        } catch (RuntimeException e) {
+            // Не прочитали — значение идёт как есть (slug по-прежнему работает), но не молча.
+            LOG.warnf("[LORE] ключи проектов не прочитаны: %s — короткий код проекта не переводится", e.getMessage());
+            return cached == null ? Map.of() : cached;
+        }
     }
 
     /** Продукт → его проекты (BELONGS_TO_PROJECT): один запрос на вызов с выбором продукта. */

@@ -46,7 +46,33 @@ class ModelDescribesRecordPropsTest {
                 e.getValue().get("fields").fieldNames().forEachRemaining(s::add);
             });
         }
+        // После 1.18 схема прода растёт доводкой (LoreSchemaAdditive, ADR-LORE-062): свойство, которое она создаёт,
+        // объявлено так же законно, как поле установщика — иначе каждое поле доводки краснит этот сторож.
+        for (Map.Entry<String, Set<String>> e : additiveProps().entrySet())
+            out.computeIfAbsent(e.getKey(), k -> new TreeSet<>()).addAll(e.getValue());
         return out;
+    }
+
+    private static final java.util.regex.Pattern ADDITIVE_PROPERTY =
+        java.util.regex.Pattern.compile("(?i)^\\s*CREATE\\s+PROPERTY\\s+(\\w+)\\.(\\w+)");
+
+    /** Свойства, которые создаёт доводка схемы кода: тип → поля. */
+    static Map<String, Set<String>> additiveProps() {
+        Map<String, Set<String>> out = new TreeMap<>();
+        for (LoreSchemaAdditive.Change c : LoreSchemaAdditive.CHANGES)
+            for (String q : c.ddl()) {
+                java.util.regex.Matcher mm = ADDITIVE_PROPERTY.matcher(q);
+                if (mm.find()) out.computeIfAbsent(mm.group(1), k -> new TreeSet<>()).add(mm.group(2));
+            }
+        return out;
+    }
+
+    @Test
+    void additivePropsAreDeclared() throws Exception {
+        assertTrue(additiveProps().getOrDefault("ClRoutineMetric", Set.of()).contains("basis"),
+            "доводка QG-07 создаёт ClRoutineMetric.basis — разбор DDL доводки его не нашёл");
+        assertTrue(installerProps().getOrDefault("ClRoutineMetric", Set.of()).contains("basis"),
+            "поле доводки не попало в объявленные");
     }
 
     static Map<String, Set<String>> unmodeled() throws Exception {
@@ -84,7 +110,6 @@ class ModelDescribesRecordPropsTest {
         Map.entry("pr_ship_lag: KnowPR.git_project", "1.18: проект PR — ребро; поле пишет мерж (LoreForgejoResource), установщик его не заводит"),
         Map.entry("files_of_task: KnowFile.project", "файл — служебный тип без описания в модели; проект строкой — до решения о модели файлов"),
         Map.entry("project_files: KnowFile.project", "файл — служебный тип без описания в модели; проект строкой — до решения о модели файлов"),
-        Map.entry("agent_sessions: KnowAgentSession.project", "сессия: проект строкой становится связью при переносе (session-model.mjs); поле — для старой схемы"),
         Map.entry("project_role_events: KnowProjectRoleEvent.project", "журнал событий роли — проект строкой, тип вне модели"),
         Map.entry("agent_owners: KnowActor.activity_window_h", "окно активности машины: свойство заводит сервер (MachineActivity:44), установщик — нет"),
         Map.entry("agent_owners: KnowActor.activity_window_harness", "окно активности по harness: свойство заводит сервер (MachineActivity), установщик — нет"),

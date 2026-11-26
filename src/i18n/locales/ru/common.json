@@ -916,12 +916,33 @@
       "diag2a": "403 на write",
       "diag2b": "нет/неверный X-Seer-Role",
       "diag2c": "env LORE_SEER_ROLE=admin",
-      "diag3a": "MART_UPSTREAM / 500",
-      "diag3b": "ArcadeDB недоступен или неверный пароль",
-      "diag3c": "проверить :2480 и ARCADEDB_ROOT_PASSWORD",
+      "diag3a": "MART_UPSTREAM / 502",
+      "diag3b": "ArcadeDB витрины bench ответила ошибкой (неверный пароль, нет базы RAGVSDL)",
+      "diag3c": "проверить ARCADEDB_ROOT_PASSWORD и базу RAGVSDL",
       "diag4a": "Сервер не стартует под клиентом",
       "diag4b": "не собран dist/",
       "diag4c": "npm run build в mcp-server",
+      "diag5a": "MART_UNREACHABLE / 503 (bench_query_slice)",
+      "diag5b": "витрина bench включена, но недоступна — сервис не поднят или адрес не тот",
+      "diag5c": "проверить MART_ARCADE_URL; bench не нужен — BENCH_MART_ENABLED=false",
+      "diag6a": "S3_UNREACHABLE / 503 (bragi_asset_up, asset_up)",
+      "diag6b": "S3 задан, но недоступен — сервис не поднят или адрес не виден из контейнера бэкенда",
+      "diag6c": "проверить S3_ENDPOINT (не localhost), S3_ACCESS_KEY, S3_SECRET_KEY; без файлов — оставить S3_ENDPOINT пустым",
+      "diag7a": "S3_UPSTREAM / 502",
+      "diag7b": "S3 ответил ошибкой (ключи, права, бакет)",
+      "diag7c": "текст ошибки S3 — в detail ответа",
+      "diag5a": "401 на /mcp (HTTP)",
+      "diag5b": "нет или неверный LORE_MCP_TOKEN",
+      "diag5c": "Authorization: Bearer <LORE_MCP_TOKEN> или X-Lore-Mcp-Token",
+      "diag6a": "403 из браузера (HTTP)",
+      "diag6b": "origin не в LORE_MCP_CORS_ORIGINS",
+      "diag6c": "добавить origin клиента в LORE_MCP_CORS_ORIGINS",
+      "diag7a": "Запись вернула ошибку «НЕ СДЕЛАНО» / «ИЗМЕНЕНИЙ НЕТ»",
+      "diag7b": "бэкенд ответил outcome=noop (цели нет, отказ) или unchanged (уже такое значение, связь уже есть): любой CUD-инструмент отдаёт это ошибкой (D-2026-LORE-MCP-LINK-NOOP-IS-ERROR)",
+      "diag7c": "первая строка — причина и что сделать (например project_new); JSON бэкенда ниже",
+      "diag8a": "Запись по /mcp (HTTP): «без входа Keycloak закрыта»",
+      "diag8b": "HTTP-режим не передаёт роль; без токена Keycloak запись запрещена",
+      "diag8c": "включить вход (OIDC) или подключить MCP через stdio на машине агента",
       "footRunbook": "Полный runbook:",
       "footCode": "код:",
       "hintRequired": "обяз: {{list}}",
@@ -1254,7 +1275,8 @@
     },
     "qgDetail": {
       "sparkline": {
-        "noData": "нет данных"
+        "noData": "нет данных",
+        "rebased": "ряд с пересчёта базы"
       },
       "loading": "Загрузка…",
       "notFound": "QG «{{qgId}}» не найден.",
@@ -1291,7 +1313,9 @@
       },
       "changes": {
         "title": "Изменилось с прошлого прогона",
-        "empty": "Без изменений статусов."
+        "empty": "Без изменений статусов.",
+        "rebased": "база пересчитана",
+        "rebasedTitle": "Знаменатель метрики сменился ({{prev}} → {{cur}}): значение с прошлым прогоном не сравнивается"
       },
       "invariants": {
         "title": "Инварианты",

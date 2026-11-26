@@ -17,10 +17,10 @@
 // (machines.ts probeWrite). Остальным — только чтение с причиной словами;
 // «не смогли проверить» — отдельно от «нельзя» и от «никого нет».
 // Применение — одна серверная пачка на машину (batch_id), отмена — undo_of.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   BatchUndo, DiffPreview, Drawer, EmptyState, FieldEditor, Forbidden, ListView, LoadError, Matrix, Pill,
-  ScopePicker, Segmented, Skeleton, Tabs, useKitLang, useLoadState, useUrlParam,
+  ScopePicker, Segmented, Skeleton, Tabs, useKitLang, useLoadState, useUrlParam, type LoadResult,
   type BatchItemFail, type BatchResult, type DiffRow, type KitConfig, type KitLang, type ListBulkAction, type ListRowAction,
   type MatrixChange, type ScopeOption,
 } from '@seidr/kit';
@@ -37,6 +37,8 @@ import {
 } from './machines';
 import { HarnessMark, harnessValueIcon } from './HarnessMark';
 import { ACTIVITY_CHOICES, ACTIVITY_DEFAULT_H, type MachineActivity } from './activity';
+import { fetchGraphMachines, MACHINE_OPEN_PARAM, withoutGateway, type GraphMachine } from './machineGraph';
+import { MachinePassportPage, fmtUtc } from './MachinePassportPage';
 import './Admin.css';
 
 type T = ReturnType<typeof useAppT>;
@@ -130,28 +132,60 @@ export interface MachinesScreenProps {
   fetchImpl?: typeof fetch;
   /** kc_sub смотрящего: владелец машины пишет без пробы. */
   meSub?: string | null;
+  /** AP-MACHINE-PASSPORT: запись модели в паспорте машины; по умолчанию — общий паспорт. Подмена — в тестах. */
+  machineRecord?: (id: string) => ReactNode;
 }
 
-export function MachinesScreen({ fetchImpl, meSub = null }: MachinesScreenProps) {
+export function MachinesScreen({ fetchImpl, meSub = null, machineRecord }: MachinesScreenProps) {
   const t = useAppT();
   const lang = useKitLang();
+  const nav = useAdminNav();
   const [tab, setTab] = useUrlParam('adm-macl-tab');
+  // AP-MACHINE-PASSPORT (решение 1): паспорт машины — свой адрес в админке; допуски (Drawer) — прежний параметр.
+  const [openPassport, setOpenPassport] = useUrlParam(MACHINE_OPEN_PARAM);
+  const [openGrants, setOpenGrants] = useUrlParam('adm-macl-m');
   const res = useLoadState<MachinesData>(signal => fetchMachinesData(signal, fetchImpl, lang), [fetchImpl, lang], { rows: d => d.machines });
+  // Решение 3б: машины графа — отдельный запрос; сбой не роняет экран допусков, а говорится словами.
+  const graph = useLoadState<GraphMachine[]>(signal => fetchGraphMachines(signal, fetchImpl), [fetchImpl], { rows: d => d });
   const data = res.data;
   const current = tab === 'matrix' ? 'matrix' : 'machines';
+  // 5в: один мастер, два входа — здесь и в «Мастерах».
+  const newMachine = (id?: string) => nav.go('wiz', id ? { 'adm-wiz': 'newmachine', 'adm-nm-id': id } : { 'adm-wiz': 'newmachine' });
+  const grantsMachine = data && openGrants ? data.machines.find(m => m.machine_id === openGrants) ?? null : null;
+  const grantsDrawer = data && openGrants ? (
+    <Drawer open onClose={() => setOpenGrants(null)} title={openGrants}>
+      {grantsMachine
+        ? <MachinePassport machine={grantsMachine} data={data} meSub={meSub} fetchImpl={fetchImpl} onChanged={res.reload} />
+        : <EmptyState title={t('admin.macl.notFound', { id: openGrants })} hint={t('admin.macl.notFoundHint')} />}
+    </Drawer>
+  ) : null;
 
   let content;
   if (res.state === 'loading' && !data) content = <Skeleton lines={6} label={t('admin.macl.loading')} />;
   else if (res.state === 'forbidden') content = <div data-testid="adm-macl-forbidden"><Forbidden reason={reasonOf(res.error)} /></div>;
   else if (res.state === 'error' || !data) content = <LoadError error={res.error} onRetry={res.reload} />;
-  else if (data.machines.length === 0) content = <div data-testid="adm-macl-empty"><EmptyState title={t('admin.macl.empty')} hint={t('admin.macl.emptyHint')} /></div>;
+  else if (openPassport) {
+    content = (
+      <MachinePassportPage id={openPassport} acl={data.machines.find(m => m.machine_id === openPassport) ?? null}
+        fetchImpl={fetchImpl} record={machineRecord} onBack={() => setOpenPassport(null)}
+        onGrants={() => setOpenGrants(openPassport)}
+        onMatrix={() => { setOpenPassport(null); setTab('matrix'); }}
+        onEnroll={id => newMachine(id)} />
+    );
+  } else if (data.machines.length === 0) content = (
+    <>
+      <div data-testid="adm-macl-empty"><EmptyState title={t('admin.macl.empty')} hint={t('admin.macl.emptyHint')} /></div>
+      <NoGatewayBlock graph={graph} acl={data.machines} onOpen={setOpenPassport} onEnroll={newMachine} />
+    </>
+  );
   else {
     const grants = data.machines.reduce((n, m) => n + m.grants.length, 0);
     content = (
       <>
         <p className="adm-sub">
           <Pill>{t('admin.macl.stat.machines', { n: data.machines.length })}</Pill>{' '}
-          <Pill>{t('admin.macl.stat.grants', { n: grants })}</Pill>
+          <Pill>{t('admin.macl.stat.grants', { n: grants })}</Pill>{' '}
+          {graph.data && <Pill>{t('admin.macl.stat.noGateway', { n: withoutGateway(graph.data, data.machines).length })}</Pill>}
         </p>
         {data.truncated && <p className="adm-note" data-tone="wrn" role="status">{t('admin.macl.truncated')}</p>}
         {data.participationError && (
@@ -162,7 +196,12 @@ export function MachinesScreen({ fetchImpl, meSub = null }: MachinesScreenProps)
         <Tabs label={t('admin.macl.tabs')} value={current} onChange={id => setTab(id === 'machines' ? null : id)}
           items={[{ id: 'machines', label: t('admin.macl.tab.machines') }, { id: 'matrix', label: t('admin.macl.tab.matrix') }]}>
           {current === 'machines'
-            ? <MachinesList data={data} meSub={meSub} fetchImpl={fetchImpl} onChanged={res.reload} />
+            ? (
+              <>
+                <MachinesList data={data} onOpen={setOpenPassport} />
+                <NoGatewayBlock graph={graph} acl={data.machines} onOpen={setOpenPassport} onEnroll={newMachine} />
+              </>
+            )
             : <ProjectMatrixView data={data} fetchImpl={fetchImpl} onChanged={res.reload} />}
         </Tabs>
       </>
@@ -171,37 +210,78 @@ export function MachinesScreen({ fetchImpl, meSub = null }: MachinesScreenProps)
 
   return (
     <section className="adm" aria-labelledby="adm-macl-h" data-testid="adm-macl">
-      <h2 id="adm-macl-h" className="adm-h">{t('admin.macl.title')}</h2>
+      <div className="adm-field--btns">
+        <h2 id="adm-macl-h" className="adm-h">{t('admin.macl.title')}</h2>
+        <button type="button" className="adm-btn" data-testid="adm-macl-new" onClick={() => newMachine()}>{t('admin.macl.new')}</button>
+      </div>
       <p className="adm-lead">{t('admin.macl.lead')}</p>
       {content}
+      {grantsDrawer}
     </section>
   );
 }
 
 // ── вкладка «Машины» ──────────────────────────────────────────────────────
 
-function MachinesList({ data, meSub, fetchImpl, onChanged }: { data: MachinesData; meSub: string | null; fetchImpl?: typeof fetch; onChanged: () => void }) {
-  const t = useAppT();
+// AP-MACHINE-PASSPORT: строка открывает паспорт машины (прототип, экран А); допуски — Drawer по adm-macl-m
+// (из паспорта «Открыть допуски машины», из паспорта человека — блок «Машины»), он рисуется на уровне экрана.
+function MachinesList({ data, onOpen }: { data: MachinesData; onOpen: (id: string) => void }) {
   const lang = useKitLang();
-  const [open, setOpen] = useUrlParam('adm-macl-m');
   const config = useMemo(() => machinesConfig(lang), [lang]);
   const labelled = useMemo(() => data.machines.map(m => ({ ...m, harness: m.harness.map(h => data.harnessLabels[h] ?? h) })), [data]);
   const records = useMemo(() => machineRecords(labelled), [labelled]);
-  const machine = open ? data.machines.find(m => m.machine_id === open) ?? null : null;
   return (
-    <>
-      <ListView config={config} data={kitData(records, data.truncated)} initial={{ group: 'owner' }}
-        valueIcon={harnessValueIcon(data.harnessLabels, data.harnessLogos)}
-        onOpen={id => setOpen(id)} />
+    <ListView config={config} data={kitData(records, data.truncated)} initial={{ group: 'owner' }}
+      valueIcon={harnessValueIcon(data.harnessLabels, data.harnessLogos)}
+      onOpen={id => onOpen(id)} />
+  );
+}
 
-      {open && (
-        <Drawer open onClose={() => setOpen(null)} title={open}>
-          {machine
-            ? <MachinePassport machine={machine} data={data} meSub={meSub} fetchImpl={fetchImpl} onChanged={onChanged} />
-            : <EmptyState title={t('admin.macl.notFound', { id: open })} hint={t('admin.macl.notFoundHint')} />}
-        </Drawer>
-      )}
-    </>
+/**
+ * Решение владельца 3б: машины графа без шлюза — появились сами по записи агента, в machine_acl их нет.
+ * Своя группа под списком и «Завести шлюз» (= мастер «Новая машина» с этим именем). Сбой чтения — словами:
+ * «не смогли проверить» ≠ «без шлюза машин нет».
+ */
+function NoGatewayBlock({ graph, acl, onOpen, onEnroll }: {
+  graph: LoadResult<GraphMachine[]>; acl: readonly Machine[];
+  onOpen: (id: string) => void; onEnroll: (id: string) => void;
+}) {
+  const t = useAppT();
+  if (graph.data === undefined) {
+    if (graph.state === 'loading') return null;
+    return (
+      <p className="adm-note" data-tone="wrn" role="status" data-testid="adm-macl-nogw-error">
+        {t('admin.macl.nogw.error', { reason: reasonOf(graph.error) })}{' '}
+        <button type="button" className="adm-btn" onClick={graph.reload}>{t('admin.macl.retry')}</button>
+      </p>
+    );
+  }
+  const rows = withoutGateway(graph.data, acl);
+  if (!rows.length) return null;
+  return (
+    <section className="adm-field" data-testid="adm-macl-nogw" aria-labelledby="adm-macl-nogw-h">
+      <h3 id="adm-macl-nogw-h" className="adm-h">{t('admin.macl.nogw.title', { n: rows.length })}</h3>
+      <p className="adm-hint">{t('admin.macl.nogw.hint')}</p>
+      <div className="adm-tablewrap">
+        <table className="adm-table">
+          <tbody>
+            {rows.map(m => (
+              <tr key={m.machine_id} data-testid={`adm-macl-nogw-${m.machine_id}`}>
+                <td><button type="button" className="adm-btn" onClick={() => onOpen(m.machine_id)}>{m.machine_id}</button></td>
+                <td><span className="adm-missing">{t('admin.macl.nogw.none')}</span></td>
+                <td className="adm-dim">{t('admin.macl.nogw.agents', { n: m.agent_ids.length })}</td>
+                <td className="adm-dim">{fmtUtc(m.last_seen_at) ?? t('admin.mpass.never')}</td>
+                <td>
+                  <button type="button" className="adm-btn" data-testid={`adm-macl-nogw-enroll-${m.machine_id}`} onClick={() => onEnroll(m.machine_id)}>
+                    {t('admin.macl.nogw.enroll')}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 

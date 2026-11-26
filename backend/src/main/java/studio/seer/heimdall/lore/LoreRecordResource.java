@@ -53,6 +53,7 @@ public class LoreRecordResource extends LoreResourceBase {
     @Inject LoreSpecResource specResource;
     @Inject LoreDocResource docResource;
     @Inject LoreOrganizationResource organizationResource;
+    @Inject LoreProductResource productResource; // AP-PASSPORT-EDIT: ценность фичи и профиль клиента
     @Inject LoreStatusResource statusResource;   // MDL-13: трек спринта — тот же путь, что sprint/plan
 
     /** Главный срез записи типа и имя его параметра. */
@@ -117,6 +118,8 @@ public class LoreRecordResource extends LoreResourceBase {
             // и агент (actor_id, как у вкладки «Агенты») — паспорта, на которые проект уже ссылался.
             case "user" -> new Source("user_by_id", "kc_sub", false);
             case "agent" -> new Source("agent_by_id", "id", false);
+            // SPRINT_LORE_ADMIN_POLISH/AP-MACHINE-PASSPORT: машина — строка KnowMachine по machine_id; шлюз и владелец — у шлюза.
+            case "machine" -> new Source("machine_by_id", "id", false);
             // SPRINT_LORE_MODEL_DOCS_TIDY/MD-04: роль продукта и профиль клиента (были только списки),
             // ранбук (не было ни раздела, ни паспорта). Ключи — те же, что у их списков и связей.
             case "actor" -> new Source("actor_by_id", "id", false);
@@ -131,6 +134,11 @@ public class LoreRecordResource extends LoreResourceBase {
             case "organization" -> new Source("org_by_id", "id", false);
             // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: паспорт PR — строка KnowPR по pr_uid «проект#номер».
             case "pr" -> new Source("pr_by_id", "id", false);
+            // KREG-13: типы выпуска 1.19.1 — скилл, супертег, вид реестра, сессия агента.
+            case "skill" -> new Source("skill_by_id", "id", false);
+            case "tag" -> new Source("tag_by_id", "id", false);
+            case "kind" -> new Source("kind_by_id", "id", false);
+            case "agent_session" -> new Source("agent_session_by_id", "id", false);
             default -> null;
         };
     }
@@ -371,6 +379,8 @@ public class LoreRecordResource extends LoreResourceBase {
         @SuppressWarnings("unchecked") Map<String, Object> meta = (Map<String, Object>) out.get("meta");
         @SuppressWarnings("unchecked") Map<String, Object> sources = (Map<String, Object>) meta.get("sources");
         sources.put("record", src.slice());
+        // AP-PEOPLE-PAGE: поле уровня admin (учётка агента) не-админу не отдаётся — сервером, а не прятанием в UI.
+        LoreFieldAudience.stripRecord(type, out, role);
         return noStore(Response.ok(out));
     }
 
@@ -699,6 +709,11 @@ public class LoreRecordResource extends LoreResourceBase {
                 a, null, null, null, "remove".equals(action) ? "" : b), role).await().indefinitely();
             case ORG_LINK -> organizationResource.linkOrganization(
                 new LoreOrganizationResource.OrgLinkRequest(a, r.rel(), b, action), role);
+            // a — фича (у боли/выгоды/работы reversed), b — цель; a — источник профиля (боль/выгода/работа).
+            case FEATURE_VALUE -> productResource.linkFeature(new LoreProductResource.FeatureLinkRequest(
+                a, LoreRecordRelationRoutes.featureRel(r.rel()), b, action), role);
+            case VP_LINK -> productResource.linkVp(new LoreProductResource.VpLinkRequest(
+                a, LoreRecordRelationRoutes.vpRel(r.rel()), b, action), role);
         };
     }
 }

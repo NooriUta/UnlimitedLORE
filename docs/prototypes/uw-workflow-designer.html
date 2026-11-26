@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дизайнер сценариев</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+<style>
+/* Прототип SPEC-LORE-WORKFLOW-LAYERS v0.3 (SPRINT_LORE_UNIVERSAL_WORKFLOW/UW-02): админка сценариев + холст.
+   Только раскладка и поведение для approve; данные — примеры. Стиль Seiðr amber, всё токенами. */
+:root{
+  --bg:#14120e;--bg2:#1c1913;--bg3:#25211a;--bd:#3a3326;--t1:#efe6d2;--t2:#b8ab90;--t3:#7f735c;
+  --acc:#d9a441;--suc:#8fb85f;--wrn:#d9a441;--dng:#d0644f;--inf:#6fa3c4;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;--head:'Unbounded',sans-serif;--body:'Manrope',sans-serif;
+  --r:6px;--pill:999px;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--t1:#2a241a;--t2:#5d523f;--t3:#8a7d64;--acc:#a8741a;--suc:#4f7a2a;--wrn:#a8741a;--dng:#b0412d;--inf:#2f6f96;}}
+:root[data-theme="light"]{--bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--t1:#2a241a;--t2:#5d523f;--t3:#8a7d64;--acc:#a8741a;--suc:#4f7a2a;--wrn:#a8741a;--dng:#b0412d;--inf:#2f6f96;}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--t1);font:400 var(--fs-sm)/1.45 var(--body)}
+button,select,input{font:inherit;color:inherit}
+.app{display:grid;grid-template-rows:auto 1fr;height:100%}
+header{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--bd);background:var(--bg2);flex-wrap:wrap}
+header h1{font:800 var(--fs-lg)/1 var(--head);margin:0;letter-spacing:.02em}
+.tabs{display:flex;gap:4px;margin-left:12px}
+.tab{background:none;border:1px solid transparent;border-radius:var(--pill);padding:4px 12px;color:var(--t2);cursor:pointer}
+.tab.on{border-color:var(--acc);color:var(--acc)}
+.sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:var(--pill);padding:2px 8px;border:1px solid var(--bd);font-size:var(--fs-xs);color:var(--t2);white-space:nowrap}
+.chip.acc{border-color:var(--acc);color:var(--acc)}.chip.suc{border-color:var(--suc);color:var(--suc)}
+.chip.dng{border-color:var(--dng);color:var(--dng)}.chip.inf{border-color:var(--inf);color:var(--inf)}
+.btn{display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:5px 10px;cursor:pointer;color:var(--t1)}
+.btn:hover{border-color:var(--acc)}.btn.pri{background:var(--acc);color:var(--bg);border-color:var(--acc);font-weight:700}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+main{min-height:0}
+/* список */
+.list{padding:14px;overflow:auto;height:100%}
+.list h2{font:800 var(--fs-md)/1 var(--head);text-transform:uppercase;letter-spacing:.06em;color:var(--t2);margin:6px 0 10px}
+.note{color:var(--t3);font-size:var(--fs-xs);margin:0 0 12px;max-width:900px}
+table{border-collapse:collapse;width:100%;min-width:760px}
+th{font:600 var(--fs-2xs)/1 var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd)}
+td{padding:7px 8px;border-bottom:1px solid var(--bd);vertical-align:top}
+tr.row{cursor:pointer}tr.row:hover td{background:var(--bg2)}
+.lvl{font:600 var(--fs-xs)/1 var(--mono);padding:2px 6px;border-radius:4px;background:var(--bg3);color:var(--t2)}
+.lvl.L0{color:var(--t3)}.lvl.L1{color:var(--inf)}.lvl.L2{color:var(--acc)}.lvl.L3{color:var(--suc)}.lvl.TAG{color:var(--wrn)}
+.mono{font-family:var(--mono);font-size:var(--fs-xs)}
+.tw{overflow-x:auto}
+/* редактор */
+.ed{display:grid;grid-template-columns:200px 1fr 290px;grid-template-rows:auto 1fr 170px;height:100%;min-height:0}
+.bar{grid-column:1/4;display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--bd);flex-wrap:wrap;background:var(--bg)}
+.crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.crumbs a{color:var(--t2);text-decoration:none;cursor:pointer}.crumbs a:hover{color:var(--acc)}
+.crumbs .cur{color:var(--t1);font-weight:700}
+.pal,.insp{overflow:auto;border-right:1px solid var(--bd);background:var(--bg2);padding:10px}
+.insp{border-right:0;border-left:1px solid var(--bd)}
+.pal h3,.insp h3,.bottom h3{font:600 var(--fs-2xs)/1 var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin:10px 0 6px}
+.pi{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--bd);border-radius:var(--r);margin-bottom:6px;cursor:grab;background:var(--bg3)}
+.pi:hover{border-color:var(--acc)}.pi small{display:block;color:var(--t3);font-size:var(--fs-2xs)}
+.pi.lock{opacity:.6;cursor:not-allowed}
+.cv{position:relative;overflow:hidden;background:
+  radial-gradient(circle, var(--bd) 1px, transparent 1px) 0 0/18px 18px, var(--bg);touch-action:none}
+svg{display:block;width:100%;height:100%}
+.node rect{fill:var(--bg2);stroke:var(--bd);stroke-width:1.2}
+.node.core rect{fill:var(--bg3);stroke-dasharray:0}
+.node.sel rect{stroke:var(--acc);stroke-width:2}
+.node.added rect{stroke:var(--suc)}
+.node.bad rect{stroke:var(--dng);stroke-width:2}
+.node.off{opacity:.45}.node.off rect{stroke-dasharray:4 3}
+.node text{fill:var(--t1);font:600 var(--fs-sm) var(--body)}
+.node .sub{fill:var(--t3);font:400 var(--fs-2xs) var(--mono)}
+.node .lockic{fill:var(--t3);font:400 var(--fs-xs) var(--body)}
+.edge{fill:none;stroke:var(--t3);stroke-width:1.4}
+.edge.added{stroke:var(--suc);stroke-width:2}
+.edge.removed{stroke:var(--dng);stroke-dasharray:5 4;opacity:.7}
+.edge.sel{stroke:var(--acc);stroke-width:2.4}
+.edge-hit{fill:none;stroke:transparent;stroke-width:14;cursor:pointer}
+.elabel{fill:var(--t3);font:400 var(--fs-2xs) var(--mono)}
+.drill{fill:var(--acc);font:700 var(--fs-2xs) var(--body);cursor:pointer}
+.legend{position:absolute;left:10px;bottom:10px;display:flex;gap:6px;flex-wrap:wrap}
+.mm{position:absolute;right:10px;bottom:10px;width:120px;height:74px;border:1px solid var(--bd);border-radius:var(--r);background:var(--bg2);opacity:.9}
+.tools{position:absolute;right:10px;top:10px;display:flex;gap:4px}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:var(--fs-2xs);color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.field input[type=text],.field input[type=number],.field select{width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:5px 7px}
+.field .hint{font-size:var(--fs-2xs);color:var(--t3);margin-top:3px}
+.inh{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.bottom{grid-column:1/4;border-top:1px solid var(--bd);display:grid;grid-template-columns:1fr 1fr;min-height:0}
+.bottom>div{overflow:auto;padding:8px 12px}
+.bottom>div+div{border-left:1px solid var(--bd)}
+.v{display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-bottom:1px dashed var(--bd)}
+.v .ic{flex:none}
+.v.err .ic{color:var(--dng)}.v.ok .ic{color:var(--suc)}.v.warn .ic{color:var(--wrn)}
+.log{font:400 var(--fs-xs)/1.6 var(--mono);color:var(--t2);white-space:pre-wrap}
+.empty{color:var(--t3);font-style:italic}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--acc);border-radius:var(--r);padding:8px 14px;display:none;z-index:9;max-width:90vw}
+@media (max-width:900px){
+  .ed{grid-template-columns:1fr;grid-template-rows:auto auto 52vh auto auto}
+  .bar{grid-column:1}.pal{border-right:0;border-bottom:1px solid var(--bd);display:flex;gap:6px;overflow-x:auto;padding:8px}
+  .pal h3{display:none}.pi{flex:none;margin:0}.pi small{display:none}
+  .insp{border-left:0;border-top:1px solid var(--bd)}
+  .bottom{grid-column:1;grid-template-columns:1fr}.bottom>div+div{border-left:0;border-top:1px solid var(--bd)}
+  .mm{display:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <iconify-icon icon="game-icons:rune-stone" width="20" style="color:var(--acc)"></iconify-icon>
+    <h1>Сценарии</h1>
+    <div class="tabs">
+      <button class="tab" data-view="list">Админка · список</button>
+      <button class="tab" data-view="ed">Холст</button>
+    </div>
+    <span class="sp"></span>
+    <span class="chip">прототип на approve · данные — примеры</span>
+    <button class="btn" id="theme" title="Тема"><iconify-icon icon="game-icons:sun"></iconify-icon></button>
+  </header>
+  <main id="main"></main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── данные-примеры: каскад L0 → L1 → L2 → L3 (SPEC-LORE-WORKFLOW-LAYERS v0.3, раздел 4б) ──
+const CORE_STATUSES = ['planned','active','review','ready_for_deploy','uat','done','blocked','waiting','cancelled'];
+const L0_EDGES = [['planned','active'],['active','review'],['review','active'],['review','ready_for_deploy'],
+  ['ready_for_deploy','uat'],['uat','done'],['uat','active'],['active','blocked'],['blocked','active'],
+  ['active','waiting'],['waiting','active'],['planned','cancelled'],['active','cancelled']];
+const NODE_TYPES = [
+  {t:'step',     ic:'game-icons:footsteps',      name:'Шаг',              g:'Действия', d:'подшаг внутри статуса'},
+  {t:'tool',     ic:'game-icons:spanner',        name:'Инструмент',       g:'Действия', d:'вызов MCP / миниаппа'},
+  {t:'llm',      ic:'game-icons:brain',          name:'Шаг агента',       g:'Действия', d:'LLM с ролью'},
+  {t:'subgraph', ic:'game-icons:nested-hexagons',name:'Подсценарий',      g:'Действия', d:'вызов по имени и версии'},
+  {t:'cond',     ic:'game-icons:split-arrows',   name:'Условие',          g:'Логика',   d:'when по полю, без кода'},
+  {t:'parallel', ic:'game-icons:divert',         name:'Параллельно',      g:'Логика',   d:'ветки одновременно'},
+  {t:'timer',    ic:'game-icons:sands-of-time',  name:'Таймер',           g:'Логика',   d:'ждать / срок'},
+  {t:'ask',      ic:'game-icons:conversation',   name:'Вопрос человеку',  g:'Ядро',     d:'interrupt, TTL', core:true},
+  {t:'approve',  ic:'game-icons:key-lock',       name:'Подтверждение 2FA',g:'Ядро',     d:'диалог + слово/PIN в LORE', core:true},
+  {t:'commit',   ic:'game-icons:stamper',        name:'Запись (commit)',  g:'Ядро',     d:'единственный, кто пишет статус', core:true},
+];
+const W = {
+  'task-L0': {title:'Задача · эталон ядра', level:'L0', scope:'вид записи: task', ver:'core 1.19', parent:null, owner:'разработка LORE',
+    kind:'status', locked:true, runs:'—', edges:L0_EDGES.map(e=>({a:e[0],b:e[1],st:'core'}))},
+  'task-L1': {title:'Задача · установка ODAL', level:'L1', scope:'установка ODAL', ver:'v3 (черновик)', parent:'task-L0', owner:'админ сценариев',
+    kind:'status', runs:'1 204', disabled:['waiting'],
+    edges:[...L0_EDGES.map(e=>({a:e[0],b:e[1],st:(e[0]==='review'&&e[1]==='active')?'removed':'core'})),
+           {a:'ready_for_deploy',b:'active',st:'added',label:'вернуть с препрода'}]},
+  'task-L2-dev': {title:'active · dev × OMILORE', level:'L2', scope:'проект UnlimitedLORE · статус active · task_type=dev · компонент OMILORE', ver:'v2', parent:'task-L1', owner:'владелец проекта',
+    kind:'sub', inside:'active', runs:'87', gate:true,
+    nodes:[{id:'s1',t:'step',name:'Тест до кода',x:60,y:60,p:{role:'developer'}},
+           {id:'s2',t:'step',name:'Код до зелёного',x:260,y:60,p:{role:'developer'}},
+           {id:'s3',t:'tool',name:'Сторожа CI',x:460,y:60,p:{tool:'forgejo_ci_status'}},
+           {id:'s4',t:'cond',name:'CI зелёный?',x:460,y:190,p:{field:'x.ci',op:'=',value:'GREEN'}},
+           {id:'s5',t:'tool',name:'PR в зонтик',x:660,y:190,p:{tool:'forgejo_pr_new'}},
+           {id:'s6',t:'commit',name:'→ review',x:860,y:190,p:{target:'review'}}],
+    links:[['s1','s2'],['s2','s3'],['s3','s4'],['s4','s5','да'],['s4','s2','нет'],['s5','s6']]},
+  'task-L3-fj07': {title:'review · задача FJ-07', level:'L3', scope:'атрибут записи SPRINT_FORGEJO_MINIAPP/FJ-07: свои подшаги внутри review · специализация', ver:'v1', parent:'task-L2-dev', owner:'автор / исполнитель задачи',
+    kind:'sub', inside:'review', runs:'1', gate:false, mode:'специализация',
+    nodes:[{id:'f1',t:'tool',name:'qg_read на препроде',x:80,y:80,p:{tool:'forgejo:list_issues'}},{id:'f2',t:'ask',name:'Проба 2FA с владельцем',x:320,y:80,p:{ttl:3}},{id:'f3',t:'commit',name:'→ ready_for_deploy',x:560,y:80,p:{target:'ready_for_deploy'}}],
+    links:[['f1','f2'],['f2','f3']]},
+  'tag-sec': {title:'tag:security-review', level:'TAG', scope:'workflow супертега · любая запись с тегом · рядом с каскадом, результат в полях тега', ver:'v1', parent:null, owner:'владелец проекта',
+    kind:'sub', inside:'review', runs:'12', gate:true, mode:'специализация',
+    nodes:[{id:'t1',t:'llm',name:'Чек-лист безопасности',x:80,y:80,p:{role:'architect'}},
+           {id:'t2',t:'ask',name:'Ревью человека',x:320,y:80,p:{ttl:7}},
+           {id:'t3',t:'approve',name:'Подтверждение 2FA',x:560,y:80,p:{factors:'диалог + LORE',pin_hold:false}},
+           {id:'t4',t:'commit',name:'поля тега: reviewed_by',x:800,y:80,p:{target:'tag fields'}}],
+    links:[['t1','t2'],['t2','t3'],['t3','t4']]},
+};
+// ── состояние в URL ──
+const qs = new URLSearchParams(location.hash.slice(1));
+const S = {view: qs.get('view')||'list', wf: qs.get('wf')||'task-L1', sel: qs.get('sel')||null};
+function save(){ const p=new URLSearchParams({view:S.view,wf:S.wf}); if(S.sel) p.set('sel',S.sel); history.replaceState(null,'','#'+p); }
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2600);}
+function ic(n,w=14){return `<iconify-icon icon="${n}" width="${w}"></iconify-icon>`;}
+
+// ── проверки регистрации (раздел «Проверка при регистрации») ──
+function validate(w){
+  const out=[];
+  if(w.kind==='status'){
+    const st=new Set(CORE_STATUSES);
+    const off=new Set(w.disabled||[]);
+    for(const e of w.edges){
+      if(e.st==='removed'||off.has(e.a)||off.has(e.b)) continue;
+      if(!st.has(e.a)||!st.has(e.b)) out.push({s:'err',m:`статус «${!st.has(e.a)?e.a:e.b}» не из ядра — новые статусы заводит только разработка LORE (L0)`});
+      if(e.b==='done'&&e.a!=='uat') out.push({s:'err',m:`переход ${e.a} → done нарушает инвариант: done ставит только человек из uat`});
+    }
+    const reach=new Set(['planned']);let ch=true;
+    while(ch){ch=false;for(const e of w.edges){if(e.st!=='removed'&&!off.has(e.a)&&!off.has(e.b)&&reach.has(e.a)&&!reach.has(e.b)){reach.add(e.b);ch=true;}}}
+    for(const s of CORE_STATUSES){ if(off.has(s)) out.push({s:'ok',m:`статус «${s}» выключен конфигурацией ${w.level}: переходы его скрывают, в админке — пометка`}); else if(!reach.has(s)) out.push({s:'warn',m:`статус «${s}» стал недостижим — выключите его конфигурацией или верните переход`}); }
+  } else {
+    const ids=new Set(w.nodes.map(n=>n.id));
+    if(!w.nodes.some(n=>n.t==='commit')) out.push({s:'warn',m:'нет узла commit — подграф ничего не запишет (гейт выхода не закроется)'});
+    for(const n of w.nodes){
+      if(!NODE_TYPES.find(t=>t.t===n.t)) out.push({s:'err',m:`узел «${n.name}»: тип ${n.t} не из каталога`});
+      if(n.t==='commit'&&n.p.target&&!CORE_STATUSES.includes(n.p.target)&&n.p.target!=='tag fields') out.push({s:'err',m:`«${n.name}»: статус «${n.p.target}» не из модели`});
+      if(n.t==='commit'&&n.p.target==='done') out.push({s:'err',m:`«${n.name}»: агентский commit в done запрещён ядром`});
+      if(n.t==='tool'&&/delete|merge/.test(n.p.tool||'')&&!w.nodes.some(m=>m.t==='approve')) out.push({s:'err',m:`«${n.name}»: рисковый инструмент без узла «Подтверждение 2FA»`});
+      for(const k of Object.keys(n.p||{})) if(['task_uid','run_id','trail','artifacts','approval','committed'].includes(k)) out.push({s:'err',m:`«${n.name}»: поле ${k} зарезервировано ядром — свои поля только x.*`});
+    }
+    for(const l of w.links) if(!ids.has(l[0])||!ids.has(l[1])) out.push({s:'err',m:`связь ${l[0]}→${l[1]} ведёт в пустоту`});
+  }
+  if(!out.some(x=>x.s!=='ok')) out.push({s:'ok',m:'граница ядра не нарушена — можно публиковать'});
+  return out;
+}
+
+// ── список (админка) ──
+function renderList(){
+  const rows=Object.entries(W).map(([k,w])=>{
+    const v=validate(w), bad=v.some(x=>x.s==='err');
+    return `<tr class="row" data-wf="${k}">
+      <td><span class="lvl ${w.level}">${w.level}</span></td>
+      <td><b>${esc(w.title)}</b><div class="note" style="margin:2px 0 0">${esc(w.scope)}</div>${(w.disabled||[]).map(d=>`<span class="chip">${d}: выключен конфигурацией</span>`).join(' ')}</td>
+      <td class="mono">${esc(w.ver)}</td>
+      <td>${w.parent?`<span class="chip">${esc(W[w.parent].title)}</span>`:'<span class="chip">корень</span>'}</td>
+      <td>${esc(w.owner)}</td>
+      <td>${w.locked?`<span class="chip">${ic('game-icons:padlock',12)} только релиз LORE</span>`:w.gate?`<span class="chip acc">гейт выхода</span>`:'<span class="chip">—</span>'}</td>
+      <td class="mono">${w.runs}</td>
+      <td>${bad?'<span class="chip dng">ошибки</span>':'<span class="chip suc">ок</span>'}</td></tr>`;}).join('');
+  $('#main').innerHTML=`<div class="list">
+    <h2>Сценарии установки</h2>
+    <p class="note">Каскад: L0 ядро (правит только разработка LORE) → L1 версия установки (админ сценариев: убрать или добавить переходы между статусами ядра, свои шаги через супертеги) → L2 проект (подграф внутри шага) → L3 атрибут самой записи, у которой есть детализация подшагов (переопределение или специализация). Workflow супертега — рядом с каскадом. Работает самый конкретный заданный уровень; инварианты ядра — всегда. Нажмите строку — откроется холст.</p>
+    <div class="tw"><table><thead><tr><th>Уровень</th><th>Сценарий и область</th><th>Версия</th><th>Наследует</th><th>Кто правит</th><th>Гейт</th><th>Прогонов</th><th>Проверка</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <h2 style="margin-top:20px">Разрешение для задачи</h2>
+    <p class="note">Пример: SPRINT_FORGEJO_MINIAPP/FJ-07 (task_type=dev, компонент OMILORE, тег security-review), статус review →
+    L3 атрибут FJ-07 v1 (специализация) поверх L2 dev×OMILORE v2 поверх L1 ODAL v3 поверх L0 core 1.19. Прогон фиксирует все четыре версии. Если на задаче ещё тег security-review — его workflow идёт рядом, результат в полях тега.</p>
+  </div>`;
+  document.querySelectorAll('tr.row').forEach(r=>r.onclick=()=>{S.wf=r.dataset.wf;S.view='ed';S.sel=null;render();});
+}
+
+// ── холст ──
+let view={x:0,y:0,k:1};
+function layoutStatuses(){ // раскладка оси статусов: основная линия + боковые
+  const main=['planned','active','review','ready_for_deploy','uat','done'];
+  const side={blocked:[1,1],waiting:[1,-1],cancelled:[0,1]};
+  const pos={};main.forEach((s,i)=>pos[s]={x:40+i*175,y:150});
+  for(const [s,[i,dir]] of Object.entries(side)) pos[s]={x:40+i*175+(s==='cancelled'?0:85),y:150+dir*120};
+  return pos;
+}
+function renderEd(){
+  const w=W[S.wf];
+  const chain=[];for(let k=S.wf;k;k=W[k].parent) chain.unshift(k);
+  const crumbs=chain.map(k=>k===S.wf?`<span class="cur">${esc(W[k].title)}</span>`:`<a data-wf="${k}">${esc(W[k].title)}</a>`).join(' <span style="color:var(--t3)">›</span> ');
+  const groups=[...new Set(NODE_TYPES.map(t=>t.g))];
+  const pal=w.kind==='status'
+    ? `<h3>Ось статусов</h3><div class="pi lock">${ic('game-icons:padlock')}<div>Статусы — ядро<small>новый статус — только релиз LORE</small></div></div>
+       <h3>Действия</h3><div class="pi" id="addEdge">${ic('game-icons:arrow-cursor')}<div>Переход<small>выберите два статуса</small></div></div>
+       <div class="pi" data-hint="Клик по переходу → «убрать» в инспекторе">${ic('game-icons:cancel')}<div>Убрать переход<small>клик по стрелке</small></div></div>
+       <h3>Внутри статуса</h3><div class="pi" id="drillHint">${ic('game-icons:nested-hexagons')}<div>Подграф статуса<small>«⤵» на статусе</small></div></div>`
+    : groups.map(g=>`<h3>${g}</h3>`+NODE_TYPES.filter(t=>t.g===g).map(t=>`<div class="pi" data-add="${t.t}" title="${esc(t.d)}">${ic(t.ic)}<div>${t.name}<small>${esc(t.d)}</small></div></div>`).join('')).join('');
+  $('#main').innerHTML=`<div class="ed">
+    <div class="bar">
+      <span class="lvl ${w.level}">${w.level}</span>
+      <div class="crumbs">${crumbs}</div>
+      <span class="chip mono">${esc(w.ver)}</span>
+      ${w.locked?`<span class="chip">${ic('game-icons:padlock',12)} только чтение</span>`:''}
+      ${w.mode?`<span class="chip inf">${w.mode}</span>`:''}
+      ${w.gate?`<span class="chip acc">гейт выхода из «${w.inside}»</span>`:''}
+      <span class="sp"></span>
+      <button class="btn" id="diff">${ic('game-icons:split-cross')} Сравнить с ${w.parent?W[w.parent].level:'—'}</button>
+      <button class="btn" id="sim">${ic('game-icons:play-button')} Пробный прогон</button>
+      <button class="btn" id="undo" title="Ctrl+Z">${ic('game-icons:anticlockwise-rotation')}</button>
+      <button class="btn pri" id="pub" ${w.locked?'disabled':''}>${ic('game-icons:check-mark')} Опубликовать версию</button>
+    </div>
+    <div class="pal">${pal}</div>
+    <div class="cv" id="cv">
+      <svg id="svg"><defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--t3)"/></marker>
+        <marker id="arA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--suc)"/></marker>
+      </defs><g id="vp"></g></svg>
+      <div class="tools">
+        <button class="btn" id="zin">+</button><button class="btn" id="zout">−</button><button class="btn" id="fit">${ic('game-icons:contract')}</button>
+      </div>
+      <div class="legend">
+        <span class="chip">унаследовано</span><span class="chip suc">добавлено здесь</span><span class="chip dng">убрано здесь</span><span class="chip">${ic('game-icons:padlock',11)} ядро</span>
+      </div>
+      <svg class="mm" id="mm"></svg>
+    </div>
+    <div class="insp" id="insp"></div>
+    <div class="bottom">
+      <div><h3>Проверка при регистрации</h3><div id="val"></div></div>
+      <div><h3>Пробный прогон (dry-run, ничего не пишет)</h3><div class="log" id="log"><span class="empty">нажмите «Пробный прогон»</span></div></div>
+    </div>
+  </div>`;
+  document.querySelectorAll('.crumbs a').forEach(a=>a.onclick=()=>{S.wf=a.dataset.wf;S.sel=null;render();});
+  document.querySelectorAll('[data-add]').forEach(p=>p.onclick=()=>addNode(p.dataset.add));
+  document.querySelectorAll('[data-hint]').forEach(p=>p.onclick=()=>toast(p.dataset.hint));
+  const ae=$('#addEdge'); if(ae) ae.onclick=()=>{if(w.locked) return toast('L0 только для чтения — правьте версию L1');edgeMode=[];toast('Выберите статус-источник, затем статус-цель');};
+  const dh=$('#drillHint'); if(dh) dh.onclick=()=>toast('Нажмите «⤵» на статусе active — откроется подграф проекта');
+  $('#pub').onclick=()=>{const v=validate(w);if(v.some(x=>x.s==='err')) return toast('Есть ошибки проверки — версия не публикуется');toast(`Версия ${w.level} опубликована. Идущие прогоны доезжают на прежней (C6)`);};
+  $('#diff').onclick=()=>showDiff(w);
+  $('#sim').onclick=()=>simulate(w);
+  $('#undo').onclick=()=>undo();
+  $('#zin').onclick=()=>zoom(1.2);$('#zout').onclick=()=>zoom(1/1.2);$('#fit').onclick=()=>fitView();
+  bindPan();fitView();
+}
+function fitView(){const w=W[S.wf],cv=$('#cv');if(!cv) return;const pts=w.kind==='status'?Object.values(layoutStatuses()):w.nodes;
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),mx=Math.min(...xs)-20,my=Math.min(...ys)-30,Mx=Math.max(...xs)+190,My=Math.max(...ys)+130;
+  const r=cv.getBoundingClientRect();const k=Math.max(.4,Math.min(1.2,Math.min(r.width/(Mx-mx),r.height/(My-my))));
+  if(r.width<700){const kk=0.8;view={k:kk,x:10-mx*kk,y:(r.height-(My-my)*kk)/2-my*kk};return draw();}
+  view={k,x:(r.width-(Mx-mx)*k)/2-mx*k,y:(r.height-(My-my)*k)/2-my*k};draw();}
+let edgeMode=null, history_=[];
+function snapshot(){history_.push(JSON.stringify(W[S.wf]));if(history_.length>30)history_.shift();}
+function undo(){const s=history_.pop();if(!s) return toast('Отменять нечего');W[S.wf]=JSON.parse(s);draw();}
+function addNode(t){
+  const w=W[S.wf]; if(w.kind!=='sub') return; snapshot();
+  const T=NODE_TYPES.find(x=>x.t===t); const id='n'+Date.now()%100000;
+  const p=t==='commit'?{target:'review'}:t==='approve'?{factors:'диалог + LORE',pin_hold:false}:t==='ask'?{ttl:7}:t==='tool'?{tool:''}:t==='timer'?{minutes:60}:{role:'developer'};
+  w.nodes.push({id,t,name:T.name,x:120+Math.random()*300,y:280+Math.random()*60,p});
+  S.sel=id;draw();toast(`Добавлен узел «${T.name}» — перетащите и свяжите`);
+}
+function nodeBox(n){return {w:170,h:54};}
+function draw(){
+  const w=W[S.wf], vp=$('#vp'); if(!vp) return;
+  vp.setAttribute('transform',`translate(${view.x},${view.y}) scale(${view.k})`);
+  const bad=new Set(); let html='';
+  if(w.kind==='status'){
+    const pos=layoutStatuses();
+    const off=new Set(w.disabled||[]);
+    w.edges.forEach((e,i)=>{
+      const a=pos[e.a],b=pos[e.b]; if(!a||!b||off.has(e.a)||off.has(e.b)) return;
+      const x1=a.x+150,y1=a.y+22,x2=b.x,y2=b.y+22; const back=b.x<a.x||(b.x===a.x);
+      const d=back?`M${a.x+75},${a.y+(b.y>=a.y?44:0)} C${a.x+75},${(a.y+b.y)/2+ (b.y>=a.y?70:-70)} ${b.x+75},${(a.y+b.y)/2+(b.y>=a.y?70:-70)} ${b.x+75},${b.y+(b.y>=a.y?0:44)}`
+        :`M${x1},${y1} C${(x1+x2)/2},${y1} ${(x1+x2)/2},${y2} ${x2},${y2}`;
+      const cls=`edge ${e.st==='added'?'added':e.st==='removed'?'removed':''} ${S.sel==='e'+i?'sel':''}`;
+      html+=`<path class="${cls}" d="${d}" marker-end="url(#${e.st==='added'?'arA':'ar'})"/><path class="edge-hit" data-e="${i}" d="${d}"/>`;
+      if(e.label) html+=`<text class="elabel" x="${(a.x+b.x)/2+75}" y="${(a.y+b.y)/2+96}">${esc(e.label)}</text>`;
+    });
+    for(const s of CORE_STATUSES){const p=pos[s];
+      html+=`<g class="node core ${off.has(s)?'off':''} ${S.sel==='s:'+s?'sel':''}" data-s="${s}" transform="translate(${p.x},${p.y})">
+        <rect width="150" height="44" rx="8"/><text x="12" y="20">${s}</text>
+        <text class="sub" x="12" y="35">${off.has(s)?'выключен конфигурацией':'статус ядра'}</text><text class="lockic" x="132" y="18">🔒</text>
+        ${(s==='active'||s==='review')?`<text class="drill" data-drill="${s}" x="0" y="-6">⤵ подграфы внутри</text>`:''}</g>`;}
+  } else {
+    const by=Object.fromEntries(w.nodes.map(n=>[n.id,n]));
+    validate(w).forEach(v=>{if(v.s==='err') w.nodes.forEach(n=>{if(v.m.includes('«'+n.name+'»')) bad.add(n.id);});});
+    w.links.forEach((l,i)=>{const a=by[l[0]],b=by[l[1]]; if(!a||!b) return;
+      const back=b.x<a.x; const x1=a.x+170,y1=a.y+27,x2=b.x,y2=b.y+27;
+      const d=back?`M${a.x+85},${a.y+54} C${a.x+85},${a.y+130} ${b.x+85},${b.y+130} ${b.x+85},${b.y+54}`:`M${x1},${y1} C${(x1+x2)/2},${y1} ${(x1+x2)/2},${y2} ${x2},${y2}`;
+      html+=`<path class="edge ${S.sel==='l'+i?'sel':''}" d="${d}" marker-end="url(#ar)"/><path class="edge-hit" data-l="${i}" d="${d}"/>`;
+      if(l[2]) html+=`<text class="elabel" x="${back?(a.x+b.x)/2+85:(x1+x2)/2}" y="${back?a.y+118:(y1+y2)/2-6}">${esc(l[2])}</text>`;});
+    for(const n of w.nodes){const T=NODE_TYPES.find(t=>t.t===n.t)||{name:n.t};
+      html+=`<g class="node ${T.core?'core':''} ${S.sel===n.id?'sel':''} ${bad.has(n.id)?'bad':''}" data-n="${n.id}" transform="translate(${n.x},${n.y})">
+        <rect width="170" height="54" rx="8"/><text x="12" y="22">${esc(n.name)}</text>
+        <text class="sub" x="12" y="40">${esc(T.name)}${T.core?' · ядро':''}</text>${T.core?'<text class="lockic" x="152" y="18">🔒</text>':''}</g>`;}
+  }
+  vp.innerHTML=html; bindNodes(); renderInsp(); renderVal(); renderMini();
+}
+function renderMini(){const mm=$('#mm');if(!mm) return;const w=W[S.wf];
+  const pts=w.kind==='status'?Object.values(layoutStatuses()):w.nodes;
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y),mx=Math.min(...xs),my=Math.min(...ys),Mx=Math.max(...xs)+170,My=Math.max(...ys)+60;
+  const sx=110/(Mx-mx||1),sy=64/(My-my||1),s=Math.min(sx,sy);
+  mm.innerHTML=pts.map(p=>`<rect x="${5+(p.x-mx)*s}" y="${5+(p.y-my)*s}" width="${150*s}" height="${44*s}" fill="var(--bd)"/>`).join('');}
+function bindNodes(){
+  const w=W[S.wf];
+  document.querySelectorAll('[data-drill]').forEach(d=>d.onclick=ev=>{ev.stopPropagation();
+    const k=Object.keys(W).find(k=>W[k].inside===d.dataset.drill&&W[k].kind==='sub'); if(k){S.wf=k;S.sel=null;view={x:0,y:0,k:1};render();}});
+  document.querySelectorAll('[data-s]').forEach(g=>g.onclick=()=>{const s=g.dataset.s;
+    if(edgeMode){edgeMode.push(s);if(edgeMode.length===2){snapshot();const [a,b]=edgeMode;edgeMode=null;
+      if(w.edges.some(e=>e.a===a&&e.b===b&&e.st!=='removed')) return toast('Такой переход уже есть');
+      w.edges.push({a,b,st:'added',label:'новый'});toast(`Добавлен переход ${a} → ${b} — смотрите проверку`);} else toast('Теперь статус-цель');draw();return;}
+    S.sel='s:'+s;draw();});
+  document.querySelectorAll('[data-e]').forEach(h=>h.onclick=()=>{S.sel='e'+h.dataset.e;draw();});
+  document.querySelectorAll('[data-l]').forEach(h=>h.onclick=()=>{S.sel='l'+h.dataset.l;draw();});
+  document.querySelectorAll('[data-n]').forEach(g=>{
+    g.onpointerdown=ev=>{ev.stopPropagation();const n=w.nodes.find(x=>x.id===g.dataset.n);S.sel=n.id;
+      const sx=ev.clientX,sy=ev.clientY,ox=n.x,oy=n.y;let moved=false;
+      const mv=e=>{moved=true;n.x=ox+(e.clientX-sx)/view.k;n.y=oy+(e.clientY-sy)/view.k;g.setAttribute('transform',`translate(${n.x},${n.y})`);};
+      const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);if(moved) snapshot();draw();};
+      addEventListener('pointermove',mv);addEventListener('pointerup',up);};});
+}
+function bindPan(){const cv=$('#cv');let p=null;
+  cv.onpointerdown=e=>{if(e.target.closest('.node,.edge-hit,.btn')) return;p={x:e.clientX,y:e.clientY,vx:view.x,vy:view.y};};
+  cv.onpointermove=e=>{if(!p) return;view.x=p.vx+e.clientX-p.x;view.y=p.vy+e.clientY-p.y;$('#vp').setAttribute('transform',`translate(${view.x},${view.y}) scale(${view.k})`);};
+  cv.onpointerup=cv.onpointerleave=()=>p=null;
+  cv.onwheel=e=>{e.preventDefault();zoom(e.deltaY<0?1.1:1/1.1);};}
+function zoom(f){view.k=Math.max(.4,Math.min(2.2,view.k*f));draw();}
+function renderInsp(){
+  const w=W[S.wf], el=$('#insp'); if(!el) return; save();
+  const inh=`<div class="inh"><span class="lvl ${w.level}">${w.level}</span><span class="chip">${esc(w.owner)}</span>${w.parent?`<span class="chip">поверх ${W[w.parent].level}</span>`:''}</div>`;
+  if(!S.sel){el.innerHTML=`<h3>Сценарий</h3>${inh}<div class="field"><label>Область</label><div>${esc(w.scope)}</div></div>
+    ${w.kind==='sub'?`<div class="field"><label>Режим</label><select ${w.locked?'disabled':''}><option ${w.mode!=='специализация'?'selected':''}>переопределение</option><option ${w.mode==='специализация'?'selected':''}>специализация</option></select><div class="hint">переопределение — вместо подграфа уровня выше; специализация — подшаги поверх, ничего не удаляет</div></div>
+    <div class="field"><label><input type="checkbox" ${w.gate?'checked':''}> гейт выхода из «${w.inside}»</label><div class="hint">пока подграф не дошёл до конца, переход дальше отклоняется с причиной</div></div>`:''}
+    <div class="field"><label>Версии в прогоне</label><div class="mono">${(()=>{const c=[];for(let k=S.wf;k;k=W[k].parent) c.unshift(W[k].level+' '+W[k].ver);return c.join(' → ');})()}</div><div class="hint">прогон доезжает на версиях, на которых начат</div></div>`;return;}
+  if(S.sel.startsWith('s:')){const s=S.sel.slice(2);el.innerHTML=`<h3>Статус</h3>${inh}<div class="field"><label>Имя</label><input type="text" value="${s}" disabled><div class="hint">🔒 статус — ядро LORE: переименовать или добавить — только релизом (ADR + миграция)</div></div>
+    ${w.level==='L1'?`<div class="field"><label><input type="checkbox" id="stOn" ${(w.disabled||[]).includes(s)?'':'checked'}> включён в этой установке</label><div class="hint">выключенный статус скрыт из переходов; в админке — пометка «выключен конфигурацией»</div></div>`:''}
+    <div class="field"><label>Подграфы внутри</label><div>${Object.values(W).filter(x=>x.inside===s).map(x=>`<span class="chip acc">${esc(x.title)}</span>`).join(' ')||'<span class="empty">нет</span>'}</div></div>`;
+    const so=$('#stOn'); if(so) so.onchange=()=>{snapshot();w.disabled=w.disabled||[];if(so.checked) w.disabled=w.disabled.filter(x=>x!==s); else w.disabled.push(s);draw();};return;}
+  if(S.sel.startsWith('e')){const e=w.edges[+S.sel.slice(1)];el.innerHTML=`<h3>Переход</h3>${inh}<div class="field"><label>Откуда → куда</label><div class="mono">${e.a} → ${e.b}</div></div>
+    <div class="field"><label>Происхождение</label><span class="chip ${e.st==='added'?'suc':e.st==='removed'?'dng':''}">${e.st==='core'?'унаследован из '+(w.parent?W[w.parent].level:'ядра'):e.st==='added'?'добавлен в '+w.level:'убран в '+w.level}</span></div>
+    ${w.locked?'<div class="hint">L0 — только чтение</div>':`<button class="btn" id="tgl">${e.st==='removed'?'Вернуть переход':'Убрать переход'}</button>`}`;
+    const t=$('#tgl'); if(t) t.onclick=()=>{snapshot();if(e.st==='added'){w.edges.splice(+S.sel.slice(1),1);S.sel=null;}else e.st=e.st==='removed'?'core':'removed';draw();};return;}
+  if(S.sel.startsWith('l')){const l=w.links[+S.sel.slice(1)];el.innerHTML=`<h3>Связь</h3>${inh}<div class="field"><label>Условие (when)</label><input type="text" value="${esc(l[2]||'')}" placeholder="поле = значение"><div class="hint">операторы: = != < > in set — без кода</div></div><button class="btn" id="dl">Удалить связь</button>`;
+    $('#dl').onclick=()=>{snapshot();w.links.splice(+S.sel.slice(1),1);S.sel=null;draw();};return;}
+  const n=w.nodes.find(x=>x.id===S.sel); if(!n){S.sel=null;return renderInsp();}
+  const T=NODE_TYPES.find(t=>t.t===n.t)||{};
+  const f=[];
+  f.push(`<div class="field"><label>Название</label><input type="text" id="nn" value="${esc(n.name)}"></div>`);
+  if('role' in n.p) f.push(`<div class="field"><label>Роль</label><select id="pr">${['developer','architect','tester','pm','analyst','full'].map(r=>`<option ${r===n.p.role?'selected':''}>${r}</option>`).join('')}</select><div class="hint">из допустимых ролей проекта</div></div>`);
+  if('tool' in n.p) f.push(`<div class="field"><label>Инструмент</label><select id="pt">${['','forgejo_ci_status','forgejo_pr_new','forgejo:list_issues','forgejo:delete_branch','task_set','query_slice'].map(x=>`<option ${x===n.p.tool?'selected':''}>${x}</option>`).join('')}</select><div class="hint">каталог инструментов ядра; рисковый требует узла 2FA</div></div>`);
+  if('ttl' in n.p) f.push(`<div class="field"><label>Срок ответа, дней</label><input type="number" id="pttl" value="${n.p.ttl}" min="1" max="30"></div>`);
+  if('target' in n.p) f.push(`<div class="field"><label>Цель записи</label><select id="ptg">${[...CORE_STATUSES,'tag fields'].map(x=>`<option ${x===n.p.target?'selected':''}>${x}</option>`).join('')}</select><div class="hint">только допустимый по модели переход; done агенту запрещён</div></div>`);
+  if('pin_hold' in n.p) f.push(`<div class="field"><label>Факторы</label><div class="mono">диалог + LORE (слово-вызов или PIN Keycloak — на выбор человека)</div></div>
+     <div class="field"><label><input type="checkbox" disabled> держать PIN</label><input type="number" disabled placeholder="таймер, мин"><div class="hint">позже: слово владельца 26.11 — «пин пока без таймера»</div></div>`);
+  if('field' in n.p) f.push(`<div class="field"><label>Условие</label><div class="mono">${esc(n.p.field)} ${esc(n.p.op)} ${esc(n.p.value)}</div><div class="hint">свои поля — только x.*</div></div>`);
+  if('minutes' in n.p) f.push(`<div class="field"><label>Ждать, мин</label><input type="number" id="pmin" value="${n.p.minutes}"></div>`);
+  el.innerHTML=`<h3>Узел · ${esc(T.name||n.t)}</h3>${inh}${T.core?'<div class="hint" style="margin-bottom:8px">🔒 тип из ядра: параметры — в рамках его схемы</div>':''}${f.join('')}<button class="btn" id="del">${ic('game-icons:trash-can')} Удалить узел</button>`;
+  const on=(id,k,num)=>{const x=$('#'+id);if(x) x.onchange=()=>{snapshot();n.p[k]=num?+x.value:x.value;draw();};};
+  $('#nn').onchange=e=>{snapshot();n.name=e.target.value;draw();};
+  on('pr','role');on('pt','tool');on('pttl','ttl',1);on('ptg','target');on('pmin','minutes',1);
+  $('#del').onclick=()=>{snapshot();w.nodes=w.nodes.filter(x=>x.id!==n.id);w.links=w.links.filter(l=>l[0]!==n.id&&l[1]!==n.id);S.sel=null;draw();};
+}
+function renderVal(){const el=$('#val');if(!el) return;el.innerHTML=validate(W[S.wf]).map(v=>`<div class="v ${v.s}"><span class="ic">${v.s==='err'?'✖':v.s==='warn'?'▲':'✔'}</span><span>${esc(v.m)}</span></div>`).join('');}
+function showDiff(w){
+  if(!w.parent) return toast('У ядра нет родителя');
+  const log=$('#log');
+  if(w.kind==='status'){const add=w.edges.filter(e=>e.st==='added'),rem=w.edges.filter(e=>e.st==='removed');
+    log.textContent=`Сравнение ${w.level} ${w.ver} с ${W[w.parent].level} ${W[w.parent].ver}\n`+add.map(e=>`+ ${e.a} → ${e.b}  ${e.label||''}`).join('\n')+'\n'+rem.map(e=>`- ${e.a} → ${e.b}`).join('\n')+`\nстатусы: без изменений (ядро)`;}
+  else log.textContent=`Сравнение ${w.level} с ${W[w.parent].level}\nрежим: ${w.mode||'переопределение'} внутри «${w.inside}»\n+ узлов: ${w.nodes.length}, связей: ${w.links.length}\nпереходы основного workflow: не меняются`;
+}
+function simulate(w){
+  const log=$('#log');const lines=[`dry-run · ${w.title} · ничего не пишется`];
+  if(w.kind==='status'){lines.push('planned → active → review → ready_for_deploy → uat → (человек) done');
+    if(w.edges.some(e=>e.a==='ready_for_deploy'&&e.b==='active'&&e.st==='added')) lines.push('ветка L1: ready_for_deploy → active «вернуть с препрода» — доступна');
+    if(w.edges.some(e=>e.a==='review'&&e.b==='active'&&e.st==='removed')) lines.push('убрано в L1: review → active — агент получит отказ с причиной');}
+  else{const by=Object.fromEntries(w.nodes.map(n=>[n.id,n]));let cur=w.nodes[0],guard=0;const seen=new Set();
+    while(cur&&guard++<12){const T=NODE_TYPES.find(t=>t.t===cur.t)||{};
+      lines.push(`▸ ${cur.name}${T.t==='ask'?'  — interrupt: ждём человека (TTL '+cur.p.ttl+' дн)':''}${T.t==='approve'?'  — 2FA: диалог ✔ + слово в LORE ✔':''}${T.t==='commit'?'  — commit → '+cur.p.target+' (через гарды ядра)':''}`);
+      const outs=w.links.filter(l=>l[0]===cur.id);const nx=outs.find(l=>l[2]==='да')||outs[0];
+      if(!nx) break; if(seen.has(nx[1])){lines.push('… цикл, предел шагов recursionLimit');break;} seen.add(cur.id);cur=by[nx[1]];}
+    if(w.gate) lines.push(`гейт выхода из «${w.inside}»: ${w.nodes.some(n=>n.t==='commit')?'закрыт после commit':'не закроется — нет commit'}`);}
+  log.textContent=lines.join('\n');
+}
+function render(){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.view===S.view));
+  S.view==='list'?renderList():renderEd(); save();
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{S.view=t.dataset.view;render();});
+addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();} if(e.key==='Escape'){S.sel=null;edgeMode=null;draw();}
+  if(e.key==='Delete'&&S.sel&&W[S.wf].kind==='sub'&&!S.sel.startsWith('l')){const w=W[S.wf];snapshot();w.nodes=w.nodes.filter(x=>x.id!==S.sel);w.links=w.links.filter(l=>l[0]!==S.sel&&l[1]!==S.sel);S.sel=null;draw();}});
+$('#theme').onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme==='light'?'dark':'light';};
+render();
+</script>
+</body>
+</html>

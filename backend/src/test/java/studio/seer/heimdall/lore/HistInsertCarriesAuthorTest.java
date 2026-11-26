@@ -110,17 +110,34 @@ class HistInsertCarriesAuthorTest {
         assertTrue(v.get(0).contains("KnowADRHist"), v.toString());
     }
 
-    /** Схема: поля автора объявлены на КАЖДОЙ цепочке SCD2 (V66), не только на тех, что пишут REST-пути. */
+    /**
+     * Схема: поля автора объявлены на КАЖДОЙ цепочке SCD2 (V66), не только на тех, что пишут REST-пути.
+     * KnowKindHist появился после заморозки списка V66 (KREG-01) — свои поля авторов
+     * он получает от создающего шага V94.
+     */
     @Test
     void schemaDeclaresAuthorOnEveryHistChain() {
-        LoreSchemaMigrations.Step s = LoreSchemaMigrations.STEPS.stream()
+        LoreSchemaMigrations.Step v66 = LoreSchemaMigrations.STEPS.stream()
             .filter(x -> "hist_change_author".equals(x.name())).findFirst()
             .orElseThrow(() -> new AssertionError("нет шага схемы hist_change_author (S2-12)"));
-        assertEquals(66, s.version(), "номер шага — сразу после батча S2 (V65)");
-        assertEquals(17, s.compatMajor(), "аддитивно, major не поднимается");
+        assertEquals(66, v66.version(), "номер шага — сразу после батча S2 (V65)");
+        assertEquals(17, v66.compatMajor(), "аддитивно, major не поднимается");
+        LoreSchemaMigrations.Step v94 = LoreSchemaMigrations.STEPS.stream()
+            .filter(x -> "know_kind_registry".equals(x.name())).findFirst()
+            .orElseThrow(() -> new AssertionError("нет шага схемы know_kind_registry (KREG-01)"));
+        // AP-PASSPORT-EDIT: цепочки после заморозки шагов V объявляет доводка схемы кода (LoreSchemaAdditive, v5).
+        List<String> additive = LoreSchemaAdditive.change("product_history").ddl();
         for (String hist : LoreSlices.HIST_PARENT.keySet()) {
-            assertTrue(s.sql().contains("CREATE PROPERTY " + hist + ".changed_by IF NOT EXISTS STRING"), hist);
-            assertTrue(s.sql().contains("CREATE PROPERTY " + hist + ".changed_by_kind IF NOT EXISTS STRING"), hist);
+            if (ProductHistory.specOfHist(hist) != null) {
+                assertTrue(additive.contains("CREATE PROPERTY " + hist + ".changed_by IF NOT EXISTS STRING"), hist + " у доводки v5");
+                assertTrue(additive.contains("CREATE PROPERTY " + hist + ".changed_by_kind IF NOT EXISTS STRING"), hist + " у доводки v5");
+                continue;
+            }
+            LoreSchemaMigrations.Step owner = "KnowKindHist".equals(hist) ? v94 : v66;
+            assertTrue(owner.sql().contains("CREATE PROPERTY " + hist + ".changed_by IF NOT EXISTS STRING"),
+                hist + " у " + owner.name());
+            assertTrue(owner.sql().contains("CREATE PROPERTY " + hist + ".changed_by_kind IF NOT EXISTS STRING"),
+                hist + " у " + owner.name());
         }
     }
 

@@ -62,21 +62,38 @@ final class ModelSchemaAdapter {
     private static final String PLAN_BOARD = "старая доска плана снята (D-2026-LORE-PLAN-BOARD-REMOVED), установщик её не "
         + "переносит (MIG_PLAN_BOARD=drop); легаси — читается только на старой схеме или при MIG_PLAN_BOARD=keep";
 
+    /** Типы после 1.18: их заводит доводка схемы кода (LoreSchemaAdditive) на шаге накатки CD; до доводки их в базе нет. */
+    private static final String ADDITIVE = " — заводит доводка схемы кода (LoreSchemaAdditive) на шаге накатки CD; база ещё не доведена";
+
+    private static final String SKILL_TYPES = "SKILL-01 (бывш. V96): вид skill:* (KnowSkill и его рёбра) не входит в модель 1.18" + ADDITIVE;
+
     /**
      * Типы вне модели 1.18 — тип → почему его может не быть в базе из модели. Каждый тип, который читает срез или
      * раздел гигиены, либо входит в модель (схема установщика, карта связей, ряды раздела series модели), либо записан здесь — сторож
      * {@code OutsideModelTypesGuardTest}. На базе из модели, где типа нет, чтение отвечает этой причиной, а не 502.
      */
-    static final Map<String, String> OUTSIDE_MODEL = Map.of(
-        "PlanConfig", PLAN_BOARD,
-        "PlanTrack", PLAN_BOARD,
-        "PlanSection", PLAN_BOARD,
-        "PlanCheckpoint", PLAN_BOARD,
-        "PlanVersion", PLAN_BOARD,
+    static final Map<String, String> OUTSIDE_MODEL = Map.ofEntries(
+        Map.entry("PlanConfig", PLAN_BOARD),
+        Map.entry("PlanTrack", PLAN_BOARD),
+        Map.entry("PlanSection", PLAN_BOARD),
+        Map.entry("PlanCheckpoint", PLAN_BOARD),
+        Map.entry("PlanVersion", PLAN_BOARD),
         // MD-02 8а: типы, которые трогает только накатка шагов V на старой схеме — на базе из модели шаги V не идут
-        "KnowFeature", "легаси: читает только шаг V13 накатки на старой схеме (KnowFeature растворён в KnowUseCase, PL-28)",
-        "LoreTag", "легаси: читает только шаг V накатки на старой схеме (LoreSchemaMigrationRunner)",
-        "LoreSchemaVersion", "журнал шагов V заменён отметкой LoreModelSchema (MIG-03); журнал ведёт только накатка на старой схеме");
+        Map.entry("KnowFeature", "легаси: читает только шаг V13 накатки на старой схеме (KnowFeature растворён в KnowUseCase, PL-28)"),
+        Map.entry("LoreTag", "легаси: читает только шаг V накатки на старой схеме (LoreSchemaMigrationRunner)"),
+        Map.entry("LoreSchemaVersion", "журнал шагов V заменён отметкой LoreModelSchema (MIG-03); журнал ведёт только накатка на старой схеме"),
+        // KREG-01: реестр видов появился в схеме раньше, чем попадёт в модель 1.18 (следующий релиз модели);
+        // history_hygiene читает KnowKindHist — на базе из модели 1.18 его нет, срез отвечает этой причиной
+        Map.entry("KnowKindHist", "KREG-01 (бывш. V94): реестр видов KnowKind не входит в модель 1.18" + ADDITIVE),
+        // KREG-13 (26.11.2026): KnowKind описан в модели (тип kind, только чтение, админка) — пометка «вне модели» снята.
+        // SKILL-01/02 (V96): вид skill:* появился в схеме раньше, чем попадёт в модель 1.18 (следующий релиз
+        // модели); на базе из модели 1.18 этих типов нет — срезы skills/skills_full отвечают этой причиной
+        // 25.11.2026: отметка доводки схемы кода (номер и хэш LoreSchemaAdditive) — заводит сама доводка
+        Map.entry("LoreCodeSchema", "отметка доводки схемы кода (LoreSchemaAdditive), не тип модели 1.18" + ADDITIVE),
+        // KREG-13: KnowSkill описан в модели (тип skill) — пометка снята; рёбра скилла пока вне модели 1.18.
+        Map.entry("APPLIES_TO_ROLE", SKILL_TYPES),
+        Map.entry("SKILL_EXTENDS", SKILL_TYPES));
+
 
     /**
      * SPRINT_LORE_MODEL_DOCS_TIDY/MDL-13 · типы модели 1.18, у которых на старой схеме (до переноса) другое имя с теми
@@ -152,11 +169,11 @@ final class ModelSchemaAdapter {
      * имя живёт в других типах) — не здесь: их правит код по типу.
      */
     static final Map<String, String> RENAMES = Map.of(
-        "status_raw", "status",
-        "date_created", "created_at",
-        "created_date", "created_at");
+        "status_raw", "status");
+    // KREG-10: date_created / created_date → created_at сняты — код обращается к created_at сам (сторож
+    // LegacyCreationNamesCodeGuardTest), прежние имена остались только ключами ответа (… AS date_created).
 
-    private static final Pattern WORD = Pattern.compile("(?<![\\w])(status_raw|date_created|created_date)(?![\\w])");
+    private static final Pattern WORD = Pattern.compile("(?<![\\w])(status_raw)(?![\\w])");
 
     /** SQL под новую схему; текст внутри кавычек остаётся как есть. */
     static String rewriteSql(String sql) {
@@ -269,9 +286,19 @@ final class ModelSchemaAdapter {
         "QGRecommendation", "QGJobTask", "ClRoutineRun", "ClRoutineMetric", "BragiIntegration", "BragiVariant");
     private static final Pattern FROM_TYPE = Pattern.compile("(?i)\\b(?:FROM|INTO|UPDATE)\\s+(\\w+)");
 
+    /**
+     * SPRINT_LORE_KNOW_REGISTRY/SKILL-04 · типы доводки схемы кода (вне модели 1.18), у которых status — код СВОЕГО
+     * словаря строчными (KnowSkill — skill_status: draft/active/deprecated), а не код справочника модели. Их посев
+     * идёт до включения переходника и пишет код как есть; поднимать регистр фильтра или литерала записи для них —
+     * значит промахнуться мимо данных (стенд-e2e RFD3: skills?status=active → 0 при трёх active). Каждый тип доводки
+     * с полем status обязан быть здесь — сторож {@code SkillStatusFilterEngineTest#всеТипыДоводкиСоStatus_…}.
+     */
+    static final java.util.Set<String> OWN_DICT_STATUS_TYPES = java.util.Set.of("KnowSkill");
+
+    /** Регистр status в этом SQL не трогается: текстовый статус или код своего словаря типа доводки. */
     private static boolean touchesTextStatus(String sql) {
         Matcher m = FROM_TYPE.matcher(sql);
-        while (m.find()) if (TEXT_STATUS_TYPES.contains(m.group(1))) return true;
+        while (m.find()) if (TEXT_STATUS_TYPES.contains(m.group(1)) || OWN_DICT_STATUS_TYPES.contains(m.group(1))) return true;
         return false;
     }
 

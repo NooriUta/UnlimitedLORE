@@ -23,12 +23,17 @@ import { passportHref } from './passportHref';
 import { SprintTasksPanel } from '../sprint/SprintTasksPanel';
 import { ProjectExportButton } from './ProjectExportButton';
 import { MilestoneBurnLine } from '../milestone/MilestoneBurnLine';
+import { PrHeadLine } from './PrHeadLine';
 import { MilestoneCharts, SprintCharts } from '../charts/TaskFlowCharts';
 import { GateCharts, ProjectCharts } from '../charts/Batch2Charts';
 import { withSprintTasksTab } from './sprintTasksTab';
 import { withDocHtmlTab } from './docHtmlTab';
+import { withPersonFeedTab } from './userFeedTab';
+import { PersonStats } from './PersonStats';
+import { AgentHeadLine } from './AgentHeadLine';
+import { PersonCharts } from '../charts/UserCharts';
 import { useAppT } from '../i18n';
-import { type PassportType } from './passportAdapters';
+import { type AnyPassportType } from './passportAdapters';
 import { fromLoreRecord, optionsFromSlice, withFieldOptions, type OptionState } from './loreRecordContract';
 import { toDictItems, type DictApiRow } from '../sprint/taskDicts';
 import { loadRecordContract } from './recordSource';
@@ -37,6 +42,7 @@ import { saveMerging, type MdFieldState as FieldState } from '@seidr/kit/content
 import { fetchLoreRecord } from '../api/liveRecord';
 import { saveRelation } from './relationSave';
 import { relationOptionsHook } from './relationOptions';
+import { linkedCreateOf, type CreateLink, type CreateType } from './recordCreate';
 import { saveRecordStatus, statusEntity } from './statusSave';
 import { fetchPassportOrder } from './passportOrder';
 import { fetchTypeStatuses } from './passportStatuses';
@@ -72,10 +78,11 @@ function blocksFor(type: string, id: string, lang: KitLang): LiveBlocks {
   }
   return b;
 }
-const mdFor = (type: string, id: string) => (s: string) => <ProseWithPeek text={s} type={type} id={id} />;
+/** Чтение md записи: тот же рендер у паспорта и у паспорта в ленте (BP-01). */
+export const mdFor = (type: string, id: string) => (s: string) => <ProseWithPeek text={s} type={type} id={id} />;
 
 export interface ListPassportProps {
-  type: PassportType;
+  type: AnyPassportType;
   id: string;
   placement: RecordPlacement;
   fetchImpl?: typeof fetch;
@@ -109,6 +116,11 @@ export interface ListPassportProps {
    */
   readOnly?: boolean;
   /**
+   * AP-PASSPORT-EDIT (1б): «+ боль / + выгода / + работа» во вкладках фичи и роли — завести запись типа `type`;
+   * после создания связь `link` ставится сама. Нет обработчика — кнопок нет.
+   */
+  onCreateLinked?: (c: { type: CreateType; link: CreateLink }) => void;
+  /**
    * Смена места паспорта (MP2-11): меню «право / низ / полный». Экран может
    * задать свой обработчик; без него место пишется в адрес (?place=), где его
    * и читает список, — адрес остаётся одной правдой о месте записи.
@@ -124,7 +136,7 @@ export interface ListPassportProps {
   win?: UrlWindow;
 }
 
-export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win, backPlace, onClose, readOnly = false }: ListPassportProps) {
+export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win, backPlace, onClose, readOnly = false, onCreateLinked }: ListPassportProps) {
   const t = useAppT();
   const lang = useKitLang();
   // Вкладка живёт в адресе (D-21): ссылкой на «Связи» или «Историю» можно
@@ -417,6 +429,16 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     await saveRelation({ type, id: view.record.id, rel, dir, target, action, ...(reason !== undefined ? { reason } : {}) }, fetchImpl);
     pp.reload();
   };
+  // 1б: «+ боль» во вкладке связи — только там, где связь знает тип новой записи (linkedCreateOf); kit покажет
+  // кнопку лишь при праве править. Связь ставится после создания со стороны этой записи.
+  const createLinked = onCreateLinked
+    ? ({ rel, dir }: { rel: string; dir: 'out' | 'in' }) => {
+      const target = linkedCreateOf(type, rel, dir);
+      if (!target) return null;
+      const label = target === 'pain' ? t('create.linked.pain') : target === 'gain' ? t('create.linked.gain') : t('create.linked.job');
+      return { label, open: () => onCreateLinked({ type: target, link: { type, id: view.record.id, rel, dir } }) };
+    }
+    : undefined;
   // Спринт: вкладка «Задачи» — дерево спринт → [фаза] → задача (S4-TREE-NESTED,
   // решение владелицы 10.11) из того же ответа /lore/record, и вторым видом —
   // прежняя таблица задач (группировка, правка, массовый статус) со строкой сгорания.
@@ -426,7 +448,10 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     ))
     : view.config;
   // Документ: HTML-тело (content_html) — отдельной вкладкой «HTML», рендер только в песочнице (MDL-08 ч.2).
-  const baseConfig = type === 'doc' ? withDocHtmlTab(sprintConfig, view.record.kind, t('docHtml.tab'), contract?.values.content_html) : sprintConfig;
+  const docConfig = type === 'doc' ? withDocHtmlTab(sprintConfig, view.record.kind, t('docHtml.tab'), contract?.values.content_html) : sprintConfig;
+  // AP-PEOPLE-PAGE: личная страница человека — вкладка «Лента» (новости с фильтром по автору, ось who = kc_sub).
+  // Решение владельца 25.11.2026 (2а): у агента та же «Лента» — по actor_id, учётку переводит сервер.
+  const baseConfig = type === 'user' || type === 'agent' ? withPersonFeedTab(docConfig, view.record.kind, t('userFeed.tab'), view.record.id) : docConfig;
   const dictOf = (key: string) => contract?.schema.fields.find(f => f.key === key)?.dict;
   const withOptions = withFieldOptions(baseConfig, view.record.kind, dicts, dictOf, sliceOpts);
   const g = graph && graph.key === graphKey ? graph : null;
@@ -444,7 +469,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // причина уже названа в строке замечаний.
     // Меню смены статуса — цикл своего типа (items); строки других типов — их цикл (byKind).
     statuses: { ...baseConfig.statuses, ...(statuses.items.length ? { items: statuses.items } : {}), ...(statuses.byKind ? { byKind: statuses.byKind } : {}) },
-    hooks: readOnly ? { ...baseConfig.hooks } : { ...baseConfig.hooks, onSave, onRelation, relationOptions },
+    hooks: readOnly ? { ...baseConfig.hooks } : { ...baseConfig.hooks, onSave, onRelation, relationOptions, ...(createLinked ? { createLinked } : {}) },
     // Граф (GC-03): выбранный узел — карточка Peek этой записи, та же, что в списке и в тексте.
     graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render, types: LORE_GRAPH_TYPES(lang) } : baseConfig.graph,
   }, data: graphData, role: 'reader',
@@ -463,6 +488,12 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       {/* PU-27: у вехи — сгорание по задачам её спринтов (строка BURN-DOWN и
           «Цель к сроку»), той же строкой, что у спринта; срок — «Когда» вехи. */}
       {/* MDA-04: у git-проекта — выгрузка в папку .md (Obsidian) zip-архивом. */}
+      {/* MD-05: шапка PR — ветки и вид, «не влит», плашка «заголовок не дотянут» (прототип md05-pr-passport). */}
+      {type === 'pr' && contract && <PrHeadLine values={contract.values} />}
+      {/* AP-PEOPLE-PAGE: карточка агента вне админки — значок harness, профиль, машина и «чей он» ссылкой на владельца. */}
+      {type === 'agent' && contract && <AgentHeadLine values={contract.values} links={contract.links} {...(fetchImpl ? { fetchImpl } : {})} />}
+      {/* 3а (решение владельца 25.11.2026): цифры шапки — в работе, на приёмке, закрыто за 30 дней, медиана цикла. */}
+      {(type === 'user' || type === 'agent') && <PersonStats subject={{ kind: type as 'user' | 'agent', id: view.record.id }} {...(fetchImpl ? { fetchImpl } : {})} />}
       {type === 'project' && <ProjectExportButton slug={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
       {type === 'milestone' && (
         <MilestoneBurnLine
@@ -519,5 +550,7 @@ export function passportCharts(type: string, id: string, fetchImpl?: typeof fetc
   if (type === 'sprint') return <SprintCharts sprintId={id} {...f} />;
   if (type === 'project') return <ProjectCharts slug={id} {...f} />;
   if (type === 'quality_gate') return <GateCharts qgId={id} {...f} />;
+  // AP-PEOPLE-PAGE: личная страница человека — закрыто по неделям, задачи по статусам и по проектам.
+  if (type === 'user' || type === 'agent') return <PersonCharts subject={{ kind: type, id }} {...f} />;
   return undefined;
 }

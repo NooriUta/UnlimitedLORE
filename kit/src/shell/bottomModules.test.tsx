@@ -110,3 +110,29 @@ describe('KitShell — модули нижней панелью на телеф�
     expect(body('.sk-shell__dock-item[aria-disabled="true"]')).toMatch(/opacity/);
   });
 });
+
+// SPRINT_UXR_MOBILE_POLISH/MP2-15-BOTTOM-BAR — слово владельца 25.11.2026 (канал): «нижний бар … можно ли
+// как-то его уменьшить и закрыть эту задачу?» — ответ на развилку задачи «скрывать ли нижнее меню модулей,
+// когда показан один модуль». Один рабочий модуль — переключать нечего: панели нет, и место под неё
+// (48 px + полоса жестов) отдано содержимому. Два и больше — панель как была (тест выше).
+describe('KitShell — один рабочий модуль на телефоне (MP2-15)', () => {
+  const ONE: KitConfig = { ...CONFIG, modules: [
+    { id: 'lore', title: 'LORE', icon: 'scroll-unfurled', status: 'active' },
+    { id: 'bragi', title: 'Bragi', icon: 'harp', status: 'planned' },
+  ] };
+  it('панели модулей нет, у оболочки отметка «без дока» — отступ снизу не резервируется', () => {
+    const { container } = render(<KitShell config={ONE} win={fakeWin()} storage={mem()} narrow />);
+    expect(screen.queryByRole('navigation', { name: 'Модули' })).toBeNull();
+    expect(container.querySelector('.sk-shell__dock')).toBeNull();
+    expect(container.querySelector('.sk-shell')!.className).toMatch(/\bsk-shell--no-dock\b/);
+  });
+  it('положительный контроль: два рабочих модуля — панель есть, отметки «без дока» нет', () => {
+    const { container } = render(<KitShell config={CONFIG} win={fakeWin()} storage={mem()} narrow />);
+    expect(screen.getByRole('navigation', { name: 'Модули' })).toBeTruthy();
+    expect(container.querySelector('.sk-shell')!.className).not.toMatch(/sk-shell--no-dock/);
+  });
+  it('CSS: при отметке «без дока» высота дока обнуляется', () => {
+    const css = readFileSync(resolve(__dirname, '../styles/seidr.css'), 'utf8');
+    expect(css).toMatch(/\.sk-shell--narrow\.sk-shell--no-dock\s*\{[^}]*--sk-dock-h:\s*0(px)?\s*;/);
+  });
+});

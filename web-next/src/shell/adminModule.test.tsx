@@ -62,9 +62,9 @@ describe('S7B-01 · конфиг модуля admin', () => {
     // S7B-17: мастера UC-1/UC-2/UC-7 — во «Начале», рядом с Главной: это вход «хочу сделать».
     expect(groups.find(g => g.id === 'adm-start')!.items.map(i => i.id)).toEqual(['adm-home', 'adm-wiz']);
     // S7B-31 п.1 (решение 1а): «Словари» — в «Языке графа», рядом с правилами CLAUDE:
-    // правка справочника меняет подписи и цвета на каждом экране — это язык системы,
+    // правка справочника меняет подписи и цвета на каждом экране — это язык системы; рядом «Оформление» (AP-APPEARANCE),
     // а группа получает тон риска, как «Доступ» (раньше — нейтральный успех).
-    expect(groups.find(g => g.id === 'adm-lang')!.items.map(i => i.id)).toEqual(['adm-dicts', 'adm-model', 'adm-rules', 'adm-tidy', 'adm-migration']);
+    expect(groups.find(g => g.id === 'adm-lang')!.items.map(i => i.id)).toEqual(['adm-dicts', 'adm-appearance', 'adm-model', 'adm-kinds', 'adm-rules', 'adm-tidy', 'adm-migration']);
     expect(groups.find(g => g.id === 'adm-lang')!.tone).toBe('var(--wrn)');
     // Личные «Мои виды» и «Недавние» — про записи Forseti, в админке их нет.
     expect(cfg.menu.myViews).toBeFalsy();
@@ -172,11 +172,11 @@ describe('S7B-28 · «Люди и их проекты» и «Проекты» �
   // S7B-ACL-3: «Доступ к машинам» — сосед «Агентов» в той же группе.
   it('в группе «Люди и агенты» — агенты, «Доступ к машинам», «Люди и их проекты», «Проекты», «Организации»', () => {
     const grp = v2Config('ru', undefined, 'admin').menu.groups.find(g => g.id === 'adm-people')!;
-    expect(grp.items.map(i => i.id)).toEqual(['adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-orgs']);
-    expect(grp.items.map(i => i.title)).toEqual(['Агенты', 'Доступ к машинам', 'Люди и их проекты', 'Проекты', 'Организации']);
+    expect(grp.items.map(i => i.id)).toEqual(['adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-orgs', 'adm-sessions']);
+    expect(grp.items.map(i => i.title)).toEqual(['Агенты', 'Доступ к машинам', 'Люди и их проекты', 'Проекты', 'Организации', 'Сессии агентов']);
     const icons = (gameIcons as { icons: Record<string, unknown> }).icons;
     for (const i of grp.items) expect(icons[i.icon as string], `${i.id}:${i.icon}`).toBeTruthy();
-    expect(new Set(grp.items.map(i => i.icon)).size).toBe(5);
+    expect(new Set(grp.items.map(i => i.icon)).size).toBe(6);
   });
 
   it('старый /admin?adm=who с осью «проекты» — в раздел «Проекты»; без оси или «люди» — в «Люди и их проекты»', () => {

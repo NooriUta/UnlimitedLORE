@@ -469,16 +469,22 @@ export function registerLoreWrite(rawServer: McpServer): void {
       'rel="file": EDITED_IN edge to a KnowFile (ADR-018) — a repo file REFERENCE (relative path ' +
       'only), lazily created on first link; requires project. rel="adr": JUSTIFIED_BY edge to a KnowADR ' +
       '(D16) — an enb task is justified by an architectural decision; both ends are checked, a missing ' +
-      'one is a 400 rather than a silent no-op. rel="pr": CLOSED_BY edge to the KnowPR that closed the task (D-2026-MINILORE-OWNER-ANSWERS-06-11 p.3) — target_id "owner/repo#N", or "#N"/"N" with project; a release then finds its tasks via PR → SHIPPED_IN (slice release_tasks_by_tag). Use the edge, not PR numbers in note_md. Idempotent on add. Mutates system_aida_lore.',
+      'one is a 400 rather than a silent no-op. rel="pr": CLOSED_BY edge to the KnowPR that closed the task (D-2026-MINILORE-OWNER-ANSWERS-06-11 p.3) — target_id "owner/repo#N", or "#N"/"N" with project; a release then finds its tasks via PR → SHIPPED_IN (slice release_tasks_by_tag). Use the edge, not PR numbers in note_md. ' +
+      'rel="dep": DEPENDS_ON edge to ANOTHER task (target_id = the task depended on; this task_uid depends ' +
+      'on target_id) via POST /lore/task/dep — kind = blocks | waits | soft | gate | informs | relates ' +
+      '(default soft), reason REQUIRED for a new link; the server rejects edges that would create a cycle ' +
+      '(409 with the cycle path). Idempotent on add. Mutates system_aida_lore.',
     {
       task_uid:  z.string().describe('full task uid, e.g. "SPRINT_X/B1"'),
-      rel:       z.enum(['phase', 'component', 'file', 'adr', 'pr']),
-      target_id: z.string().optional().describe('phase_uid (rel="phase") | component_id (rel="component") | relative file path (rel="file", e.g. "backend/src/.../LoreSlices.java"); omit with rel="phase"+action="remove" to detach from all phases'),
+      rel:       z.enum(['phase', 'component', 'file', 'adr', 'pr', 'dep']),
+      target_id: z.string().optional().describe('phase_uid (rel="phase") | component_id (rel="component") | relative file path (rel="file", e.g. "backend/src/.../LoreSlices.java") | depended-on task_uid (rel="dep"); omit with rel="phase"+action="remove" to detach from all phases'),
       project:   z.string().optional().describe('rel="file": KnowGitProject slug the file belongs to; rel="pr": project of a bare "#N"/"N" (defaults to LORE_ACTIVE_PROJECT), e.g. "NooriUta/UnlimitedLORE"'),
       summary_md: z.string().optional().describe('rel="file" only: optional short note on what the file does'),
+      kind:      z.enum(['blocks', 'waits', 'soft', 'gate', 'informs', 'relates', 'hard']).optional().default('soft').describe('rel="dep" only; hard = old synonym of blocks (MDL-13 merged dictionary)'),
+      reason:    z.string().optional().describe('rel="dep" only: brief reason for the dependency (REQUIRED for a new link — the server answers 422 REASON_REQUIRED otherwise)'),
       action:    z.enum(['add', 'remove']).optional().default('add'),
     },
-    async ({ task_uid, rel, target_id, project, summary_md, action }) => {
+    async ({ task_uid, rel, target_id, project, summary_md, kind, reason, action }) => {
       try {
         const act = action ?? 'add';
         if (rel === 'phase') {
@@ -496,6 +502,12 @@ export function registerLoreWrite(rawServer: McpServer): void {
         if (rel === 'adr') {
           if (!target_id) return err(new Error('target_id (adr_id) required for rel="adr"'));
           return json(await lorePost('/lore/task/adr', { task_uid, adr_id: target_id, action: act }));
+        }
+        if (rel === 'dep') {
+          if (!target_id) return err(new Error('target_id (depended-on task_uid) required for rel="dep"'));
+          return json(await lorePost('/lore/task/dep', {
+            from_task: task_uid, to_task: target_id, kind: kind ?? 'soft', reason: reason ?? null, action: act,
+          }));
         }
         if (!target_id) return err(new Error('target_id required for rel="component"'));
         return json(await lorePost('/lore/task/component', { task_uid, component_id: target_id, action: act }));
@@ -1949,6 +1961,64 @@ export function registerLoreWrite(rawServer: McpServer): void {
     },
   );
 
+  // ── SPRINT_LORE_KNOW_REGISTRY/SKILL-01/02: вид skill:* (SPEC-SKILLS-TAGS-062 §5–§7) ─────
+  // Навык роли — процедура «как делать» (KnowSkill). На текущем MCP, не дожидаясь MCP2: те же пути, что у
+  // entity_upsert type=skill / entity_link type=skill. Гарды — у бэкенда (REFUSED / NOOP / FORBIDDEN_FOR_ROLE).
+  const skillShape = {
+    skill_id: z.string().describe('"skill:<slug>" (kebab-case latin) — a bare slug is accepted and prefixed'),
+    title: z.string().optional().describe('human-readable title — REQUIRED on create'),
+    body_md: z.string().optional().describe('the procedure: steps, limits, examples, links (Markdown) — REQUIRED on create'),
+    name: z.string().optional().describe('short name; defaults to the slug'),
+    version: z.string().optional().describe('semver of the procedure'),
+    status: z.enum(['draft', 'active', 'deprecated']).optional()
+      .describe('lifecycle: create → draft; draft → active|deprecated; active → deprecated; deprecated → active by the OWNER only (else NOOP)'),
+    source: z.enum(['seed', 'agent', 'human']).optional().describe('origin; default agent for an agent caller'),
+    projects: z.array(z.string()).optional().describe('git project slugs → BELONGS_TO_PROJECT; ≥1 REQUIRED on create'),
+    roles: z.array(z.string()).optional().describe('agent_profile codes (full, architect, developer, …) → APPLIES_TO_ROLE; ≥1 REQUIRED on create'),
+    owner: z.string().optional().describe('KnowUser kc_sub or login → OWNED_BY (one owner; replaces the previous)'),
+    extends: z.array(z.string()).optional().describe('skill ids this skill extends → SKILL_EXTENDS (acyclic; a cycle is REFUSED with the chain)'),
+  };
+  const skillBody = (a: { [k: string]: unknown; extends?: string[] }) => {
+    const { extends: ext, ...rest } = a;
+    return { ...rest, ...(ext === undefined ? {} : { extends_ids: ext }) };
+  };
+  const SKILL_GUARDS = 'Create needs BOTH projects (≥1, BELONGS_TO_PROJECT) and roles (≥1, APPLIES_TO_ROLE) — ' +
+    'without them the backend answers 422 REFUSED listing the missing edges; a new skill is born draft. ' +
+    'Writing skill:* is for the full and architect profiles only (403 FORBIDDEN_FOR_ROLE, allowed=[full, architect]). ' +
+    'Read with query_slice skills (no body) / skills_full (with body_md), params project, role, status; ' +
+    'the kind card (params, enums, guards, errors) — GET /lore/skill/describe?kind=skill:*. Mutates system_aida_lore.';
+  definePostTool(server, {
+    name: 'skill_new',
+    description: 'Create a role SKILL (KnowSkill, kind skill:*) — a procedure an agent role follows (SPEC-SKILLS-TAGS-062). ' + SKILL_GUARDS,
+    schema: skillShape,
+    path: '/lore/skill',
+    body: skillBody,
+  });
+  definePostTool(server, {
+    name: 'skill_set',
+    description: 'Update a role SKILL (KnowSkill) — fields patch, status by the lifecycle, listed projects/roles/extends ADDED ' +
+      '(removal: skill_link action=remove). deprecated → active only by the skill OWNER (OWNED_BY) — anyone else gets 409 NOOP ' +
+      'with the owner to ask. ' + SKILL_GUARDS,
+    schema: skillShape,
+    path: '/lore/skill',
+    body: skillBody,
+  });
+  definePostTool(server, {
+    name: 'skill_link',
+    description: 'Link (or unlink) a role SKILL: rel="role" → APPLIES_TO_ROLE (agent_profile code), rel="project" → ' +
+      'BELONGS_TO_PROJECT (slug), rel="extends" → SKILL_EXTENDS (skill id; a cycle is 422 REFUSED with the inheritance ' +
+      'chain), rel="owner" → OWNED_BY (KnowUser kc_sub or login; one owner, replaced). Removing the LAST project or role ' +
+      'is 422 REFUSED — a skill without them is a dangling record nobody sees. Writing: full and architect only. Mutates system_aida_lore.',
+    schema: {
+      skill_id: z.string().describe('"skill:<slug>"'),
+      rel: z.enum(['role', 'project', 'extends', 'owner']),
+      target_id: z.string().describe('agent_profile code | project slug | skill id | KnowUser kc_sub or login'),
+      action: z.enum(['add', 'remove']).optional().default('add'),
+    },
+    path: '/lore/skill/link',
+    body: ({ skill_id, rel, target_id, action }) => ({ skill_id, rel, target_id, action: action ?? 'add' }),
+  });
+
   definePostTool(server, {
     name: 'component_new',
     description: 'Create a new LoreComponent vertex (upsert by component_id). ' +
@@ -2159,6 +2229,10 @@ export function registerLoreWrite(rawServer: McpServer): void {
           'script_absent', 'not_implemented', 'budget_exhausted', 'no_changes', 'no_evidence',
         ]).optional().describe('REQUIRED when status is NOT_MEASURED or SKIP — why the measurement did not happen'),
         model:  z.string().optional().describe('Model that judged this particular metric; defaults to the run-level model. Metrics collected by deterministic code have none'),
+        // QG-07: task_done_pct_avg "fell" 99.1% → 78.1% with no regression — the sample went
+        // from LIMIT 15 sprints to all 357 groups. A value is comparable with the previous run
+        // only on the same basis; a changed basis breaks the series instead of raising an alarm.
+        basis:  z.string().optional().describe('Fingerprint of the metric denominator — what was counted: sample size, filter, LIMIT, e.g. "groups=357" or "sprints:LIMIT 15". The QG screen compares a value with the previous run ONLY when the basis is the same; a changed basis is shown as "basis recomputed", not as a drop. Omit for absolute counts that have no denominator'),
       })).optional().describe('List of measured metrics for this run — one per invariant, with evidence in source'),
     },
     async ({ routine_name, run_date, status, started_at, finished_at, flags, run_id,
@@ -2320,13 +2394,34 @@ export function registerLoreWrite(rawServer: McpServer): void {
         default_branch: z.string().optional(),
       })).optional().describe('origin + mirrors; stored as JSON, URL composed on read'),
       default_branch: z.string().optional().describe('repo default branch, e.g. "develop"'),
+      // Паритет с дверью POST /lore/project (ProjectFieldParityTest, слово владелицы 22.11.2026: «проверь паритет
+      // полей и MCP»): что паспорт проекта показывает — то агент может записать. Не передано — не трогается.
+      short_code: z.string().optional().describe('short project code shown in chips, e.g. "UDWE"'),
+      short_title_en: z.string().optional(),
+      short_title_pl: z.string().optional(),
+      title_en: z.string().optional(),
+      title_pl: z.string().optional(),
+      description: z.string().optional().describe('project description (ru), Markdown'),
+      description_en: z.string().optional(),
+      description_pl: z.string().optional(),
+      is_private: z.boolean().optional(),
     },
     path: '/lore/project',
-    body: ({ slug, name, hosts, default_branch }) => ({
+    body: ({ slug, name, hosts, default_branch, short_code, short_title_en, short_title_pl, title_en, title_pl,
+      description, description_en, description_pl, is_private }) => ({
       slug,
       name: name ?? null,
       hosts: hosts ? JSON.stringify(hosts) : null,
       default_branch: default_branch ?? null,
+      short_code: short_code ?? null,
+      short_title_en: short_title_en ?? null,
+      short_title_pl: short_title_pl ?? null,
+      title_en: title_en ?? null,
+      title_pl: title_pl ?? null,
+      description: description ?? null,
+      description_en: description_en ?? null,
+      description_pl: description_pl ?? null,
+      is_private: is_private ?? null,
     }),
   });
 
@@ -2614,7 +2709,10 @@ export function registerLoreWrite(rawServer: McpServer): void {
     'Uploads a base64-encoded image file to BRAGI\'s S3-backed asset store (MinIO), returning a same-origin ' +
       'file_url ("/lore/bragi/asset/file/..."). This is the ONLY way to get a real, browser-loadable file_url — ' +
       'there is no separate "presign" step. Call this FIRST, then pass its file_url into bragi_asset_attach ' +
-      'to create the BragiAsset row and wire it to a publication/variant. Does not touch the graph itself.',
+      'to create the BragiAsset row and wire it to a publication/variant. Does not touch the graph itself. ' +
+      'S3 is an OPTIONAL service of the installation: 503 FILES_NOT_CONFIGURED = no S3 set (install without files); ' +
+      '503 S3_UNREACHABLE = S3 set but not reachable (check S3_ENDPOINT, keys); 502 S3_UPSTREAM = S3 answered an ' +
+      'error. Without S3 use bragi_asset_attach with an external https URL instead.',
     {
       filename:     z.string().describe('original filename, e.g. "cover.png" — extension is preserved'),
       base64_data:  z.string().describe('raw file bytes, base64-encoded (no data: URI prefix)'),

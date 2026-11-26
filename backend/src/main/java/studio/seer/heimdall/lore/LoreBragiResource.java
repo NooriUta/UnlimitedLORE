@@ -257,8 +257,8 @@ public class LoreBragiResource extends LoreResourceBase {
                 "ok", true, "file_url", "/lore/bragi/asset/file/" + name, "size_bytes", size)));
         } catch (Exception e) {
             LOG.warnf("[BRAGI UPLOAD] %s: %s", original, e.getMessage());
-            return noStore(Response.status(Response.Status.BAD_GATEWAY)
-                .entity(new LoreError("S3_UPSTREAM", e.getMessage())));
+            // ISS-03: S3 задан, но не поднят — 503 S3_UNREACHABLE с переменной; ошибка самого S3 — 502.
+            return OptionalUpstream.failure(OptionalUpstream.Service.S3, e, "файл не загружен");
         }
     }
 
@@ -277,6 +277,8 @@ public class LoreBragiResource extends LoreResourceBase {
                 .header("Cache-Control", "public, max-age=31536000, immutable")
                 .build();
         } catch (Exception e) {
+            // ISS-03: недоступное хранилище — не «файла нет», а 503 с причиной.
+            if (OptionalUpstream.unreachable(e)) return OptionalUpstream.failure(OptionalUpstream.Service.S3, e, "файл не прочитан");
             return Response.status(Response.Status.NOT_FOUND).build();
         }
     }
@@ -837,12 +839,18 @@ public class LoreBragiResource extends LoreResourceBase {
         try {
             String targetType = req.target_type().equals("task") ? "KnowTask" : "KnowADR";
             String targetField = req.target_type().equals("task") ? "task_uid" : "adr_id";
-            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "CREATE EDGE LED_TO FROM (SELECT FROM BragiInsight WHERE insight_id=:iid) " +
-                "TO (SELECT FROM " + targetType + " WHERE " + targetField + "=:tid) IF NOT EXISTS",
-                Map.of("iid", req.insight_id(), "tid", req.target_id()))).await().indefinitely();
-            return noStore(Response.ok(Map.of("ok", true, "insight_id", req.insight_id(),
-                "target_type", req.target_type(), "target_id", req.target_id())));
+            // ISS-06: проба ДО записи — исход по факту ребра; CREATE EDGE в пустую выборку (инсайта или цели нет)
+            // молча ничего не пишет, прежний ответ был безусловным ok:true
+            boolean had = edgeExists("LED_TO", "insight_id", req.insight_id(), targetField, req.target_id());
+            if (!had)
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE LED_TO FROM (SELECT FROM BragiInsight WHERE insight_id=:iid) " +
+                    "TO (SELECT FROM " + targetType + " WHERE " + targetField + "=:tid) IF NOT EXISTS",
+                    Map.of("iid", req.insight_id(), "tid", req.target_id()))).await().indefinitely();
+            return linkOutcome(had, Map.of("ok", true, "insight_id", req.insight_id(),
+                "target_type", req.target_type(), "target_id", req.target_id()), false,
+                "LED_TO", "insight_id", req.insight_id(), targetField, req.target_id(),
+                "инсайт " + req.insight_id() + " или " + req.target_type() + " " + req.target_id());
         } catch (Exception e) {
             LOG.warnf("[BRAGI INSIGHT LINK] %s -> %s: %s", req.insight_id(), req.target_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)

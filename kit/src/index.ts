@@ -4,6 +4,8 @@
 // Версия kit: приложение должно уметь сказать, на чём оно работает (K-08 п. 1).
 export * from './version';
 export * from './tokens/prefs';
+// AP-APPEARANCE: свой стиль установки — инлайн-переменные на корне поверх палитры.
+export * from './tokens/ownStyle';
 export * from './tokens/layoutPrefs';
 export * from './elements';
 export * from './i18n';

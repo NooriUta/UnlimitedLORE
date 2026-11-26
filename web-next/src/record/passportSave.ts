@@ -6,7 +6,7 @@
 // одним полем перезаписала бы разделы; до раздельной правки ADR только читается.
 import { loreFetch } from '../auth/session';
 import { LoreHttpError } from '../api/loreSlice';
-import type { PassportType } from './passportAdapters';
+import type { AnyPassportType as PassportType } from './passportAdapters';
 
 /** Типы, у которых текст записи уже правится на месте. */
 export const EDITABLE_BODY: readonly PassportType[] = ['sprint', 'task', 'spec'];
@@ -91,6 +91,13 @@ function idBody(type: PassportType, rec: Ref): Record<string, unknown> {
   if (type === 'adr') return named('adr_id', 'name');
   // S5-DOC-PASSPORT: /lore/doc пишет только переданные поля — имя не нужно и не затирается.
   if (type === 'doc') return { doc_id: rec.id };
+  // AP-PASSPORT-EDIT, волна 1: пути продуктового слоя пишут только переданные поля (UPSERT по коду) —
+  // имя не нужно и не затирается. Роль продукта — KnowProjectActor (путь project-actor, ключ actor_id).
+  const PRODUCT_ID: Partial<Record<PassportType, string>> = {
+    pain: 'pain_id', gain: 'gain_id', job: 'job_id', actor: 'actor_id', feature: 'feature_id',
+  };
+  const key = (PRODUCT_ID as Record<string, string | undefined>)[type];
+  if (key) return { [key]: rec.id };
   return { id: rec.id };
 }
 
@@ -143,11 +150,12 @@ export async function savePassportField(
    * таблица по одному имени на тип молча не записала бы остальные (замечание
    * серверной сессии 09.11, проверено по `LoreRecordRegistry:532`).
    */
-  write?: { endpoint: string; field: string } | null,
+  write?: { endpoint: string; field: string; idKey?: string } | null,
 ): Promise<void> {
   const { path, body } = write
     // MC-08: флаг (поле вида bool) уходит boolean как есть — иначе сервер получил бы пустую строку.
-    ? { path: write.endpoint, body: { ...idBody(type, rec), [write.field]: typeof to === 'string' || typeof to === 'boolean' ? to : '' } }
+    // KREG-13: ключ записи — из модели (write.idKey), иначе правило типа (idBody).
+    ? { path: write.endpoint, body: { ...(write.idKey ? { [write.idKey]: rec.id } : idBody(type, rec)), [write.field]: typeof to === 'string' || typeof to === 'boolean' ? to : '' } }
     : payload(type, rec, field, to);
   const checked = (VERSION_CHECKED as readonly string[]).includes(type);
   const version = typeof expectedVersion === 'string' ? expectedVersion.trim() : '';

@@ -92,6 +92,56 @@ final class WorkQuality {
         return s != null && !s.isBlank();
     }
 
+    /**
+     * Технические типы задач (ADR-LORE-015): работа, которая трогает код или
+     * инфраструктуру, и потому имеет адрес — компонент. Остальные типы
+     * (planning, research, analytics, docs, content) компонента не требуют:
+     * им достаточно проекта (RM-P3, слово владельца 25.11.2026 — «зачем нам
+     * спринты все к компонентам привязывать, у нас есть атрибут — не
+     * технический спринт/задача»). Единственный источник этого списка.
+     */
+    static final java.util.Set<String> TECHNICAL_TASK_TYPES = java.util.Set.of("dev", "ops", "test", "design");
+
+    /**
+     * Техническая ли задача. Тип не проставлен — считаем технической: тихо
+     * освободить её (и её спринт) от компонента из-за пустого поля значило бы
+     * наградить пропуск, а не правило.
+     */
+    static boolean isTechnical(String taskType) {
+        return taskType == null || taskType.isBlank() || TECHNICAL_TASK_TYPES.contains(taskType.trim());
+    }
+
+    /**
+     * Есть ли в спринте техническая задача. На вход — {@code task_type} задач
+     * спринта (траверс {@code in('PART_OF').task_type} — скаляр, список или
+     * null). Задач нет — технических нет.
+     */
+    static boolean hasTechnicalTasks(Object taskTypes) {
+        if (taskTypes == null) return false;
+        if (taskTypes instanceof Collection<?> c) {
+            for (Object o : c) if (isTechnical(o == null ? null : String.valueOf(o))) return true;
+            return false;
+        }
+        return isTechnical(String.valueOf(taskTypes));
+    }
+
+    /**
+     * То же, но с числом задач спринта: траверс графа может выронить null-значения
+     * из списка типов, и задача без типа тогда стала бы невидимой. Задач больше,
+     * чем непустых типов, — значит, есть задача без типа, а она судится как техническая.
+     */
+    static boolean hasTechnicalTasks(Object taskTypes, Object taskCount) {
+        if (hasTechnicalTasks(taskTypes)) return true;
+        if (!(taskCount instanceof Number n)) return false;
+        long typed = 0;
+        if (taskTypes instanceof Collection<?> c) {
+            for (Object o : c) if (o != null && !String.valueOf(o).isBlank()) typed++;
+        } else if (taskTypes != null && !String.valueOf(taskTypes).isBlank()) {
+            typed = 1;
+        }
+        return n.longValue() > typed;
+    }
+
     /** Траверс графа отдаёт скаляр либо список — пусто значит «ребра нет». */
     private static boolean any(Object raw) {
         if (raw == null) return false;
@@ -115,7 +165,14 @@ final class WorkQuality {
     static Result evaluateTask(String statusRaw, Double effortDays, String workClass,
                                Object components, Object projects,
                                Object realizesUc, Object justifiedBy) {
-        return evaluateTask(statusRaw, effortDays, workClass, components, projects, realizesUc, justifiedBy, null);
+        return evaluateTask(statusRaw, effortDays, workClass, null, components, projects, realizesUc, justifiedBy, null);
+    }
+
+    /** С формой, без типа задачи: тип неизвестен — компонент обязателен (как у технической). */
+    static Result evaluateTask(String statusRaw, Double effortDays, String workClass,
+                               Object components, Object projects,
+                               Object realizesUc, Object justifiedBy, TaskShape.Shape shape) {
+        return evaluateTask(statusRaw, effortDays, workClass, null, components, projects, realizesUc, justifiedBy, shape);
     }
 
     /**
@@ -124,10 +181,10 @@ final class WorkQuality {
      * а счёт, красный у всех, перестают читать. {@code shape == null} — текст
      * задачи вызывающему неизвестен, и судить форму не по чему.
      */
-    static Result evaluateTask(String statusRaw, Double effortDays, String workClass,
+    static Result evaluateTask(String statusRaw, Double effortDays, String workClass, String taskType,
                                Object components, Object projects,
                                Object realizesUc, Object justifiedBy, TaskShape.Shape shape) {
-        Result base = evaluateTaskCore(statusRaw, effortDays, workClass, components, projects, realizesUc, justifiedBy);
+        Result base = evaluateTaskCore(statusRaw, effortDays, workClass, taskType, components, projects, realizesUc, justifiedBy);
         if (shape == null) return base;
         List<Finding> f = new ArrayList<>(base.findings());
         hint(f, "shape_why", shape.why(), "Есть «почему»: повод, факт или симптом");
@@ -139,7 +196,7 @@ final class WorkQuality {
         return new Result(base.kind(), base.score(), base.max(), f, Map.of("shape", shape.toMap()));
     }
 
-    private static Result evaluateTaskCore(String statusRaw, Double effortDays, String workClass,
+    private static Result evaluateTaskCore(String statusRaw, Double effortDays, String workClass, String taskType,
                                            Object components, Object projects,
                                            Object realizesUc, Object justifiedBy) {
         List<Finding> f = new ArrayList<>();
@@ -149,7 +206,14 @@ final class WorkQuality {
         // поставить», а именно это забывание проверка и ловит.
         req(f, "effort_days", effortDays != null && effortDays > 0,
             "Оценка по времени задана (effort_days > 0)");
-        req(f, "component", any(components), "Компонент привязан (свой или от спринта)");
+        // Компонент — адрес в коде; нетехнической задаче (planning/research/…)
+        // он не нужен, достаточно проекта: тогда это подсказка (RM-P3).
+        if (isTechnical(taskType)) {
+            req(f, "component", any(components), "Компонент привязан (свой или от спринта)");
+        } else {
+            hint(f, "component", any(components),
+                "Компонент привязан — для нетехнической задачи опционально, достаточно проекта");
+        }
         req(f, "project", any(projects), "Проект известен (через спринт)");
 
         // Класс работы — ОБЯЗАТЕЛЕН (решение владельца 2026-08-03).
@@ -182,14 +246,25 @@ final class WorkQuality {
      *
      * @param plannedStart планируемое начало; вместе с концом это «оценка по времени» спринта
      * @param milestones   TARGETS_MILESTONE — подсказка, не штраф (ловит strategic_coverage)
+     * @param hasTechnicalTasks есть ли в спринте техническая задача ({@link #hasTechnicalTasks(Object)});
+     *                     нет (все нетехнические или задач нет) — компонент только подсказка
      */
     static Result evaluateSprint(String statusRaw, Object projects, Object components,
-                                 String plannedStart, String plannedEnd, Object milestones) {
+                                 String plannedStart, String plannedEnd, Object milestones,
+                                 boolean hasTechnicalTasks) {
         List<Finding> f = new ArrayList<>();
 
         req(f, "status", filled(statusRaw), "Статус задан");
         req(f, "project", any(projects), "Проект привязан (BELONGS_TO_PROJECT)");
-        req(f, "component", any(components), "Компонент привязан (BELONGS_TO)");
+        // RM-P3 (слово владельца 25.11.2026): компонент обязателен только тогда,
+        // когда спринт трогает код — есть задача типа из TECHNICAL_TASK_TYPES.
+        // Спринт из planning/research/docs… (и пустой) — достаточно проекта.
+        if (hasTechnicalTasks) {
+            req(f, "component", any(components), "Компонент привязан (BELONGS_TO) — в спринте есть технические задачи");
+        } else {
+            hint(f, "component", any(components),
+                "Компонент привязан — опционально: технических задач в спринте нет, достаточно проекта");
+        }
         // Обе даты вместе: одна без другой не даёт ни длительности, ни места на
         // доске плана — а именно ради доски они и заполняются.
         req(f, "planned_dates", filled(plannedStart) && filled(plannedEnd),

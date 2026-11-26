@@ -23,6 +23,8 @@ import java.util.regex.Pattern;
  *   (дрейф кода против применённой истории). Нужна правка → новый шаг.
  * - Аддитивные шаги (всё ниже) данных не трогают (ADR-023 п.5).
  * - version=4 — Java-шаг (backfill), см. LoreSchemaMigrationRunner#javaStep.
+ * - С 1.18 (база прода собрана из модели) реестр ЗАМОРОЖЕН на V100: новые изменения схемы — только
+ *   {@link LoreSchemaAdditive#CHANGES} (доводка схемы кода), см. комментарий в конце STEPS.
  */
 final class LoreSchemaMigrations {
 
@@ -235,12 +237,48 @@ final class LoreSchemaMigrations {
 
     /**
      * RM-P13: типы *Hist, у которых {@code valid_from} и {@code valid_to}
-     * объявлены DATETIME — все двенадцать. До V56 сюда входили только
+     * объявлены DATETIME. До V56 сюда входили только
      * KnowSprintHist и KnowDictEntryHist; порядок — прежний (сначала бывшие
      * текстовые, потом два исходных), чтобы SQL среза history_hygiene,
-     * собираемый по этому списку, не переставлял ветки без нужды.
+     * собираемый по этому списку, не переставлял ветки без нужды. KnowKindHist
+     * добавлен KREG-01 (V94) — в хвост, порядок остальных не тронут.
      */
     static final List<String> HIST_VALID_FROM_TEMPORAL = List.of(
+        "KnowADRHist",
+        "KnowDecisionHist",
+        "KnowDocHist",
+        "KnowFindingHist",
+        "KnowMilestoneHist",
+        "KnowPhaseHist",
+        "KnowReleaseHist",
+        "KnowRunbookHist",
+        "KnowSpecHist",
+        "KnowTaskHist",
+        "KnowSprintHist",
+        "KnowDictEntryHist",
+        // KREG-01 (V94): SCD2-история рантайм-реестра видов KnowKind.
+        "KnowKindHist",
+        // AP-PASSPORT-EDIT (доводка v5, LoreSchemaAdditive.PRODUCT_HIST_DDL): боль, выгода, работа, роль продукта, фича — в хвост.
+        "KnowPainHist",
+        "KnowGainHist",
+        "KnowJobHist",
+        "KnowProjectActorHist",
+        "KnowUseCaseHist");
+
+    /**
+     * KREG-01: список шага V66 (hist_change_author) — ЗАМОРОЖЕН на тех типах, что
+     * существовали на момент его выпуска. SQL V66 собирается из этого списка, а
+     * checksum выпущенного шага неизменяем: переключить V66 на
+     * {@link #HIST_VALID_FROM_TEMPORAL} после добавления KnowKindHist — значит
+     * пересчитать checksum применённого шага, и гард старта откажет каждой
+     * существующей БД («изменён после применения»). Та же болезнь, по которой
+     * заморожен {@link #V42_HIST_VALID_FROM_TEXT} — см. v42StaysFrozenOnItsOwnList.
+     *
+     * <p>Свежая БД знает KnowKindHist до миграций (LoreSchemaInitializer, зеркало
+     * V94), поэтому V66 на ней не падает — но и не объявляет ей changed_by: это
+     * делает сам V94. Порядок — прежний (реестр на момент выпуска V66).
+     */
+    static final List<String> V66_HIST_CHANGE_AUTHOR_TYPES = List.of(
         "KnowADRHist",
         "KnowDecisionHist",
         "KnowDocHist",
@@ -1494,7 +1532,10 @@ final class LoreSchemaMigrations {
         // (ChangeAuthor). Необязательные STRING на всех двенадцати *Hist — старые
         // версии остаются без автора («неизвестно»), v1 поле не знает и не задевает.
         // Только аддитивно, major 17 (чек-лист S2-07 предусматривал ровно эту форму).
-        new Step(66, 17, "hist_change_author", HIST_VALID_FROM_TEMPORAL.stream()
+        // Список — V66_HIST_CHANGE_AUTHOR_TYPES: заморожен на исторических типах,
+        // живой реестр HIST_VALID_FROM_TEMPORAL трогать нельзя (дрейф checksum
+        // выпущенного шага, KREG-01). KnowKindHist объявляет автора сам V94.
+        new Step(66, 17, "hist_change_author", V66_HIST_CHANGE_AUTHOR_TYPES.stream()
             .flatMap(h -> java.util.stream.Stream.of(
                 "CREATE PROPERTY " + h + ".changed_by IF NOT EXISTS STRING",
                 "CREATE PROPERTY " + h + ".changed_by_kind IF NOT EXISTS STRING"))
@@ -1793,7 +1834,70 @@ final class LoreSchemaMigrations {
         // Справочник правит только человек, а база с нуля должна знать состояния сама — Java-шаг как V90: только
         // INSERT недостающих строк, существующие не переписываются; DDL нет. Разрешение владелицы менять модель
         // данных QG в спринте — 15.11.2026. Номер сверен с сессией модели (V91 — её, V92 — профиль). Аддитивно, major 17.
-        new Step(93, 17, QgStatusDictSeed.STEP, List.of())
+        new Step(93, 17, QgStatusDictSeed.STEP, List.of()),
+
+        // SPRINT_LORE_KNOW_REGISTRY/KREG-01 (SPEC-MODEL-EXPORT-064 §5, ADR-LORE-057
+        // KnowRegistry): рантайм-реестр видов для агентов/MCP — KnowKind + его
+        // SCD2-история KnowKindHist. Атрибуты в DDL, стабильные, с индексами
+        // (слово владелицы 24.11.2026): не schemaless-JSON. UNIQUE на kind — гард
+        // двойников (две записи одного вида — дефект входов, импорт падает с
+        // отчётом, а не молча мержит); source — прогоны импорта по происхождению;
+        // replaces — поиск «кто заменил этот вид» (строковая ссылка внутри записи,
+        // не графовое ребро). Форма KnowKind меняется миграцией, не записью
+        // (правило двух слоёв MDL-01 применяется и к самому реестру). Спека пишет
+        // EMBEDDEDLIST/EMBEDDEDMAP, ArcadeDB объявляет их LIST/MAP (тот же тип;
+        // LoreModelConsistency читает обе орфографии). Аддитивно,
+        // major 17, v1 не задет.
+        new Step(94, 17, "know_kind_registry", LoreSchemaAdditive.KNOW_KIND_DDL),
+
+        // SPRINT_LORE_KNOW_REGISTRY/SKILL-05 (SPEC-SKILLS-TAGS-062 §4, SPEC-MODEL-EXPORT-064 §3a):
+        // супертеги — вершина KnowTag из свободного токена ≤64 становится записью класса.
+        // Обязательные name/title/source; field_schema — MAP-подсказка класса (НЕ DDL
+        // полей: значения по-прежнему живут на ребре TAGGED_WITH, LoreEdgeFreeFields);
+        // synonyms — LIST бывших имён (сторож переименования, TagRename); owner —
+        // ref на kc_sub владельца, необязателен. Типы контейнеров — MAP/LIST: в Type
+        // enum ArcadeDB 26.10 EMBEDDED*-имён нет (замерено падением старта на
+        // «No enum constant Type.EMBEDDEDMAP»). Геоид-ключ — tag:<slug> (созидание
+        // пишет геоид-форму, LoreTagResource#apply; легаси-токены доживают до rename).
+        // Аддитивно, major 17; данных не трогает — обязательные поля легаси-вершин
+        // добираются лениво на записи тем же ресурсом. V95, не V94: V94 взял
+        // параллельный KREG-01 (KnowKind/KnowKindHist) — леджер по номеру, дубль
+        // означал бы молчаливый пропуск одного из шагов на живой БД.
+        new Step(95, 17, "knowtag_supertag_fields", LoreSchemaAdditive.KNOWTAG_SUPERTAG_DDL),
+
+        // SPRINT_LORE_KNOW_REGISTRY/SKILL-01 + SKILL-02 (SPEC-SKILLS-TAGS-062 §5–§6, ADR-LORE-057):
+        // вид skill:* — вершина KnowSkill (процедура роли: body_md, status по словарю skill_status,
+        // source seed/agent/human) и её рёбра. Обязательные при создании BELONGS_TO_PROJECT и
+        // APPLIES_TO_ROLE держит гард записи (LoreSkillResource/SkillRules), не схема. Истории SCD2 у
+        // скилла нет (спека её не требует): свежесть — updated_at, как у вопроса. UNIQUE на skill_id —
+        // гард двойников на новом типе (v1 о нём не знает). Рёбра: APPLIES_TO_ROLE (скилл → роль
+        // агента, KnowDictEntry agent_profile), SKILL_EXTENDS (скилл → скилл, ацикличность — гард
+        // записи). Имя SKILL_EXTENDS, а не EXTENDS спеки: EXTENDS — ключевое слово SQL ArcadeDB
+        // (CREATE TYPE … EXTENDS …), прецедент — UC_EXTENDS сценариев; в API связь зовётся rel=extends.
+        // BELONGS_TO_PROJECT и OWNED_BY существуют давно (V20, V30-е) — не переобъявляются.
+        // V96, не V95: V95 у SKILL-05 (PR #1797). Аддитивно, major 17.
+        new Step(96, 17, "know_skill", LoreSchemaAdditive.KNOW_SKILL_DDL),
+
+        // SPRINT_LORE_KNOW_REGISTRY/SKILL-01 + SKILL-03 (окно OQ-062-SKILL-SEED): словарь skill_status
+        // (draft/active/deprecated) и три посевных скилла release-cutover, qg-triage, adr-review с
+        // обязательными рёбрами. Java-шаг как V90/V93: только INSERT недостающего (SkillSeed.plan),
+        // существующее не переписывается. Аддитивно, major 17.
+        new Step(97, 17, SkillSeed.STEP, List.of()),
+
+        // SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS (issue SeidrStudio/UnlimitedLORE#2): статьи словаря
+        // area для областей компонентов — на чистой базе были только research/business (V89), цвет рисовался
+        // из констант фронта, правка в админке ни на что не влияла. Java-шаг как V90/V93: только INSERT
+        // недостающих строк, правленные людьми не переписываются; DDL нет. Номер: V95–V97 заняты веткой
+        // реестра (umbrella/know-registry-2511), V98–V99 зарезервированы под неё же — поэтому V100.
+        // Аддитивно, major 17.
+        new Step(100, 17, AreaDictSeed.STEP, List.of())
+
+        // ══ ШАГИ V ЗАМОРОЖЕНЫ (владелец 25.11.2026: «подчисти версионирование, а то следующие будут тоже делать») ══
+        // С 1.18 прод — база, собранная из модели: шаги V на неё не катятся, и V94–V100 до прода молча не доехали.
+        // Новый тип/поле/индекс/ребро/посев — ТОЛЬКО запись в LoreSchemaAdditive.CHANGES (+ VERSION и PINNED):
+        // доводка схемы кода одна для базы из модели, базы шагов V и свежей установки. V94–V100 выше оставлены
+        // (выпущены, их строки лежат в журналах тестовых баз), их DDL — ссылки на те же списки доводки, а Java-часть
+        // V97/V100 зовёт её посевы. Новый new Step(…) здесь краснит LoreSchemaAdditiveGuardTest.
     );
 
     /** V91: имя шага объявления стабильных полей (сторож DeclareStableFieldsStepTest). */

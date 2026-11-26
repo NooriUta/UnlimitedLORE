@@ -47,6 +47,10 @@ curl -s -X POST http://localhost:2480/api/v1/server -u root:<password> \
   -d '{"command":"create database system_aida_lore"}'
 ```
 
+Имя `system_aida_lore` — умолчание, не требование: бэкенд берёт имя из `LORE_DB`
+(свойство `lore.db`; в `docker-compose.yml` у `lore-backend` — `LORE_DB=${LORE_DB:-system_aida_lore}`).
+Своё имя — задать `LORE_DB` в `.env` и создать базу с этим же именем.
+
 Затем развернуть схему (типы/индексы) — см.
 [`backend/db-schema/README.md`](../backend/db-schema/README.md):
 
@@ -86,6 +90,7 @@ docker compose up -d lore-backend
 | `ARCADEDB_USER` | пользователь ArcadeDB | `root` |
 | `ARCADEDB_ROOT_PASSWORD` | пароль ArcadeDB | `unset` — **обязательно задать** |
 | `LORE_BOOTSTRAP` | прогонять ли DDL при старте | `false` |
+| `LORE_DB` | имя базы LORE в ArcadeDB (свойство `lore.db`) — любое; на пустой базе ядро и схема поднимаются сами | `system_aida_lore` |
 
 Backend слушает `:9100` (публикуется наружу — так и MCP-сервер на хосте, и dev
 frontend через vite-proxy до него достучатся).
@@ -105,6 +110,10 @@ docker compose up -d lore-app
 
 Слушает `:4400`. Открыть `http://localhost:4400/lore?section=plan`.
 
+`LORE_PUBLIC_URL` — канонический https-адрес установки. Пустой (по умолчанию) — редирект выключен:
+LORE открывается по тому адресу, по которому пришли; вход по OIDC на голом IP тогда не работает (PKCE
+требует HTTPS или localhost).
+
 Для локальной разработки (hot reload) вместо докер-образа:
 
 ```bash
@@ -123,6 +132,19 @@ npm install
 npm run build       # tsc → dist/index.js
 ```
 
+MCP-сервер работает в одном из двух транспортов, выбор — `LORE_MCP_TRANSPORT`: по умолчанию
+`stdio` (процесс на машине агента, как ниже), `http` — Streamable HTTP (`LORE_MCP_PORT`, в пакете
+установки это сервис `lore-mcp` за nginx веба: агент ходит на `https://<хост>/mcp`, проверка —
+`/mcp/health`; подробно — `deploy/install/README.md`, раздел «Подключить агента к MCP»).
+
+Переменные HTTP-режима: `LORE_MCP_HOST` (по умолчанию `127.0.0.1`; в образе `lore-mcp` — `0.0.0.0`),
+`LORE_MCP_PORT` (по умолчанию `9200`), `LORE_MCP_TOKEN` — токен шлюза для клиентов без Keycloak (Llama Chat
+и др.): задан — обязателен на каждом запросе (`Authorization: Bearer` или `X-Lore-Mcp-Token`), без него 401;
+`LORE_MCP_CORS_ORIGINS` — origin браузерных клиентов через запятую, чужой origin — 403. `GET /health` и
+`GET /mcp/health` — 200 без входа. Токена нет, а адрес не loopback — громкое предупреждение при старте.
+Запись без Keycloak по HTTP закрыта намеренно: роль (`X-Seer-Role`) в этом режиме не передаётся, агент
+получает «Запись по HTTP без входа Keycloak закрыта: включите вход (OIDC) или подключите MCP через stdio».
+
 Зарегистрировать **в user-скоупе** Claude Code (`~/.claude.json`), а не
 проектным `.mcp.json`. С #1298 `.mcp.json` не отслеживается git, а забытая
 локальная копия в чекауте **перекрывает** user-скоуп: 13.11.2026 в ней лежал
@@ -134,6 +156,11 @@ claude mcp add --scope user aida-lore \
   -e LORE_BACKEND_URL=http://localhost:9100 -e LORE_SEER_ROLE=admin \
   -- node /абсолютный/путь/mcp-server/dist/index.js
 ```
+
+Роль: обычной записи хватает `LORE_SEER_ROLE=admin`; создание проекта (`project_new`) требует
+`LORE_SEER_ROLE=superadmin` — одним словом (так роль называется во всех проверках бэкенда; роль realm
+Keycloak — `super-admin`, и это написание в заголовке принимается синонимом). Отказ 403 называет роль,
+которой не хватило.
 
 Против стенда — то же плюс `LORE_OIDC_ISSUER`, `LORE_MCP_CLIENT_ID`,
 `LORE_MCP_CLIENT_SECRET`, `LORE_MACHINE_ID` (полная команда —
@@ -153,11 +180,31 @@ Claude Code, `lore-mcp-full_<harness>` — остальные (например,
 4. (если настроен MCP) `query_slice({slice: "sprints"})` из LLM-агента —
    возвращает реальные данные
 
+## Опциональные сервисы — что без них деградирует
+
+Без этих сервисов LORE стартует и работает; отваливается только их часть. Healthcheck
+бэкенда от них не зависит. При старте бэкенд один раз (в фоне, старт не ждёт) пробует
+каждый заданный сервис и пишет в журнал строку `[OPTIONAL UPSTREAM]`: недоступен — WARN
+с кодом и переменной, не задан — INFO.
+
+| Сервис | Не задан | Задан, но недоступен | Что деградирует | Что проверить |
+|---|---|---|---|---|
+| S3 (MinIO или своё S3) | 503 `FILES_NOT_CONFIGURED` | 503 `S3_UNREACHABLE` | загрузка и отдача файлов: `bragi_asset_up`, `asset_up`, аватары, картинки в телах. Остальные `bragi_*` (граф) и `bragi_asset_attach` с внешним URL работают | `S3_ENDPOINT` (адрес, видимый из контейнера бэкенда, не `localhost`), `S3_ACCESS_KEY`, `S3_SECRET_KEY`; без файлов — оставить `S3_ENDPOINT` пустым |
+| Витрина bench (MART, база `RAGVSDL`) | 404 `MART_DISABLED` (по умолчанию выключена) | 503 `MART_UNREACHABLE` | `bench_query_slice`; `bench_status` читает файл `results/STATUS.json` из `BENCH_ROOT` — без него 404 `BENCH_ROOT_MISSING` | `MART_ARCADE_URL`, база `RAGVSDL`; не нужен — `BENCH_MART_ENABLED=false` |
+
+Ошибка самого сервиса (неверные ключи, нет бакета или базы) — 502 `S3_UPSTREAM` /
+`MART_UPSTREAM` с текстом ошибки в `detail`.
+
 ## Частые проблемы
 
 - **Backend поднялся, но слайсы пустые/ошибка 500** — проверить, что схема
-  реально развёрнута (шаг 2) и БД называется именно `system_aida_lore`
-  (`lore.db` в `application.properties`).
+  реально развёрнута (шаг 2) и имя БД совпадает с `LORE_DB` бэкенда
+  (по умолчанию `system_aida_lore`, свойство `lore.db`).
+- **Бэкенд смотрит не в ту базу / «Database not found»** — имя базы задаёт `LORE_DB`
+  в окружении `lore-backend` (по умолчанию `system_aida_lore`); база с этим именем
+  должна существовать в ArcadeDB. Проверить: `docker compose exec lore-backend env | grep LORE_DB`.
+- **`bragi_asset_up` / `bench_query_slice` отвечают 503** — опциональный сервис не задан
+  или недоступен, код ответа говорит, какой и что проверить (раздел «Опциональные сервисы» выше).
 - **Правки в Java не попадают в контейнер** — забыли `./gradlew build` перед
   `docker compose build lore-backend` (см. память `feedback_backend_build_prebuilt_jar.md`).
 - **Frontend service не поднимается / контейнер называется не так** — сервис

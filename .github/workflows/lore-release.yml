@@ -541,13 +541,33 @@ jobs:
           fi
 
           HOST="${GITHUB_SERVER_URL:-http://forgejo:3000}"
-          if ! git push "${HOST%/}/${MIRROR_REPO}.git" \
-               "refs/remotes/origin/main:refs/heads/main" "refs/tags/$TAG" \
-               -c http.extraheader="Authorization: token ${MIRROR_TOKEN}"; then
+          # `-c` — опция самого git, а не `git push`: стоит ДО подкоманды (v1.19.0: «unknown switch `c'»).
+          if ! git -c http.extraheader="Authorization: token ${MIRROR_TOKEN}" push "${HOST%/}/${MIRROR_REPO}.git" \
+               "refs/remotes/origin/main:refs/heads/main" "refs/tags/$TAG"; then
             echo "::error::зеркало SeidrStudio НЕ обновлено: git push на ${MIRROR_REPO} не прошёл. Тег $TAG и релиз на месте, зеркало отстало."
             exit 1
           fi
           echo "зеркало обновлено: main + $TAG -> ${MIRROR_REPO}"
+
+      # ── Выпуск в зеркале SeidrStudio (23.11.2026) ──────────────────────────
+      # Шаг выше пушит только main и тег — объект Release (описание + вложения) в зеркало не попадал ни разу.
+      # Замечание владельца на v1.19.0: «не вижу зеркала выпуска в SeidrStudio, только зеркало репозитория».
+      # Логика — в скрипте, его же зовёт мини-труба lore-mirror-release.yml (догнать прошлый выпуск руками).
+      # Только после УДАЧНОГО пуша: без тега в зеркале выпуск не завести. continue-on-error — как у пуша:
+      # отставшее зеркало не роняет опубликованный релиз, отказ красит прогон вердиктом в конце.
+      # SPRINT_CICD_OPS_2611/CO-MIRRORS-AUTOSYNC.
+      - name: Выпуск → зеркало SeidrStudio
+        id: mirror_seidr_release
+        if: ${{ steps.mirror_seidr.outcome == 'success' }}
+        continue-on-error: true
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+          HOST: ${{ github.server_url }}
+          SRC_REPO: ${{ github.repository }}
+          SRC_TOKEN: ${{ secrets.MIRROR_PULL_TOKEN }}
+          DST_REPO: ${{ vars.SEIDR_MIRROR_REPO || 'SeidrStudio/UnlimitedLORE' }}
+          DST_TOKEN: ${{ secrets.MIRROR_PUSH_TOKEN }}
+        run: bash .github/scripts/mirror-release.sh
 
       # ── Оповещение о релизе (TG-01, хвост) ─────────────────────────────────
       # Telegram в этом файле раньше был только про здоровье GH_MIRROR_TOKEN
@@ -717,6 +737,15 @@ jobs:
           echo "::error::После починки — dispatch lore-release.yml с tag=<тег>: шаг идемпотентен, одноимённые вложения заменяются."
           exit 1
 
+      # Выпуск не доехал до зеркала SeidrStudio — релиз опубликован, но прогон красный: иначе друг узнал бы
+      # о пропаже раньше нас. Повтор — мини-труба lore-mirror-release.yml с тем же тегом, она идемпотентна.
+      - name: Вердикт выпуска в зеркале
+        if: ${{ always() && steps.mirror_seidr_release.outcome == 'failure' }}
+        run: |
+          echo "::error::выпуск НЕ перенесён в зеркало SeidrStudio (см. шаг «Выпуск → зеркало SeidrStudio»). Main и тег в зеркале есть, а описания и вложений нет."
+          echo "::error::После починки — запустить lore-mirror-release.yml с tag=<тег>: перенос идемпотентен."
+          exit 1
+
       # 04.11.2026: оповещение о релизе две недели не доходило (api.telegram.org
       # недоступен с ci-server — VPN-выход xray сломан), а прогоны были зелёными:
       # шаг под continue-on-error. Тот же приём, что у зеркала: релиз уже выложен,
@@ -743,7 +772,9 @@ jobs:
     env:
       # Адрес — по имени (SPEC-INFRA-ADDRESS-BY-NAME), ключ хоста закреплён
       # отпечатком: keyscan без сверки — доверие первому ответившему.
-      LORE_HOST: lore-host.seidrstudio.pro
+      # Адрес прод-хоста — переменная Actions репозитория LORE_HOST_ADDR (не в файлах: ни в дистрибутив, ни в зеркала).
+      # Нет переменной — прежнее имя. 25.11.2026: CoreDNS на 131 не поднялся после перезагрузки, имя не резолвилось.
+      LORE_HOST: ${{ vars.LORE_HOST_ADDR || 'lore-host.seidrstudio.pro' }}
       LORE_HOST_USER: nooriuta
       LORE_HOST_FP: SHA256:dp7oLAGQkIQ+fcFOuwqhnqoLOB0VkWom2ibmuzDG6YA
       DEPLOY_STATE: /tmp/lore-deploy.env

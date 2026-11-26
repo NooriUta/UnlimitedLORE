@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LORE · Админка v3 — прототип</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+:root{--fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-base:12.5px;--fs-md:13.5px;--fs-lg:16px;--fs-xl:20px;--fs-2xl:24px;--font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif;--sbw:236px;--tap:32px}
+[data-theme=dark]{--bg0:#0f0d09;--bg1:#17140e;--bg2:#1f1b13;--bg3:#29231a;--bg4:#332b1f;--bd:#3a3224;--t1:#ece3d0;--t2:#c7b996;--t3:#a89a7b;--acc:#e6a93c;--accbg:#3a2c12;--wrn:#d89a3a;--dng:#f07c6c;--suc:#7fb36a;--inf:#6fb0a0;--onacc:#17140e;--sh:0 8px 30px rgba(0,0,0,.5)}
+[data-theme=light]{--bg0:#f5f3ee;--bg1:#faf8f3;--bg2:#ffffff;--bg3:#eee9df;--bg4:#e4ddcf;--bd:#d4ccb8;--t1:#1e1a12;--t2:#4f4636;--t3:#6a5d45;--acc:#8a560a;--accbg:#f5e7cb;--wrn:#84500a;--dng:#ad2828;--suc:#2f6a2b;--inf:#2a5c4e;--onacc:#ffffff;--sh:0 8px 30px rgba(60,40,10,.18)}
+@media (pointer:coarse),(max-width:760px){:root{--tap:44px}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg0);color:var(--t1);font:var(--fs-base)/1.5 var(--font);overflow-x:hidden}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.skip{position:absolute;left:-9999px;top:4px;background:var(--acc);color:var(--onacc);padding:6px 10px;border-radius:6px;z-index:99}
+.skip:focus{left:8px}
+iconify-icon{display:inline-block;width:1em;height:1em;vertical-align:-2px}
+.mono{font-family:var(--mono)}
+.muted{color:var(--t2)}
+.dim{color:var(--t3)}
+/* top */
+.top{height:46px;display:flex;align-items:center;gap:8px;padding:0 10px;background:var(--bg1);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:20}
+.brand{font:800 var(--fs-md)/1 var(--head);color:var(--acc);letter-spacing:.04em;white-space:nowrap}
+.apps{display:flex;gap:2px;min-width:0;overflow:hidden}
+.app{display:flex;align-items:center;gap:5px;min-height:var(--tap);padding:0 9px;border-radius:7px;border:1px solid transparent;background:none;cursor:pointer;color:var(--t2);white-space:nowrap}
+.app:hover{background:var(--bg3)}
+.app[aria-current=page]{background:var(--accbg);color:var(--acc);border-color:color-mix(in srgb,var(--acc) 35%,transparent);font-weight:700}
+.sp{flex:1}
+.ib{min-width:var(--tap);min-height:var(--tap);display:inline-flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--bd);background:var(--bg2);border-radius:7px;cursor:pointer;padding:0 8px;color:var(--t1)}
+.ib:hover{border-color:var(--acc)}
+.av{width:var(--tap);height:var(--tap);border-radius:999px;background:var(--accbg);color:var(--acc);border:1px solid var(--acc);font-weight:700;cursor:pointer}
+.menu{position:absolute;max-height:72vh;overflow-y:auto;background:var(--bg2);border:1px solid var(--bd);border-radius:9px;box-shadow:var(--sh);padding:5px;min-width:220px;z-index:40}
+.menu .mh{font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);padding:6px 8px 3px}
+.menu button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;min-height:var(--tap);padding:0 8px;border:0;background:none;border-radius:6px;cursor:pointer}
+.menu button:hover,.menu button[aria-checked=true]{background:var(--bg3)}
+.menu .sep{height:1px;background:var(--bd);margin:4px 0}
+/* system strip */
+.sys{display:flex;flex-wrap:wrap;gap:5px;padding:5px 10px;background:var(--bg1);border-bottom:1px solid var(--bd);align-items:center}
+.sys .lbl{font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-right:4px}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:var(--fs-xs);border:1px solid var(--bd);background:var(--bg2);white-space:nowrap;line-height:1.5}
+button.chip{cursor:pointer;min-height:26px}
+.t-suc{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 45%,transparent)}
+.t-wrn{color:var(--wrn);border-color:color-mix(in srgb,var(--wrn) 45%,transparent)}
+.t-dng{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 45%,transparent)}
+.t-inf{color:var(--inf);border-color:color-mix(in srgb,var(--inf) 45%,transparent)}
+.t-acc{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 45%,transparent)}
+.demo{font:600 var(--fs-2xs)/1.4 var(--mono);color:var(--wrn);border:1px dashed var(--wrn);border-radius:999px;padding:0 6px;white-space:nowrap}
+.real{font:600 var(--fs-2xs)/1.4 var(--mono);color:var(--suc);border:1px solid color-mix(in srgb,var(--suc) 50%,transparent);border-radius:999px;padding:0 6px;white-space:nowrap}
+/* shell */
+.shell{display:flex;min-height:calc(100vh - 82px)}
+.side{width:var(--sbw);flex-shrink:0;background:var(--bg1);border-right:1px solid var(--bd);padding:8px 6px 30px;overflow-y:auto;position:sticky;top:46px;align-self:flex-start;max-height:calc(100vh - 46px)}
+.grp{margin:10px 4px 3px;display:flex;align-items:baseline;gap:6px;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t2);font-weight:700}
+.grp .risk{font-weight:400;text-transform:none;letter-spacing:0;color:var(--t3);font-size:var(--fs-2xs)}
+.dot{width:7px;height:7px;border-radius:99px;display:inline-block;flex-shrink:0}
+.nav{display:flex;align-items:center;gap:7px;width:100%;min-height:var(--tap);padding:0 8px;border:0;background:none;border-radius:7px;cursor:pointer;color:var(--t2);text-align:left;position:relative}
+.nav:hover{background:var(--bg3);color:var(--t1)}
+.nav[aria-current=page]{background:var(--bg3);color:var(--t1);font-weight:700}
+.nav[aria-current=page]::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;border-radius:3px;background:var(--rail,var(--acc))}
+.cnt{margin-left:auto;font:600 var(--fs-2xs)/1 var(--mono);color:var(--t3)}
+.cnt.unk{color:var(--wrn)}
+.cnt.bad{color:var(--dng)}
+main{flex:1;min-width:0;padding:12px 16px 80px}
+.where{display:none}
+.crumb{font-size:var(--fs-xs);color:var(--t3);margin-bottom:4px}
+h1{font:800 var(--fs-xl)/1.25 var(--head);margin:0 0 4px}
+h2{font:800 var(--fs-md)/1.3 var(--head);margin:18px 0 6px}
+h3{font-size:var(--fs-md);margin:12px 0 6px}
+.lead{color:var(--t2);margin:0 0 10px;max-width:780px}
+.notice{border:1px solid var(--bd);border-left:3px solid var(--inf);background:var(--bg1);border-radius:7px;padding:7px 10px;margin:0 0 10px;font-size:var(--fs-sm)}
+.notice.w{border-left-color:var(--wrn)}
+.notice.d{border-left-color:var(--dng)}
+/* control row */
+.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0 4px}
+.ctl .search{flex:1 1 200px;min-width:0;min-height:var(--tap);border:1px solid var(--bd);border-radius:7px;background:var(--bg2);padding:0 9px}
+.ctl .ib.on{border-color:var(--acc);color:var(--acc)}
+.fdesc{font-size:var(--fs-xs);color:var(--t2);margin:0 0 8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fdesc button{border:0;background:none;color:var(--acc);cursor:pointer;text-decoration:underline;padding:0;min-height:24px}
+/* blocks */
+.blk{border:1px solid var(--bd);border-radius:9px;background:var(--bg1);margin:0 0 12px;overflow:hidden}
+.bh{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--bd);background:var(--bg2);flex-wrap:wrap}
+.bh b{font-size:var(--fs-sm);text-transform:uppercase;letter-spacing:.06em}
+.bh .sp{flex:1}
+.bb{padding:8px 10px}
+.state{padding:14px 10px;color:var(--t2);font-size:var(--fs-sm)}
+.state.err{color:var(--dng)}
+/* table */
+table.rt{width:100%;border-collapse:collapse}
+.rt th{font:700 var(--fs-2xs)/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd);white-space:nowrap}
+.rt td{padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:middle;overflow-wrap:anywhere}
+.bb{overflow-x:auto}
+.rt tr.row{cursor:pointer}.rt tr.ro{cursor:default}
+.rt tr.row:hover td{background:var(--bg2)}
+.rt tr.gh td{background:var(--bg3);font-size:var(--fs-xs);font-weight:700;color:var(--t2);cursor:default}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;border:1px solid var(--bd);vertical-align:-1px}
+.btn{min-height:var(--tap);padding:0 11px;border-radius:7px;border:1px solid var(--bd);background:var(--bg2);cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--acc)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--onacc);font-weight:700}
+.btn.dng{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 50%,transparent)}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.row-a{display:flex;gap:6px;flex-wrap:wrap}
+/* record */
+.rec-h{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.verdict{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0 10px;font-size:var(--fs-sm);color:var(--t2)}
+.verdict .v{color:var(--t1);font-weight:700}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--bd);margin-bottom:10px;overflow-x:auto}
+.tab{min-height:var(--tap);padding:0 12px;border:0;background:none;cursor:pointer;color:var(--t2);border-bottom:2px solid transparent;white-space:nowrap}
+.tab[aria-selected=true]{color:var(--acc);border-bottom-color:var(--acc);font-weight:700}
+.rec-wrap{display:flex;gap:14px;align-items:flex-start}
+.rec-main{flex:1;min-width:0}
+.rail{width:260px;flex-shrink:0;border:1px solid var(--bd);border-radius:9px;background:var(--bg1);padding:8px 10px}
+.ear{position:fixed;right:0;top:45%;writing-mode:vertical-rl;min-width:var(--tap);padding:10px 4px;border:1px solid var(--bd);border-right:0;border-radius:8px 0 0 8px;background:var(--bg2);cursor:pointer;color:var(--t2);z-index:15}
+.ear[aria-pressed=true]{color:var(--acc);border-color:var(--acc)}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0;font-size:var(--fs-sm)}
+dl.kv dt{color:var(--t3)}
+dl.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.fld{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;align-items:center;margin:0 0 8px}
+.fld label{color:var(--t2);font-size:var(--fs-sm)}
+.inp{min-height:var(--tap);border:1px solid var(--bd);border-radius:7px;background:var(--bg2);padding:0 9px;width:100%;min-width:0}
+.inp[readonly]{color:var(--t3);background:var(--bg3)}
+.inp.chg{border-color:var(--wrn)}
+.dirty{position:sticky;bottom:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--bg2);border:1px solid var(--wrn);border-radius:9px;padding:7px 10px;margin-top:10px;box-shadow:var(--sh)}
+.diff{font:var(--fs-sm)/1.55 var(--mono);background:var(--bg0);border:1px solid var(--bd);border-radius:7px;padding:6px 8px;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.diff .m{color:var(--dng)}
+.diff .p{color:var(--suc)}
+.who{font:600 var(--fs-2xs)/1.4 var(--mono);border-radius:999px;padding:1px 7px;border:1px solid var(--bd)}
+.who.h{color:var(--inf);border-color:color-mix(in srgb,var(--inf) 45%,transparent)}
+.who.a{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 45%,transparent)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.card{border:1px solid var(--bd);border-radius:9px;background:var(--bg1);padding:10px;display:flex;flex-direction:column;gap:6px}
+.card .k{font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3)}
+.card .n{font:800 var(--fs-xl)/1.1 var(--head)}
+.pre{font:var(--fs-sm)/1.5 var(--mono);background:var(--bg0);border:1px solid var(--bd);border-radius:7px;padding:8px;white-space:pre-wrap;overflow-wrap:anywhere;margin:4px 0}
+.sw-tog{width:44px;height:24px;border-radius:999px;border:1px solid var(--bd);background:var(--bg3);position:relative;cursor:pointer;flex-shrink:0}
+.sw-tog::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:99px;background:var(--t3);transition:left .15s}
+.sw-tog[aria-checked=true]{background:var(--accbg);border-color:var(--acc)}
+.sw-tog[aria-checked=true]::after{left:22px;background:var(--acc)}
+/* modal & toast */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:flex;align-items:center;justify-content:center;padding:12px}
+.modal{background:var(--bg1);border:1px solid var(--bd);border-radius:12px;box-shadow:var(--sh);width:min(560px,100%);max-height:90vh;overflow:auto;padding:14px}
+.modal h2{margin-top:0}
+.toasts{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:60;width:min(520px,calc(100% - 20px))}
+.toast{background:var(--bg2);border:1px solid var(--bd);border-left:3px solid var(--suc);border-radius:9px;box-shadow:var(--sh);padding:8px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toast .sp{flex:1}
+.proto{position:fixed;left:10px;bottom:10px;z-index:30}
+.proto .ib{background:var(--bg2);font-size:var(--fs-xs)}
+@media (max-width:1100px){:root{--sbw:200px}.rail{width:220px}}
+@media (max-width:760px){
+  .side{display:none}
+  .apps .app:not([aria-current=page]){display:none}
+  .where{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg1);border-bottom:1px solid var(--bd);position:sticky;top:46px;z-index:18}
+  .where .ib{flex:1;justify-content:flex-start;min-width:0;overflow:hidden}
+  main{padding:10px 10px 90px}
+  .crumb{display:none}
+  .rt thead{display:none}
+  .rt,.rt tbody,.rt tr,.rt td{display:block;width:100%}
+  .rt tr.row{border:1px solid var(--bd);border-radius:9px;margin:0 0 8px;padding:6px 8px;background:var(--bg1)}
+  .rt tr.gh{margin:10px 0 4px}
+  .rt tr.gh td{border-radius:7px}
+  .rt td{border:0;padding:3px 0;display:flex;gap:8px;justify-content:space-between;min-width:0}
+  .rt td::before{content:attr(data-l);color:var(--t3);font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+  .rt td.ttl{font-weight:700;font-size:var(--fs-md)}
+  .rt td.ttl::before{content:none}
+  .rt td>span:last-child{text-align:right;min-width:0;overflow-wrap:anywhere}
+  .rec-wrap{flex-direction:column}
+  .rail{width:100%}
+  .fld{grid-template-columns:1fr}
+  .ear{top:auto;bottom:70px}
+  .sys .lbl{display:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Перейти к содержимому</a>
+<header class="top">
+  <span class="brand">LORE</span>
+  <nav class="apps" aria-label="Приложения" id="apps"></nav>
+  <span class="sp"></span>
+  <button class="ib" data-act="search" title="Поиск ( / )"><iconify-icon icon="game-icons:magnifying-glass"></iconify-icon><span class="dim mono">/</span></button>
+  <button class="av" id="avBtn" data-act="avatar" aria-haspopup="menu" aria-label="Меню пользователя vasilisk">V</button>
+</header>
+<div class="sys" id="sys" aria-label="Состояние системы"></div>
+<div class="where" id="where"></div>
+<div class="shell">
+  <nav class="side" id="side" aria-label="Разделы админки"></nav>
+  <main id="main" tabindex="-1"></main>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="proto"><button class="ib" data-act="proto" aria-haspopup="menu" id="protoBtn"><iconify-icon icon="game-icons:perspective-dice-six-faces-random"></iconify-icon>Прототип: сценарий</button></div>
+<div id="layer"></div>
+<script>
+'use strict';
+/* ================= ДАННЫЕ =================
+   real  — снимок LORE через MCP query_slice 07.11.2026 (agent_owners, git_projects, dictionary, tags_usage, project_users, search)
+   demo  — выдумано для прототипа, на экране помечено «демо» */
+const SNAP='снимок LORE 07.11.2026';
+const AGENTS=[['AGENT-ANALYST-msbt4m00','Claude Code (analyst)','lore-mcp-analyst','analyst'],['AGENT-ARCHITECT-msbt34au','Claude Code (architect)','lore-mcp-architect','architect'],['AGENT-DEVELOPER-msbt3dik','Claude Code (developer)','lore-mcp-developer','developer'],['AGENT-FULL-msbt0fed','Claude Code (full)','lore-mcp-full','full'],['AGENT-MARKETER-msbt4vj7','Claude Code (marketer)','lore-mcp-marketer','marketer'],['AGENT-PM-msbt4bye','Claude Code (pm)','lore-mcp-pm','pm'],['AGENT-TESTER-msbt42cj','Claude Code (tester)','lore-mcp-tester','tester']].map(([id,name,client,role],i)=>({id,name,client,role,owner:'omiloreadmin',last:[4,38,12,2,190,55,1440][i],writes:{full:'всё, кроме доступа',architect:'ADR, решения, спеки, компоненты',developer:'ADR, спеки, релизы',tester:'задачи, QG',pm:'спринты, вехи, фичи',analyst:'вопросы, инсайты',marketer:'BRAGI, спеки, доки'}[role]}));
+const PEOPLE=[{id:'vasilisk',sub:'8ed926c9-ba98-4498-8c98-27b7966109b2',email:'vasilisk@seidrstudio.pro',on:true,realm:['admin'],proj:[['NooriUta/UnlimitedLORE','owner']],newNav:true},{id:'omiloreadmin',sub:'52f6fad5-3fe6-42b2-8393-f5e667ac8c8f',email:'—',on:true,realm:['admin','super-admin'],proj:[['NooriUta/UnlimitedLORE','owner']],newNav:false}];
+const PROJECTS=[['AIDA/BOKVIT','BÓKVIT','main'],['AIDA/Datawanderers-ServerandLore','Дата-странники: лор и сервер','main'],['AIDA/Datawanderers-Unity','Дата-странники: Латунные сны (Unity)','main'],['AIDA/GLADSHEIM','GLADSHEIM — датахаб MIDGARD','main'],['AIDA/MIDGARD','MIDGARD','main'],['AIDA/TEIKN','TEIKN — чтение планировок','main'],['AIDA/forgejo-mcp','forgejo-mcp (MCP-сервер для Forgejo)','main'],['AIDA/freyja','FREYJA — учёт и сервис (без репозитория)',null],['AIDA/miniLORE','miniLORE (мобильный монитор сессий)','develop'],['AIDA/miniLore_serverside','miniLore_serverside','main'],['AIDA/studio','Студия — сервисно-организационная работа (без репозитория)',null],['AIDA/udwe-engine','udwe-engine — наш форк движка UDW-DWH','main'],['AIDA/udwe-mig-gen','udwe-mig-gen — конвейер миграций UDW-DWH','develop'],['AIDA/udwe-rollout','udwe-rollout — труба наката','develop'],['NooriUta/AIDA','AIDA (monorepo)','develop',true],['NooriUta/AIDA-TestPlayGround','AIDA-TestPlayGround','main',true],['NooriUta/BRAGI','BRAGI',null],['NooriUta/ODIN','ODIN',null],['NooriUta/UnlimitedLORE','UnlimitedLORE','develop'],['NooriUta/aida-documentation','aida-documentation',null,true],['NooriUta/seidr-site','seidr-site','develop',true],['NooriUta/volva','volva','main',true],['ivanovalex32/UDWE','UDWE — движок UDW-DWH (Greenplum)','main']].map(([slug,name,br,priv])=>({id:slug,name,br,priv:!!priv,members:slug==='NooriUta/UnlimitedLORE'?[['vasilisk','owner'],['omiloreadmin','owner']]:null}));
+const TAGS=[['rule',100],['security',73],['hound',60],['minilore',43],['arcadedb',41],['frontend',40],['llm',39],['lineage',38],['поправка',31],['product-layer',28],['rbac',28],['schema',27],['ADR-MIDGARD-034',23],['ci',22],['scd2',21],['ADR-MIDGARD-032',19],['atoms',18],['mcp',18],['multitenant',18],['reconstruction',18],['identity',17],['measurement',16],['release',16],['голос',16],['datawanderers',15],['search',15],['secrets',15],['ADR-MIDGARD-033',14],['architecture',14],['keycloak',14],['migration',14],['openlineage',14],['wake-word',14],['безопасность',14],['infra',13],['iot',13],['volva',13],['grammar',12],['mig_gen',12],['ux-redesign',12]];
+const V='var(--';const CM=(a,p,b)=>`color-mix(in srgb,var(--${a}) ${p}%,var(--${b}))`;
+const DICT_RAW={
+adr_status:[['PROPOSED','Предложен',V+'inf)','calendar'],['ACCEPTED','Принят',V+'suc)','laurel-crown'],['DEPRECATED','Устарел',V+'wrn)',null],['SUPERSEDED','Заменён',V+'t3)','pause-button']],
+agent_profile:[['full','full (Claude, основной)'],['architect','архитектор'],['developer','разработчик'],['tester','тестировщик'],['pm','РП'],['analyst','аналитик'],['marketer','маркетолог']],
+app_setting:[['ффф','ывввв'],['md_images_enabled','true'],['md_image_max_mb','5']],
+area:[['platform','Платформа',V+'acc)'],['api','API',CM('acc',55,'inf')],['frontend','Фронтенд',CM('suc',70,'bg0')],['engine','Движок',CM('wrn',60,'dng')],['algorithm','Алгоритмы',CM('acc',60,'dng')],['parsing','Парсинг',CM('inf',60,'bg0')],['data','Данные',V+'suc)'],['db','БД',CM('inf',70,'bg0')],['ai','ИИ',V+'inf)'],['observability','Наблюдаемость',V+'wrn)'],['security','Безопасность',V+'dng)'],['infra','Инфраструктура',V+'t2)'],['service','Сервисы',CM('suc',55,'wrn')],['marketing','Маркетинг',CM('acc',55,'wrn')],['product','Продукт',CM('suc',55,'inf')],['finance','Финансы',CM('wrn',55,'suc')],['developer-tools','Инструменты разработчика',V+'t2)']],
+artifact_kind:[['adr','ADR',null,'scroll-quill'],['spec','Спеки',null,'white-book'],['runbook','Runbooks',null,'spell-book'],['doc','Документы',null,'papers'],['qg','Quality Gates',null,'checkered-flag']],
+decision_status:[['proposed','Предложено — правило сформулировано, вердикта нет',V+'inf)','calendar'],['accepted','Принято — действующее правило',V+'suc)','laurel-crown'],['deferred','Отложено — намеренно не сейчас',V+'t3)','pause-button'],['superseded','Вытеснено — заменено более поздним решением',V+'t3)','pause-button'],['fixed','Fixed (легаси сида) — к ревизии',V+'wrn)','battery-50'],['done','Done (легаси сида) — к ревизии',V+'wrn)','battery-50']],
+gain_rank:[['essential','🔴 Обязательная — без неё решение не работает','#C85848'],['expected','🟠 Ожидаемая — клиент считает её само собой','#D4922A'],['desired','🟢 Желаемая — обрадуется, но не ждёт','#7DBF78'],['unexpected','✨ Неожиданная — превосходит ожидания','#88B8A8']],
+job_kind:[['functional','⚙ Функциональная — выполнить задачу','#5AB4E8'],['social','👥 Социальная — как выглядеть в глазах других','#C0A36E'],['emotional','💭 Эмоциональная — как себя чувствовать','#9A8CDB'],['supporting','🔧 Вспомогательная — обслуживает основную работу','#665C48']],
+priority:[['P0','Критический',V+'dng)','dice-fire'],['P1','Высокий',V+'wrn)'],['P2','Средний',V+'inf)'],['P3','Низкий',V+'t3)']],
+product:[['AIDA','AIDA',V+'acc)','brain'],['HOUND','HOUND',CM('acc',60,'dng'),'wolf-head'],['SEIDR','SEIDR STUDIO',CM('acc',60,'inf'),'crystal-ball'],['HEIMDALL','HEIMDALL',CM('suc',70,'bg0'),'guards'],['MT','Mimir (MT)',V+'inf)','open-book'],['OMILORE','OMILORE',V+'suc)','spell-book'],['MINILORE','miniLORE',CM('suc',60,'inf'),'smartphone'],['BRAGI','BRAGI',CM('acc',55,'wrn'),'scroll-quill'],['MIDGARD','Мидгард',CM('wrn',60,'suc'),'house'],['ODIN','ODIN',CM('inf',70,'bg0'),'horned-helm'],['VOLVA','Völva',CM('inf',60,'acc'),'third-eye'],['MIGGEN','mig_gen (UDWE)',V+'t2)','gears'],['TYR','TYR',CM('t2',70,'wrn'),'scales'],['DW','DataWanderes'],['HARPA','HARPA',V+'wrn)'],['FREYJA','FREYJA',V+'suc)'],['BOKVIT','BOKVIT',V+'acc)']],
+project_role:[['owner','Владелец проекта',V+'inf)'],['architect','Архитектор'],['pm','Руководитель (PM)'],['developer','Разработчик'],['business-analyst','Бизнес-аналитик'],['marketer','Контент/маркетинг'],['tester','Тестировщик'],['reader','Читатель']],
+spec_status:[['proposed','Предложение',V+'inf)','calendar'],['accepted','Принята',V+'suc)','laurel-crown'],['deprecated','Устарела',V+'t3)','pause-button'],['superseded','Вытеснена',V+'t3)','pause-button']],
+sprint_status:[['todo','К выполнению',V+'t3)','checkbox-tree'],['backlog','Бэклог',V+'t3)','tied-scroll'],['planned','Запланировано',V+'wrn)','calendar'],['design','Проектирование',V+'wrn)','magic-swirl'],['active','В работе',V+'inf)','progression'],['partial','Частично',V+'wrn)','battery-50'],['ready_for_deploy','Готово к деплою',V+'inf)','wave-crest'],['done','Готово',V+'suc)','divided-spiral'],['blocked','Заблокировано',V+'dng)','handcuffed'],['cancelled','Отменено',V+'t3)','cross-mark']],
+task_type:[['planning','Планирование','#7c869c','compass'],['design','Дизайн','#9b7ad9','scroll-quill'],['dev','Разработка','#4caf72','gears'],['test','Тестирование','#d9a441','checkered-flag'],['ops','Релиз/Ops','#d76b6b','cog'],['research','Исследование','#5b9bd5','magnifying-glass'],['analytics','Аналитика','#b06bd7','pie-chart'],['docs','Документация','#5bc8c8','spell-book'],['content','Контент','#e0a03a','quill-ink']],
+uc_goal_level:[['cloud','☁ Облако — стратегическая цель (фича)','#88B8A8'],['kite','🪁 Змей — обзорная цель','#A8B860'],['sea-level','🌊 Уровень моря — пользовательская цель','#5AB4E8'],['subfunction','🐟 Рыба — подфункция','#665C48']],
+uc_rigor:[['casual','⚡ Лёгкий (casual)','#D4922A'],['fully-dressed','📋 Полный (fully dressed)','#88B8A8']],
+work_class:[['uc','Use Case — реализует сценарий','#5AB4E8'],['jtd','Job to be Done — задача-хелпер','#C0A36E'],['enb','Enabler — расчищает дорогу','#9A8CDB']]};
+DICT_RAW.task_status=DICT_RAW.sprint_status.map(r=>r.slice());
+const CANON=['adr_status','sprint_status','task_status','priority'];
+const DICTS=[];Object.entries(DICT_RAW).forEach(([t,rows])=>rows.forEach(([code,label,color,icon],i)=>DICTS.push({id:t+'/'+code,type:t,code,label,color:color||null,icon:icon||null,order:(i+1)*10,active:true})));
+const RULES=[['claude_rules_global','Глобальные правила машины (~/.claude/CLAUDE.md)','~/.claude/CLAUDE.md'],['claude_rules_unlimitedlore','UnlimitedLORE — Git/CI workflow','C:\\AIDA\\UnlimitedLORE\\CLAUDE.md'],['claude_rules_aida_root','aida-root — статусы, SCD2-контракт, вокабуляр LORE','C:\\AIDA\\aida-root\\CLAUDE.md'],['claude_rules_volva','Volva (Metabase) — корневые правила','volva/CLAUDE.md'],['claude_rules_volva_frontend','Volva frontend — React 19, Mantine, ADR-VOLVA-004/008','volva/frontend/CLAUDE.md'],['claude_rules_db_scheduler','db-scheduler — сборка, стиль, диалекты','db-scheduler/CLAUDE.md'],['claude_rules_seidr_site','Правила CLAUDE — seidr-site','seidr-site/CLAUDE.md'],['claude_rules_datawanderers_lore','Правила CLAUDE: Дата-странники (лор, сервер, инструменты)','Datawanderers-ServerandLore/CLAUDE.md'],['claude_rules','Правила CLAUDE — обзор',null],['claude_rules_analysis','Аналитика по правилам CLAUDE',null]].map(([id,title,file],i)=>({id,title,file,sync:[35,180,2880,9000,9000,20000,4300,600,null,1500][i],drift:['нет','нет','неизвестно','есть','неизвестно','неизвестно','нет','нет',null,null][i]}));
+const ROLE_MATRIX=[['Словари','/lore/dict/entry',1,[]],['Учётные записи','/lore/kc/*',1,[]],['Роли в проектах','/lore/user/role',0,['full']],['Переиндексация корпуса','/lore/admin/lore/ingest',1,[]],['ADR','/lore/adr*',0,['full','architect','developer']],['Решения','/lore/decision*',0,['full','architect']],['Спеки/ранбуки/доки','/lore/spec*, runbook*, doc*',0,['full','architect','developer','marketer']],['Спринты и вехи','/lore/sprint*, milestone*',0,['full','pm']],['Релизы','/lore/release*',0,['full','developer']],['Вопросы','/lore/question*',0,['full','architect','analyst','pm']],['Фичи','/lore/feature*',0,['full','architect','pm']],['Агентные личности','/lore/actor*',0,['full','architect','pm']],['Компоненты','/lore/component*',0,['full','architect']],['Проекты','/lore/project*',0,['full','architect','pm']],['Публикации BRAGI','/lore/bragi*',0,['full','marketer']],['Forgejo (PR, мерж)','/lore/forgejo*',0,['full']],['Файлы-ассеты','/lore/asset*',0,['full']],['Чтение (слайсы)','/lore/slice/*',0,['все агенты']]];
+const REALM=[['super-admin','Всё, включая выдачу admin','только консоль Keycloak'],['admin','Админка: доступ, справочники, настройки','здесь → Люди'],['editor','Запись через UI','здесь → Люди'],['viewer','Только чтение','здесь → Люди']];
+const TOOLS=[['query_slice','read','чтение','GET /lore/slice/{id}'],['list_slices','read','чтение','GET /lore/slices'],['search','read','чтение','GET /lore/slice/search'],['lore_version','read','система','GET /lore/version'],['task_new','write','задачи','POST /lore/task'],['status_set','write','задачи','POST /lore/status'],['sprint_new','write','спринты','POST /lore/sprint'],['adr_new','write','ADR','POST /lore/adr'],['decision_new','write','решения','POST /lore/decision'],['doc_new','write','доки','POST /lore/doc'],['claude_rules_push','write','правила','POST /lore/doc (kind claude-rules)'],['claude_rules_pull','read','правила','GET /lore/doc/{id}'],['dict_set','write','справочники','POST /lore/dict/entry'],['project_new','write','проекты','POST /lore/project'],['project_role_set','write','доступ','POST /lore/user/role'],['actor_new','write','доступ','POST /lore/actor'],['forgejo_pr_merge','write','forgejo','POST /lore/forgejo/merge'],['release_new','write','релизы','POST /lore/release']].map(([id,kind,ent,api])=>({id,kind,ent,api}));
+const SETTINGS=[{id:'qg.actions_projects',type:'список git-проектов через запятую',def:'— (из LORE_QG_ACTIONS_PROJECTS)',val:null,known:true,descr:'Какие репозитории опрашивает канал прогонов Forgejo Actions для гейтов качества.'},{id:'md_images_enabled',type:'да/нет',def:'true',val:'true',known:true,descr:'Разрешена ли вставка картинок в MD-поля.'},{id:'md_image_max_mb',type:'число, МБ',def:'5',val:'5',known:true,descr:'Предельный размер одной картинки в MD-поле.'},{id:'ффф',type:'—',def:'—',val:'ывввв',known:false,descr:'Неопознанный ключ: код его не читает.'}];
+const FLAGS=[{id:'new_nav',name:'Новая навигация (панель, паспорт)',scope:'на пользователя',descr:'Принцип 36: каркас — только за флагом на пользователя, с метриками «до / после».'},{id:'volva_embed',name:'Встройки Völva в тексте',scope:'на всех',on:true,descr:'Блоки lore-query в Markdown.'},{id:'read_collapse',name:'Сворачивать меню в режиме чтения',scope:'по умолчанию, пользователь переопределяет',on:true,descr:'D-2026-UXR-READ-COLLAPSE.'}];
+let AUDIT=[[3,'h','vasilisk','access','Люди','omiloreadmin','выдала роль в проекте NooriUta/UnlimitedLORE: owner'],[11,'a','Claude Code (full)','dicts','Словари','task_type/content','добавил значение «Контент»'],[26,'a','Claude Code (pm)','rules','Правила CLAUDE','claude_rules_unlimitedlore','обновил снимок файла (doc_new)'],[60,'h','vasilisk','sys','Настройки','md_image_max_mb','5 → 5 (без изменений, повторное сохранение)'],[95,'h','omiloreadmin','access','Агенты','AGENT-TESTER-msbt42cj','ротировал секрет lore-mcp-tester'],[300,'a','Claude Code (architect)','dicts','Проекты','AIDA/TEIKN','завёл проект'],[1500,'h','vasilisk','access','Люди','vasilisk','включён флаг «Новая навигация»']].map(([ago,k,who,sec,sub,obj,what])=>({ago,k,who,sec,sub,obj,what}));
+const DENIALS=[[7,'POST','/lore/dict/entry',403,'agent:lore-mcp-marketer','FORBIDDEN_HUMAN_ONLY'],[42,'GET','/lore/kc/users',403,'editor','ADMIN_ONLY'],[310,'POST','/lore/project',403,'agent:lore-mcp-tester','ROLE_NOT_ALLOWED']];
+
+/* ================= НАВИГАЦИЯ ================= */
+const NAV=[
+ {g:'Обзор',risk:'',tone:'acc',items:[['overview','Сводка','radar-sweep']]},
+ {g:'Доступ',risk:'высокий риск · подтверждение + журнал',tone:'dng',key:'access',items:[['users','Люди','person'],['agents','Агенты','robot-golem'],['roles','Роли и права','key'],['denials','Отказы доступа','barrier']]},
+ {g:'Справочники',risk:'данные графа',tone:'acc',key:'dicts',items:[['dicts','Словари','book-cover'],['projects','Проекты','open-folder'],['tags','Теги','price-tag']]},
+ {g:'Правила CLAUDE',risk:'снимки файлов',tone:'inf',key:'rules',items:[['rules','Документы правил','scroll-unfurled']]},
+ {g:'MCP',risk:'агенты и клиенты',tone:'inf',key:'mcp',items:[['mcp','Инструменты','plug'],['conn','Подключения','linked-rings'],['health','Здоровье','heart-beats']]},
+ {g:'Система',risk:'обслуживание',tone:'wrn',key:'sys',items:[['settings','Настройки','cog'],['flags','Флаги','lever'],['quick','Быстрые команды','fast-arrow'],['version','Версия','info']]},
+ {g:'Журнал',risk:'кто · что · когда',tone:'acc',key:'audit',items:[['audit','Журнал действий','scroll-quill']]}];
+const SEC={};NAV.forEach(g=>g.items.forEach(([k,l,ic])=>SEC[k]={k,l,ic,g:g.g,tone:g.tone,gkey:g.key}));
+const SEC_OF_GROUP={access:['users','agents','roles','denials'],dicts:['dicts','projects','tags'],rules:['rules'],mcp:['mcp','conn','health'],sys:['settings','flags','quick','version']};
+const APPS=[['forseti','Forseti','spell-book'],['bragi','BRAGI','scroll-quill'],['muninn','MUNINN','raven'],['tyr','TYR','scales'],['admin','Админка','cog']];
+
+/* ================= СОСТОЯНИЕ И URL ================= */
+const st={s:'overview',id:null,tab:'over',q:'',f:{},g:'',o:'',dict:'area',roles:'by-role',scen:'ok',rail:localStorage.getItem('adm.rail')==='1',notice:null,form:null};
+const LEGACY_TAB={users:'users',agents:'agents',roles:'roles',dicts:'dicts',projects:'projects',tags:'tags',claudeRules:'rules',settings:'settings',quick:'quick',mcpApi:'mcp',connections:'conn'};
+function readUrl(){
+  const p=new URLSearchParams(location.search);const notes=[];
+  if(p.has('tab')&&!p.has('s')){const old=p.get('tab');const nw=LEGACY_TAB[old];
+    if(nw){p.set('s',nw);if(p.get('user')){p.set('id',p.get('user'));}if(p.get('doc')){p.set('id',p.get('doc'));}notes.push(`Старая ссылка ?tab=${old} нормализована → раздел «${SEC[nw].l}».`);}
+    else notes.push(`Раздела «${old}» нет — открыта Сводка (раньше молча открывались «Словари»).`);
+    p.delete('tab');p.delete('user');p.delete('doc');}
+  const s=p.get('s')||'overview';
+  if(!SEC[s]){notes.push(`Раздела «${s}» нет — открыта Сводка.`);st.s='overview';}else st.s=s;
+  st.id=p.get('id');st.tab=p.get('t')||'over';st.q=p.get('q')||'';st.g=p.get('g')||'';st.o=p.get('o')||'';
+  st.f={};(p.get('f')||'').split(',').filter(Boolean).forEach(kv=>{const [k,v]=kv.split(':');if(k)st.f[k]=v;});
+  st.dict=p.get('dict')||'area';st.roles=p.get('roles')==='by-object'?'by-object':'by-role';
+  st.scen=p.get('scen')||'ok';if(p.has('rail'))st.rail=p.get('rail')==='1';
+  const th=p.get('theme')||localStorage.getItem('adm.theme');if(th)document.documentElement.dataset.theme=th;
+  st.notice=notes.join(' ')||null;
+}
+function writeUrl(push){
+  const p=new URLSearchParams();p.set('s',st.s);
+  if(st.id)p.set('id',st.id);if(st.id&&st.tab!=='over')p.set('t',st.tab);
+  if(st.q)p.set('q',st.q);const f=Object.entries(st.f).filter(([,v])=>v&&v!=='all').map(([k,v])=>k+':'+v).join(',');if(f)p.set('f',f);
+  if(st.g)p.set('g',st.g);if(st.o)p.set('o',st.o);if(st.s==='dicts'&&st.dict!=='area')p.set('dict',st.dict);
+  if(st.s==='roles'&&st.roles==='by-object')p.set('roles','by-object');if(st.scen!=='ok')p.set('scen',st.scen);
+  history[push?'pushState':'replaceState'](null,'','?'+p.toString());
+}
+function go(s,id,extra){ // одно правило сброса: смена раздела сбрасывает id, вкладку, поиск, фильтры, группировку, порядок
+  if(s!==st.s){st.q='';st.f={};st.g='';st.o='';}
+  st.s=s;st.id=id||null;st.tab='over';st.form=null;Object.assign(st,extra||{});st.notice=null;writeUrl(true);render();
+  document.getElementById('main').focus({preventScroll:true});window.scrollTo(0,0);
+}
+window.addEventListener('popstate',()=>{readUrl();render();});
+
+/* ================= УТИЛИТЫ ================= */
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ic=(n,extra='')=>`<iconify-icon icon="game-icons:${n}" ${extra} aria-hidden="true"></iconify-icon>`;
+const ago=m=>m==null?'—':m<60?`${m} мин назад`:m<1440?`${Math.round(m/60)} ч назад`:`${Math.round(m/1440)} дн назад`;
+const demo=(t='демо')=>`<span class="demo" title="Значение выдумано для прототипа">${t}</span>`;
+const real=()=>`<span class="real" title="${SNAP} (MCP query_slice)">LORE</span>`;
+const isHex=c=>!!c&&/^#/.test(c);
+const hasEmoji=s=>/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u.test(s||'');
+const kcState=()=>({ok:'ok',kc403:'403',kcdown:'down',slicefail:'ok'}[st.scen]);
+const sliceOk=()=>st.scen!=='slicefail';
+function errBlock(reason,what){return `<div class="state err" role="status">${ic('hazard-sign')} Не смогли проверить: ${esc(reason)}. ${esc(what)} — это не «пусто». <button class="btn" data-act="retry">${ic('anticlockwise-rotation')} Повторить</button></div>`;}
+function blockHead(title,{err,fresh,extra}={}){return `<div class="bh"><b>${esc(title)}</b>${err?`<span class="chip t-dng" title="${esc(err)}">${ic('hazard-sign')} ${esc(err)}</span>`:''}<span class="sp"></span>${fresh?`<span class="dim" style="font-size:var(--fs-xs)">проверено ${esc(fresh)}</span>`:''}${extra||''}</div>`;}
+
+/* ================= ОБОЛОЧКА ================= */
+function counter(k){
+  const kc=kcState();
+  if(k==='users')return kc==='ok'?{n:PEOPLE.length}:{unk:kc==='403'?'не смогли проверить: 403 — нет прав':'не смогли проверить: Keycloak не ответил'};
+  if(k==='agents')return {n:AGENTS.length};
+  if(k==='dicts')return sliceOk()?{n:Object.keys(DICT_RAW).length}:{unk:'не смогли проверить: слайс dictionary упал (502)'};
+  if(k==='projects')return sliceOk()?{n:PROJECTS.length}:{unk:'не смогли проверить: слайс git_projects упал'};
+  if(k==='tags')return {n:'500+'};
+  if(k==='rules')return {n:RULES.length};
+  if(k==='settings')return {bad:1,why:'1 неопознанный ключ app_setting'};
+  if(k==='denials')return {n:DENIALS.length};
+  if(k==='health')return {unk:'MCP-сервер из браузера не проверяется'};
+  return null;
+}
+function cntHtml(k){const c=counter(k);if(!c)return '';
+  if(c.unk)return `<span class="cnt unk" title="${esc(c.unk)}" aria-label="${esc(c.unk)}">?</span>`;
+  if(c.bad)return `<span class="cnt bad" title="${esc(c.why)}" aria-label="${esc(c.why)}">${c.bad}</span>`;
+  return `<span class="cnt">${c.n}</span>`;}
+function renderShell(){
+  document.getElementById('apps').innerHTML=APPS.map(([k,l,i])=>`<button class="app" ${k==='admin'?'aria-current="page"':''} data-act="app" data-k="${k}" title="${k==='admin'?'Админка — только роль admin':'Перейти в '+l}">${ic(i)}<span>${l}</span></button>`).join('');
+  const kc=kcState();
+  const kcChip=kc==='ok'?['t-suc','KC: ok','Мост в Keycloak отвечает.']:kc==='403'?['t-dng','KC: 403','Keycloak отказал: управление доступом открыто только роли admin.']:['t-dng','KC: недоступен','Keycloak не ответил (timeout 5 с). Списки людей и учёток неизвестны — это не «пусто».'];
+  const chips=[['t-wrn','auth: off · dev','Аутентификация выключена: роль берётся из конфига. Режим разработки.','hazard-sign'],[kcChip[0],kcChip[1],kcChip[2]],['t-wrn','права агентов: ?','auth-preflight не ответил — защита не подтверждена (не «защищено»).'],['','роль: admin','Роль текущей сессии.'],['t-inf','версия: ?','/lore/version требует токен — в прототипе не читается.']];
+  document.getElementById('sys').innerHTML=`<span class="lbl">Система</span>`+chips.map(([t,l,d,i],n)=>`<button class="chip ${t}" data-act="syschip" data-n="${n}" aria-expanded="false" title="${esc(d)}">${i?ic(i):''}${esc(l)}</button>`).join('')+demo('состояния — демо');
+  document.getElementById('side').innerHTML=NAV.map(g=>`<div class="grp"><span class="dot" style="background:var(--${g.tone})"></span>${esc(g.g)}${g.risk?`<span class="risk">${esc(g.risk)}</span>`:''}</div>`+g.items.map(([k,l,i])=>`<button class="nav" style="--rail:var(--${g.tone})" data-act="nav" data-k="${k}" ${st.s===k?'aria-current="page"':''}>${ic(i)}${esc(l)}${cntHtml(k)}</button>`).join('')).join('');
+  const cur=SEC[st.s];const c=counter(st.s);
+  document.getElementById('where').innerHTML=`<button class="ib" data-act="where" aria-haspopup="menu" id="whereBtn"><span class="dot" style="background:var(--${cur.tone})"></span><b>${esc(cur.g)}</b><span class="dim">›</span>${esc(cur.l)}${cntHtml(st.s)}<span class="sp"></span>${ic('triangle-target')}</button>${c&&(c.unk||c.bad)?`<span class="chip ${c.unk?'t-wrn':'t-dng'}" style="white-space:normal">${esc(c.unk||c.why)}</span>`:''}`;
+}
+
+/* ================= СПИСКИ (общий механизм) ================= */
+/* cfg: {cols:[{k,l,ttl,html(row)}], rows, search(row)->str, filters:[{k,l,icon,opts:[[v,l,pred]]}], groups:[[k,l,fn]], orders:[[k,l,cmp]], open(row)->id} */
+function listView(cfg){
+  const q=st.q.toLowerCase();
+  let rows=cfg.rows.filter(r=>!q||cfg.search(r).toLowerCase().includes(q));
+  const fparts=[];
+  (cfg.filters||[]).forEach(f=>{const v=st.f[f.k]||'all';const o=f.opts.find(x=>x[0]===v)||f.opts[0];if(o[0]!=='all'){rows=rows.filter(o[2]);}fparts.push(`${f.l} = ${o[1]}`);});
+  const ord=(cfg.orders||[]).find(o=>o[0]===st.o)||(cfg.orders||[])[0];if(ord)rows=rows.slice().sort(ord[2]);
+  const grp=st.g?(cfg.groups||[]).find(g=>g[0]===st.g&&g[2]):null;
+  const fOn=Object.values(st.f).some(v=>v&&v!=='all');
+  let desc=`Показано ${rows.length} из ${cfg.rows.length}${cfg.totalNote?' '+cfg.totalNote:''} · ${fparts.join(' · ')||'без фильтра'}${q?` · поиск «${esc(st.q)}»`:''} · ${grp?'группировка: '+grp[1]:'без группировки'} · порядок: ${ord?ord[1]:'—'}`;
+  let body='';
+  if(!rows.length)body=`<tr><td colspan="${cfg.cols.length}" class="state">${q||fOn?'Под фильтр ничего не подошло (проверено).':'Пусто (проверено): слайс ответил, строк нет.'}</td></tr>`;
+  else{
+    const line=r=>{const oid=cfg.open(r);return (oid?`<tr class="row" data-act="open" data-id="${esc(oid)}" tabindex="0">`:`<tr class="row ro">`)+`${cfg.cols.map(c=>`<td data-l="${esc(c.l)}" class="${c.ttl?'ttl':''}"><span>${c.html(r)}</span></td>`).join('')}</tr>`;};
+    if(grp){const m=new Map();rows.forEach(r=>{const k=grp[2](r);if(!m.has(k))m.set(k,[]);m.get(k).push(r);});
+      body=[...m.entries()].map(([k,rs])=>`<tr class="gh"><td colspan="${cfg.cols.length}">${esc(k)} · ${rs.length}</td></tr>`+rs.map(line).join('')).join('');}
+    else body=rows.map(line).join('');
+  }
+  return `<div class="ctl" role="toolbar" aria-label="Управление списком">
+    <input class="search" type="search" placeholder="${esc(cfg.ph||'Поиск…')}  ( / )" aria-label="Поиск по списку" value="${esc(st.q)}" data-act="q" id="q">
+    <button class="ib ${fOn?'on':''}" data-act="menu-f" aria-haspopup="menu">${ic('funnel')}Фильтр${fOn?' · '+Object.values(st.f).filter(v=>v&&v!=='all').length:''}</button>
+    <button class="ib ${grp?'on':''}" data-act="menu-g" aria-haspopup="menu">${ic('stack')}Группировка</button>
+    <button class="ib" data-act="menu-o" aria-haspopup="menu">${ic('trade')}Порядок</button>
+    ${cfg.add?`<button class="btn pri" data-act="${cfg.add[0]}">+ ${esc(cfg.add[1])}</button>`:''}
+  </div>
+  <div class="fdesc">${desc}${fOn||q||grp?` <button data-act="reset">Сбросить всё</button>`:''}</div>
+  <table class="rt"><thead><tr>${cfg.cols.map(c=>`<th>${esc(c.l)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
+}
+let LISTCFG=null;
+
+/* ================= ЭКРАНЫ ================= */
+const S={};
+S.overview=()=>{
+  const hex=Object.entries(DICT_RAW).filter(([,r])=>r.some(x=>isHex(x[2]))).map(([t])=>t);
+  const att=[
+   ['dng','Доступ','У всех 7 агентов один владелец — omiloreadmin. Уйдёт учётка — агенты осиротеют.','agents',null,true],
+   ['wrn','Система','В app_setting лежит неопознанный ключ «ффф» = «ывввв»: код его не читает.','settings','ффф',true],
+   ['wrn','Справочники',`${hex.length} словарей держат сырые hex-цвета вне токенов: ${hex.join(', ')}.`,'dicts',null,true],
+   ['wrn','Правила CLAUDE','MCP-слайс docs kind=claude-rules отдал 1 документ из 10 (total 1, без пометки «скрыто скоупом»). Гипотеза: умолчание проекта сессии.','rules',null,true],
+   ['inf','Журнал','Аудита админ-операций в продукте нет (заглушка «появится с AL-20/AL-43»). Журнал ниже — как должно быть.','audit',null,false]];
+  return `<h1>Сводка админки</h1><p class="lead">Что требует внимания, по разделам. Пункты — ссылки в нужное место. ${real()} — из ${SNAP}; ${demo()} — выдумано для прототипа.</p>
+  ${st.notice?`<div class="notice w" role="status">${esc(st.notice)}</div>`:''}
+  <div class="blk">${blockHead('Требует внимания',{fresh:'2 мин назад'})}<div class="bb">${att.map(([t,g,txt,s,id,r])=>`<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--bd)"><span class="chip t-${t}">${esc(g)}</span><span style="flex:1;min-width:0">${esc(txt)} ${r?real():demo()}</span><button class="btn" data-act="goto" data-s="${s}" data-id="${esc(id||'')}">Открыть</button></div>`).join('')}</div></div>
+  <div class="cards">${[['Люди',kcState()==='ok'?PEOPLE.length:'?','users',kcState()==='ok'?'2 логина из project_users; почта и realm-роли — демо':'Keycloak: '+kcState()],['Агенты',7,'agents','все 7 — Claude Code, профили full…tester'],['Словари',Object.keys(DICT_RAW).length,'dicts','121 значение'],['Проекты',23,'projects','6 приватных'],['Правила CLAUDE',10,'rules','найдено поиском; слайс отдал 1'],['Последнее действие',ago(AUDIT[0].ago),'audit','vasilisk · человек']].map(([k,n,s,sub])=>`<button class="card" style="text-align:left;cursor:pointer" data-act="nav" data-k="${s}"><span class="k">${esc(k)}</span><span class="n">${esc(n)}</span><span class="muted" style="font-size:var(--fs-xs)">${esc(sub)}</span></button>`).join('')}</div>`;
+};
+S.users=()=>{
+  const kc=kcState();
+  if(st.id)return recUser(PEOPLE.find(p=>p.id===st.id));
+  let inner;
+  if(kc!=='ok')inner=errBlock(kc==='403'?'403 — Keycloak отказал, нужна роль admin':'Keycloak не ответил за 5 с','Список людей неизвестен');
+  else{LISTCFG={rows:PEOPLE,ph:'логин или email',search:r=>r.id+' '+r.email,open:r=>r.id,add:['add-user','Человек'],
+    cols:[{k:'id',l:'логин',ttl:1,html:r=>`<b>${esc(r.id)}</b> ${real()}`},{k:'email',l:'email',html:r=>`${esc(r.email)} ${demo()}`},{k:'realm',l:'realm-роли',html:r=>r.realm.map(x=>`<span class="chip ${/admin/.test(x)?'t-dng':''}">${esc(x)}</span>`).join(' ')+' '+demo()},{k:'proj',l:'проекты и роли',html:r=>r.proj.map(([p,ro])=>`<span class="chip">${esc(p.split('/')[1])} · ${esc(ro)}</span>`).join(' ')},{k:'on',l:'вкл',html:r=>r.on?'да':'нет'}],
+    filters:[{k:'realm',l:'роль',opts:[['all','любая'],['admin','admin',r=>r.realm.includes('admin')],['noadmin','без admin',r=>!r.realm.includes('admin')]]},{k:'on',l:'учётка',opts:[['all','любая'],['on','включена',r=>r.on],['off','отключена',r=>!r.on]]}],
+    groups:[['','без группировки'],['realm','по высшей роли',r=>r.realm.includes('super-admin')?'super-admin':r.realm[0]||'—']],
+    orders:[['','по логину ↑',(a,b)=>a.id.localeCompare(b.id)],['proj','по числу проектов ↓',(a,b)=>b.proj.length-a.proj.length]]};
+    inner=listView(LISTCFG);}
+  return head('users','Люди — учётки Keycloak и их роли: realm-роли (что можно в LORE) и роли в проектах (что видно). Паролей LORE не хранит; super-admin выдаётся только в консоли Keycloak.')+`<div class="blk">${blockHead('Люди',{err:kc!=='ok'?(kc==='403'?'403':'KC недоступен'):null,fresh:kc==='ok'?'1 мин назад':null,extra:auditLink('access')})}<div class="bb">${inner}</div></div>`;
+};
+S.agents=()=>{
+  if(st.id)return recAgent(AGENTS.find(a=>a.id===st.id));
+  LISTCFG={rows:AGENTS,ph:'имя, учётка или профиль',search:r=>r.name+' '+r.client+' '+r.role,open:r=>r.id,add:['add-agent','Агент'],
+   cols:[{l:'агент',ttl:1,html:r=>`<b>${esc(r.name)}</b>`},{l:'профиль',html:r=>`<span class="chip t-acc">${esc(r.role)}</span>`},{l:'владелец',html:r=>esc(r.owner)},{l:'учётка KC',html:r=>`<span class="mono">${esc(r.client)}</span>`},{l:'пишет',html:r=>esc(r.writes)},{l:'посл. действие',html:r=>ago(r.last)+' '+demo()}],
+   filters:[{k:'role',l:'профиль',opts:[['all','любой'],...AGENTS.map(a=>[a.role,a.role,r=>r.role===a.role])]},{k:'stale',l:'активность',opts:[['all','любая'],['day','молчит > суток',r=>r.last>=1440]]}],
+   groups:[['','без группировки'],['owner','по владельцу',r=>r.owner]],
+   orders:[['','по имени ↑',(a,b)=>a.name.localeCompare(b.name)],['last','по последнему действию',(a,b)=>a.last-b.last]]};
+  return head('agents','Агент = владелец × профиль × учётка Keycloak. Профиль задаёт, что агент может писать; видит он то же, что владелец.')+`<div class="notice w">${ic('hazard-sign')} Все 7 агентов принадлежат одному человеку (omiloreadmin) ${real()}. Права агентов сейчас <b>не подтверждены</b> бэкендом (auth-preflight молчит) — таблица описывает намерение.</div><div class="blk">${blockHead('Агенты графа',{fresh:'1 мин назад',extra:auditLink('access')})}<div class="bb">${listView(LISTCFG)}</div></div>`;
+};
+S.roles=()=>{
+  const byObj=st.roles==='by-object';
+  const seg=`<div class="row-a" role="tablist" aria-label="Режим">${[['by-role','Кто что может'],['by-object','Кто имеет доступ к…']].map(([k,l])=>`<button class="btn ${st.roles===k?'pri':''}" role="tab" aria-selected="${st.roles===k}" data-act="roles" data-k="${k}">${l}</button>`).join('')}</div>`;
+  const body=byObj?`<table class="rt"><thead><tr><th>что</th><th>API</th><th>люди</th><th>агенты</th></tr></thead><tbody>${ROLE_MATRIX.map(([w,api,ho,ag])=>`<tr><td data-l="что" class="ttl"><span>${esc(w)}</span></td><td data-l="API"><span class="mono">${esc(api)}</span></td><td data-l="люди"><span>${ho?'<span class="chip t-dng">только люди (admin)</span>':'editor+'}</span></td><td data-l="агенты"><span>${ag.length?ag.map(x=>`<span class="chip">${esc(x)}</span>`).join(' '):'<span class="dim">никто</span>'}</span></td></tr>`).join('')}</tbody></table>`
+  :`<h3>Люди · realm-роли</h3><table class="rt"><thead><tr><th>роль</th><th>что даёт</th><th>где назначается</th><th>кому выдана</th></tr></thead><tbody>${REALM.map(([r,g,w])=>`<tr><td data-l="роль" class="ttl"><span class="mono">${esc(r)}</span></td><td data-l="что даёт"><span>${esc(g)}</span></td><td data-l="где"><span>${esc(w)}</span></td><td data-l="кому"><span>${kcState()==='ok'?PEOPLE.filter(p=>p.realm.includes(r)).map(p=>esc(p.id)).join(', ')||'<span class="dim">никому (проверено)</span>':'<span class="chip t-wrn">н/д — KC недоступен</span>'}</span></td></tr>`).join('')}</tbody></table>
+   <h3>Агенты · профили</h3><table class="rt"><thead><tr><th>профиль</th><th>подпись (словарь)</th><th>что может писать</th><th>учётка</th></tr></thead><tbody>${DICT_RAW.agent_profile.map(([c,l])=>{const a=AGENTS.find(x=>x.role===c);return `<tr class="row" data-act="open-s" data-s="agents" data-id="${a?a.id:''}"><td data-l="профиль" class="ttl"><span class="mono">${esc(c)}</span></td><td data-l="подпись"><span>${esc(l)}</span></td><td data-l="пишет"><span>${esc(a?a.writes:'—')}</span></td><td data-l="учётка"><span class="mono">${esc(a?a.client:'нет учётки')}</span></td></tr>`;}).join('')}</tbody></table>`;
+  return head('roles','Две оси прав: люди (realm-роли Keycloak + роли в проектах) и агенты (профиль × владелец). Матрица — та же, что проверяет бэкенд (D4).')+seg+`<div class="blk" style="margin-top:8px">${blockHead(byObj?'Кто имеет доступ к…':'Кто что может',{fresh:'1 мин назад'})}<div class="bb">${body}</div></div>`;
+};
+S.denials=()=>head('denials','Последние отказы доступа (кольцевой буфер, 30 записей, с последнего рестарта бэкенда). Показывает, где права мешают работе — человеку или агенту.')+`<div class="blk">${blockHead('Отказы',{fresh:'только что'})}<div class="bb"><table class="rt"><thead><tr><th>когда</th><th>метод</th><th>путь</th><th>статус</th><th>кто</th><th>причина</th></tr></thead><tbody>${DENIALS.map(([m,me,p,s,who,why])=>`<tr><td data-l="когда"><span>${ago(m)}</span></td><td data-l="метод"><span class="mono">${me}</span></td><td data-l="путь" class="ttl"><span class="mono">${esc(p)}</span></td><td data-l="статус"><span class="chip t-dng">${s}</span></td><td data-l="кто"><span class="who ${who.startsWith('agent')?'a':'h'}">${esc(who)}</span></td><td data-l="причина"><span class="mono">${esc(why)}</span></td></tr>`).join('')}</tbody></table><div class="dim" style="font-size:var(--fs-xs);margin-top:6px">${demo()} строки выдуманы</div></div></div>`;
+S.dicts=()=>{
+  if(st.id)return recDict(DICTS.find(d=>d.id===st.id));
+  if(!sliceOk())return head('dicts','Словари единого языка графа.')+`<div class="blk">${blockHead('Словари',{err:'слайс dictionary: 502'})}${errBlock('слайс dictionary ответил 502','Список словарей неизвестен')}</div>`;
+  const types=Object.keys(DICT_RAW).sort();
+  const t=types.includes(st.dict)?st.dict:'area';
+  const rows=DICTS.filter(d=>d.type===t);
+  LISTCFG={rows,ph:'код или подпись',search:r=>r.code+' '+r.label,open:r=>r.id,add:['add-dict','значение'],
+   cols:[{l:'код',ttl:1,html:r=>`<span class="mono">${esc(r.code)}</span>`},{l:'подпись',html:r=>esc(r.label)},{l:'вид',html:r=>`${r.color?`<span class="sw" style="background:${esc(r.color)}"></span>`:'<span class="dim">—</span>'} ${r.icon?ic(r.icon):''} ${isHex(r.color)?'<span class="chip t-wrn">hex вне токенов</span>':''}`},{l:'порядок',html:r=>r.order},{l:'акт.',html:r=>r.active?'да':'<span class="chip">откл.</span>'}],
+   filters:[{k:'act',l:'состояние',opts:[['all','все'],['on','активные',r=>r.active],['off','отключённые',r=>!r.active]]},{k:'q8',l:'качество',opts:[['all','любое'],['hex','сырой hex',r=>isHex(r.color)],['emoji','эмодзи в подписи',r=>hasEmoji(r.label)],['nocolor','без цвета',r=>!r.color]]}],
+   groups:[['','без группировки'],['color','по наличию цвета',r=>r.color?(isHex(r.color)?'hex':'токен'):'без цвета']],
+   orders:[['','по порядку',(a,b)=>a.order-b.order],['code','по коду ↑',(a,b)=>a.code.localeCompare(b.code)]]};
+  const canon=CANON.includes(t);
+  return head('dicts','Словари единого языка графа: статусы, области, продукты, роли. Код значения после создания не меняется (OQ-ADMIN-DICT-CODE).')+
+  `<div class="ctl" role="tablist" aria-label="Тип словаря" style="flex-wrap:wrap">${types.map(x=>`<button class="chip ${x===t?'t-acc':''}" style="min-height:var(--tap)" role="tab" aria-selected="${x===t}" data-act="dict" data-k="${x}">${CANON.includes(x)?ic('padlock')+' ':''}${esc(x)} <span class="dim">${DICT_RAW[x].length}</span>${DICT_RAW[x].some(r=>isHex(r[2]))?' <span style="color:var(--wrn)">●</span>':''}</button>`).join('')}<button class="chip" style="min-height:var(--tap)" data-act="add-type">+ тип</button></div>
+  ${canon?`<div class="notice d">${ic('padlock')} «${t}» — канон-словарь: на его кодах держатся проверки статусов. Правка требует ввода кода и попадает в журнал.</div>`:''}
+  <div class="blk">${blockHead(t,{fresh:'1 мин назад',extra:real()+auditLink('dicts')})}<div class="bb">${listView(LISTCFG)}</div></div>`;
+};
+S.projects=()=>{
+  if(st.id)return recProject(PROJECTS.find(p=>p.id===st.id));
+  if(!sliceOk())return head('projects','Git-проекты.')+`<div class="blk">${blockHead('Проекты',{err:'слайс git_projects упал'})}${errBlock('слайс git_projects ответил 502','Список проектов неизвестен')}</div>`;
+  LISTCFG={rows:PROJECTS,ph:'slug или имя',search:r=>r.id+' '+r.name,open:r=>r.id,add:['add-project','Проект'],
+   cols:[{l:'slug',ttl:1,html:r=>`<span class="mono">${esc(r.id)}</span>`},{l:'имя',html:r=>esc(r.name)},{l:'ветка',html:r=>r.br?`<span class="mono">${esc(r.br)}</span>`:'<span class="chip t-wrn">нет репозитория</span>'},{l:'доступ',html:r=>r.priv?'<span class="chip t-acc">приватный</span>':'<span class="dim">не задано</span>'},{l:'участники',html:r=>r.members?r.members.length+' чел.':'<span class="dim">не загружено</span>'}],
+   filters:[{k:'owner',l:'владелец',opts:[['all','любой'],['AIDA','AIDA',r=>r.id.startsWith('AIDA/')],['NooriUta','NooriUta',r=>r.id.startsWith('NooriUta/')],['other','прочие',r=>!/^(AIDA|NooriUta)\//.test(r.id)]]},{k:'repo',l:'репозиторий',opts:[['all','любой'],['none','без ветки',r=>!r.br]]}],
+   groups:[['','без группировки'],['org','по организации',r=>r.id.split('/')[0]],['br','по ветке',r=>r.br||'нет ветки']],
+   orders:[['','по slug ↑',(a,b)=>a.id.localeCompare(b.id)],['name','по имени ↑',(a,b)=>a.name.localeCompare(b.name)]]};
+  return head('projects','Git-проекты: slug, ветка, хостинги (origin + зеркала) и участники. Роль в проекте определяет, что человек и его агенты видят.')+`<div class="blk">${blockHead('Проекты',{fresh:'1 мин назад',extra:real()+auditLink('dicts')})}<div class="bb">${listView(LISTCFG)}</div></div>`;
+};
+S.tags=()=>{
+  LISTCFG={rows:TAGS.map(([id,n])=>({id,n})),ph:'тег',search:r=>r.id,open:r=>'',totalNote:'(загружена первая страница: 40 из 500 — обрезано)',
+   cols:[{l:'тег',ttl:1,html:r=>`<span class="mono">${esc(r.id)}</span>`},{l:'использований',html:r=>r.n},{l:'заметка',html:r=>/[а-я]/i.test(r.id)&&/^[а-яё]+$/i.test(r.id)?'<span class="chip t-wrn">кириллица — возможен дубль</span>':/^ADR-/.test(r.id)?'<span class="chip">тег-ссылка на ADR</span>':''}],
+   filters:[{k:'kind',l:'вид',opts:[['all','любой'],['cyr','кириллица',r=>/[а-яё]/i.test(r.id)],['adr','ссылка на ADR',r=>/^ADR-/.test(r.id)]]}],
+   groups:[['','без группировки'],['lang','по алфавиту записи',r=>/[а-яё]/i.test(r.id)?'кириллица':'латиница']],
+   orders:[['','по использованию ↓',(a,b)=>b.n-a.n],['alpha','по алфавиту ↑',(a,b)=>a.id.localeCompare(b.id)]]};
+  return head('tags','Теги KnowTag. Чтение здесь; слияние и переименование — через MCP (агентом), с записью в журнал.')+`<div class="notice">${ic('info')} Пары «security / безопасность» — кандидаты на слияние. Слияние пока делает агент через MCP: в прототипе кнопки нет, чтобы не обещать того, чего бэкенд не умеет.</div><div class="blk">${blockHead('Теги',{fresh:'1 мин назад',extra:real()})}<div class="bb">${listView(LISTCFG)}</div></div>`;
+};
+S.rules=()=>{
+  if(st.id)return recRule(RULES.find(r=>r.id===st.id));
+  LISTCFG={rows:RULES,ph:'название или doc_id',search:r=>r.id+' '+r.title,open:r=>r.id,
+   cols:[{l:'документ',ttl:1,html:r=>esc(r.title)},{l:'doc_id',html:r=>`<span class="mono">${esc(r.id)}</span>`},{l:'файл',html:r=>r.file?`<span class="mono">${esc(r.file)}</span>`:'<span class="dim">служебный, без файла</span>'},{l:'синхр. с файлом',html:r=>r.sync==null?'—':ago(r.sync)+' '+demo()},{l:'расхождение',html:r=>r.drift==null?'—':r.drift==='есть'?'<span class="chip t-wrn">есть</span>':r.drift==='нет'?'<span class="chip t-suc">нет</span>':'<span class="chip">не смогли проверить</span>'}],
+   filters:[{k:'drift',l:'расхождение',opts:[['all','любое'],['yes','есть',r=>r.drift==='есть'],['unk','не проверено',r=>r.drift==='неизвестно']]}],
+   groups:[['','без группировки'],['kind','по виду',r=>r.file?(r.id==='claude_rules_global'?'глобальные':'по репозиториям'):'служебные']],
+   orders:[['','по порядку',(a,b)=>RULES.indexOf(a)-RULES.indexOf(b)],['sync','давно не синхронизированные',(a,b)=>(b.sync||0)-(a.sync||0)]]};
+  return head('rules','Снимки файлов CLAUDE.md: глобальный и по репозиториям. Источник истины — файлы на машине; здесь витрина, дифф и время последней синхронизации.')+`<div class="notice w">${ic('hazard-sign')} Список собран поиском (search «claude_rules») ${real()}: слайс docs kind=claude-rules через MCP вернул <b>1 из 10</b> с total=1 и без пометки «скрыто скоупом». Экран обязан показывать «скрыто скоупом: N», а не короткий список как полный.</div><div class="blk">${blockHead('Документы правил',{fresh:'3 мин назад'})}<div class="bb">${listView(LISTCFG)}</div></div>`;
+};
+S.mcp=()=>{
+  LISTCFG={rows:TOOLS,ph:'имя инструмента',search:r=>r.id+' '+r.api,open:r=>'',totalNote:'(выборка; в aida-lore их ~110)',
+   cols:[{l:'инструмент',ttl:1,html:r=>`<span class="mono">${esc(r.id)}</span>`},{l:'тип',html:r=>`<span class="chip ${r.kind==='write'?'t-wrn':'t-inf'}">${r.kind==='write'?ic('quill-ink')+' запись':ic('magnifying-glass')+' чтение'}</span>`},{l:'сущность',html:r=>esc(r.ent)},{l:'вызов бэкенда',html:r=>`<span class="mono">${esc(r.api)}</span>`}],
+   filters:[{k:'kind',l:'тип',opts:[['all','любой'],['read','чтение',r=>r.kind==='read'],['write','запись',r=>r.kind==='write']]},{k:'ent',l:'сущность',opts:[['all','любая'],...[...new Set(TOOLS.map(t=>t.ent))].map(e=>[e,e,r=>r.ent===e])]}],
+   groups:[['','без группировки'],['ent','по сущности',r=>r.ent],['kind','по типу',r=>r.kind==='write'?'запись':'чтение']],
+   orders:[['','по имени ↑',(a,b)=>a.id.localeCompare(b.id)]]};
+  return head('mcp','Справочник инструментов MCP-сервера aida-lore: что читает, что пишет, какой вызов бэкенда стоит за инструментом. Фильтры теперь в URL — ссылкой можно поделиться.')+`<div class="blk">${blockHead('Инструменты',{extra:demo('выборка имён — реальная, вызовы — сокращены')})}<div class="bb">${listView(LISTCFG)}</div></div>`;
+};
+S.conn=()=>head('conn','Как подключить клиента к LORE: Claude Code, OpenCode, канал miniLORE.')+[['Claude Code (user-скоуп)','claude mcp add aida-lore --scope user -- node C:\\AIDA\\UnlimitedLORE-mcp\\dist\\index.js'],['Проверить, какой код запущен','lore_version   # сверить с GET /lore/version'],['Канал miniLORE','& "$env:USERPROFILE\\.local\\bin\\claude.exe" --dangerously-load-development-channels server:minilore-link --resume <sessionId>']].map(([t,c],i)=>`<div class="blk">${blockHead(t)}<div class="bb"><div class="pre">${esc(c)}</div><button class="btn" data-act="copy" data-i="${i}">${ic('papers')} Скопировать</button></div></div>`).join('');
+S.health=()=>head('health','Здоровье цепочки «клиент → MCP → бэкенд → база». Каждое звено проверяется отдельно; «не смогли проверить» не равно «работает».')+`<div class="blk">${blockHead('Звенья',{fresh:'только что'})}<div class="bb"><table class="rt"><thead><tr><th>звено</th><th>состояние</th><th>как проверено</th></tr></thead><tbody>${[['Бэкенд LORE (каталог слайсов)','<span class="chip t-suc">отвечает</span>','GET /lore/slices — 200, 230 мс'],['MCP-сервер aida-lore','<span class="chip t-wrn">не смогли проверить</span>','браузер не видит stdio-процесс клиента. Сейчас экран «Инструменты MCP» выдаёт ответ бэкенда за здоровье MCP — это подмена.'],['Версия MCP vs develop','<span class="chip t-wrn">не смогли проверить</span>','нужен вызов lore_version из клиента; отставание чекаута — частая причина «Unrecognized key»'],['Keycloak-мост',kcState()==='ok'?'<span class="chip t-suc">отвечает</span>':'<span class="chip t-dng">'+(kcState()==='403'?'403':'недоступен')+'</span>','GET /lore/kc/auth-preflight'],['ArcadeDB (прод)','<span class="chip t-suc">отвечает</span>','косвенно: слайс вернул строки']].map(([a,b,c])=>`<tr><td data-l="звено" class="ttl"><span>${a}</span></td><td data-l="состояние"><span>${b}</span></td><td data-l="как"><span>${esc(c)}</span></td></tr>`).join('')}</tbody></table><div style="margin-top:6px">${demo()}</div></div></div>`;
+S.settings=()=>{
+  if(st.id)return recSetting(SETTINGS.find(s=>s.id===st.id));
+  LISTCFG={rows:SETTINGS,ph:'ключ',search:r=>r.id+' '+r.descr,open:r=>r.id,
+   cols:[{l:'ключ',ttl:1,html:r=>`<span class="mono">${esc(r.id)}</span>`},{l:'значение',html:r=>r.val==null?'<span class="dim">не задано · по умолчанию '+esc(r.def)+'</span>':`<span class="mono">${esc(r.val)}</span>`},{l:'тип',html:r=>esc(r.type)},{l:'статус',html:r=>r.known?'<span class="chip t-suc">читается кодом</span>':'<span class="chip t-dng">неопознан</span>'}],
+   filters:[{k:'known',l:'статус',opts:[['all','любой'],['unk','неопознанные',r=>!r.known],['set','заданные',r=>r.val!=null]]}],
+   groups:[['','без группировки'],['known','по статусу',r=>r.known?'известные':'неопознанные']],orders:[['','по ключу ↑',(a,b)=>a.id.localeCompare(b.id)]]};
+  return head('settings','Параметры приложения (app_setting) и готовность к включению аутентификации.')+`<div class="blk">${blockHead('Включение аутентификации',{err:'auth-preflight не ответил'})}<div class="bb"><div class="state err">${ic('hazard-sign')} Чек-лист не проверен: preflight молчит. Раньше это сообщение смешивало «грузится» и «KC недоступен».</div><div class="row-a"><button class="btn" disabled>Включить аутентификацию</button><span class="muted" style="font-size:var(--fs-xs)">Флип — env LORE_AUTH_ENABLED=true + рестарт по RUNBOOK-AUTH-OMILORE (владелица лично). Кнопка не притворяется рабочей.</span></div></div></div><div class="blk">${blockHead('Параметры',{fresh:'1 мин назад',extra:real()+auditLink('sys')})}<div class="bb">${listView(LISTCFG)}</div></div>`;
+};
+S.flags=()=>head('flags','Флаги функций. «Новая навигация» включается на пользователя — так каркас катится со страховкой и метриками «до / после».')+FLAGS.map(f=>`<div class="blk">${blockHead(f.name,{extra:`<span class="chip">${esc(f.scope)}</span>`+demo()})}<div class="bb"><p class="muted" style="margin:0 0 6px">${esc(f.descr)}</p>${f.id==='new_nav'?PEOPLE.map(p=>`<div style="display:flex;align-items:center;gap:10px;min-height:var(--tap)"><button class="sw-tog" role="switch" aria-checked="${p.newNav}" aria-label="Новая навигация для ${p.id}" data-act="flag-user" data-id="${p.id}"></button><span>${esc(p.id)}</span></div>`).join(''):`<div style="display:flex;align-items:center;gap:10px"><button class="sw-tog" role="switch" aria-checked="${!!f.on}" aria-label="${esc(f.name)}" data-act="flag" data-id="${f.id}"></button><span>${f.on?'включено':'выключено'}</span></div>`}</div></div>`).join('');
+S.quick=()=>head('quick','Личная шпаргалка владельца — команды для консоли. Копирование честное: вне https браузер не даёт буфер, и экран это говорит.')+[['Перейти в проект',['cd C:\\AIDA\\UnlimitedLORE','cd C:\\AIDA\\aida-root','cd D:\\Mobilepoc']],['Канал miniLORE',['& "$env:USERPROFILE\\.local\\bin\\claude.exe" --dangerously-load-development-channels server:minilore-link --resume <sessionId>']]].map(([g,cs])=>`<div class="blk">${blockHead(g)}<div class="bb">${cs.map(c=>`<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><div class="pre" style="flex:1;min-width:0">${esc(c)}</div><button class="btn" data-act="copyq" data-c="${esc(c)}">${ic('papers')} Скопировать</button></div>`).join('')}</div></div>`).join('');
+S.version=()=>head('version','Версии фронта, бэкенда и MCP — чтобы понять, что именно выкачено, без ssh.')+`<div class="blk">${blockHead('Версии',{err:'/lore/version: 401 без токена'})}<div class="bb"><dl class="kv"><dt>Фронт (бандл)</dt><dd class="mono">index-3f9a2c.js ${demo()}</dd><dt>Бэкенд</dt><dd><span class="chip t-wrn">не смогли проверить</span> /lore/version требует токен</dd><dt>MCP aida-lore</dt><dd><span class="chip t-wrn">не смогли проверить</span> только из клиента (lore_version)</dd><dt>ArcadeDB</dt><dd class="mono">26.10.2 ${demo()}</dd></dl></div></div>`;
+S.audit=()=>{
+  LISTCFG={rows:AUDIT,ph:'кто, объект, действие',search:r=>r.who+' '+r.obj+' '+r.what,open:r=>'',
+   cols:[{l:'когда',html:r=>ago(r.ago)},{l:'кто',ttl:1,html:r=>`<span class="who ${r.k}">${r.k==='a'?'агент':'человек'}</span> ${esc(r.who)}`},{l:'раздел',html:r=>esc(r.sub)},{l:'объект',html:r=>`<span class="mono">${esc(r.obj)}</span>`},{l:'что',html:r=>esc(r.what)}],
+   filters:[{k:'sec',l:'группа',opts:[['all','все'],['access','Доступ',r=>r.sec==='access'],['dicts','Справочники',r=>r.sec==='dicts'],['rules','Правила',r=>r.sec==='rules'],['sys','Система',r=>r.sec==='sys']]},{k:'k',l:'кто',opts:[['all','все'],['h','люди',r=>r.k==='h'],['a','агенты',r=>r.k==='a']]}],
+   groups:[['','без группировки'],['who','по исполнителю',r=>r.who],['sec','по разделу',r=>r.sub]],orders:[['','сначала новые',(a,b)=>a.ago-b.ago],['old','сначала старые',(a,b)=>b.ago-a.ago]]};
+  return head('audit','Журнал админ-операций: кто (человек или агент), что, когда, над чем. Откатываемые действия можно отменить отсюда же.')+`<div class="notice w">${ic('hazard-sign')} В продукте журнала нет (UsersTab: «аудит появится с AL-20/AL-43»). Записи ${demo()}; ваши действия в прототипе добавляются сюда.</div><div class="blk">${blockHead('Журнал',{fresh:'только что'})}<div class="bb">${listView(LISTCFG)}</div></div>`;
+};
+function head(s,lead){const c=SEC[s];return `<div class="crumb">Админка › ${esc(c.g)} › ${esc(c.l)}</div><h1>${esc(c.l)}</h1><p class="lead">${esc(lead)}</p>${st.notice?`<div class="notice w" role="status">${esc(st.notice)}</div>`:''}`;}
+function auditLink(sec){return `<button class="chip" data-act="goto-audit" data-sec="${sec}">${ic('scroll-quill')} журнал раздела</button>`;}
+
+/* ================= СТРАНИЦЫ ЗАПИСЕЙ ================= */
+function recShell({s,title,id,verdict,tabs,body,rail,actions}){
+  const c=SEC[s];
+  return `<div class="crumb">Админка › ${esc(c.g)} › <button class="chip" data-act="nav" data-k="${s}">‹ ${esc(c.l)}</button></div>
+  <div class="rec-h"><div style="flex:1;min-width:0"><h1 style="overflow-wrap:anywhere">${esc(title)}</h1><div class="mono dim" style="font-size:var(--fs-xs);overflow-wrap:anywhere">${esc(id)}</div></div><div class="row-a">${actions||''}</div></div>
+  <div class="verdict" aria-label="Вердикт">${verdict}</div>
+  <div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button class="tab" role="tab" aria-selected="${st.tab===k}" data-act="tab" data-k="${k}">${esc(l)}</button>`).join('')}</div>
+  <div class="rec-wrap"><div class="rec-main">${body}</div>${st.rail?`<aside class="rail" aria-label="Свойства">${rail}</aside>`:''}</div>
+  <button class="ear" data-act="rail" aria-pressed="${st.rail}" title="Правая колонка свойств (запоминается)">${st.rail?'Скрыть свойства':'Свойства'}</button>`;
+}
+function auditFor(obj){const rs=AUDIT.filter(a=>a.obj===obj);return rs.length?`<table class="rt"><tbody>${rs.map(r=>`<tr><td data-l="когда"><span>${ago(r.ago)}</span></td><td data-l="кто" class="ttl"><span><span class="who ${r.k}">${r.k==='a'?'агент':'человек'}</span> ${esc(r.who)}</span></td><td data-l="что"><span>${esc(r.what)}</span></td></tr>`).join('')}</tbody></table>`:'<div class="state">Пусто (проверено): по этой записи действий не было.</div>';}
+function notFound(s,id){return head(s,'')+`<div class="notice d">Записи «${esc(id)}» нет${s==='users'&&kcState()!=='ok'?' — или Keycloak не ответил, и проверить нельзя':''}. <button class="btn" data-act="nav" data-k="${s}">К списку</button></div>`;}
+function recUser(u){
+  if(kcState()!=='ok')return head('users','')+`<div class="blk">${blockHead(st.id,{err:'KC: '+kcState()})}${errBlock('Keycloak: '+kcState(),'Карточка человека неизвестна')}</div>`;
+  if(!u)return notFound('users',st.id);
+  const admins=PEOPLE.filter(p=>p.realm.includes('admin')).length;
+  const ag=AGENTS.filter(a=>a.owner===u.id).length;
+  const verdict=`<span class="v">человек</span> · <span class="chip ${u.on?'t-suc':'t-dng'}">${u.on?'включён':'отключён'}</span> · realm: ${u.realm.map(r=>`<span class="chip t-dng">${esc(r)}</span>`).join(' ')} · проектов: ${u.proj.length} · агентов: ${ag} · последнее действие: ${ago(AUDIT.find(a=>a.who===u.id)?.ago)} ${demo()}`;
+  let body='';
+  if(st.tab==='over')body=`<div class="blk">${blockHead('Глобальные роли (realm)')}<div class="bb">${['admin','editor','viewer'].map(r=>{const has=u.realm.includes(r);return `<div style="display:flex;align-items:center;gap:8px;min-height:var(--tap);border-bottom:1px solid var(--bd)"><span class="mono" style="flex:1">${r}</span>${has?'<span class="chip t-suc">есть</span>':'<span class="dim">нет</span>'}<button class="btn ${has&&r==='admin'?'dng':''}" data-act="realm" data-r="${r}" data-on="${has?1:0}">${has?'Снять…':'Выдать…'}</button></div>`;}).join('')}<div style="display:flex;align-items:center;gap:8px;min-height:var(--tap)"><span class="mono" style="flex:1">super-admin</span>${u.realm.includes('super-admin')?'<span class="chip t-suc">есть</span>':'<span class="dim">нет</span>'}<span class="dim" style="font-size:var(--fs-xs)">только консоль Keycloak</span></div>${admins<=1&&u.realm.includes('admin')?'<div class="notice d" style="margin-top:6px">Последний admin — снять нельзя (409 LAST_ADMIN).</div>':''}</div></div>
+   <div class="blk">${blockHead('Роли в проектах')}<div class="bb">${u.proj.map(([p,r],i)=>`<div style="display:flex;align-items:center;gap:8px;min-height:var(--tap);flex-wrap:wrap;border-bottom:1px solid var(--bd)"><button class="chip" data-act="open-s" data-s="projects" data-id="${esc(p)}">${esc(p)}</button><span style="flex:1"></span><select class="inp" style="width:auto" aria-label="Роль в ${esc(p)}" data-act="projrole" data-i="${i}">${DICT_RAW.project_role.map(([c,l])=>`<option value="${c}" ${c===r?'selected':''}>${esc(l)}</option>`).join('')}</select><button class="btn dng" data-act="projdel" data-i="${i}">Снять…</button></div>`).join('')}<div class="row-a" style="margin-top:6px"><button class="btn" data-act="projadd">+ роль в проекте</button></div></div></div>
+   <div class="blk">${blockHead('Флаги')}<div class="bb"><div style="display:flex;align-items:center;gap:10px"><button class="sw-tog" role="switch" aria-checked="${u.newNav}" aria-label="Новая навигация" data-act="flag-user" data-id="${u.id}"></button><span>Новая навигация</span></div></div></div>`;
+  if(st.tab==='agents')body=`<div class="blk">${blockHead('Агенты этого человека')}<div class="bb">${ag?AGENTS.filter(a=>a.owner===u.id).map(a=>`<button class="chip" style="min-height:var(--tap);margin:2px" data-act="open-s" data-s="agents" data-id="${a.id}">${esc(a.name)}</button>`).join(''):'<div class="state">Пусто (проверено): агентов нет.</div>'}</div></div>`;
+  if(st.tab==='log')body=`<div class="blk">${blockHead('Журнал по человеку')}<div class="bb">${auditFor(u.id)}</div></div>`;
+  return recShell({s:'users',title:u.id,id:'KC '+u.sub,verdict,tabs:[['over','Обзор'],['agents','Агенты · '+ag],['log','Журнал']],body,
+    rail:`<dl class="kv"><dt>логин</dt><dd>${esc(u.id)} ${real()}</dd><dt>email</dt><dd>${esc(u.email)} ${demo()}</dd><dt>KC id</dt><dd class="mono">${esc(u.sub)}</dd><dt>создан</dt><dd>${demo()}</dd></dl>`,
+    actions:`<button class="btn dng" data-act="user-off">Отключить учётку…</button>`});
+}
+function recAgent(a){
+  if(!a)return notFound('agents',st.id);
+  const verdict=`<span class="v">агент</span> · профиль <span class="chip t-acc">${esc(a.role)}</span> · владелец <button class="chip" data-act="open-s" data-s="users" data-id="${a.owner}">${esc(a.owner)}</button> · последнее действие ${ago(a.last)} ${demo()} · пишет: ${esc(a.writes)} · <span class="chip t-wrn">права не подтверждены бэкендом</span>`;
+  let body='';
+  if(st.tab==='over')body=`<div class="blk">${blockHead('Привязка')}<div class="bb"><div class="fld"><label for="ag-role">Профиль</label><select id="ag-role" class="inp" data-act="formf" data-k="role">${DICT_RAW.agent_profile.map(([c,l])=>`<option value="${c}" ${(st.form?.role??a.role)===c?'selected':''}>${esc(c)} — ${esc(l)}</option>`).join('')}</select></div><div class="fld"><label for="ag-own">Владелец</label><select id="ag-own" class="inp" data-act="formf" data-k="owner">${PEOPLE.map(p=>`<option ${(st.form?.owner??a.owner)===p.id?'selected':''}>${p.id}</option>`).join('')}</select></div><div class="fld"><label>Учётка KC</label><input class="inp mono" readonly value="${esc(a.client)}" aria-label="Учётка KC"></div>${dirtyBar('agent')}</div></div>
+   <div class="blk">${blockHead('Секрет учётки',{extra:'<span class="chip t-dng">необратимо</span>'})}<div class="bb"><p class="muted" style="margin:0 0 6px">Ротация выдаёт новый секрет (показывается один раз) и сразу ломает клиента со старым. Отменить нельзя — поэтому ввод имени учётки.</p><button class="btn dng" data-act="rotate">Ротировать секрет…</button></div></div>`;
+  if(st.tab==='rights')body=`<div class="blk">${blockHead('Что может писать профиль «'+a.role+'»')}<div class="bb"><table class="rt"><tbody>${ROLE_MATRIX.map(([w,api,ho,ag])=>{const ok=ag.includes(a.role)||ag.includes('все агенты');return `<tr><td data-l="что" class="ttl"><span>${esc(w)}</span></td><td data-l="API"><span class="mono">${esc(api)}</span></td><td data-l="может"><span>${ok?'<span class="chip t-suc">да</span>':ho?'<span class="chip t-dng">только люди</span>':'<span class="dim">нет</span>'}</span></td></tr>`;}).join('')}</tbody></table></div></div>`;
+  if(st.tab==='log')body=`<div class="blk">${blockHead('Журнал по агенту')}<div class="bb">${auditFor(a.id)}</div></div>`;
+  return recShell({s:'agents',title:a.name,id:a.id,verdict,tabs:[['over','Обзор'],['rights','Права'],['log','Журнал']],body,
+    rail:`<dl class="kv"><dt>actor_id</dt><dd class="mono">${esc(a.id)}</dd><dt>учётка</dt><dd class="mono">${esc(a.client)}</dd><dt>machine</dt><dd class="dim">не задано ${real()}</dd><dt>session</dt><dd class="dim">не задано</dd></dl>`});
+}
+function recDict(d){
+  if(!d)return notFound('dicts',st.id);
+  const canon=CANON.includes(d.type);const f=st.form||{};
+  const val=k=>f[k]!==undefined?f[k]:d[k];
+  const chg=k=>f[k]!==undefined&&f[k]!==d[k]?'chg':'';
+  const verdict=`<span class="v">значение словаря</span> · <span class="chip">${esc(d.type)}</span>${canon?' · <span class="chip t-dng">'+ic('padlock')+' канон</span>':''} · <span class="chip ${d.active?'t-suc':''}">${d.active?'активно':'отключено'}</span> · использований: <span class="chip">н/д</span> ${isHex(d.color)?'· <span class="chip t-wrn">hex вне токенов</span>':''}`;
+  let body='';
+  if(st.tab==='over')body=`<div class="blk">${blockHead('Значение')}<div class="bb">
+   <div class="fld"><label>Код</label><input class="inp mono" readonly value="${esc(d.code)}" aria-label="Код (не меняется)"></div>
+   <div class="fld"><label for="d-l">Подпись</label><input id="d-l" class="inp ${chg('label')}" value="${esc(val('label'))}" data-act="formf" data-k="label"></div>
+   <div class="fld"><label for="d-c">Цвет (токен)</label><select id="d-c" class="inp ${chg('color')}" data-act="formf" data-k="color">${['', 'var(--acc)','var(--suc)','var(--wrn)','var(--dng)','var(--inf)','var(--t2)','var(--t3)'].concat(val('color')&&!/^var/.test(val('color'))?[val('color')]:[]).map(c=>`<option value="${esc(c)}" ${c===(val('color')||'')?'selected':''}>${c||'— без цвета —'}${isHex(c)?' (hex — вне токенов)':''}</option>`).join('')}</select></div>
+   <div class="fld"><label for="d-i">Иконка (game-icons)</label><input id="d-i" class="inp mono ${chg('icon')}" value="${esc(val('icon')||'')}" data-act="formf" data-k="icon"></div>
+   <div class="fld"><label for="d-o">Порядок</label><input id="d-o" type="number" class="inp ${chg('order')}" value="${esc(val('order'))}" data-act="formf" data-k="order"></div>
+   <div class="fld"><label>Так будет выглядеть</label><span><span class="chip">${val('color')?`<span class="sw" style="background:${esc(val('color'))}"></span>`:''}${val('icon')?ic(val('icon')):''} ${esc(val('label'))}</span></span></div>
+   ${dirtyBar('dict')}</div></div>
+   <div class="row-a">${d.active?`<button class="btn dng" data-act="deact">Деактивировать…</button>`:`<button class="btn" data-act="react">Включить обратно</button>`}</div>`;
+  if(st.tab==='log')body=`<div class="blk">${blockHead('Журнал значения')}<div class="bb">${auditFor(d.id)}</div></div>`;
+  return recShell({s:'dicts',title:d.label,id:d.id,verdict,tabs:[['over','Обзор'],['log','Журнал']],body,rail:`<dl class="kv"><dt>тип</dt><dd>${esc(d.type)}</dd><dt>код</dt><dd class="mono">${esc(d.code)}</dd><dt>источник</dt><dd>${real()}</dd></dl>`});
+}
+function recProject(p){
+  if(!p)return notFound('projects',st.id);
+  const verdict=`<span class="v">git-проект</span> · ветка ${p.br?`<span class="mono">${esc(p.br)}</span>`:'<span class="chip t-wrn">нет репозитория</span>'} · ${p.priv?'<span class="chip t-acc">приватный</span>':'доступ не задан'} · участников: ${p.members?p.members.length+' (owner: '+p.members.filter(m=>m[1]==='owner').length+')':'<span class="chip">не загружено</span>'}`;
+  let body='';
+  if(st.tab==='over')body=`<div class="blk">${blockHead('Проект')}<div class="bb"><div class="fld"><label>slug</label><input class="inp mono" readonly value="${esc(p.id)}" aria-label="slug"></div><div class="fld"><label for="p-n">Имя</label><input id="p-n" class="inp" value="${esc(st.form?.name??p.name)}" data-act="formf" data-k="name"></div><div class="fld"><label for="p-b">Ветка по умолчанию</label><input id="p-b" class="inp mono" value="${esc(st.form?.br??p.br??'')}" data-act="formf" data-k="br"></div><div class="fld"><label>Хостинги</label><span class="muted">origin + зеркала (ADR-018) · ${demo()} <button class="btn">+ хостинг</button></span></div>${dirtyBar('project')}</div></div>`;
+  if(st.tab==='members')body=`<div class="blk">${blockHead('Участники',{err:p.members?null:'слайс project_users не запрошен'})}<div class="bb">${p.members?p.members.map(([u,r])=>`<div style="display:flex;gap:8px;align-items:center;min-height:var(--tap);border-bottom:1px solid var(--bd);flex-wrap:wrap"><button class="chip" data-act="open-s" data-s="users" data-id="${u}">${esc(u)}</button><span style="flex:1"></span><span class="chip">${esc(r)}</span><button class="btn dng" data-act="member-del" data-u="${u}">Снять…</button></div>`).join('')+`<div style="margin-top:6px">${real()} project_users</div>`:'<div class="state">Не смогли проверить: участники этого проекта в прототип не загружены — это не «пусто».</div>'}</div></div>`;
+  if(st.tab==='log')body=`<div class="blk">${blockHead('Журнал проекта')}<div class="bb">${auditFor(p.id)}</div></div>`;
+  return recShell({s:'projects',title:p.name,id:p.id,verdict,tabs:[['over','Обзор'],['members','Участники'],['log','Журнал']],body,rail:`<dl class="kv"><dt>slug</dt><dd class="mono">${esc(p.id)}</dd><dt>is_private</dt><dd>${p.priv?'true':'не задано'}</dd><dt>спринтов</dt><dd>${demo()}</dd></dl>`});
+}
+function recRule(r){
+  if(!r)return notFound('rules',st.id);
+  const verdict=`<span class="v">снимок CLAUDE.md</span> · файл ${r.file?`<span class="mono">${esc(r.file)}</span>`:'—'} · синхронизирован с файлом ${ago(r.sync)} ${demo()} · расхождение: ${r.drift==='есть'?'<span class="chip t-wrn">есть</span>':r.drift==='нет'?'<span class="chip t-suc">нет</span>':'<span class="chip">не смогли проверить</span>'}`;
+  let body='';
+  if(st.tab==='over')body=`<div class="blk">${blockHead('Тело снимка',{extra:demo('отрывок')})}<div class="bb"><div class="pre"># ${esc(r.title)}\n\n## Правила\n- Never push directly to develop, preprod or main…\n- Committing to a feature branch is pre-authorized…</div></div></div>`;
+  if(st.tab==='diff')body=`<div class="blk">${blockHead('Снимок ↔ файл',{extra:demo()})}<div class="bb">${r.drift==='есть'?`<div class="diff"><span class="m">- Merging a PR into develop is pre-authorized once CI…</span>\n<span class="p">+ Merging a PR into develop is pre-authorized once its CI has actually finished and shows green…</span>\n  Do NOT merge a PR whose CI is still pending…</div>`:r.drift==='нет'?'<div class="state">Расхождений нет (sha совпадает).</div>':'<div class="state">Не смогли проверить: браузер не видит файл на машине. Сверку делает агент — claude_rules_pull, затем сравнение sha.</div>'}<p class="muted" style="font-size:var(--fs-xs)">Обновить снимок может только агент на машине владельца (файл — источник истины):</p><div class="pre">claude_rules_push ${esc(r.id)}</div><button class="btn" data-act="copyq" data-c="claude_rules_push ${esc(r.id)}">${ic('papers')} Скопировать команду</button></div></div>`;
+  if(st.tab==='log')body=`<div class="blk">${blockHead('История синхронизаций')}<div class="bb">${auditFor(r.id)}</div></div>`;
+  return recShell({s:'rules',title:r.title,id:r.id,verdict,tabs:[['over','Тело'],['diff','Дифф с файлом'],['log','История']],body,rail:`<dl class="kv"><dt>doc_id</dt><dd class="mono">${esc(r.id)}</dd><dt>kind</dt><dd>claude-rules</dd><dt>sha256</dt><dd class="mono">${r.id==='claude_rules_datawanderers_lore'?'56cc58e7… '+real():'—'}</dd></dl>`});
+}
+function recSetting(s){
+  if(!s)return notFound('settings',st.id);
+  const verdict=`<span class="v">параметр</span> · ${s.known?'<span class="chip t-suc">читается кодом</span>':'<span class="chip t-dng">неопознан — код не читает</span>'} · тип: ${esc(s.type)} · по умолчанию: <span class="mono">${esc(s.def)}</span>`;
+  let body='';
+  if(st.tab==='over')body=`<div class="blk">${blockHead('Значение')}<div class="bb"><p class="muted" style="margin:0 0 8px">${esc(s.descr)}</p>${s.known?`<div class="fld"><label for="s-v">Значение</label><input id="s-v" class="inp mono ${st.form?.val!==undefined&&st.form.val!==s.val?'chg':''}" value="${esc(st.form?.val??s.val??'')}" data-act="formf" data-k="val"></div>${dirtyBar('setting')}`:`<div class="row-a"><button class="btn dng" data-act="setting-del">Удалить ключ…</button><span class="muted" style="font-size:var(--fs-xs)">мягкое удаление (is_active=false), можно отменить</span></div>`}</div></div>`;
+  if(st.tab==='log')body=`<div class="blk">${blockHead('Журнал')}<div class="bb">${auditFor(s.id)}</div></div>`;
+  return recShell({s:'settings',title:s.id,id:'app_setting/'+s.id,verdict,tabs:[['over','Обзор'],['log','Журнал']],body,rail:`<dl class="kv"><dt>dict_type</dt><dd>app_setting</dd><dt>источник</dt><dd>${real()}</dd></dl>`});
+}
+function dirtyBar(kind){const f=st.form;if(!f||!Object.keys(f).length)return '';return `<div class="dirty" role="status"><span class="chip t-wrn">изменён</span><span class="muted" style="font-size:var(--fs-xs)">${Object.keys(f).length} пол. · новая версия SCD2 при сохранении</span><span class="sp" style="flex:1"></span><button class="btn" data-act="form-reset">Сбросить</button><button class="btn pri" data-act="form-save" data-kind="${kind}">Сохранить</button></div>`;}
+
+/* ================= РИСКОВЫЕ ДЕЙСТВИЯ ================= */
+function confirmRisk({title,diff,word,undo,onOk,note}){
+  const L=document.getElementById('layer');
+  L.innerHTML=`<div class="scrim" data-act="scrim"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><h2 id="mt">${esc(title)}</h2>
+   <div class="diff">${diff}</div>
+   <p class="muted" style="font-size:var(--fs-sm)">${undo?'Можно отменить в течение 10 с из уведомления и позже — из журнала.':'<b style="color:var(--dng)">Необратимо.</b> Отменить нельзя.'} ${note?esc(note):''} Действие попадёт в журнал от вашего имени.</p>
+   <label for="cw" style="font-size:var(--fs-sm)">Введите <b class="mono">${esc(word)}</b>, чтобы подтвердить</label>
+   <input id="cw" class="inp mono" autocomplete="off" style="margin:4px 0 10px">
+   <div class="row-a" style="justify-content:flex-end"><button class="btn" data-act="m-cancel">Отмена</button><button class="btn pri" id="mok" disabled>Подтвердить</button></div></div></div>`;
+  const inp=document.getElementById('cw'),ok=document.getElementById('mok');
+  inp.addEventListener('input',()=>ok.disabled=inp.value.trim()!==word);
+  ok.addEventListener('click',()=>{L.innerHTML='';onOk();});
+  setTimeout(()=>inp.focus(),0);
+}
+function closeLayer(){document.getElementById('layer').innerHTML='';}
+function logAudit(sec,sub,obj,what){AUDIT.unshift({ago:0,k:'h',who:'vasilisk',sec,sub,obj,what});}
+function toast(msg,undoFn){
+  const T=document.getElementById('toasts');const el=document.createElement('div');el.className='toast';
+  el.innerHTML=`<span>${esc(msg)}</span><span class="sp"></span>${undoFn?'<button class="btn">Отменить</button>':''}<button class="btn" aria-label="Закрыть">✕</button>`;
+  T.appendChild(el);const btns=el.querySelectorAll('button');
+  if(undoFn)btns[0].addEventListener('click',()=>{undoFn();el.remove();toast('Отменено. В журнале — запись об отмене.');});
+  btns[btns.length-1].addEventListener('click',()=>el.remove());
+  setTimeout(()=>el.remove(),undoFn?10000:4000);
+}
+
+/* ================= МЕНЮ ================= */
+function openMenu(anchor,html){
+  closeMenu();const r=anchor.getBoundingClientRect();const m=document.createElement('div');m.className='menu';m.id='menu';m.setAttribute('role','menu');m.innerHTML=html;document.body.appendChild(m);
+  const w=m.offsetWidth;let left=Math.min(r.left,window.innerWidth-w-8);left=Math.max(8,left);
+  m.style.left=left+'px';m.style.top=(r.bottom+window.scrollY+4)+'px';
+  setTimeout(()=>{const b=m.querySelector('button');b&&b.focus();},0);
+}
+function closeMenu(){const m=document.getElementById('menu');m&&m.remove();}
+
+/* ================= РЕНДЕР ================= */
+function render(){
+  closeMenu();renderShell();
+  const fn=S[st.s]||S.overview;
+  document.getElementById('main').innerHTML=fn();
+  document.title=`${SEC[st.s].l} · Админка LORE`;
+}
+
+/* ================= СОБЫТИЯ ================= */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-act]');
+  if(!t){if(!e.target.closest('.menu'))closeMenu();return;}
+  const a=t.dataset.act;
+  const curRec=()=>({users:PEOPLE,agents:AGENTS,dicts:DICTS,projects:PROJECTS,settings:SETTINGS,rules:RULES}[st.s]||[]).find(x=>x.id===st.id);
+  switch(a){
+  case 'nav': go(t.dataset.k);break;
+  case 'goto': go(t.dataset.s,t.dataset.id||null);break;
+  case 'goto-audit': go('audit',null);st.f={sec:t.dataset.sec};writeUrl(false);render();break;
+  case 'open': if(t.dataset.id)go(st.s,t.dataset.id,{q:st.q,f:st.f,g:st.g,o:st.o});break;
+  case 'open-s': if(t.dataset.id)go(t.dataset.s,t.dataset.id);break;
+  case 'tab': st.tab=t.dataset.k;st.form=null;writeUrl(false);render();break;
+  case 'rail': st.rail=!st.rail;localStorage.setItem('adm.rail',st.rail?'1':'0');render();break;
+  case 'dict': st.dict=t.dataset.k;st.q='';st.f={};writeUrl(false);render();break;
+  case 'roles': st.roles=t.dataset.k;writeUrl(false);render();break;
+  case 'reset': st.q='';st.f={};st.g='';st.o='';writeUrl(false);render();break;
+  case 'retry': toast('Повторный запрос отправлен (прототип: сценарий не меняется).');break;
+  case 'menu-f': openMenu(t,(LISTCFG.filters||[]).map(f=>`<div class="mh">${ic(f.icon||'funnel')} ${esc(f.l)}</div>`+f.opts.map(o=>`<button role="menuitemradio" aria-checked="${(st.f[f.k]||'all')===o[0]}" data-act="setf" data-k="${f.k}" data-v="${o[0]}">${(st.f[f.k]||'all')===o[0]?ic('check-mark'):'<span style="width:1em"></span>'}${esc(o[1])}</button>`).join('')).join('<div class="sep"></div>'));break;
+  case 'menu-g': openMenu(t,`<div class="mh">Группировка</div>`+(LISTCFG.groups||[]).map(g=>`<button role="menuitemradio" aria-checked="${st.g===g[0]}" data-act="setg" data-v="${g[0]}">${st.g===g[0]?ic('check-mark'):'<span style="width:1em"></span>'}${esc(g[1])}</button>`).join(''));break;
+  case 'menu-o': openMenu(t,`<div class="mh">Порядок</div>`+(LISTCFG.orders||[]).map(o=>`<button role="menuitemradio" aria-checked="${st.o===o[0]}" data-act="seto" data-v="${o[0]}">${st.o===o[0]?ic('check-mark'):'<span style="width:1em"></span>'}${esc(o[1])}</button>`).join(''));break;
+  case 'setf': st.f[t.dataset.k]=t.dataset.v;writeUrl(false);render();break;
+  case 'setg': st.g=t.dataset.v;writeUrl(false);render();break;
+  case 'seto': st.o=t.dataset.v;writeUrl(false);render();break;
+  case 'where': openMenu(t,NAV.map(g=>`<div class="mh"><span class="dot" style="background:var(--${g.tone})"></span> ${esc(g.g)} ${g.risk?'· '+esc(g.risk):''}</div>`+g.items.map(([k,l,i])=>`<button role="menuitemradio" aria-checked="${st.s===k}" data-act="nav" data-k="${k}">${ic(i)}${esc(l)}${cntHtml(k)}</button>`).join('')).join(''));break;
+  case 'avatar': openMenu(t,`<div class="mh">vasilisk · admin</div><button data-act="personal">${ic('person')}Личные настройки</button><button data-act="theme">${ic('sun')}Тема: ${document.documentElement.dataset.theme==='dark'?'тёмная → светлая':'светлая → тёмная'}</button><div class="sep"></div><div class="mh">Только для admin</div><button data-act="nav" data-k="overview">${ic('cog')}Админка</button><div class="sep"></div><button data-act="logout">${ic('exit-door')}Выйти</button>`);break;
+  case 'app': if(t.dataset.k!=='admin')toast('Переход в другое приложение — вне прототипа.');break;
+  case 'personal': closeMenu();toast('Личные настройки — отдельная страница пользователя, не админка (тема, виды, флаги «для себя»).');break;
+  case 'logout': closeMenu();toast('Выход — вне прототипа.');break;
+  case 'theme': {const n=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=n;localStorage.setItem('adm.theme',n);closeMenu();break;}
+  case 'search': {const q=document.getElementById('q');if(q)q.focus();else toast('Поиск по всей админке — Ctrl+K (вне прототипа). На экранах-списках «/» ставит курсор в поиск.');break;}
+  case 'syschip': {const d=t.getAttribute('title');const was=t.getAttribute('aria-expanded')==='true';document.querySelectorAll('#sys .chip').forEach(c=>c.setAttribute('aria-expanded','false'));let box=document.getElementById('sysd');if(box)box.remove();if(!was){t.setAttribute('aria-expanded','true');box=document.createElement('div');box.id='sysd';box.className='notice';box.style.cssText='margin:0;flex-basis:100%';box.textContent=d;document.getElementById('sys').appendChild(box);}break;}
+  case 'proto': openMenu(t,`<div class="mh">Сценарий данных</div>`+[['ok','Всё отвечает'],['kc403','Keycloak: 403'],['kcdown','Keycloak недоступен'],['slicefail','Слайсы словарей/проектов упали']].map(([k,l])=>`<button role="menuitemradio" aria-checked="${st.scen===k}" data-act="scen" data-k="${k}">${st.scen===k?ic('check-mark'):'<span style="width:1em"></span>'}${l}</button>`).join('')+`<div class="sep"></div><div class="mh">Старые ссылки</div><button data-act="legacy" data-u="?tab=claudeRules&doc=claude_rules_global">?tab=claudeRules&amp;doc=…</button><button data-act="legacy" data-u="?tab=users&user=vasilisk">?tab=users&amp;user=vasilisk</button><button data-act="legacy" data-u="?tab=nonsense">?tab=nonsense</button>`);break;
+  case 'scen': st.scen=t.dataset.k;writeUrl(false);render();break;
+  case 'legacy': history.pushState(null,'',t.dataset.u);readUrl();writeUrl(false);render();break;
+  case 'copy': case 'copyq': {const txt=a==='copyq'?t.dataset.c:t.closest('.bb').querySelector('.pre').textContent;
+     if(!navigator.clipboard||!window.isSecureContext){toast('Не скопировано: браузер не даёт буфер вне https. Выделите текст вручную.');break;}
+     navigator.clipboard.writeText(txt).then(()=>toast('Скопировано.'),()=>toast('Не скопировано: браузер отказал.'));break;}
+  case 'formf': break;
+  case 'form-reset': st.form=null;render();break;
+  case 'form-save': {const r=curRec();const f=st.form;const kind=t.dataset.kind;const before={};Object.keys(f).forEach(k=>before[k]=r[k]);
+     const apply=()=>{Object.assign(r,f);st.form=null;logAudit(SEC[st.s].gkey,SEC[st.s].l,r.id,'изменено: '+Object.keys(f).map(k=>`${k} «${before[k]??''}» → «${f[k]}»`).join(', '));render();toast('Сохранено: новая версия записи.',()=>{Object.assign(r,before);logAudit(SEC[st.s].gkey,SEC[st.s].l,r.id,'отмена правки');render();});};
+     const risky=(kind==='dict'&&CANON.includes(r.type))||kind==='agent';
+     if(risky)confirmRisk({title:kind==='agent'?'Изменить привязку агента':'Правка канон-словаря',diff:Object.keys(f).map(k=>`<span class="m">- ${esc(k)}: ${esc(before[k]??'')}</span>\n<span class="p">+ ${esc(k)}: ${esc(f[k])}</span>`).join('\n'),word:kind==='agent'?r.client:r.code,undo:true,onOk:apply});
+     else apply();break;}
+  case 'realm': {const u=curRec();const r=t.dataset.r;const on=t.dataset.on==='1';
+     if(on&&r==='admin'&&PEOPLE.filter(p=>p.realm.includes('admin')).length<=1){toast('Нельзя: это последний admin (409 LAST_ADMIN).');break;}
+     confirmRisk({title:`${on?'Снять':'Выдать'} realm-роль ${r}`,diff:`  человек: ${esc(u.id)}\n<span class="${on?'m':'p'}">${on?'-':'+'} realm: ${r}</span>\n  итого: ${esc((on?u.realm.filter(x=>x!==r):[...u.realm,r]).join(', ')||'нет ролей')}`,word:u.id,undo:true,
+       onOk:()=>{const prev=u.realm.slice();u.realm=on?u.realm.filter(x=>x!==r):[...u.realm,r];logAudit('access','Люди',u.id,`${on?'снята':'выдана'} realm-роль ${r}`);render();toast(`${on?'Снята':'Выдана'} роль ${r} — ${u.id}.`,()=>{u.realm=prev;logAudit('access','Люди',u.id,'отмена: realm-роль '+r);render();});}});break;}
+  case 'projdel': {const u=curRec();const i=+t.dataset.i;const [p,r]=u.proj[i];
+     confirmRisk({title:'Снять роль в проекте',diff:`<span class="m">- ${esc(p)} · ${esc(r)}</span>\n  после: ${u.proj.length-1} проект(ов)${u.proj.length===1?'\n  ⚠ без проектов человек не увидит ничего':''}`,word:u.id,undo:true,
+       onOk:()=>{const prev=u.proj.slice();u.proj.splice(i,1);logAudit('access','Люди',u.id,`снята роль ${r} в ${p}`);render();toast('Роль в проекте снята.',()=>{u.proj=prev;render();});}});break;}
+  case 'projadd': toast('Выбор проекта и роли — как в текущей админке (select проект + select роль). В прототипе не воспроизводится.');break;
+  case 'user-off': {const u=curRec();confirmRisk({title:'Отключить учётку',diff:`  человек: ${esc(u.id)}\n<span class="m">- enabled: true</span>\n<span class="p">+ enabled: false</span>\n  агентов владельца: ${AGENTS.filter(a=>a.owner===u.id).length} — перестанут работать`,word:u.id,undo:true,onOk:()=>{u.on=false;logAudit('access','Люди',u.id,'учётка отключена');render();toast('Учётка отключена.',()=>{u.on=true;render();});}});break;}
+  case 'rotate': {const ag=curRec();confirmRisk({title:'Ротировать секрет',diff:`  учётка: ${esc(ag.client)}\n<span class="m">- секрет: ••••••• (действующий)</span>\n<span class="p">+ секрет: новый, покажется один раз</span>`,word:ag.client,undo:false,note:'Клиент со старым секретом перестанет подключаться сразу.',onOk:()=>{logAudit('access','Агенты',ag.id,'ротирован секрет '+ag.client);render();toast('Секрет ротирован. Новый показан один раз (прототип: не показывается).');}});break;}
+  case 'deact': {const d=curRec();confirmRisk({title:'Деактивировать значение',diff:`  ${esc(d.type)}/${esc(d.code)}\n<span class="m">- is_active: true</span>\n<span class="p">+ is_active: false</span>\n  использований: н/д — проверьте, прежде чем снимать`,word:d.code,undo:true,onOk:()=>{d.active=false;logAudit('dicts','Словари',d.id,'деактивировано');render();toast('Значение отключено.',()=>{d.active=true;render();});}});break;}
+  case 'react': {const d=curRec();d.active=true;logAudit('dicts','Словари',d.id,'включено обратно');render();toast('Значение включено.',()=>{d.active=false;render();});break;}
+  case 'setting-del': {const s=curRec();confirmRisk({title:'Удалить неопознанный ключ',diff:`<span class="m">- app_setting/${esc(s.id)} = ${esc(s.val)}</span>\n  код этот ключ не читает — удаление ни на что не влияет`,word:s.id,undo:true,onOk:()=>{const i=SETTINGS.indexOf(s);SETTINGS.splice(i,1);logAudit('sys','Настройки',s.id,'удалён ключ');go('settings');toast('Ключ удалён (is_active=false).',()=>{SETTINGS.splice(i,0,s);render();});}});break;}
+  case 'member-del': toast('Снятие участника — тем же подтверждением, что и в карточке человека. Последнего owner снять нельзя.');break;
+  case 'flag-user': {const u=PEOPLE.find(p=>p.id===t.dataset.id);u.newNav=!u.newNav;logAudit('sys','Флаги',u.id,`новая навигация: ${u.newNav?'вкл':'выкл'}`);render();toast(`Новая навигация для ${u.id}: ${u.newNav?'включена':'выключена'}.`,()=>{u.newNav=!u.newNav;render();});break;}
+  case 'flag': {const f=FLAGS.find(x=>x.id===t.dataset.id);confirmRisk({title:'Флаг на всех пользователей',diff:`<span class="${f.on?'m':'p'}">${f.on?'-':'+'} ${esc(f.name)}</span>\n  затронет всех пользователей сразу`,word:f.id,undo:true,onOk:()=>{f.on=!f.on;logAudit('sys','Флаги',f.id,f.on?'включён':'выключен');render();toast('Флаг переключён.',()=>{f.on=!f.on;render();});}});break;}
+  case 'add-user': case 'add-agent': case 'add-dict': case 'add-project': case 'add-type': toast('Форма создания — как в текущей админке, открывается страницей новой записи. В прототипе не воспроизводится.');break;
+  case 'm-cancel': closeLayer();break;
+  case 'scrim': if(e.target===t)closeLayer();break;
+  }
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.dataset.act==='q'){st.q=t.value;writeUrl(false);const pos=t.selectionStart;render();const q=document.getElementById('q');if(q){q.focus();q.setSelectionRange(pos,pos);}}
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.act==='formf'){const rec=({users:PEOPLE,agents:AGENTS,dicts:DICTS,projects:PROJECTS,settings:SETTINGS}[st.s]||[]).find(x=>x.id===st.id);let v=t.value;if(t.type==='number')v=+v;st.form=st.form||{};if(rec&&rec[t.dataset.k]===v)delete st.form[t.dataset.k];else st.form[t.dataset.k]=v;if(!Object.keys(st.form).length)st.form=null;const id=t.id;render();const el=document.getElementById(id);el&&el.focus();}
+  if(t.dataset.act==='projrole'){const u=PEOPLE.find(p=>p.id===st.id);const i=+t.dataset.i;const prev=u.proj[i][1];const nv=t.value;
+    confirmRisk({title:'Сменить роль в проекте',diff:`  ${esc(u.proj[i][0])}\n<span class="m">- ${esc(prev)}</span>\n<span class="p">+ ${esc(nv)}</span>`,word:u.id,undo:true,onOk:()=>{u.proj[i][1]=nv;logAudit('access','Люди',u.id,`роль в ${u.proj[i][0]}: ${prev} → ${nv}`);render();toast('Роль изменена.',()=>{u.proj[i][1]=prev;render();});}});
+    t.value=prev;}
+});
+document.addEventListener('keydown',e=>{
+  const typing=/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName);
+  if(e.key==='Escape'){closeMenu();closeLayer();}
+  if(e.key==='/'&&!typing){const q=document.getElementById('q');if(q){e.preventDefault();q.focus();}}
+  if(e.key==='Enter'&&document.activeElement.matches('tr.row')){document.activeElement.click();}
+});
+readUrl();writeUrl(false);render();
+</script>
+</body>
+</html>

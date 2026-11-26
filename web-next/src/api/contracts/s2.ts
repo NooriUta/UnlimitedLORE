@@ -115,7 +115,9 @@ export interface BacklinksResponse {
 /** Типы с цепочкой SCD2 = LoreSlices.HIST_PARENT (та же карта, что у history_hygiene). */
 export const HISTORY_TYPES = [
   'adr', 'decision', 'doc', 'finding', 'milestone', 'phase',
-  'release', 'runbook', 'spec', 'task', 'sprint', 'dict_entry',
+  'release', 'runbook', 'spec', 'task', 'sprint', 'dict_entry', 'kind',
+  // AP-PASSPORT-EDIT (доводка v5): история боли, выгоды, работы, роли продукта и фичи
+  'pain', 'gain', 'job', 'actor', 'feature',
 ] as const;
 export type HistoryType = typeof HISTORY_TYPES[number];
 
@@ -124,7 +126,8 @@ export const HISTORY_HIST_CLASS: Readonly<Record<HistoryType, string>> = {
   adr: 'KnowADRHist', decision: 'KnowDecisionHist', doc: 'KnowDocHist', finding: 'KnowFindingHist',
   milestone: 'KnowMilestoneHist', phase: 'KnowPhaseHist', release: 'KnowReleaseHist',
   runbook: 'KnowRunbookHist', spec: 'KnowSpecHist', task: 'KnowTaskHist', sprint: 'KnowSprintHist',
-  dict_entry: 'KnowDictEntryHist',
+  dict_entry: 'KnowDictEntryHist', kind: 'KnowKindHist',
+  pain: 'KnowPainHist', gain: 'KnowGainHist', job: 'KnowJobHist', actor: 'KnowProjectActorHist', feature: 'KnowUseCaseHist',
 };
 
 export interface HistoryQuery {
@@ -308,6 +311,11 @@ export interface UserSettings {
    * не было (S4-21, владелица 11.11: «я жду ползунка для шрифтов»). 1 — выбора не было.
    */
   text_scale: number;
+  /**
+   * Пара шрифтов (AP-APPEARANCE, решения 2в и 4а): pair — Unbounded + Manrope + Plex Mono, mono — всё Plex Mono.
+   * Выбирается независимо от палитры и только внутри набора установки (сервер отказывает словами вне набора).
+   */
+  font_pair: 'pair' | 'mono';
 }
 
 export const DEFAULT_SETTINGS: Readonly<UserSettings> = {
@@ -326,6 +334,7 @@ export const DEFAULT_SETTINGS: Readonly<UserSettings> = {
   nav_version: 'v2',
   show_tech: false,
   text_scale: 1,
+  font_pair: 'pair',
 };
 
 type Check = (v: unknown) => boolean;
@@ -347,6 +356,7 @@ const SETTINGS_SCHEMA: Record<keyof UserSettings, Check> = {
   nav_version: oneOf('v1', 'v2'),
   show_tech: bool,
   text_scale: v => typeof v === 'number' && Number.isFinite(v),
+  font_pair: oneOf('pair', 'mono'),
 };
 
 /** Ключи патча, которые сервер отвергнет 400 BAD_PARAMS (незнакомые и с чужим значением). */

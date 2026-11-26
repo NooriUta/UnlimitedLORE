@@ -79,6 +79,9 @@ public class AgentMachineFilter implements ContainerRequestFilter, ContainerResp
     /** Пары «клиент|машина», уже привязанные этим процессом, — чтобы не писать на каждый вызов. */
     private final Set<String> linked = ConcurrentHashMap.newKeySet();
 
+    /** Когда этот процесс последний раз ставил отметку машине — окно {@link AgentMachine#TOUCH_EVERY}. */
+    private final Map<String, Instant> touched = new ConcurrentHashMap<>();
+
     @Override
     public void filter(ContainerRequestContext req) {
         if (!applies(req)) return;
@@ -103,8 +106,12 @@ public class AgentMachineFilter implements ContainerRequestFilter, ContainerResp
         if (v.machineId() == null || res.getStatus() >= 300) return;
         String client = author.by();
         String key = client + "|" + v.machineId();
-        if (client == null || linked.contains(key)) return;
-        Infrastructure.getDefaultWorkerPool().execute(() -> link(client, v.machineId(), key));
+        if (client == null) return;
+        // AP-MACHINE-PASSPORT (решение владельца 6в): привязанная пара тоже ставит отметку last_seen_at — не чаще
+        // окна AgentMachine.TOUCH_EVERY. Раньше кеш «уже привязан» выключал запись целиком, и отметка застывала.
+        java.util.List<String> todo = AgentMachine.afterWrite(linked.contains(key), touched.get(v.machineId()), Instant.now());
+        if (todo.isEmpty()) return;
+        Infrastructure.getDefaultWorkerPool().execute(() -> link(client, v.machineId(), key, todo));
     }
 
     private boolean applies(ContainerRequestContext req) {
@@ -113,13 +120,14 @@ public class AgentMachineFilter implements ContainerRequestFilter, ContainerResp
             && AgentScopeFilter.familyOf(req.getUriInfo().getPath()) != null;
     }
 
-    private void link(String client, String machine, String key) {
+    private void link(String client, String machine, String key, java.util.List<String> todo) {
         try {
-            String now = Instant.now().toString();
-            Map<String, Object> p = Map.of("m", machine, "now", now);
-            command(AgentMachine.ENSURE_MACHINE_SQL, p);
-            command(AgentMachine.FIRST_SEEN_SQL, p);
-            command(AgentMachine.LINK_SQL, Map.of("c", client, "m", machine));
+            Instant at = Instant.now();
+            touched.put(machine, at);
+            Map<String, Object> p = Map.of("m", machine, "now", at.toString());
+            for (String sql : todo)
+                command(sql, AgentMachine.LINK_SQL.equals(sql) ? Map.of("c", client, "m", machine) : p);
+            if (!todo.contains(AgentMachine.LINK_SQL)) return;
             // Кешируем только подтверждённое ребро: пустой CREATE EDGE значит и «уже было»,
             // и «актора с этим client_id нет» — второй случай получит ребро при следующей
             // записи после заведения актора, а не останется навсегда без него.

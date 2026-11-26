@@ -114,6 +114,10 @@ import {
   FEED_GAPS, FEED_UNDATED, FEED_UNREAD, feedByGroups, feedByTime, feedGaps, feedOrder, feedTime,
 } from './feedModel';
 import type { FeedGroup, FeedRow } from './feedModel';
+import {
+  FEED_MODE_PARAM, FEED_SHOWN_PARAM, feedAutoLimit, feedModeSwitchShown, feedMoreShown, feedShownOf, feedTail, readFeedMode, readFeedShown,
+  type FeedMode,
+} from './feedPaging';
 
 export interface ListBulkAction {
   id: string;
@@ -297,6 +301,16 @@ export interface ListViewProps {
    */
   onFeedUnder?: (id: string) => void;
   /**
+   * Паспорт записи в ленте (BP-01-FULL-PASSPORT-FEED, прототип принят 25.11.2026).
+   *
+   * Задан — у ленты появляется переключатель «Контекст / Полные паспорта», а у
+   * карточки контекста — «Открыть паспорт целиком». Что рисовать паспортом и
+   * откуда его грузить, решает приложение (K-14); kit зовёт функцию ТОЛЬКО для
+   * видимых записей, поэтому загрузка невидимых паспортов не начинается.
+   * Не задан — лента как прежде, без переключателя: обещать нечего.
+   */
+  feedPassport?: (r: KitRecord) => ReactNode;
+  /**
    * Peek (S9-10, D-2026-LORE-PEEK-ONE-CARD): пробел на строке — панель справа с карточкой, J/K листают,
    * Esc закрывает; на узком экране — нижний лист. Нет — пробел ничего не делает.
    */
@@ -441,6 +455,25 @@ function esc(s: string): string {
   return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 }
 
+/**
+ * Автодогрузка ленты (BP-01): хвост попал в окно с запасом 600px — следующая
+ * порция. Без IntersectionObserver ничего не делает: тогда лента сразу
+ * показывает предел автодогрузки (feedShownOf), и человек не застрянет.
+ */
+function FeedAutoMore({ onMore, children }: { onMore: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLSpanElement | null>(null);
+  const more = useRef(onMore);
+  more.current = onMore;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) more.current(); }, { rootMargin: '600px' });
+    io.observe(el);
+    return () => io.disconnect();
+  });
+  return <span ref={ref} className="sk-feed__auto">{children}</span>;
+}
+
 function resolveWin(urlState: ListViewProps['urlState']): UrlWindow | null {
   if (urlState === false) return null;
   if (urlState && typeof urlState === 'object') return urlState;
@@ -580,7 +613,7 @@ const CELL_VALUES_INLINE = 1;
 
 export function ListView({
   config, data: dataIn, href, ctx: ctxPart, bulkActions: bulkActionsProp, rowActions: rowActionsProp, onOpen, openOnRowClick, recordPlace, onSelectionChange, urlState, initial, budget: budgetPart,
-  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, peek, expand, bare, cellOf, head, appViews, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
+  quickIcons, valueIcon, facetPinned, feedBody, onFeedBody, feedUnder, onFeedUnder, feedPassport, peek, expand, bare, cellOf, head, appViews, viewIcons, library, widths, narrow: narrowProp, className, state: stateProp, onStateChange,
   counts: serverCounts, dateFilter, missing: missingProp, refHref,
 }: ListViewProps) {
   // K5-RECORD-UPDATED-EVENT: правка записи, принятая сервером где-то ещё (паспорт, статус), —
@@ -722,6 +755,16 @@ export function ListView({
     if (win) pushUrlState({ [TREE_PARAM]: n.size ? [...n].join(',') : null }, { win, replace: true });
     return n;
   });
+  // Лента паспортов (BP-01): режим и сколько показано — в адресе (lfm, lfn), как у прототипа.
+  // «Открыть паспорт целиком» у карточки контекста — местное: это чтение на месте, а не вид.
+  const [feedMode, setFeedModeRaw] = useState<FeedMode>(() => (win ? readFeedMode(readUrlState(win)) : 'context'));
+  const [feedAsked, setFeedAsked] = useState<number | null>(() => (win ? readFeedShown(readUrlState(win)) : null));
+  const [feedOpenPp, setFeedOpenPp] = useState<Set<string>>(() => new Set());
+  const canObserve = typeof IntersectionObserver !== 'undefined';
+  const setFeedShown = (n: number) => {
+    setFeedAsked(n);
+    if (win) pushUrlState({ [FEED_SHOWN_PARAM]: String(n) }, { win, replace: true });
+  };
   // Режим выбора (S4-10): включается долгим нажатием или кнопкой «Выбрать».
   const [mode, setMode] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -2032,8 +2075,12 @@ export function ListView({
    * нового типа лента молча перестала бы его показывать как следует.
    */
   const feedItem = (r: KitRecord, at: string | null, level: FeedLevel = 'flat'): ReactNode => {
-    const leads = (feedCfg?.lead ?? []).filter(k => valuesOf(r, k).length > 0);
-    const bodyNode = feedBodyBlock(r);
+    // BP-01: паспорт целиком — в режиме «Полные паспорта» или раскрытый у карточки
+    // контекста. Тогда суть и тело-контекст не рисуются: паспорт несёт тело целиком,
+    // а второе, обрезанное, тело рядом было бы повтором.
+    const asPassport = !!feedPassport && level !== 'under' && (feedMode === 'full' || feedOpenPp.has(r.id));
+    const leads = asPassport ? [] : (feedCfg?.lead ?? []).filter(k => valuesOf(r, k).length > 0);
+    const bodyNode = asPassport ? null : feedBodyBlock(r);
     // Верхний уровень — тот, у кого приложение вернуло состояние нижнего
     // (K-14): kit не знает, что считать верхним.
     const under = underOf(r, level);
@@ -2059,15 +2106,25 @@ export function ListView({
               записи, а не часть текста. Связи же у записи с телом уезжают во
               вклеенный блок — там у них есть ЧИСЛО, которого в строке чипов
               нет. У записи без тела всё как было. */}
-          {(withStatus || (!bodyNode && feedBecause(r))) && (
+          {(withStatus || (!bodyNode && !asPassport && feedBecause(r))) && (
             <span className="sk-feed__meta">
               {withStatus && <StatusCell code={r.status} kind={r.kind} labels={labels} />}
-              {!bodyNode && feedBecause(r)}
+              {!bodyNode && !asPassport && feedBecause(r)}
             </span>
           )}
           {under && feedStrip(r)}
           {bodyNode}
           {bodyNode && feedGlued(r)}
+          {asPassport && <div className="sk-feed__pp" onClick={e => e.stopPropagation()}>{feedPassport!(r)}</div>}
+          {!asPassport && feedPassport && level !== 'under' && (
+            <button
+              type="button"
+              className="sk-btn sk-feed__ppopen"
+              onClick={e => { e.stopPropagation(); setFeedOpenPp(prev => new Set(prev).add(r.id)); }}
+            >
+              {t('kit.list.feed.openPassport')}
+            </button>
+          )}
           {fold && feedUnderBlock(r, fold)}
         </span>
       </li>
@@ -2114,11 +2171,58 @@ export function ListView({
           действительно нет.
     */
     const empty = feedGroupsList.length === 0;
+    /*
+      Окно показа (BP-01, прототип принят 25.11.2026): записи идут порциями по 4
+      в порядке ленты — сквозь группы; автоматом до 12 паспортов / 40 карточек,
+      дальше кнопкой. Окно считается ПОСЛЕ фильтров и поиска: «показано N из M»
+      говорит об отфильтрованной ленте. Провалы источника окном не режутся,
+      пока стоят выше границы: они — утверждение о данных, а не запись.
+
+      Окно включается вместе с паспортом (`feedPassport`): лента без паспорта —
+      прежняя, со своей обрезкой по группам, и у чужих приложений kit ничего не
+      меняется молча.
+    */
+    const paged = !!feedPassport;
+    const feedTotal = feedGroupsList.reduce((n, g) => n + g.rows.filter(x => x.kind === 'record').length, 0);
+    const feedShown = paged ? feedShownOf(feedAsked, feedTotal, feedMode, canObserve) : feedTotal;
+    const tail = feedTail(feedShown, feedTotal, feedMode);
+    let seen = 0;
+    const windowed = feedGroupsList.map(g => {
+      const rows: FeedRow[] = [];
+      for (const row of g.rows) {
+        // Граница окна: дальше — только если за ней есть скрытые записи.
+        if (seen >= feedShown && feedShown < feedTotal) break;
+        if (row.kind === 'record') seen++;
+        rows.push(row);
+      }
+      return { ...g, shownRows: rows };
+    }).filter(g => g.shownRows.length > 0);
+    const pickMode = (m: FeedMode) => {
+      if (m === feedMode) return;
+      setFeedModeRaw(m);
+      setFeedOpenPp(new Set());
+      const n = feedModeSwitchShown(m, feedShown);
+      setFeedAsked(n);
+      if (win) pushUrlState({ [FEED_MODE_PARAM]: m === 'full' ? 'full' : null, [FEED_SHOWN_PARAM]: String(n) }, { win, replace: true });
+    };
+    const shownNote = t('kit.list.feed.shown', { shown: feedShown, total: feedTotal });
     body = (
-      <div className="sk-feed">
-        {feedGroupsList.map(g => {
+      <div className="sk-feed" data-feed-mode={feedPassport ? feedMode : undefined}>
+        {feedPassport && !empty && (
+          <div className="sk-feed__bar">
+            <span className="sk-feed__modes" role="group" aria-label={t('kit.list.feed.mode.group')}>
+              {(['context', 'full'] as const).map(m => (
+                <button key={m} type="button" className="sk-pill sk-pill--filter" aria-pressed={feedMode === m} onClick={() => pickMode(m)}>
+                  {t(m === 'full' ? 'kit.list.feed.mode.full' : 'kit.list.feed.mode.context')}
+                </button>
+              ))}
+            </span>
+            <span className="sk-feed__shown" aria-live="polite">{shownNote}</span>
+          </div>
+        )}
+        {windowed.map(g => {
           const limit = limitOf(g.key);
-          const cutN = g.rows.length - limit;
+          const cutN = g.shownRows.length - limit;
           const title = feedGroupTitle(g);
           return (
             <section key={g.key} className="sk-feed__day" data-day={g.key} aria-label={t('kit.list.column', { title, n: g.rows.length })}>
@@ -2127,11 +2231,11 @@ export function ListView({
                 <span className="sk-feed__count">{g.rows.length}</span>
               </h3>
               <ul className="sk-feed__items">
-                {g.rows.slice(0, limit).map((row, i) => (row.kind === 'record' ? feedItem(row.record, row.at) : feedGapRow(row, i)))}
+                {g.shownRows.slice(0, limit).map((row, i) => (row.kind === 'record' ? feedItem(row.record, row.at) : feedGapRow(row, i)))}
               </ul>
               {cutN > 0 && (
                 <p className="sk-feed__cut" role="status">
-                  <span>{t(g.group ? 'kit.list.feed.cutGroup' : 'kit.list.feed.cutDay', { shown: limit, total: g.rows.length })}</span>
+                  <span>{t(g.group ? 'kit.list.feed.cutGroup' : 'kit.list.feed.cutDay', { shown: limit, total: g.shownRows.length })}</span>
                   {' '}
                   <button type="button" className="sk-btn" onClick={() => showMore(g.key)}>{t('kit.list.more', { n: cutN })}</button>
                 </p>
@@ -2139,6 +2243,29 @@ export function ListView({
             </section>
           );
         })}
+        {/* Хвост окна (BP-01): всё показано · догрузится при прокрутке · дальше кнопкой. */}
+        {paged && feedTotal > 0 && (
+          <div className="sk-feed__tail" data-tail={tail.kind} role="status">
+            {tail.kind === 'all' && <span>{t('kit.list.feed.all', { total: feedTotal })}</span>}
+            {tail.kind === 'auto' && (
+              <FeedAutoMore onMore={() => setFeedShown(feedMoreShown(feedShown, feedTotal))}>
+                <span className="sk-feed__shown">{shownNote}</span>
+                {' · '}
+                <span>{t('kit.list.feed.autoLoading')}</span>
+              </FeedAutoMore>
+            )}
+            {tail.kind === 'more' && (
+              <>
+                <span className="sk-feed__shown">{shownNote}</span>
+                {' · '}
+                <span>{t('kit.list.feed.autoLimit', { limit: feedAutoLimit(feedMode) })}</span>
+                <button type="button" className="sk-btn sk-feed__more" onClick={() => setFeedShown(feedMoreShown(feedShown, feedTotal))}>
+                  {t('kit.list.feed.loadMore', { n: tail.n })}
+                </button>
+              </>
+            )}
+          </div>
+        )}
         {/* Проверенный ноль: источник ответил целиком, провалов нет, записей нет. */}
         {empty && shown.kind === 'complete' && records.length === 0 && <EmptyState title={listCfg?.empty?.title} hint={listCfg?.empty?.hint} />}
         {/* Фильтр отсеял всё — это не «ничего не было», и чинится другим фильтром. */}

@@ -37,7 +37,10 @@ final class LoreRecordRelationRoutes {
         // AP-PROJECT-LINK-UI: проекты решения, вопроса и ранбука — штатные decision/project, question/project, runbook/project.
         DECISION_PROJECT, QUESTION_PROJECT, RUNBOOK_PROJECT,
         // Решение владелицы 19.11.2026: связи организации — один путь organization/link (super-admin).
-        ORG_LINK
+        ORG_LINK,
+        // AP-PASSPORT-EDIT (1б): ценность фичи — feature/link (ADDRESSES · PROMISES · HELPS_WITH);
+        // профиль клиента — vp/link (FELT_BY · DESIRED_BY · PERFORMED_BY · BLOCKS · SUCCESS_OF).
+        FEATURE_VALUE, VP_LINK
     }
 
     record Route(String type, String rel, String dir, Handler handler, boolean reversed) {}
@@ -94,8 +97,43 @@ final class LoreRecordRelationRoutes {
         r("organization", "ORG_HAS_PROJECT", "out", Handler.ORG_LINK, false),
         r("organization", "ORG_HAS_PRODUCT", "out", Handler.ORG_LINK, false),
         r("organization", "ORG_MEMBER", "out", Handler.ORG_LINK, false),
-        r("organization", "ORG_HAS_REPOSITORY", "out", Handler.ORG_LINK, false)
+        r("organization", "ORG_HAS_REPOSITORY", "out", Handler.ORG_LINK, false),
+        // AP-PASSPORT-EDIT (1б): «+ боль / + выгода / + работа» во вкладках фичи и роли — и привязка с обоих концов.
+        r("feature", "ADDRESSES", "out", Handler.FEATURE_VALUE, false),
+        r("feature", "PROMISES", "out", Handler.FEATURE_VALUE, false),
+        r("feature", "HELPS_WITH", "out", Handler.FEATURE_VALUE, false),
+        r("pain", "ADDRESSES", "in", Handler.FEATURE_VALUE, true),
+        r("gain", "PROMISES", "in", Handler.FEATURE_VALUE, true),
+        r("job", "HELPS_WITH", "in", Handler.FEATURE_VALUE, true),
+        r("pain", "FELT_BY", "out", Handler.VP_LINK, false),
+        r("gain", "DESIRED_BY", "out", Handler.VP_LINK, false),
+        r("job", "PERFORMED_BY", "out", Handler.VP_LINK, false),
+        r("actor", "FELT_BY", "in", Handler.VP_LINK, true),
+        r("actor", "DESIRED_BY", "in", Handler.VP_LINK, true),
+        r("actor", "PERFORMED_BY", "in", Handler.VP_LINK, true),
+        r("pain", "BLOCKS", "out", Handler.VP_LINK, false),
+        r("job", "BLOCKS", "in", Handler.VP_LINK, true),
+        r("gain", "SUCCESS_OF", "out", Handler.VP_LINK, false),
+        r("job", "SUCCESS_OF", "in", Handler.VP_LINK, true)
     );
+
+    /** Ребро ценности фичи → rel пути feature/link; null — не ребро ценности. */
+    static String featureRel(String edge) {
+        return switch (edge) {
+            case "ADDRESSES" -> "pain";
+            case "PROMISES" -> "gain";
+            case "HELPS_WITH" -> "job";
+            default -> null;
+        };
+    }
+
+    /** Ребро профиля клиента → rel пути vp/link (его словарь — строчными). */
+    static String vpRel(String edge) {
+        return switch (edge) {
+            case "FELT_BY", "DESIRED_BY", "PERFORMED_BY", "BLOCKS", "SUCCESS_OF" -> edge.toLowerCase(java.util.Locale.ROOT);
+            default -> null;
+        };
+    }
 
     /** Маршрут или {@code null}: ребра у типа нет либо путь привязки для него не заведён. */
     static Route find(String type, String rel, String dir) {

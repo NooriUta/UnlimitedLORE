@@ -67,6 +67,29 @@ final class AgentMachine {
         "CREATE EDGE USES_MACHINE FROM (SELECT FROM KnowActor WHERE client_id = :c) "
         + "TO (SELECT FROM KnowMachine WHERE machine_id = :m) IF NOT EXISTS";
 
+    /**
+     * SPRINT_LORE_ADMIN_POLISH/AP-MACHINE-PASSPORT (решение владельца 6в): отметка у уже привязанной пары.
+     * Только трогает существующую машину — заводит её {@link #ENSURE_MACHINE_SQL}. Отметка не едет назад: запись,
+     * пришедшая позже по времени сервера, не затирается более ранней (ISO-время сравнивается строкой).
+     */
+    static final String TOUCH_SQL =
+        "UPDATE KnowMachine SET last_seen_at = :now WHERE machine_id = :m AND (last_seen_at IS NULL OR last_seen_at < :now)";
+
+    /** Не чаще раза в минуту на машину: отметка — «была на связи», а не счётчик вызовов. */
+    static final java.time.Duration TOUCH_EVERY = java.time.Duration.ofMinutes(1);
+
+    /**
+     * Что записать после успешной мутации агента. {@code linked} — пара «учётка + машина» уже подтверждена
+     * этим процессом; {@code lastTouch} — когда этот процесс последний раз ставил отметку машине (null — не ставил).
+     */
+    static List<String> afterWrite(boolean linked, java.time.Instant lastTouch, java.time.Instant now) {
+        if (!linked) return List.of(ENSURE_MACHINE_SQL, FIRST_SEEN_SQL, LINK_SQL);
+        // Корень находки 1 прототипа: привязанная пара не писала НИЧЕГО, и отметка застывала на первой
+        // записи после рестарта. Теперь — отметка, но не чаще окна.
+        if (lastTouch == null || !now.isBefore(lastTouch.plus(TOUCH_EVERY))) return List.of(TOUCH_SQL);
+        return List.of();
+    }
+
     /** Подтверждение привязки — для кеша «уже привязан» в фильтре. */
     static final String LINKED_SQL =
         "SELECT count(*) AS n FROM USES_MACHINE WHERE @out.client_id = :c AND @in.machine_id = :m";

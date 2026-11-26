@@ -260,6 +260,28 @@ final class LoreRecordFrom {
     /** Переименование колонки: строка как есть. */
     private static Val s(String key, String column) { return v(key, Transform.STR, column); }
 
+    /**
+     * KREG-13 (владелец 26.11.2026: «LoreRecordFrom.java — это же не похоже на json по модели»): тип без ручной
+     * записи в {@link #VALUES} собирается из самой модели — поля и тело типа, колонка поля — {@code aliases}
+     * (нет псевдонима — одноимённая колонка); заголовок — первое непустое из заголовка и кода. Новые типы
+     * описываются только в lore-model.json, Java не трогается. {@code null} — типа нет в модели.
+     */
+    static List<Val> fromModel(String type) {
+        LoreModelFile.Content c = LoreModelFile.content();
+        LoreRecordRegistry.TypeDef d = c.typeDefs().get(type);
+        if (d == null) return null;
+        Map<String, String> al = c.aliases().getOrDefault(type, Map.of());
+        String codeCol = al.getOrDefault("code", "code");
+        List<Val> out = new java.util.ArrayList<>();
+        for (LoreRecordRegistry.Field f : d.fields()) {
+            String col = al.getOrDefault(f.key(), f.key());
+            out.add("title".equals(f.key()) ? v("title", Transform.FIRST_OF, col, codeCol) : s(f.key(), col));
+        }
+        if (d.body() != null)
+            for (LoreRecordRegistry.Body b : d.body()) out.add(s(b.key(), al.getOrDefault(b.key(), b.key())));
+        return out;
+    }
+
     /** Список строк без повтора; элементы-списки разворачиваются на один уровень. */
     static List<String> distinctFlat(Object v) {
         java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();
@@ -428,6 +450,16 @@ final class LoreRecordFrom {
             s("harness", "harness"),
             s("owner", "owner"),
             list("projects", "projects"))),
+        // SPRINT_LORE_ADMIN_POLISH/AP-MACHINE-PASSPORT: машина — имя и обе отметки вершины; владелец, шлюз и harness —
+        // у актора-шлюза (срез machine_by_id). Нет шлюза — поля пустые, а не подставленные.
+        Map.entry("machine", List.of(
+            v("title", Transform.FIRST_OF, "machine_id"),
+            s("code", "machine_id"),
+            s("owner", "owner"),
+            s("gateway", "gateway"),
+            s("harness", "harness"),
+            s("last_seen_at", "last_seen_at"),
+            s("first_seen_at", "first_seen_at"))),
         Map.entry("decision", List.of(
             v("title", Transform.FIRST_OF, "title", "decision_id"),
             v("status", Transform.DOC_TOKEN, "status_raw"),
@@ -700,8 +732,8 @@ final class LoreRecordFrom {
             lf("USES_REPOSITORY", "out", "repository", "uses"),
             lf("USES_REPOSITORY", "in", "repository", "used_by"))),
         // MD-05: задачи, закрытые PR (CLOSED_BY задача → PR), и релизы PR (SHIPPED_IN) — из строки pr_by_id.
+        // Задачи PR — срезом pr_tasks (SLICE_LINKS): название и статус, а не голые коды (прототип md05-pr-passport).
         Map.entry("pr", List.of(
-            lf("CLOSED_BY", "in", "task", "task_uids"),
             lf("SHIPPED_IN", "out", "release", "release_uids"))),
         // S4-PRODUCTS-NODE: компоненты продукта и подпродукты — из строки product_by_id.
         Map.entry("product", List.of(
@@ -807,6 +839,10 @@ final class LoreRecordFrom {
         // S9-05 A: «таблица детей» человека и агента — задачи, где у него ОТКРЫТАЯ роль.
         "user", List.of(
             new SliceLink("tasks", "user_tasks", "kc_sub", "ROLE_HELD_BY", "in", "task",
+                from(Transform.STR, "task_uid"), from(Transform.FIRST_OF, "title", "task_uid"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
+        // MD-05: задачи, которые PR закрывает (CLOSED_BY задача → PR), — с названием и статусом.
+        "pr", List.of(
+            new SliceLink("tasks", "pr_tasks", "id", "CLOSED_BY", "in", "task",
                 from(Transform.STR, "task_uid"), from(Transform.FIRST_OF, "title", "task_uid"), from(Transform.PLAN_TOKEN, "status_raw"), true)),
         "agent", List.of(
             new SliceLink("tasks", "agent_tasks", "id", "ROLE_HELD_BY", "in", "task",

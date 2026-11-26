@@ -448,6 +448,66 @@ describe('группа: несколько разделов — ОДНА вкл�
   });
 });
 
+describe('порядок ЗАДАЧИ с ПРОДА — зависимости задачи в паспорте (KREG-11)', () => {
+  // SPRINT_LORE_KNOW_REGISTRY/KREG-11: task_link rel="dep" (DEPENDS_ON задача→задача) получил
+  // выделенный путь записи; разделы «Зависит от»/«От неё зависят» встают в паспорт задачи
+  // группой deps — ровно как у спринта (sprint/dep тот же движок). Форма ниже — фрагмент
+  // серверного LorePassportSurface.build() для типа task.
+  const PROD_TASK = {
+    decided: true,
+    sections: [
+      { key: 'content', source: 'body', ref: null, order: 1, slot: 'own', group: null },
+      { key: 'gates', source: 'relation', ref: 'gates', order: 2, slot: 'content', group: null },
+      { key: 'adrs', source: 'relation', ref: 'JUSTIFIED_BY:out', order: 3, slot: 'own', group: { key: 'justification', label: 'ADR' } },
+      { key: 'qgRecs', source: 'relation', ref: 'PROMOTED_TO:in', order: 4, slot: 'own', group: { key: 'justification', label: 'ADR' } },
+      { key: 'insights', source: 'relation', ref: 'LED_TO:in', order: 5, slot: 'own', group: { key: 'justification', label: 'ADR' } },
+      { key: 'dependsOn', source: 'relation', ref: 'DEPENDS_ON:out', order: 6, slot: 'own', group: { key: 'deps', label: 'Зависимости' } },
+      { key: 'blocks', source: 'relation', ref: 'DEPENDS_ON:in', order: 7, slot: 'own', group: { key: 'deps', label: 'Зависимости' } },
+      { key: 'prs', source: 'relation', ref: 'CLOSED_BY:out', order: 8, slot: 'own', group: { key: 'realization', label: 'Реализация' } },
+      { key: 'useCases', source: 'relation', ref: 'REALIZES:out', order: 9, slot: 'own', group: { key: 'realization', label: 'Реализация' } },
+      { key: 'questions', source: 'part', ref: 'questions', order: 10, slot: 'own', group: null },
+      { key: 'refsOut', source: 'relation', ref: 'REFERENCES:out', order: 11, slot: 'own', group: { key: 'refs', label: 'Ссылки' } },
+      { key: 'refsIn', source: 'relation', ref: 'REFERENCES:in', order: 12, slot: 'own', group: { key: 'refs', label: 'Ссылки' } },
+      { key: 'publications', source: 'relation', ref: 'PRODUCED_BY:in', order: 13, slot: 'own', group: null },
+    ],
+  };
+  const order = passportSections(model({ task: PROD_TASK }), 'task');
+
+  /** Вкладки паспорта задачи: контент, обоснование, зависимости, реализация, прочее. */
+  const items = [
+    { id: 'content' }, { id: 'gates' }, { id: 'adrs' }, { id: 'qgRecs' }, { id: 'insights' },
+    { id: 'dependsOn' }, { id: 'blocks' }, { id: 'prs' }, { id: 'useCases' }, { id: 'questions' },
+    { id: 'refsOut' }, { id: 'refsIn' }, { id: 'publications' }, { id: 'graph' },
+  ];
+
+  it('положительный контроль: документ принят, порядок решён', () => {
+    expect(order.decided).toBe(true);
+    expect(order.notes).toEqual([]);
+    expect(order.sections.map(s => s.key).slice(0, 7)).toEqual(
+      ['content', 'gates', 'adrs', 'qgRecs', 'insights', 'dependsOn', 'blocks']);
+  });
+
+  it('зависимости задачи — ВКЛАДКАМИ (own), не блоками в хвосте текста', () => {
+    expect(order.sections.find(s => s.key === 'dependsOn')?.slot).toBe('own');
+    expect(order.sections.find(s => s.key === 'blocks')?.slot).toBe('own');
+    const out = applySections(items, order);
+    expect(out.map(i => i.id)).toContain('dependsOn');
+    expect(out.map(i => i.id)).toContain('blocks');
+    // «Блокирующие вопросы» — по-прежнему вклеены в хвост текста.
+    expect(out.map(i => i.id)).not.toContain('gates');
+    expect(gluedSections(order).map(s => s.key)).toEqual(['gates']);
+  });
+
+  it('группа deps: «Зависит от» и «От неё зависят» — одна вкладка, как у спринта', () => {
+    expect(sectionGroups(order)).toEqual([
+      { group: { key: 'justification', label: 'ADR' }, keys: ['adrs', 'qgRecs', 'insights'] },
+      { group: { key: 'deps', label: 'Зависимости' }, keys: ['dependsOn', 'blocks'] },
+      { group: { key: 'realization', label: 'Реализация' }, keys: ['prs', 'useCases'] },
+      { group: { key: 'refs', label: 'Ссылки' }, keys: ['refsOut', 'refsIn'] },
+    ]);
+  });
+});
+
 // Пилот 16.11: модель назвала служебные «Связи» и «Журнал», а вкладки связей, которых модель не
 // назвала, вставали ПОСЛЕ них: «Обзор · Пройти как игрок · Связи · Журнал · По смыслу · Граф».
 describe('applySections: не названные разделы записи — до служебных вкладок', () => {

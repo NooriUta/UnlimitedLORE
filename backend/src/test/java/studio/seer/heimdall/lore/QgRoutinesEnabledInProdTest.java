@@ -23,6 +23,7 @@ class QgRoutinesEnabledInProdTest {
     private static final List<String> ROUTINES = List.of(
         QgKnowHygieneRoutine.NAME, QgDocLinksRoutine.NAME, QgSupervisorRoutine.NAME,
         QgLoreBlockedReasonRoutine.NAME, QgLoreProjectBindingRoutine.NAME, QgLoreProjectRolesRoutine.NAME,
+        QgLoreSkillTagRoutine.NAME,
         QgBranchTaskStatusRoutine.NAME);
 
     @Test

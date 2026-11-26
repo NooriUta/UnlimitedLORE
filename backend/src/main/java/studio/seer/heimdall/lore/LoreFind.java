@@ -54,7 +54,22 @@ final class LoreFind {
     private static final Set<String> OPS = Set.of("=", "!=", "set", "<", ">", "<=", ">=", "contains");
     private static final Set<String> NOT_YET = Set.of("neighbor", "neighbors", "edge_fields", "view");
     private static final Set<String> KNOWN_KEYS = Set.of("type", "where", "links_to", "not_linked", "id_in",
-        "changed_within_days", "fields", "sort", "limit", "neighbor", "neighbors", "edge_fields", "view");
+        "changed_within_days", "fields", "sort", "limit", "neighbor", "neighbors", "edge_fields", "view",
+        // GC-05, 21.11: один параметр проекта (project; scope_projects — прежнее имя, с _warning) и текст поиска.
+        "project", SliceProjectParam.LEGACY, "search");
+
+    /** Ключи проекта (короткий код, aliases, slug) → slug базы; читаются один раз на запрос, только когда нужны. */
+    private static final class ProjectKeys {
+        private final LoreGraphResource.DbSource.Sql db;
+        private Map<String, String> keys;
+        ProjectKeys(LoreGraphResource.DbSource.Sql db) { this.db = db; }
+        Map<String, String> get() {
+            if (keys == null) keys = SliceProjectParam.keys(db.queryPublic("SELECT slug, short_code, aliases FROM KnowGitProject", Map.of()));
+            return keys;
+        }
+        String canonical(String key) { return SliceProjectParam.canonical(key, get()); }
+        boolean known(String slug) { return get().containsValue(slug); }
+    }
 
     private static final String OPEN = "out('HAS_STATE')[valid_to IS NULL]";
 
@@ -105,7 +120,7 @@ final class LoreFind {
         sprint.put("title", Field.one("coalesce(title, name)"));
         sprint.put("status_raw", Field.one(scd2("status_raw")));
         sprint.put("priority", Field.one(scd2("priority")));
-        sprint.put("created_date", Field.one("created_date"));
+        sprint.put("created_date", Field.one("created_at"));
         sprint.put("planned_start_date", Field.one(scd2("planned_start_date")));
         sprint.put("planned_end_date", Field.one(scd2("planned_end_date")));
         sprint.put("milestone_ids", Field.many("outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id"));
@@ -119,7 +134,7 @@ final class LoreFind {
         Map<String, Field> adr = new LinkedHashMap<>();
         adr.put("title", Field.one("name"));
         adr.put("status", Field.one("status"));
-        adr.put("date_created", Field.one("date_created"));
+        adr.put("date_created", Field.one("created_at"));
         adr.put("component", Field.many("out('BELONGS_TO').component_id"));
         adr.put("project", Field.many("out('BELONGS_TO_PROJECT').slug"));
         put(new TypeDef("adr", "KnowADR", "adr_id", adr, "status", List.of(
@@ -188,9 +203,32 @@ final class LoreFind {
         known.add("id");
         known.add("status_category");
 
+        ProjectKeys pk = new ProjectKeys(db);
         Object where = req.get("where");
         List<Object> conds = where == null ? List.of() : asList(where, "where");
         for (Object c : conds) validate(c, known);
+        // GC-05, 21.11: значение поля project в условии — тоже ключ проекта (короткий код, aliases).
+        List<Object> canon = new ArrayList<>();
+        for (Object c : conds) canon.add(canonProject(c, pk));
+        conds = canon;
+
+        // GC-05 «поиск с мультифильтром» (§12.4): текст — тонкий мост поверх тех же строк и условий, не второй
+        // механизм. Каждое слово обязано встретиться в коде или названии записи (без регистра).
+        List<String> searchTokens = null;
+        String searchText = null;
+        if (req.get("search") != null) {
+            searchText = str(req.get("search")).strip();
+            if (searchText.isEmpty()) throw bad("search — непустая строка");
+            if (searchText.length() > 160) throw bad("search — не длиннее 160 символов");
+            searchTokens = new ArrayList<>();
+            for (String w : searchText.toLowerCase(Locale.ROOT).split("\\s+")) if (!w.isEmpty()) searchTokens.add(w);
+        }
+
+        // GC-05, 21.11: один параметр проекта. project — каноническое имя; scope_projects — прежнее, с _warning.
+        List<String> warnings = new ArrayList<>();
+        List<String> projects = projectList(req.get("project"), "project", pk);
+        List<String> legacyProjects = projectList(req.get(SliceProjectParam.LEGACY), SliceProjectParam.LEGACY, pk);
+        if (legacyProjects != null) warnings.add(SliceProjectParam.LEGACY_WARNING);
 
         int limit = intOr(req.get("limit"), DEFAULT_LIMIT, "limit");
         if (limit < 1 || limit > MAX_LIMIT) throw bad("limit — от 1 до " + MAX_LIMIT);
@@ -245,7 +283,29 @@ final class LoreFind {
         if (links != null) {
             List<Object> all = links instanceof List<?> l ? new ArrayList<>(l) : List.of(links);
             int i = 0;
-            for (Object o : all) sqlWhere.add(linkSql(def, asMap(o, "links_to"), "lt" + (i++), params, allowed, db));
+            for (Object o : all) sqlWhere.add(linkSql(def, asMap(o, "links_to"), "lt" + (i++), params, allowed, db, pk));
+        }
+        if (projects != null || legacyProjects != null) {
+            if (!def.fields().containsKey("project"))
+                throw bad("project: у типа " + def.type() + " проекта нет — фильтровать нечем");
+            List<String> chosen = new ArrayList<>(projects != null ? projects : legacyProjects);
+            List<String> all = new ArrayList<>(chosen);
+            if (projects != null && legacyProjects != null) all.addAll(legacyProjects);
+            for (String p : all) {
+                if (!pk.known(p))
+                    throw new LoreGraphBuilder.GraphException(404, "NOT_FOUND", "project: проект «" + p + "» не найден");
+                if (allowed != null && !allowed.contains(p))
+                    throw new LoreGraphBuilder.GraphException(403, "OUTSIDE_SCOPE",
+                        "project: проект «" + p + "» вне разрешённых вызывающему проектов");
+            }
+            if (projects != null && legacyProjects != null) chosen.retainAll(new LinkedHashSet<>(legacyProjects));
+            if (chosen.isEmpty()) chosen.add(SliceProjectNarrowing.NO_PROJECT);
+            List<String> parts = new ArrayList<>();
+            for (int j = 0; j < chosen.size(); j++) {
+                params.put("pj" + j, chosen.get(j));
+                for (String path : def.fields().get("project").sql()) parts.add(path + " CONTAINS :pj" + j);
+            }
+            sqlWhere.add("(" + String.join(" OR ", parts) + ")");
         }
         Object notLinked = req.get("not_linked");
         if (notLinked != null) {
@@ -281,7 +341,11 @@ final class LoreFind {
                 if (at == null || at.isBefore(since)) continue;
             }
             boolean ok = true;
-            for (Object c : conds) if (!eval(c, row)) { ok = false; break; }
+            if (searchTokens != null) {
+                String hay = (row.get("id") + " " + str(row.get("title"))).toLowerCase(Locale.ROOT);
+                for (String w : searchTokens) if (!hay.contains(w)) { ok = false; break; }
+            }
+            if (ok) for (Object c : conds) if (!eval(c, row)) { ok = false; break; }
             if (!ok) continue;
             if (!visible(def, row, allowed)) { hidden++; continue; }
             matched.add(row);
@@ -323,17 +387,34 @@ final class LoreFind {
         if (rows.isEmpty() && hidden > 0)
             meta.put("note", "подходящие записи есть (" + hidden + "), но все вне разрешённых вызывающему проектов");
         meta.put("sql_hash", sha(sql));
+        if (searchText != null) {
+            Map<String, Object> s = new LinkedHashMap<>();
+            s.put("text", searchText);
+            s.put("mode", "substring");
+            s.put("fields", List.of("id", "title"));
+            s.put("note", "каждое слово — в коде или названии записи; ранжированный полнотекстовый поиск по телам — search");
+            meta.put("search", s);
+        }
+        if (projects != null || legacyProjects != null) {
+            Map<String, Object> p = new LinkedHashMap<>();
+            if (projects != null) p.put("project", projects);
+            if (legacyProjects != null) p.put(SliceProjectParam.LEGACY, legacyProjects);
+            meta.put("project", p);
+        }
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("rows", rows);
         res.put("meta", meta);
+        if (!warnings.isEmpty()) res.put("_warning", String.join("; ", warnings));
         return res;
     }
 
     // ── связи ────────────────────────────────────────────────────────────────
 
     private static String linkSql(TypeDef def, Map<String, Object> m, String p, Map<String, Object> params,
-                                  Set<String> allowed, LoreGraphResource.DbSource.Sql db) {
+                                  Set<String> allowed, LoreGraphResource.DbSource.Sql db, ProjectKeys pk) {
         Target t = target(str(m.get("id")));
+        // GC-05, 21.11: project:<короткий код | прежнее «владелец/репо»> → ключ проекта этой базы.
+        if ("project".equals(t.type())) t = new Target(t.type(), t.vertexClass(), t.idField(), pk.canonical(t.id()));
         List<String> rels = rels(m.get("rels"), "links_to.rels");
         int depth = intOr(m.get("depth"), 1, "links_to.depth");
         if (depth < 1 || depth > MAX_LINK_DEPTH) throw bad("links_to.depth — от 1 до " + MAX_LINK_DEPTH);
@@ -468,6 +549,51 @@ final class LoreFind {
         Object p = row.get("project");
         if (p instanceof Collection<?> c) for (Object x : c) if (allowed.contains(String.valueOf(x))) return true;
         return false;
+    }
+
+    // ── проект ───────────────────────────────────────────────────────────────
+
+    /** Значение параметра проекта: строка «a,b» или список → ключи базы; {@code null} — параметра нет. */
+    private static List<String> projectList(Object raw, String name, ProjectKeys pk) {
+        if (raw == null) return null;
+        List<String> out = new ArrayList<>();
+        List<Object> items = raw instanceof String s ? new ArrayList<>(List.of((Object[]) s.split(","))) : asList(raw, name);
+        for (Object o : items) {
+            String v = str(o).strip();
+            if (v.isEmpty()) continue;
+            if (v.length() > 300) throw bad(name + ": ключ проекта длиннее 300 символов");
+            String c = pk.canonical(v);
+            if (!out.contains(c)) out.add(c);
+        }
+        if (out.isEmpty()) throw bad(name + " — хотя бы один ключ проекта (короткий код или slug)");
+        return out;
+    }
+
+    /** Условие с полем project: значения → ключи базы (копия, вход не меняется). */
+    @SuppressWarnings("unchecked")
+    private static Object canonProject(Object c, ProjectKeys pk) {
+        Map<String, Object> m = (Map<String, Object>) c;
+        Map<String, Object> out = new LinkedHashMap<>(m);
+        for (String k : List.of("or", "and")) {
+            if (m.containsKey(k)) {
+                List<Object> list = new ArrayList<>();
+                for (Object x : (List<Object>) m.get(k)) list.add(canonProject(x, pk));
+                out.put(k, list);
+                return out;
+            }
+        }
+        if (m.containsKey("not")) { out.put("not", canonProject(m.get("not"), pk)); return out; }
+        if (!"project".equals(str(m.get("field"))) || m.get("value") == null || "set".equals(str(m.get("op")))
+                || "contains".equals(str(m.get("op")))) return out;
+        Object v = m.get("value");
+        if (v instanceof Collection<?> col) {
+            List<Object> list = new ArrayList<>();
+            for (Object x : col) list.add(x == null ? null : pk.canonical(String.valueOf(x)));
+            out.put("value", list);
+        } else {
+            out.put("value", pk.canonical(String.valueOf(v)));
+        }
+        return out;
     }
 
     // ── условия ──────────────────────────────────────────────────────────────

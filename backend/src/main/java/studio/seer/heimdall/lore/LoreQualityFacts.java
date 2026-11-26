@@ -81,7 +81,11 @@ public class LoreQualityFacts {
             + "out('HAS_STATE')[planned_end_date IS NOT NULL].planned_end_date[0]     AS planned_end_date, "
             + "out('BELONGS_TO_PROJECT').slug        AS projects, "
             + "out('BELONGS_TO').component_id        AS components, "
-            + "outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id AS milestones"),
+            + "outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id AS milestones, "
+            // RM-P3: типы задач спринта — тем же запросом, без N+1; по ним
+            // решается, обязателен ли компонент (WorkQuality.hasTechnicalTasks).
+            + "in('PART_OF').task_type           AS task_types, "
+            + "in('PART_OF').size()              AS task_count"),
         ADR("adr", "KnowADR", "adr_id",
             "status, "
             + "out('BELONGS_TO').component_id AS components, "
@@ -195,12 +199,13 @@ public class LoreQualityFacts {
                     Double effort = eff instanceof Number n ? n.doubleValue() : null;
                     TaskShape.Shape shape = TaskShape.analyze(s(r, "title"), s(r, "note_md"), s(r, "task_type"),
                         effort, s(r, "status_raw"), daysSince(s(r, "state_since")));
-                    return WorkQuality.evaluateTask(s(r, "status_raw"), effort, s(r, "work_class"),
+                    return WorkQuality.evaluateTask(s(r, "status_raw"), effort, s(r, "work_class"), s(r, "task_type"),
                         comps, r.get("projects"), r.get("realizes_uc"), r.get("justified_by"), shape);
                 }
                 case SPRINT:
                     return WorkQuality.evaluateSprint(s(r, "status_raw"), r.get("projects"), r.get("components"),
-                        s(r, "planned_start_date"), s(r, "planned_end_date"), r.get("milestones"));
+                        s(r, "planned_start_date"), s(r, "planned_end_date"), r.get("milestones"),
+                        WorkQuality.hasTechnicalTasks(r.get("task_types"), r.get("task_count")));
                 case ADR: {
                     boolean hasDecisions = r.get("decision_count") instanceof Number n && n.intValue() > 0;
                     Object sb = r.get("superseded_by");

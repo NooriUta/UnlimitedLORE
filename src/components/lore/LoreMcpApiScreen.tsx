@@ -39,7 +39,7 @@ const TOOLS: ToolDoc[] = [
   { name: 'list_slices', kind: 'read', entity: 'Meta', backend: 'GET /lore/slices', params: '—',
     desc: 'Каталог всех именованных слайсов (read-запросов) с их обязательными/опциональными параметрами. Вызывать первым — задаёт, что вообще можно прочитать через query_slice.' },
   { name: 'query_slice', kind: 'read', entity: 'Meta', backend: 'GET /lore/slice/{slice}', params: 'slice, params?',
-    desc: 'Выполнить один слайс из каталога list_slices и получить rows[]. params — map строк-значений: {"id":"ADR-FE-001"}, {"sprint_id":"SPRINT_X"} и т.п. Сам SQL и whitelisting полей — на бэкенде, клиент их не видит. ADR-LORE-017 (T16): project-scoped слайсы (сегодня — "sprints") принимают опциональный params.project (git_project slug) — не передан, подставляется сессионный LORE_ACTIVE_PROJECT, если задан; явный project, отличный от него, разрешён, но ответ несёт поле _warning — расхождение никогда не тихое.' },
+    desc: 'Выполнить один слайс из каталога list_slices и получить rows[]. params — map строк-значений: {"id":"ADR-FE-001"}, {"sprint_id":"SPRINT_X"} и т.п. Сам SQL и whitelisting полей — на бэкенде, клиент их не видит. ADR-LORE-017 (T16): project-scoped слайсы (сегодня — "sprints") принимают опциональный params.project (git_project slug) — не передан, подставляется сессионный LORE_ACTIVE_PROJECT, если задан; явный project, отличный от него, разрешён, но ответ несёт поле _warning — расхождение никогда не тихое. GC-05 (21.11): параметр проекта у ВСЕХ проектных срезов называется project (реестр list_slices объявляет его у каждого) — у среза без своего фильтра он сужает выдачу скоупом (adrs?project= больше не 400); ключ проекта — короткий код (LORE) или прежнее «владелец/репо» через aliases; прежнее имя scope_projects принимается, ответ несёт _warning. AP-PEOPLE-PAGE: поля модели уровня admin (учётка агента client_id, источник имени name_source) сервер вырезает из строк срезов своего типа для всех, кроме admin/superadmin (в agent_owners — ещё служебному читателю miniLORE); фасет или фильтр по такому полю — 403 FIELD_ADMIN_ONLY. Срезы личной страницы: user_tasks/agent_tasks (с колонкой project), user_task_status_versions {"kc_sub"} и agent_task_status_versions {"id": actor_id или учётка} — история статусов задач человека/агента в форме task_status_versions.' },
   { name: 'project_export', kind: 'read', entity: 'Meta', backend: 'GET /lore/export/project/{owner}/{repo}?format=json', params: 'project, dir, overwrite?',
     desc: 'Выгрузка проекта в локальную папку .md под Obsidian (SPRINT_LORE_MD_ARCHIVE/MDA-03): LORE/<owner>__<repo>/<папка типа>/<ID>.md, задачи — в папке спринта, ссылки [[ID|тип:ID]], только текущее состояние. Непустая папка без overwrite — отказ; overwrite заменяет только папку LORE/<owner>__<repo>/. Ответ: путь, число файлов, counts, unreadable (не прочитано ≠ пусто), hidden_by_rights. Проект без роли — 403, незарегистрированный — 404.' },
   { name: 'changed', kind: 'read', entity: 'Meta', backend: 'GET /lore/changed', params: 'from?, to?, types?, project?, status_category?, actor?, limit?, offset?',
@@ -70,8 +70,8 @@ const TOOLS: ToolDoc[] = [
     params: 'from, to, rels?, walk_types?, dir?, max_depth?, k?, structural?',
     desc: 'Путь между двумя записями (SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05): from/to = <тип>:<ключ>. Кратчайший путь (k ≤ 3 путей, max_depth ≤ 6) с теми же фильтрами, что у graph; paths[{length, nodes[], edges[]}], рёбра в настоящем направлении. «Пути нет» — meta.found:false с причиной: too_deep (глубже max_depth), through_hidden (только через записи вне скоупа), no_path (нет до глубины N), budget (упёрлись в потолок — отсутствие не доказано).' },
   { name: 'find', kind: 'read', entity: 'Graph', backend: 'POST /lore/find',
-    params: 'type, where?, links_to?, not_linked?, id_in?, changed_within_days?, fields?, sort?, limit?',
-    desc: 'Структурный запрос «тип + поля + связь» (SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05), ничего не пишет: type = task | sprint | adr | decision | spec; where — условия (И, плюс or/and/not; операторы = != set < > <= >= contains); links_to — связь с project/component/repository/<тип>:<ключ> (по модели или rels+depth+dir); not_linked, id_in, changed_within_days, fields, sort, limit (≤ 2000). meta: complete, truncated, capped_at, total, hidden_by_scope; у пустого ответа empty_reason = hidden_by_scope | no_match.' },
+    params: 'type, where?, links_to?, not_linked?, id_in?, changed_within_days?, fields?, sort?, limit?, search?, project?, scope_projects?',
+    desc: 'Структурный запрос «тип + поля + связь» (SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05), ничего не пишет: type = task | sprint | adr | decision | spec; where — условия (И, плюс or/and/not; операторы = != set < > <= >= contains); links_to — связь с project/component/repository/<тип>:<ключ> (по модели или rels+depth+dir); not_linked, id_in, changed_within_days, fields, sort, limit (≤ 2000). meta: complete, truncated, capped_at, total, hidden_by_scope; у пустого ответа empty_reason = hidden_by_scope | no_match. GC-05 (21.11): search — текст по коду и названию (каждое слово, без регистра) вместе с where/project одним вызовом (поиск с мультифильтром); project — тот же параметр проекта, что у срезов: короткий код или «владелец/репо», список = любой из них, чужой — 403, неизвестный — 404; scope_projects — прежнее имя, принимается с _warning.' },
   { name: 'lore_version', kind: 'read', entity: 'Meta', backend: 'GET /lore/version',
     params: '—',
     desc: 'Сверка сборки MCP-сервера со сборкой бэкенда (SE-10): {mcp:{commit, built_at}, backend:{commit, built_at, schema_version}, drift:{verdict: ok|mcp_older|unknown, reason}}. mcp_older — схемы инструментов в сессии могут отставать от бэкенда (новый параметр отбивается «Unrecognized key», исправленное описание читается старым): пересобрать mcp-server и перезапустить сессию. Бэкенд недоступен — verdict unknown с причиной, а не ok.' },
@@ -127,6 +127,16 @@ const TOOLS: ToolDoc[] = [
   { name: 'task_mv', kind: 'write', entity: 'Task', backend: 'POST /lore/task/move',
     params: 'task_uid, target_sprint_id, new_task_id?',
     desc: 'Переместить задачу в другой спринт (ADR-LORE-013, cancel+recreate) — создаёт свежую копию в target_sprint_id (title/note_md/effort_days + TAGGED_WITH-компоненты, начальный статус PLANNED), исходную помечает ❌ CANCELLED-надгробием. НЕ переключение PK: у новой задачи СВОЯ история статусов, у исходной — своя. task_id переиспользуется, если свободен в цели, иначе new_task_id, иначе суффикс "<id>_N" (возвращается как new_task_id + task_id_changed). IN_PHASE и входящие рёбра (PROMOTED_TO/LED_TO) остаются на исходной — перепривязать на новую через task_link.' },
+  // SPRINT_LORE_KNOW_REGISTRY/SKILL-01/02 (SPEC-SKILLS-TAGS-062 §5–§7): вид skill:* — процедуры ролей агентов.
+  { name: 'skill_new', kind: 'write', entity: 'Skill', backend: 'POST /lore/skill',
+    params: 'skill_id, name, title, body_md, projects[], roles[], version?, source?, extends?, owner?',
+    desc: 'KnowSkill: завести скилл — процедуру роли. Обязательные рёбра при создании: проект (BELONGS_TO_PROJECT ≥1) и роль (APPLIES_TO_ROLE ≥1), иначе 422 REFUSED со списком недостающего. Рождается в статусе draft. Писать могут только full и architect (иначе FORBIDDEN_FOR_ROLE).' },
+  { name: 'skill_set', kind: 'write', entity: 'Skill', backend: 'POST /lore/skill',
+    params: 'skill_id, title?, body_md?, version?, status? (draft|active|deprecated)',
+    desc: 'KnowSkill: поправить скилл. Перевод deprecated → active — только владелец скилла (OWNED_BY), остальным 409 NOOP с подсказкой, кого спросить. Рёбра правятся через skill_link.' },
+  { name: 'skill_link', kind: 'write', entity: 'Skill', backend: 'POST /lore/skill/link',
+    params: 'skill_id, rel (role|project|extends|owner), target_id, action? (add|remove)',
+    desc: 'Рёбра скилла: role → APPLIES_TO_ROLE, project → BELONGS_TO_PROJECT, extends → SKILL_EXTENDS (без циклов — иначе 422 REFUSED с цепочкой), owner → OWNED_BY (владелец один, новый заменяет прежнего). Снять последний проект или последнюю роль нельзя — 422 REFUSED.' },
   { name: 'task_link', kind: 'write', entity: 'Task', backend: 'POST /lore/task/phase, POST /lore/task/component',
     params: 'task_uid, rel (phase|component), target_id?, action?',
     desc: 'Link-collapse (T02, 2→1): rel="phase" — ребро IN_PHASE к фазе спринта (задача и фаза обязаны принадлежать одному спринту; action="remove" без target_id отвязывает от ВСЕХ фаз). rel="component" — ребро TAGGED_WITH к LoreComponent, many-to-many. Идемпотентно на add.' },
@@ -255,7 +265,7 @@ const TOOLS: ToolDoc[] = [
   // ── QG-рутина: прогон → job-task → рекомендация → задача ──────────────────
   { name: 'qg_run_log', kind: 'write', entity: 'QG-flow', backend: 'POST /lore/qg/run',
     params: 'routine_name, run_date, status, metrics[]?, started_at?, finished_at?, flags?, run_id?',
-    desc: 'ClRoutineRun + ClRoutineMetric: записать результат завершённого прогона QG-рутины. Вызывать один раз в конце каждого прогона. metrics[] — SMART-метрики по ADR-QG-002: каждая несёт key/value/unit/target/status/source (source — команда-репродьюсер + file:line evidence, на неё опирается rec_new).' },
+    desc: 'ClRoutineRun + ClRoutineMetric: записать результат завершённого прогона QG-рутины. Вызывать один раз в конце каждого прогона. metrics[] — SMART-метрики по ADR-QG-002: каждая несёт key/value/unit/target/status/source (source — команда-репродьюсер + file:line evidence, на неё опирается rec_new) и необязательный basis — отпечаток знаменателя (что считали: размер выборки, фильтр, LIMIT, например «groups=357»). Экран гейта сравнивает значение с прошлым прогоном только при той же базе; сменилась база — «база пересчитана», а не падение (QG-07).' },
   { name: 'qg_job_new', kind: 'write', entity: 'QG-flow', backend: 'POST /lore/qg/job-task',
     params: 'job_id, qg_id, inv_id?, run_date?, severity?, status?, note_md?',
     desc: 'QGJobTask: upsert + ребро YIELDED от родительской QualityGate. Вызывать, когда конкретный инвариант провалился (FAIL). Если позже приходит PASS по тому же qg_id+inv_id — открытые job-task для этой пары автоматически закрываются как resolved.' },
@@ -421,6 +431,13 @@ const TOOLS: ToolDoc[] = [
   { name: 'forgejo_ci_status', kind: 'read', entity: 'Forgejo', backend: 'GET /lore/forgejo/ci',
     params: 'git_project, ref',
     desc: 'Статус CI-гейта (словарь §10) для произвольной ветки или коммита — проверить, что ветка GREEN, до открытия PR. Логи и перезапуски — через forgejo-mcp, не этим инструментом.' },
+  // ── Forgejo-миниапп (ADR-LORE-060, SPRINT_FORGEJO_MINIAPP/FJ-03): весь операционный Forgejo одним инструментом ──
+  { name: 'forgejo', kind: 'write', entity: 'Forgejo', backend: 'POST /lore/forgejo-app/{route}',
+    params: 'route, args?, truncate?',
+    desc: 'Любой маршрут реестра миниаппа (107 маршрутов бывшего forgejo-mcp + добавленные записью): route — имя (list_issues, get_file_contents, …), args — его параметры. Ответ — конверт v=1 {kind, outcome found|empty|failed, data, meta{cursor, has_more, truncated}, error{code,status,allowed,hint}}; отказ — данные с подсказкой, не пустой список. RBAC по roles[] маршрута до разбора args, SSRF-защита, page=1 при limit, срез 6k. Мерж — только forgejo_pr_merge.' },
+  { name: 'forgejo_describe', kind: 'read', entity: 'Forgejo', backend: 'GET /lore/forgejo-app/describe',
+    params: 'route?, group?',
+    desc: 'Каталог миниаппа: без аргументов — группы и имена маршрутов, разрешённые роли вызывающего; group — одна группа матрицы; route — карточка маршрута: метод, путь, параметры, роли, риск, гарды и каталог отказов со следующим шагом.' },
   { name: 'forgejo_branch_protection', kind: 'read', entity: 'Forgejo', backend: 'GET /lore/forgejo/branch-protection',
     params: 'git_project, branch?',
     desc: 'ЧИТАТЬ защиту веток основного Forgejo-репозитория проекта (решение 136: мост защиту никогда не пишет — менять её может только человек). Без branch — полный список.' },
@@ -429,6 +446,13 @@ const TOOLS: ToolDoc[] = [
 const ENV_ROWS: [string, string, string][] = [
   ['LORE_BACKEND_URL', 'http://localhost:9100', 'Базовый URL backend UnlimitedLORE'],
   ['LORE_SEER_ROLE',   'admin',                 'Заголовок X-Seer-Role для write-инструментов'],
+  // ISS-04 (issue #4): HTTP-режим для клиентов по URL (Llama Chat и др. web UI).
+  ['LORE_MCP_TRANSPORT',    'stdio',     'stdio (по умолчанию) или http — Streamable HTTP на /mcp'],
+  ['LORE_MCP_HOST',         '127.0.0.1', 'HTTP: адрес; в образе lore-mcp — 0.0.0.0. Не loopback без LORE_MCP_TOKEN — громкое предупреждение при старте'],
+  ['LORE_MCP_PORT',         '9200',      'HTTP: порт'],
+  ['LORE_MCP_TOKEN',        '—',         'HTTP: токен шлюза; задан — обязателен на каждом запросе (Authorization: Bearer или X-Lore-Mcp-Token), иначе 401. В бэкенд не уходит'],
+  ['LORE_MCP_CORS_ORIGINS', '—',         'HTTP: origin браузерных клиентов через запятую; preflight 204, чужой origin 403. Пусто — CORS выключен'],
+  ['GET /health',           '200',       'HTTP: проверка без входа (то же, что /mcp/health)'],
 ];
 
 const SMOKE = `cd C:/AIDA/UnlimitedLORE/mcp-server
@@ -820,8 +844,15 @@ npm install && npm run build          # → dist/index.js`}</Pre>
                 {([
                   [t('lore.mcpApi.diag1a', 'Инструменты есть, любой вызов = ошибка'), t('lore.mcpApi.diag1b', 'backend :9100 не поднят'), t('lore.mcpApi.diag1c', 'поднять backend')],
                   [t('lore.mcpApi.diag2a', '403 на write'), t('lore.mcpApi.diag2b', 'нет/неверный X-Seer-Role'), t('lore.mcpApi.diag2c', 'env LORE_SEER_ROLE=admin')],
-                  [t('lore.mcpApi.diag3a', 'MART_UPSTREAM / 500'), t('lore.mcpApi.diag3b', 'ArcadeDB недоступен или неверный пароль'), t('lore.mcpApi.diag3c', 'проверить :2480 и ARCADEDB_ROOT_PASSWORD')],
+                  [t('lore.mcpApi.diag3a', 'MART_UPSTREAM / 502'), t('lore.mcpApi.diag3b', 'ArcadeDB витрины bench ответила ошибкой (неверный пароль, нет базы RAGVSDL)'), t('lore.mcpApi.diag3c', 'проверить ARCADEDB_ROOT_PASSWORD и базу RAGVSDL')],
+                  [t('lore.mcpApi.diag5a', 'MART_UNREACHABLE / 503 (bench_query_slice)'), t('lore.mcpApi.diag5b', 'витрина bench включена, но недоступна — сервис не поднят или адрес не тот'), t('lore.mcpApi.diag5c', 'проверить MART_ARCADE_URL; bench не нужен — BENCH_MART_ENABLED=false')],
+                  [t('lore.mcpApi.diag6a', 'S3_UNREACHABLE / 503 (bragi_asset_up, asset_up)'), t('lore.mcpApi.diag6b', 'S3 задан, но недоступен — сервис не поднят или адрес не виден из контейнера бэкенда'), t('lore.mcpApi.diag6c', 'проверить S3_ENDPOINT (не localhost), S3_ACCESS_KEY, S3_SECRET_KEY; без файлов — оставить S3_ENDPOINT пустым')],
+                  [t('lore.mcpApi.diag7a', 'S3_UPSTREAM / 502'), t('lore.mcpApi.diag7b', 'S3 ответил ошибкой (ключи, права, бакет)'), t('lore.mcpApi.diag7c', 'текст ошибки S3 — в detail ответа')],
                   [t('lore.mcpApi.diag4a', 'Сервер не стартует под клиентом'), t('lore.mcpApi.diag4b', 'не собран dist/'), t('lore.mcpApi.diag4c', 'npm run build в mcp-server')],
+                  [t('lore.mcpApi.diag5a', '401 на /mcp (HTTP)'), t('lore.mcpApi.diag5b', 'нет или неверный LORE_MCP_TOKEN'), t('lore.mcpApi.diag5c', 'Authorization: Bearer <LORE_MCP_TOKEN> или X-Lore-Mcp-Token')],
+                  [t('lore.mcpApi.diag6a', '403 из браузера (HTTP)'), t('lore.mcpApi.diag6b', 'origin не в LORE_MCP_CORS_ORIGINS'), t('lore.mcpApi.diag6c', 'добавить origin клиента в LORE_MCP_CORS_ORIGINS')],
+                  [t('lore.mcpApi.diag7a', 'Запись вернула ошибку «НЕ СДЕЛАНО» / «ИЗМЕНЕНИЙ НЕТ»'), t('lore.mcpApi.diag7b', 'бэкенд ответил outcome=noop (цели нет, отказ) или unchanged (уже такое значение, связь уже есть): любой CUD-инструмент отдаёт это ошибкой (D-2026-LORE-MCP-LINK-NOOP-IS-ERROR)'), t('lore.mcpApi.diag7c', 'первая строка — причина и что сделать (например project_new); JSON бэкенда ниже')],
+                  [t('lore.mcpApi.diag8a', 'Запись по /mcp (HTTP): «без входа Keycloak закрыта»'), t('lore.mcpApi.diag8b', 'HTTP-режим не передаёт роль; без токена Keycloak запись запрещена'), t('lore.mcpApi.diag8c', 'включить вход (OIDC) или подключить MCP через stdio на машине агента')],
                 ] as [string, string, string][]).map(([a, b, c]) => (
                   <tr key={a} style={S.tr}>
                     <Td style={{ color: 'var(--t1)' }}>{a}</Td>

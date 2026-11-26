@@ -181,6 +181,9 @@ services:
     environment:
       - LORE_MCP_TRANSPORT=http
       - LORE_MCP_PORT=9200
+      # Токен шлюза для клиентов без Keycloak (Llama Chat и др.) и origin браузерных клиентов — README «Подключить агента к MCP».
+      - LORE_MCP_TOKEN=${LORE_MCP_TOKEN:-}
+      - LORE_MCP_CORS_ORIGINS=${LORE_MCP_CORS_ORIGINS:-}
       # Бэкенд — по имени в сети compose, мимо nginx.
       - LORE_BACKEND_URL=http://lore-backend:9100
       - LORE_OIDC_ISSUER=${LORE_OIDC_ISSUER:-}

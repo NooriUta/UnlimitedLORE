@@ -44,6 +44,8 @@ esac
 
 # shellcheck disable=SC2206 # PROBE_CURL — составная команда намеренно
 CURL=(${PROBE_CURL:-docker run --rm --network host curlimages/curl:latest curl})
+# Фолбэк имени на IP, как у прода (владелец 26.11): PREPROD_RESOLVE=имя:443:IP — TLS по имени, соединение по IP.
+[ -n "${PREPROD_RESOLVE:-}" ] && CURL+=(--resolve "$PREPROD_RESOLVE")
 attempts="${PROBE_ATTEMPTS:-12}" delay="${PROBE_DELAY:-10}" i=1 got="" code=""
 while :; do
   raw="$("${CURL[@]}" -s -m 15 -w '\n%{http_code}' "$url" 2>/dev/null || true)"

@@ -336,7 +336,8 @@ function hostedMode(): boolean {
 
 async function writeAuthHeaders(): Promise<Record<string, string>> {
   const ctx = clientAuth.getStore();
-  if (ctx) return { ...ctx.headers, Authorization: `Bearer ${ctx.token}` };
+  // Пустой токен — клиент прошёл шлюз LORE_MCP_TOKEN без личности (ISS-04): Authorization не шлётся.
+  if (ctx) return ctx.token ? { ...ctx.headers, Authorization: `Bearer ${ctx.token}` } : { ...ctx.headers };
   if (hostedMode()) {
     throw new Error('HTTP-режим MCP: обращение к бэкенду вне запроса клиента — токена нет (LORE_MCP_CLIENT_ID/SECRET в этом режиме не используются)');
   }
@@ -497,6 +498,25 @@ export async function loreGet(path: string, params?: Record<string, string>): Pr
   return res.json();
 }
 
+/**
+ * ISS-04, владелец 25.11.2026 («без записи keycloak отказывать»): в HTTP-режиме роль (X-Seer-Role) не
+ * передаётся, поэтому без токена Keycloak бэкенд отвечает на запись 403 с советом «LORE_SEER_ROLE=admin»,
+ * который в этом режиме не поможет. Без токена Keycloak — пустой (шлюз LORE_MCP_TOKEN) или не JWT.
+ */
+export const HTTP_WRITE_NEEDS_KEYCLOAK =
+  'Запись по HTTP без входа Keycloak закрыта: включите вход (OIDC) или подключите MCP через stdio на машине агента.';
+
+function hostedWithoutKeycloak(): boolean {
+  if (!hostedMode()) return false;
+  const ctx = clientAuth.getStore();
+  return !!ctx && !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/.test(ctx.token);
+}
+
+async function writeFailure(path: string, res: Response): Promise<Error> {
+  const base = `POST ${path} → ${res.status} ${await detail(res)}`;
+  return new Error(res.status === 403 && hostedWithoutKeycloak() ? `${HTTP_WRITE_NEEDS_KEYCLOAK} (бэкенд: ${base})` : base);
+}
+
 /** POST a LORE write endpoint, authenticated per writeAuthHeaders() (see A2 above). */
 export async function lorePost(path: string, body: unknown, extraHeaders?: Record<string, string>): Promise<unknown> {
   const res = await loreFetch(`POST ${path}`, `${BASE}${path}`, {
@@ -504,8 +524,30 @@ export async function lorePost(path: string, body: unknown, extraHeaders?: Recor
     headers: { 'Content-Type': 'application/json', ...(await writeAuthHeaders()), ...(extraHeaders ?? {}) },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`POST ${path} → ${res.status} ${await detail(res)}`);
+  if (!res.ok) throw await writeFailure(path, res);
   return res.json();
+}
+
+/**
+ * SPRINT_FORGEJO_MINIAPP/FJ-03: POST эндпоинта, отвечающего конвертом v=1 (SPEC-AGENT-SURFACE-061 §4). Отказ —
+ * данные: 4xx/5xx с телом-конвертом ({v:1, outcome, error}) возвращается как есть, а не бросается. Бросается только
+ * транспорт — сеть, не-JSON или ответ не-конверт (например, 403 фильтра записи или 401 токена).
+ */
+export async function loreEnvelope(path: string, body: unknown, extraHeaders?: Record<string, string>): Promise<unknown> {
+  const res = await loreFetch(`POST ${path}`, `${BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await writeAuthHeaders()), ...(extraHeaders ?? {}) },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  let parsed: unknown;
+  try { parsed = JSON.parse(text); } catch { parsed = undefined; }
+  const isEnvelope = !!parsed && typeof parsed === 'object' && (parsed as { v?: unknown }).v === 1
+    && typeof (parsed as { outcome?: unknown }).outcome === 'string';
+  if (res.ok && parsed !== undefined) return parsed;
+  if (isEnvelope) return parsed;
+  const base = `POST ${path} → ${res.status} ${text.slice(0, 500)}`;
+  throw new Error(res.status === 403 && hostedWithoutKeycloak() ? `${HTTP_WRITE_NEEDS_KEYCLOAK} (бэкенд: ${base})` : base);
 }
 
 /** POST a base64-encoded file to a multipart LORE upload endpoint (e.g. BRAGI
@@ -527,7 +569,7 @@ export async function loreUpload(
     headers: { ...(await writeAuthHeaders()) },
     body: form,
   });
-  if (!res.ok) throw new Error(`POST ${path} → ${res.status} ${await detail(res)}`);
+  if (!res.ok) throw await writeFailure(path, res);
   return res.json();
 }
 

@@ -18,8 +18,10 @@ class ComponentTechFeaturePassportTest {
     @Test
     void elevenPassportTypesInKitOrder() {
         assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "track", "release",
-            "component", "tech", "feature", "product", "user", "agent",
-            "actor", "pain", "gain", "job", "runbook", "quality_gate", "repository", "organization", "pr", "project"), LoreRecordRegistry.TYPES);
+            "component", "tech", "feature", "product", "user", "agent", "machine",
+            "actor", "pain", "gain", "job", "runbook", "quality_gate", "repository", "organization", "pr",
+            // KREG-13: типы выпуска 1.19.1 — описаны только в модели.
+            "skill", "tag", "kind", "agent_session", "project"), LoreRecordRegistry.TYPES);
     }
 
     @Test
@@ -34,8 +36,10 @@ class ComponentTechFeaturePassportTest {
             assertTrue(LoreRecordRegistry.READ_ONLY.contains(t), t + " — только чтение");
             Map<String, Object> s = LoreRecordRegistry.schemaJson(t);
             assertNotNull(s, t + ": тип не заведён в реестре");
-            for (Map<String, Object> f : (List<Map<String, Object>>) s.get("fields"))
-                assertEquals(false, f.get("editable"), t + "." + f.get("key") + " не правится");
+            // AP-PASSPORT-EDIT волна 1 (PR #1829): паспорт фичи правится — название и тела через /lore/feature
+            if (!"feature".equals(t))
+                for (Map<String, Object> f : (List<Map<String, Object>>) s.get("fields"))
+                    assertEquals(false, f.get("editable"), t + "." + f.get("key") + " не правится");
             LoreRecordResource.Source src = LoreRecordResource.sourceOf(t);
             assertNotNull(src, t + ": нет главного среза");
             assertEquals(e.getValue()[0], src.slice(), t);
@@ -47,6 +51,8 @@ class ComponentTechFeaturePassportTest {
             // Аудит времени 10.11: hist — факт графа, а не «нужна ли история фасаду». У технологии
             // (спека SPEC-TECH-*) цепочка KnowSpecHist есть; у компонента и фичи Hist-типа нет.
             if ("tech".equals(t)) assertEquals("KnowSpecHist", g.hist(), t + ": цепочка спеки");
+            // AP-PASSPORT-EDIT (доводка v5): у фичи своя цепочка KnowUseCaseHist
+            else if ("feature".equals(t)) assertEquals("KnowUseCaseHist", g.hist(), t + ": цепочка фичи");
             else assertNull(g.hist(), t + ": Hist-типа в графе нет");
             assertEquals(e.getValue()[2], g.key(), t);
         }

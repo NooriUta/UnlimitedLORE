@@ -140,12 +140,14 @@
     "/lore/repository/link",
     "/lore/runbook/adr",
     "/lore/runbook/project",
+    "/lore/skill/link",
     "/lore/sprint/component",
     "/lore/sprint/dep",
     "/lore/sprint/project",
     "/lore/tag/apply",
     "/lore/task/adr",
     "/lore/task/component",
+    "/lore/task/dep",
     "/lore/task/file",
     "/lore/task/phase",
     "/lore/task/pr",
@@ -188,6 +190,7 @@
     "/lore/repository",
     "/lore/runbook",
     "/lore/runbook/project",
+    "/lore/skill",
     "/lore/spec",
     "/lore/spec/link",
     "/lore/sprint/create",
@@ -309,6 +312,15 @@
     "/lore/runbook",
     "/lore/runbook/project"
   ],
+  "skill_link": [
+    "/lore/skill/link"
+  ],
+  "skill_new": [
+    "/lore/skill"
+  ],
+  "skill_set": [
+    "/lore/skill"
+  ],
   "spec_del": [
     "/lore/spec/delete"
   ],
@@ -350,6 +362,7 @@
   "task_link": [
     "/lore/task/adr",
     "/lore/task/component",
+    "/lore/task/dep",
     "/lore/task/file",
     "/lore/task/phase",
     "/lore/task/pr"
