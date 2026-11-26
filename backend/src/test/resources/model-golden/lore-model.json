@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "3f146edd1b200a6b",
+  "version" : "1661d9ac82e2142f",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -17709,18 +17709,18 @@
           "consumes" : [ "code", "tests", "pr" ]
         }, {
           "stage" : "stand_check",
-          "produces" : [ "stand_report", "release" ],
+          "produces" : [ "stand_report", "release", "review_report" ],
           "consumes" : [ "pr", "ci_run" ]
         }, {
           "stage" : "uat",
-          "consumes" : [ "stand_report" ]
+          "consumes" : [ "stand_report", "review_report" ]
         } ]
       },
       "doc" : {
         "label" : "документ",
         "types" : [ "docs" ],
         "stages" : [ "draft", "review_text" ],
-        "review_stages" : [ "owner_read" ],
+        "review_stages" : [ "agent_review", "owner_read" ],
         "evidence" : [ {
           "type" : "lore",
           "label" : "запись LORE: спека, док, runbook, ADR"
@@ -17734,8 +17734,12 @@
           "produces" : [ "doc" ],
           "consumes" : [ "draft" ]
         }, {
-          "stage" : "owner_read",
+          "stage" : "agent_review",
+          "produces" : [ "review_report" ],
           "consumes" : [ "doc" ]
+        }, {
+          "stage" : "owner_read",
+          "consumes" : [ "doc", "review_report" ]
         } ]
       },
       "ops" : {
@@ -17764,7 +17768,7 @@
           "consumes" : [ "pr", "code", "tests" ]
         }, {
           "stage" : "stand_check",
-          "produces" : [ "stand_report" ],
+          "produces" : [ "stand_report", "review_report" ],
           "consumes" : [ "measurement" ]
         } ]
       },
@@ -17772,7 +17776,7 @@
         "label" : "исследование",
         "types" : [ "research", "analytics" ],
         "stages" : [ "collect", "analyse", "write" ],
-        "review_stages" : [ "owner_read" ],
+        "review_stages" : [ "agent_review", "owner_read" ],
         "evidence" : [ {
           "type" : "lore",
           "label" : "запись LORE с выводом: док, спека или решение"
@@ -17789,8 +17793,12 @@
           "produces" : [ "doc", "decision" ],
           "consumes" : [ "findings" ]
         }, {
+          "stage" : "agent_review",
+          "produces" : [ "review_report" ],
+          "consumes" : [ "doc", "decision" ]
+        }, {
           "stage" : "owner_read",
-          "consumes" : [ "doc" ]
+          "consumes" : [ "doc", "review_report" ]
         } ]
       },
       "external" : {
@@ -17851,7 +17859,7 @@
         "label" : "регламент",
         "types" : [ "finance", "support" ],
         "stages" : [ "period_open", "reconciling" ],
-        "review_stages" : [ "report" ],
+        "review_stages" : [ "report", "agent_review" ],
         "evidence" : [ {
           "type" : "doc",
           "label" : "закрытый период + отчёт"
@@ -17866,13 +17874,17 @@
           "stage" : "report",
           "produces" : [ "period_report" ],
           "consumes" : [ "findings" ]
+        }, {
+          "stage" : "agent_review",
+          "produces" : [ "review_report" ],
+          "consumes" : [ "period_report" ]
         } ]
       },
       "content" : {
         "label" : "контент",
         "types" : [ "content" ],
         "stages" : [ "draft", "ready" ],
-        "review_stages" : [ "approval", "scheduled" ],
+        "review_stages" : [ "agent_review", "approval", "scheduled" ],
         "evidence" : [ {
           "type" : "url",
           "label" : "URL публикации"
@@ -17884,8 +17896,12 @@
           "stage" : "ready",
           "consumes" : [ "draft" ]
         }, {
-          "stage" : "approval",
+          "stage" : "agent_review",
+          "produces" : [ "review_report" ],
           "consumes" : [ "draft" ]
+        }, {
+          "stage" : "approval",
+          "consumes" : [ "draft", "review_report" ]
         }, {
           "stage" : "scheduled",
           "produces" : [ "publication" ],
@@ -17896,7 +17912,7 @@
         "label" : "железо",
         "types" : [ "procurement" ],
         "stages" : [ "prototype", "testing", "waiting_supplier" ],
-        "review_stages" : [ "protocol" ],
+        "review_stages" : [ "agent_review", "protocol" ],
         "evidence" : [ {
           "type" : "doc",
           "label" : "протокол испытаний, сертификат"
@@ -17912,8 +17928,12 @@
         }, {
           "stage" : "waiting_supplier"
         }, {
-          "stage" : "protocol",
+          "stage" : "agent_review",
+          "produces" : [ "review_report" ],
           "consumes" : [ "test_protocol" ]
+        }, {
+          "stage" : "protocol",
+          "consumes" : [ "test_protocol", "review_report" ]
         } ]
       }
     },
@@ -17973,6 +17993,10 @@
         "label" : "отчёт смоука стенда, скрины",
         "source" : "stage",
         "evidence" : "probe"
+      },
+      "review_report" : {
+        "label" : "заключение внутренней приёмки агентом (RFD → UAT): ок или замечания",
+        "source" : "stage"
       },
       "diagnosis" : {
         "label" : "диагноз: лог, метрика, причина",
