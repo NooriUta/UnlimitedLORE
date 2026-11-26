@@ -10,7 +10,7 @@
 
 ## Адрес
 
-v2 препрода — `https://preprod.new.lore.odal.seidrstudio.pro` (порт 4412 на ci-server). `http://192.168.3.131:4400` — это пересыльщик ПРОДА (редирект на `lore.odal`), смоук его отвергает, как и любой адрес прода, в том числе по редиректу.
+v2 препрода — `https://preprod.lore.odal.seidrstudio.pro` (порт 4412 на ci-server). `http://192.168.3.131:4400` — это пересыльщик ПРОДА (редирект на `lore.odal`), смоук его отвергает, как и любой адрес прода, в том числе по редиректу.
 
 ## Вход (один раз, руками)
 
@@ -18,7 +18,7 @@ v2 препрода — `https://preprod.new.lore.odal.seidrstudio.pro` (пор�
 
 ```
 cd web-next
-npx playwright codegen --channel=chrome --save-storage=e2e/stand/.auth/stand.json https://preprod.new.lore.odal.seidrstudio.pro
+npx playwright codegen --channel=chrome --save-storage=e2e/stand/.auth/stand.json https://preprod.lore.odal.seidrstudio.pro
 ```
 
 Войти в открывшемся окне, дождаться ленты LORE, закрыть окно. Папка `e2e/stand/.auth/` в git не идёт. Вход хранится в localStorage (`lore.v2.oidc.*`) и со временем истекает — тогда сценарии «не выполнены» с причиной «вход истёк», файл переснять той же командой.
@@ -27,14 +27,14 @@ npx playwright codegen --channel=chrome --save-storage=e2e/stand/.auth/stand.jso
 
 ```
 cd web-next
-LORE_STAND_URL=https://preprod.new.lore.odal.seidrstudio.pro LORE_STAND_STORAGE_STATE=e2e/stand/.auth/stand.json npm run e2e:stand
+LORE_STAND_URL=https://preprod.lore.odal.seidrstudio.pro LORE_STAND_STORAGE_STATE=e2e/stand/.auth/stand.json npm run e2e:stand
 ```
 
 PowerShell:
 
 ```
 cd web-next
-$env:LORE_STAND_URL = 'https://preprod.new.lore.odal.seidrstudio.pro'
+$env:LORE_STAND_URL = 'https://preprod.lore.odal.seidrstudio.pro'
 $env:LORE_STAND_STORAGE_STATE = 'e2e/stand/.auth/stand.json'
 npm run e2e:stand
 ```
@@ -61,7 +61,7 @@ npm run e2e:stand
 
 ```
 cd web-next
-npx playwright codegen --channel=chrome --save-storage=e2e/stand/.auth/test-viewer.json https://preprod.new.lore.odal.seidrstudio.pro
+npx playwright codegen --channel=chrome --save-storage=e2e/stand/.auth/test-viewer.json https://preprod.lore.odal.seidrstudio.pro
 ```
 
 Нет файла учётки — её кейсы «не выполнены» с именем учётки. RB-08 (просроченный токен) берёт токен из файла входа: он выполняется, когда файл старше срока токена (минуты), иначе «не выполнен».
@@ -70,7 +70,7 @@ npx playwright codegen --channel=chrome --save-storage=e2e/stand/.auth/test-view
 
 ```
 cd web-next
-$env:LORE_STAND_URL = 'https://preprod.new.lore.odal.seidrstudio.pro'
+$env:LORE_STAND_URL = 'https://preprod.lore.odal.seidrstudio.pro'
 npx playwright test -c playwright.stand.config.ts rbac.stand.ts
 ```
 
@@ -82,7 +82,7 @@ npx playwright test -c playwright.stand.config.ts rbac.stand.ts
 
 ```
 cd web-next
-$env:LORE_STAND_URL = 'https://preprod.new.lore.odal.seidrstudio.pro'
+$env:LORE_STAND_URL = 'https://preprod.lore.odal.seidrstudio.pro'
 $env:LORE_STAND_ACCOUNTS_JSON = Get-Content <путь к файлу учёток> -Raw   # {"test-sa":"…",…}
 npm run e2e:stand:login        # пишет e2e/stand/.auth/<логин>.json и stand.json (= test-sa)
 $env:LORE_STAND_STORAGE_STATE = 'e2e/stand/.auth/stand.json'

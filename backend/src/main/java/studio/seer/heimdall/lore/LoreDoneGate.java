@@ -106,6 +106,11 @@ final class LoreDoneGate {
     }
 
     static Verdict transition(String currentToken, String target, String reason, String waitingFor) {
+        // UW-L0-SPEC, слово владельца 26.11: «агент ставит uat, но из uat дальше человек». done из uat решает
+        // гейт done (агенту — только словом человека, owner_word); повтор того же статуса — не выход.
+        if ("uat".equals(currentToken) && target != null && !"uat".equals(target) && !"done".equals(target))
+            return new Verdict(409, "UAT_EXIT_HUMAN_ONLY", "задача на приёмке (uat): дальше её ведёт человек — "
+                + "вернуть в работу, закрыть или отменить может только он; агент оставляет задачу в uat");
         if ("blocked".equals(target) && blank(reason))
             return new Verdict(400, "REASON_REQUIRED", "у blocked обязательна причина (reason) — без неё блокировку "
                 + "не отличить от забытой задачи");

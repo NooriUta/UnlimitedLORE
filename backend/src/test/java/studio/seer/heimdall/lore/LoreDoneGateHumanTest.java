@@ -72,7 +72,9 @@ class LoreDoneGateHumanTest {
         assertNull(LoreDoneGate.transitionFor(false, "ready_for_deploy", "active", null, null), "возврат с приёмки человеком");
         assertNull(LoreDoneGate.transitionFor(false, "active", "blocked", null, null), "blocked человеком");
         assertNull(LoreDoneGate.transitionFor(false, "active", "waiting", null, null), "waiting человеком");
-        assertEquals("REASON_REQUIRED", LoreDoneGate.transitionFor(true, "uat", "active", null, null).code());
+        assertEquals("REASON_REQUIRED", LoreDoneGate.transitionFor(true, "ready_for_deploy", "active", null, null).code());
+        // UW-L0-SPEC 26.11: из uat агенту — никуда (кроме done по слову человека)
+        assertEquals("UAT_EXIT_HUMAN_ONLY", LoreDoneGate.transitionFor(true, "uat", "active", "причина", null).code());
         assertEquals("REASON_REQUIRED", LoreDoneGate.transitionFor(true, "active", "blocked", null, null).code());
         assertEquals("WAITING_FOR_REQUIRED", LoreDoneGate.transitionFor(true, "active", "waiting", null, null).code());
     }

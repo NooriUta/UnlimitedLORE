@@ -21,7 +21,7 @@ on:
       stand_url:
         description: 'Адрес стенда (только препрод)'
         required: false
-        default: 'https://preprod.new.lore.odal.seidrstudio.pro'
+        default: 'https://preprod.lore.odal.seidrstudio.pro'
 
 concurrency:
   group: lore-stand-e2e
@@ -32,7 +32,7 @@ jobs:
     runs-on: lore-only
     timeout-minutes: 75
     env:
-      LORE_STAND_URL: ${{ inputs.stand_url || 'https://preprod.new.lore.odal.seidrstudio.pro' }}
+      LORE_STAND_URL: ${{ inputs.stand_url || 'https://preprod.lore.odal.seidrstudio.pro' }}
       LORE_STAND_ACCOUNTS_JSON: ${{ secrets.LORE_STAND_ACCOUNTS_JSON }}
       # Проба брокеринга seer → omilore (BR-01/02): пароль test-* в seerPreprod.
       LORE_STAND_BROKER_ACCOUNTS_JSON: ${{ secrets.LORE_STAND_BROKER_ACCOUNTS_JSON }}
@@ -99,6 +99,14 @@ jobs:
             echo "::warning::загрузка Chromium не удалась (попытка $i из 3)"; sleep 15
           done
           echo "::error::Chromium не установлен за 3 попытки"; exit 1
+
+      # Владелец 26.11.2026: «как и для прода прописать fallback на IP». Препрод внутренний (CoreDNS 131);
+      # если из контейнера джобы имя не разрешается — /etc/hosts на 192.168.3.131, имя мимо прокси.
+      - name: Имя препрода — фолбэк на IP 131
+        env:
+          STAND_HOST: preprod.lore.odal.seidrstudio.pro
+          STAND_HOST_IP: 192.168.3.131
+        run: bash .github/scripts/stand-host-fallback.sh
 
       # Достижим ли стенд и KC из контейнера раннера — через прокси раннера и напрямую.
       # Только диагностика: шаг не роняет джобу (прогон 7846 упал на входе без следа).
