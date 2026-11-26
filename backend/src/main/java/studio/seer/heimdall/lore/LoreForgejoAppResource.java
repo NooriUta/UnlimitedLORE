@@ -189,6 +189,21 @@ public class LoreForgejoAppResource extends LoreResourceBase {
             List<Map<String, Object>> params = new ArrayList<>();
             for (ForgejoRoutes.Param p : r.params().values()) params.add(p.toMap());
             card.put("params", params);
+            if (!r.rules().isEmpty()) {
+                List<Map<String, Object>> rules = new ArrayList<>();
+                for (ForgejoRoutes.Rule x : r.rules()) {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("kind", x.kind());
+                    m.put("param", x.param());
+                    if (x.values() != null) m.put("values", x.values());
+                    if (x.pattern() != null) m.put("pattern", x.pattern());
+                    if (x.risk() != null) m.put("risk", x.risk());
+                    if (x.roles() != null) m.put("roles", x.roles());
+                    m.put("reason", x.reason());
+                    rules.add(m);
+                }
+                card.put("rules", rules);
+            }
             if (ForgejoApp.takesRepo(r))
                 card.put(ForgejoApp.GIT_PROJECT, "вместо owner+repo можно дать git_project — слаг проекта LORE (например "
                     + "NooriUta/UnlimitedLORE); резолв только в наш Forgejo, что-то одно из двух");
