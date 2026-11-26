@@ -1073,10 +1073,18 @@ public class AidaLoreResource extends LoreResourceBase {
 
         LoreSlices.Composed composed;
         final SlicePage page;
+        final List<Object> where;
         java.util.Set<String> rowScope;
         java.util.Set<String> callerScope;
         SliceProjectNarrowing.Result narrowing;
         try {
+            // KREG-12 шаг 2 (ADR-LORE-061): where — JSON-список условий над строками среза; вынимается до compose.
+            try {
+                where = SliceQuery.parseWhere(given.remove("where"));
+            } catch (SliceQuery.Refusal r) {
+                return Uni.createFrom().item(noStore(Response.status(Response.Status.BAD_REQUEST)
+                    .entity(new LoreError(r.code(), r.getMessage()))));
+            }
             // SE-01: limit/offset — страница для любого слайса; вынимаются до compose.
             page = SlicePage.extract(given);
             callerScope = allowedProjectsOrNull(role);
@@ -1317,6 +1325,27 @@ public class AidaLoreResource extends LoreResourceBase {
                 if (outside != null) out.put("outside_scope", outside);
                 // AP-PEOPLE-PAGE: колонки полей уровня admin (учётка агента) не-админу не уходят — до страницы и fields.
                 out.put("rows", LoreFieldAudience.stripRows(id, castRows(out.get("rows")), role, svcReader));
+                // KREG-12 шаг 2: отбор where — после всех обогащений и прав, до страницы (total — после отбора).
+                if (where != null) {
+                    List<Map<String, Object>> rows = castRows(out.get("rows"));
+                    java.util.Set<String> fields = new java.util.TreeSet<>(KnowRegistry.selectColumns(LoreSlices.get(id).baseSql()));
+                    for (Map<String, Object> r : rows) fields.addAll(r.keySet());
+                    try {
+                        SliceQuery.Filtered f = SliceQuery.filter(rows, where, fields);
+                        out.put("rows", f.rows());
+                        Map<String, Object> wm = new LinkedHashMap<>();
+                        wm.put("applied", true);
+                        wm.put("matched", f.matched());
+                        wm.put("complete", f.complete());
+                        out.put("where", wm);
+                    } catch (SliceQuery.Refusal r) {
+                        Map<String, Object> err = new LinkedHashMap<>();
+                        err.put("error", r.code());
+                        err.put("detail", r.getMessage());
+                        if (!r.allowed().isEmpty()) err.put("allowed", r.allowed());
+                        return noStore(Response.status(Response.Status.BAD_REQUEST).entity(err));
+                    }
+                }
                 try {
                     SlicePage.apply(out, page);
                 } catch (IllegalArgumentException e) {

@@ -83,6 +83,42 @@ final class SliceQuery {
         return new Result(List.copyOf(matched.subList(from, to)), matched.size(), limit, page, to < matched.size(), complete);
     }
 
+    // ── отбор для GET-среза (шаг 2): where строкой JSON, страницу ведёт SlicePage ──
+
+    /** Итог отбора без страницы: совпавшие строки и просмотрено ли всё (потолок {@value #SCAN_CAP}). */
+    record Filtered(List<Map<String, Object>> rows, int matched, boolean complete) {}
+
+    /**
+     * Разбор параметра {@code where} GET-среза: JSON-список условий (или одно условие объектом).
+     * Пусто — null (отбора нет); не JSON — BAD_PARAMS.
+     */
+    static List<Object> parseWhere(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String t = raw.strip();
+        try {
+            if (t.startsWith("[")) return new io.vertx.core.json.JsonArray(t).getList();
+            if (t.startsWith("{")) return List.of(new io.vertx.core.json.JsonObject(t).getMap());
+        } catch (RuntimeException e) {
+            throw new Refusal("BAD_PARAMS", "where — не JSON: " + e.getMessage(), null);
+        }
+        throw new Refusal("BAD_PARAMS", "where — JSON-список условий [{field, op, value}, …]", null);
+    }
+
+    /** Отбор строк среза по where (верхний уровень — И) без страницы; поля проверяются по {@code fields}. */
+    static Filtered filter(List<Map<String, Object>> rows, List<Object> where, Set<String> fields) {
+        List<Object> w = where == null ? List.of() : where;
+        for (Object c : w) validate(c, fields);
+        int scanned = Math.min(rows.size(), SCAN_CAP);
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (int i = 0; i < scanned; i++) {
+            Map<String, Object> r = rows.get(i);
+            boolean ok = true;
+            for (Object c : w) if (!eval(c, r)) { ok = false; break; }
+            if (ok) out.add(r);
+        }
+        return new Filtered(out, out.size(), rows.size() <= SCAN_CAP);
+    }
+
     // ── проверка ─────────────────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
