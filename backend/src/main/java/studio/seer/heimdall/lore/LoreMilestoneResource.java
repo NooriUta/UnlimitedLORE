@@ -81,6 +81,59 @@ public class LoreMilestoneResource extends LoreResourceBase {
         }
     }
 
+    // ── QG-10: единый путь записи связей вехи ─────────────────────────────────
+
+    public record MilestoneLinkRequest(String milestone_id, String rel, String target_id, String action) {}
+
+    /**
+     * SPRINT_QG_REBUILD/QG-10: {@code rel=sprint} — то же, что {@code milestone/sprint} (синоним, не второй путь);
+     * {@code rel=component} — ребро TAGGED_WITH веха → компонент («какой компонент веха двигает»).
+     */
+    @POST
+    @Path("milestone/link")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response linkMilestone(MilestoneLinkRequest req, @HeaderParam("X-Seer-Role") String role) {
+        if (!enabled) return disabled();
+        requireAdmin(role);
+        if (req == null || req.milestone_id() == null || req.target_id() == null)
+            return badParams("milestone_id and target_id required");
+        MilestoneLink.Rel rel = MilestoneLink.rel(req.rel());
+        if (rel == null) return badParams("rel must be one of: " + MilestoneLink.ALLOWED);
+        if (rel == MilestoneLink.Rel.SPRINT)
+            return linkSprintMilestone(new SprintMilestoneRequest(req.target_id(), req.milestone_id(), req.action()), role);
+        boolean remove = "remove".equalsIgnoreCase(req.action());
+        try {
+            // Оба конца — до записи: пустая выборка в CREATE EDGE … TO (SELECT …) молча не создаёт ребра.
+            if (!vertexExists("KnowMilestone", "milestone_id", req.milestone_id()))
+                return badParams("milestone not found: " + req.milestone_id());
+            if (!vertexExists("LoreComponent", "component_id", req.target_id()))
+                return badParams("component not found: " + req.target_id());
+            Map<String, Object> p = Map.of("mid", req.milestone_id(), "cid", req.target_id());
+            boolean had = !ingestService.queryPublic(MilestoneLink.findComponentEdgeSql(), p).isEmpty();
+            if (remove) {
+                for (Map<String, Object> e : ingestService.queryPublic(MilestoneLink.findComponentEdgeSql(), p))
+                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                        "DELETE FROM TAGGED_WITH WHERE @rid=" + e.get("@rid"), null)).await().indefinitely();
+            } else if (!had) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    MilestoneLink.createComponentEdgeSql(), p)).await().indefinitely();
+            }
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("milestone_id", req.milestone_id());
+            out.put("rel", "component");
+            out.put("component_id", req.target_id());
+            out.put("action", remove ? "removed" : "added");
+            return remove ? unlinkOutcome(out, had)
+                : linkOutcome(had, out, false, "TAGGED_WITH", "milestone_id", req.milestone_id(),
+                    "component_id", req.target_id(), "веха " + req.milestone_id() + " или компонент " + req.target_id());
+        } catch (Exception e) {
+            LOG.warnf("[LORE MILESTONE COMPONENT] %s / %s: %s", req.milestone_id(), req.target_id(), e.getMessage());
+            return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
+        }
+    }
+
     // ── RM-S1: веха → ПРОДУКТ ────────────────────────────────────────────────
 
     public record MilestoneProductRequest(String milestone_id, String product_code, String action) {}

@@ -4464,8 +4464,8 @@
       "type" : "ref",
       "required" : false,
       "desc" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
-      "layer" : "model",
-      "property" : "components",
+      "layer" : "edge",
+      "rel" : "TAGGED_WITH",
       "ref_kind" : "entity:component",
       "multi" : true
     }, {
@@ -4672,6 +4672,12 @@
       "keys" : [ "history" ],
       "edge_fields" : [ ]
     }, {
+      "rel" : "TAGGED_WITH",
+      "dir" : "out",
+      "target_kind" : "entity:component",
+      "keys" : [ "components" ],
+      "edge_fields" : [ "changed_at", "changed_by", "fields", "tagged_at", "tagged_by" ]
+    }, {
       "rel" : "TARGETS_MILESTONE",
       "dir" : "in",
       "target_kind" : "entity:feature",
@@ -4702,7 +4708,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowMilestone",
     "hist" : "KnowMilestoneHist",
-    "content_hash" : "sha256:7a3d29b1076504a1cfc53a1bffca3f8f4ded662962017355ae32c08d981bf37e"
+    "content_hash" : "sha256:a586b69d594132ad421408bb3f1e946ceaa6d99cc2bf7e1b7558dfc13f57057e"
   }, {
     "kind" : "entity:organization",
     "id_field" : "org_id",
@@ -14457,6 +14463,10 @@
       "name" : "products",
       "required" : false,
       "layer" : "slice"
+    }, {
+      "name" : "components",
+      "required" : false,
+      "layer" : "slice"
     } ],
     "links" : [ ],
     "guards" : [ {
@@ -14469,7 +14479,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:168a569e49b89a4461ce9871fa91e9e19e570eae290f5a2b96db8fcfa39f64ab"
+    "content_hash" : "sha256:0f8f7c110bae51bf97f3f7a928f288df252cb560ca296cd03225006abe2a0d32"
   }, {
     "kind" : "slice:milestone_sprints",
     "id_field" : null,

@@ -40,7 +40,9 @@ final class LoreRecordRelationRoutes {
         ORG_LINK,
         // AP-PASSPORT-EDIT (1б): ценность фичи — feature/link (ADDRESSES · PROMISES · HELPS_WITH);
         // профиль клиента — vp/link (FELT_BY · DESIRED_BY · PERFORMED_BY · BLOCKS · SUCCESS_OF).
-        FEATURE_VALUE, VP_LINK
+        FEATURE_VALUE, VP_LINK,
+        // QG-10: какой компонент веха двигает — TAGGED_WITH веха → компонент через milestone/link rel=component.
+        MILESTONE_COMPONENT
     }
 
     record Route(String type, String rel, String dir, Handler handler, boolean reversed) {}
@@ -71,6 +73,7 @@ final class LoreRecordRelationRoutes {
         // веха (MDL-13, смоук 21.11.2026: «Готово, когда» — ставить и снимать зависимость и у вехи): статус и создание
         // только чтение, а «зависит от» — тот же путь dep (LoreDependency принимает веху концом), что у задачи и спринта
         r("milestone", "DEPENDS_ON", "out", Handler.DEPENDS_ON, false),
+        r("milestone", "TAGGED_WITH", "out", Handler.MILESTONE_COMPONENT, false),
         r("milestone", "DEPENDS_ON", "in", Handler.DEPENDS_ON, true),
         // ADR
         r("adr", "DEPENDS_ON", "out", Handler.ADR_DEPENDS_ON, false),

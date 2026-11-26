@@ -679,6 +679,9 @@ public class LoreRecordResource extends LoreResourceBase {
                 new LoreSprintTaskResource.SprintComponentRequest(a, b, action), role);
             case SPRINT_MILESTONE -> milestoneResource.linkSprintMilestone(
                 new LoreMilestoneResource.SprintMilestoneRequest(a, b, action), role);
+            // QG-10: веха — a, компонент — b.
+            case MILESTONE_COMPONENT -> milestoneResource.linkMilestone(
+                new LoreMilestoneResource.MilestoneLinkRequest(a, "component", b, action), role);
             // IMPLEMENTED_IN идёт ADR → спринт: у ADR запись — a, у спринта (reversed) — тоже ADR в a.
             case ADR_SPRINT -> adrResource.linkAdr(new LoreAdrResource.AdrLinkRequest(a, b, null, null, action), role);
             case TASK_COMPONENT -> sprintTask.linkTaskComponent(

@@ -3040,8 +3040,15 @@
       "labelKey" : "pp.field.components",
       "kind" : "ref",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/record/{type}/{id}/relation",
+        "field" : "TAGGED_WITH"
+      },
       "multi" : true,
       "refType" : "component",
+      "rel" : "TAGGED_WITH",
+      "dir" : "out",
       "relation" : "attribute",
       "definition" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
       "labelEn" : "Components",
@@ -3177,6 +3184,18 @@
       "targetType" : "product",
       "relation" : "attribute",
       "place" : "prop"
+    }, {
+      "key" : "components",
+      "label" : "Компоненты",
+      "labelKey" : "pp.rel.components",
+      "labelEn" : "Components",
+      "labelPl" : "Komponenty",
+      "rel" : "TAGGED_WITH",
+      "dir" : "out",
+      "targetType" : "component",
+      "relation" : "attribute",
+      "place" : "prop",
+      "manageable" : true
     }, {
       "key" : "history",
       "label" : "История",
