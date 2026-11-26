@@ -6,7 +6,7 @@
     "ddl" : 50,
     "entity" : 29,
     "skill" : 1,
-    "slice" : 229
+    "slice" : 230
   },
   "kinds" : [ {
     "kind" : "ddl:AgentActionLog",
@@ -13011,6 +13011,22 @@
       "name" : "version_kind",
       "required" : false,
       "layer" : "slice"
+    }, {
+      "name" : "changed_by",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "changed_by_kind",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "changed_by_session",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "changed_by_machine",
+      "required" : false,
+      "layer" : "slice"
     } ],
     "links" : [ ],
     "guards" : [ {
@@ -13023,7 +13039,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:4489850c337ccfd5dd227b6bf98db2349da4dd2b05be74f7354faf3450570a87"
+    "content_hash" : "sha256:4adb6aa1a20f1424819450024f4254418e26bd542f4a1a0093d66b2ba6efdbef"
   }, {
     "kind" : "slice:invest_profile",
     "id_field" : null,
@@ -19961,6 +19977,64 @@
     "replaces" : [ ],
     "source" : "slice-registry",
     "content_hash" : "sha256:73777da4db3df3a617543cc6dded11ab3a87c99dd64142f559bab1a2c51dda1c"
+  }, {
+    "kind" : "slice:session_coverage",
+    "id_field" : null,
+    "title" : "session_coverage",
+    "params" : [ {
+      "name" : "from",
+      "type" : "string",
+      "required" : true,
+      "role" : "required"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "client",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "machine",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "harness",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "writes",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "with_session",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-params",
+      "params" : [ "from" ]
+    }, {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:7bb2389b9e31bceb2217ca8c4b417a50d3dda9734f363cb48028982b605ba106"
   }, {
     "kind" : "slice:sessions_recent",
     "id_field" : null,

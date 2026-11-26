@@ -72,6 +72,12 @@ public class LoreRequestStatsFilter implements ContainerResponseFilter {
                 AgentActionLog.clientMark(agent, agent ? clientIdOf(identity) : null),
                 AgentMachine.mark(agent, req.getHeaderString(AgentMachine.HEADER)));
         }
+        // Дверь сессии (слово владельца 26.11.2026): любой вызов агента с X-Lore-Session-Id заводит сессию сам.
+        if ("agent".equals(axis)) {
+            String machine = req.getHeaderString(AgentMachine.HEADER);
+            stats.touchAgentSession(req.getHeaderString(ChangeAuthor.SESSION_HEADER), clientIdOf(identity),
+                machine == null ? null : AgentMachine.canon(machine));
+        }
         if (stats.touchSession(axis + ":" + caller)) stats.recordSessionStart(caller, axis);
     }
 

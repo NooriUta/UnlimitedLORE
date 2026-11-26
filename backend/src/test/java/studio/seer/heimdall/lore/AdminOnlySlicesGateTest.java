@@ -19,7 +19,7 @@ class AdminOnlySlicesGateTest {
     private static final List<String> JOURNALS = List.of(
         "mcp_failures", "mcp_failure_rows", "mcp_connections", "agent_actions", "admin_actions",
         "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix",
-        "agent_action_points");
+        "agent_action_points", "session_coverage");
 
     /** Паспорт машины (AP-MACHINE-PASSPORT): только админка; отдаёт client_id агентов — поле уровня admin (AP-PEOPLE-PAGE). */
     private static final List<String> ADMIN_PASSPORTS = List.of("machine_by_id", "machines_graph");
