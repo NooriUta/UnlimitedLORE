@@ -53,12 +53,15 @@ final class LoreSchemaAdditive {
      * Номер схемы кода. Поднимать при КАЖДОМ изменении {@link #CHANGES} и закреплять новый хэш в {@link #PINNED}
      * (сторож хэша — как у номера модели: «схема сменилась, а номер тот же» — красный).
      */
-    static final int VERSION = 2;
+    static final int VERSION = 5;
 
     /** Номер → хэш доводки. Прежние номера не правятся: их отметка уже лежит в базах. */
     static final Map<Integer, String> PINNED = Map.of(
         1, "54761523d90deed8",
-        2, "1fb90ce03ae56244");
+        2, "1fb90ce03ae56244",
+        3, "7f859c257fe15414",
+        4, "8db786982331b847",
+        5, "a4b19c3f6c60ca04");
 
     /** Последний шаг V. Реестр шагов заморожен: новое — только в {@link #CHANGES}. */
     static final int LAST_V_STEP = 100;
@@ -148,6 +151,56 @@ final class LoreSchemaAdditive {
         "CREATE VERTEX TYPE ClRoutineMetric IF NOT EXISTS",
         "CREATE PROPERTY ClRoutineMetric.basis IF NOT EXISTS STRING");
 
+    // ── v4 · SPRINT_LORE_ADMIN_POLISH/AP-APPEARANCE (1а): свой стиль — статья palette с JSON токенов. Поле и в истории
+    // словаря: правка своего стиля — такая же версия статьи, как правка подписи (AL-43). Посев — подписи шести наших
+    // палитр (SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS, 5а).
+    static final List<String> APPEARANCE_DDL = List.of(
+        "CREATE PROPERTY KnowDictEntry.tokens_json IF NOT EXISTS STRING",
+        "CREATE PROPERTY KnowDictEntryHist.tokens_json IF NOT EXISTS STRING");
+
+    // ── v5 · SPRINT_LORE_ADMIN_POLISH/AP-PASSPORT-EDIT (владелец 25.11.2026 «историчность доделываем»): SCD2-история боли,
+    // выгоды, работы, роли продукта и фичи — по образцу KnowKindHist/KnowDocHist. Цепочка — <Вершина>Hist через HAS_STATE,
+    // поля времени DATETIME (RM-P13), автор версии (S2-12), снимок полей версии (ProductHistory.SPECS). Объявления типа и
+    // времени — литералами (их читают сторожа реестров valid_from по тексту корпуса), остальные поля — из той же таблицы,
+    // что у записи и посева. Посев — начальная версия «как есть» у записей без истории (ProductHistory.seed).
+    private static final List<String> PRODUCT_HIST_HEAD = List.of(
+        "CREATE EDGE TYPE HAS_STATE IF NOT EXISTS",
+        "CREATE VERTEX TYPE KnowPainHist IF NOT EXISTS",
+        "CREATE PROPERTY KnowPainHist.valid_from IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowPainHist.valid_to IF NOT EXISTS DATETIME",
+        "CREATE VERTEX TYPE KnowGainHist IF NOT EXISTS",
+        "CREATE PROPERTY KnowGainHist.valid_from IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowGainHist.valid_to IF NOT EXISTS DATETIME",
+        "CREATE VERTEX TYPE KnowJobHist IF NOT EXISTS",
+        "CREATE PROPERTY KnowJobHist.valid_from IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowJobHist.valid_to IF NOT EXISTS DATETIME",
+        "CREATE VERTEX TYPE KnowProjectActorHist IF NOT EXISTS",
+        "CREATE PROPERTY KnowProjectActorHist.valid_from IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowProjectActorHist.valid_to IF NOT EXISTS DATETIME",
+        "CREATE VERTEX TYPE KnowUseCaseHist IF NOT EXISTS",
+        "CREATE PROPERTY KnowUseCaseHist.valid_from IF NOT EXISTS DATETIME",
+        "CREATE PROPERTY KnowUseCaseHist.valid_to IF NOT EXISTS DATETIME");
+
+    /** Служебные поля версии у каждой новой цепочки: ключ, версия, хэш снимка, автор (ChangeAuthor.SET_SQL). */
+    private static final List<String> HIST_SERVICE_FIELDS = List.of("state_uid", "content_hash", "changed_by", "changed_by_kind",
+        "changed_by_session", "changed_by_harness", "changed_by_harness_note", "changed_by_machine");
+
+    static final List<String> PRODUCT_HIST_DDL = productHistDdl();
+
+    private static List<String> productHistDdl() {
+        List<String> out = new ArrayList<>(PRODUCT_HIST_HEAD);
+        for (ProductHistory.Spec s : ProductHistory.SPECS) {
+            String h = s.hist();
+            out.add("CREATE PROPERTY " + h + "." + s.key() + " IF NOT EXISTS STRING");
+            for (String f : HIST_SERVICE_FIELDS) out.add("CREATE PROPERTY " + h + "." + f + " IF NOT EXISTS STRING");
+            for (String f : s.fields()) out.add("CREATE PROPERTY " + h + "." + f + " IF NOT EXISTS STRING");
+            out.add("CREATE INDEX IF NOT EXISTS ON " + h + " (state_uid) UNIQUE");
+            out.add("CREATE INDEX IF NOT EXISTS ON " + h + " (valid_to) NOTUNIQUE");
+            out.add("CREATE INDEX IF NOT EXISTS ON " + h + " (" + s.key() + ") NOTUNIQUE");
+        }
+        return List.copyOf(out);
+    }
+
     /** Записи доводки по порядку применения. Новое изменение схемы — сюда (и VERSION + PINNED). */
     static final List<Change> CHANGES = List.of(
         new Change("know_kind_registry", "SPRINT_LORE_KNOW_REGISTRY/KREG-01 (бывш. V94): реестр видов KnowKind + KnowKindHist",
@@ -162,7 +215,17 @@ final class LoreSchemaAdditive {
         new Change("area_dict_seed", "SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS (бывш. V100): статьи словаря area",
             List.of(), fingerprint(AreaDictSeed.SEEDS), LoreSchemaAdditive::seedAreas),
         new Change("qg_metric_basis", "SPRINT_QG_REBUILD/QG-07 (доводка v2): ClRoutineMetric.basis — отпечаток знаменателя метрики прогона",
-            QG_METRIC_BASIS_DDL, null, null));
+            QG_METRIC_BASIS_DDL, null, null),
+        new Change("ui_dict_seed", "SPRINT_LORE_EXT_ISSUES_W2/ISS-02-DICT-SEED-GUARD (доводка v3): словари task_type, priority, agent_profile, которые читает UI",
+            List.of(), fingerprint(UiDictSeed.SEEDS) + "|" + new TreeMap<>(UiDictSeed.SYNONYMS.getOrDefault("priority", Map.of())),
+            LoreSchemaAdditive::seedUiDicts),
+        new Change("appearance", "SPRINT_LORE_ADMIN_POLISH/AP-APPEARANCE + SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS (доводка v4): "
+                + "tokens_json своего стиля, подписи шести палитр; task_type ui_dict_seed — на токенах темы",
+            APPEARANCE_DDL, fingerprint(PaletteDictSeed.SEEDS), LoreSchemaAdditive::seedPalettes),
+        new Change("product_history", "SPRINT_LORE_ADMIN_POLISH/AP-PASSPORT-EDIT (доводка v5): SCD2-история боли, выгоды, работы, "
+                + "роли продукта и фичи — KnowPainHist, KnowGainHist, KnowJobHist, KnowProjectActorHist, KnowUseCaseHist; "
+                + "начальная версия «как есть» у записей без истории",
+            PRODUCT_HIST_DDL, ProductHistory.fingerprint(), sql -> ProductHistory.seed(sql, typeNames(sql))));
 
     /** Шаги V после модели 1.18 → запись доводки, которая несёт то же самое на базу из модели. */
     static final Map<Integer, String> FROM_V_STEPS = Map.of(
@@ -392,6 +455,27 @@ final class LoreSchemaAdditive {
         for (String dict : AreaDictSeed.SEEDS.keySet()) existing.put(dict, codesOf(sql, dict));
         List<StatusDictCoreSeed.Insert> plan = StatusDictCoreSeed.plan(AreaDictSeed.SEEDS, existing);
         for (StatusDictCoreSeed.Insert i : plan) sql.run(AreaDictSeed.INSERT_SQL, AreaDictSeed.params(i));
+        return plan.size();
+    }
+
+    /** Доводка v4 (AUD-AREA-COLORS 5а): подписи шести наших палитр — только недостающие статьи. */
+    static int seedPalettes(Sql sql) {
+        Map<String, Set<String>> existing = new LinkedHashMap<>();
+        for (String dict : PaletteDictSeed.SEEDS.keySet()) existing.put(dict, codesOf(sql, dict));
+        List<StatusDictCoreSeed.Insert> plan = StatusDictCoreSeed.plan(PaletteDictSeed.SEEDS, existing);
+        for (StatusDictCoreSeed.Insert i : plan) sql.run(PaletteDictSeed.INSERT_SQL, PaletteDictSeed.params(i));
+        return plan.size();
+    }
+
+    /**
+     * Доводка v3 (ISS-02-DICT-SEED-GUARD, владелец 25.11.2026 «словари сеять каких нет»): task_type, priority,
+     * agent_profile — только недостающие статьи; синонимы priority (P0–P3) закрывают свою ступень шкалы.
+     */
+    static int seedUiDicts(Sql sql) {
+        Map<String, Set<String>> existing = new LinkedHashMap<>();
+        for (String dict : UiDictSeed.SEEDS.keySet()) existing.put(dict, codesOf(sql, dict));
+        List<StatusDictCoreSeed.Insert> plan = UiDictSeed.plan(existing);
+        for (StatusDictCoreSeed.Insert i : plan) sql.run(UiDictSeed.INSERT_SQL, UiDictSeed.params(i));
         return plan.size();
     }
 }

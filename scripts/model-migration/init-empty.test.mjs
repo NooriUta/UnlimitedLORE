@@ -74,3 +74,40 @@ test('связи модели заводятся видом, даже без д�
   for (const E of ['HAS_STATE', 'BELONGS_TO_PROJECT', 'HAS_PROJECT_ROLE', 'PART_OF', 'HAS_REPOSITORY'])
     assert.ok(db.types.has(E), 'нет связи ' + E);
 });
+
+// SPRINT_LORE_EXT_ISSUES_W2/ISS-02-DICT-SEED-GUARD: UI читает task_type, priority, agent_profile — свежая установка
+// обязана их содержать (решение владельца 25.11.2026 «словари сеять каких нет»). Коды и цвета — те же, что у доводки
+// схемы кода (UiDictSeed.java): установщик и доводка не расходятся, доводка на такой базе ничего не добавляет.
+test('свежая установка сеет словари, которые читает UI: task_type (ADR-LORE-015), priority, agent_profile — с цветами', () => {
+  const rows = dictEntriesFromRules();
+  const codes = d => rows.filter(r => r.dict_type === d).map(r => r.code);
+  assert.deepEqual(codes('task_type'), ['planning', 'design', 'dev', 'test', 'ops', 'research', 'analytics', 'docs', 'content']);
+  assert.deepEqual(codes('priority'), ['critical', 'high', 'normal', 'low']);
+  assert.deepEqual(codes('agent_profile'), ['full', 'architect', 'developer', 'tester', 'pm', 'analyst', 'marketer', 'product-analyst']);
+  for (const d of ['task_type', 'priority', 'agent_profile'])
+    for (const r of rows.filter(x => x.dict_type === d)) {
+      assert.ok(r.color, `${d}.${r.code}: нет цвета`);
+      assert.ok(r.label_en, `${d}.${r.code}: нет подписи en`);
+    }
+  assert.equal(rows.find(r => r.dict_type === 'priority' && r.code === 'critical').color, 'var(--dng)');
+  assert.equal(rows.find(r => r.dict_type === 'task_type' && r.code === 'dev').icon, 'gears');
+});
+
+// SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS (решение владельца 25.11.2026): 5а — подписи шести палитр на свежей установке
+// (экран настроек больше не пишет «без статьи — показан код»); 6а — цвет статьи справочника — токен темы, не hex.
+// Те же статьи и цвета — у доводки схемы кода (PaletteDictSeed.java, UiDictSeed.java).
+test('свежая установка сеет подписи шести палитр, цвета словарей — токены темы', () => {
+  const rows = dictEntriesFromRules();
+  const pal = rows.filter(r => r.dict_type === 'palette');
+  assert.deepEqual(pal.map(r => r.code), ['amber-forest', 'lichen', 'slate', 'juniper', 'warm-dark', 'mono']);
+  for (const r of pal) {
+    assert.ok(r.label_en, 'palette.' + r.code + ': нет подписи en');
+    assert.equal(r.color, 'var(--swatch-' + r.code + ')');
+  }
+  assert.equal(pal.find(r => r.code === 'mono').label_ru, 'приглушённая (mono)', 'подпись mono — как на проде');
+  const ARG = String.raw`\s*(?:var\(--[a-z0-9_-]+\)|transparent)(?:\s+\d{1,3}%)?\s*`;
+  const TOKEN = new RegExp(String.raw`^(?:var\(--[a-z0-9_-]+\)|color-mix\(\s*in\s+[a-z-]+\s*,` + ARG + ',' + ARG + String.raw`\))$`);
+  const raw = rows.filter(r => r.color && !TOKEN.test(r.color)).map(r => r.dict_type + '/' + r.code + '=' + r.color);
+  assert.deepEqual(raw, [], 'сырой цвет в правилах установщика');
+  assert.equal(rows.find(r => r.dict_type === 'task_type' && r.code === 'dev').color, 'var(--suc)');
+});

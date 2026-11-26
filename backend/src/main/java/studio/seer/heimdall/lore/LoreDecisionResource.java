@@ -26,7 +26,13 @@ public class LoreDecisionResource extends LoreResourceBase {
     // AL-79: status — значение словаря decision_status (V14), не свободный текст.
     public record DecisionCreateRequest(String decision_id, String title, String body_md,
         String date_created, String refs_raw, String component_id, String adr_id,
-        java.util.List<String> tags, String status, String project) {}
+        java.util.List<String> tags, String status, String project,
+        // KREG-10: дата создания — свойство created_at; date_created выше — прежнее имя поля запроса (MCP decision_new).
+        String created_at) {
+
+        /** Присланная дата создания: created_at, иначе прежнее имя поля запроса. */
+        String createdGiven() { return created_at != null ? created_at : this.date_created(); }
+    }
 
     /**
      * AL-79: фолбэк на случай пустого словаря (свежая БД до сидов) — тот же
@@ -99,22 +105,17 @@ public class LoreDecisionResource extends LoreResourceBase {
         }
         try {
             // LH-44: only SET provided fields — a title-only re-call must not wipe
-            // body_md/refs_raw or reset date_created to today.
+            // body_md/refs_raw or reset the creation date to today.
             StringBuilder dsql = new StringBuilder("UPDATE KnowDecision SET decision_id=:did, title=:title");
             Map<String, Object> p = new java.util.HashMap<>();
             p.put("did", req.decision_id());
             p.put("title", req.title().trim());
             if (req.body_md() != null)      { dsql.append(", body_md=:body");      p.put("body", req.body_md()); }
-            if (knownNew) {
-                // S2-10: у НОВОГО решения рядом с датой — полный ISO-момент создания,
-                // если он известен (CreationMoment.resolve). Дата в прошлом момента не
-                // получает; правка существующего решения его не трогает. При сбое
-                // пробы — прежнее поведение (дата только присланная): иначе момент
-                // «сейчас» лёг бы на решение, которое, возможно, давно существует.
-                CreationMoment.Resolved cm = CreationMoment.resolve(req.date_created(), java.time.Instant.now());
-                dsql.append(", date_created=:date"); p.put("date", cm.date());
-                if (cm.moment() != null) { dsql.append(", created_at=:cat"); p.put("cat", cm.moment()); }
-            } else if (req.date_created() != null) { dsql.append(", date_created=:date"); p.put("date", req.date_created()); }
+            // S2-10 + KREG-10: у НОВОГО решения — момент создания, если он известен (CreationMoment.resolve),
+            // иначе присланная дата; всё — в одно свойство created_at. При сбое пробы — только присланная дата:
+            // иначе момент «сейчас» лёг бы на решение, которое, возможно, давно существует.
+            CreationMoment.Set created = CreationMoment.creationSet(knownNew, req.createdGiven(), java.time.Instant.now());
+            if (created != null) { dsql.append(created.sql()); p.put("created_at", created.value()); }
             if (req.refs_raw() != null)     { dsql.append(", refs_raw=:refs");     p.put("refs", req.refs_raw()); }
             if (req.component_id() != null) { dsql.append(", component_id=:comp"); p.put("comp", req.component_id()); }
             // S2-13: статус (status_raw — поле, которое читают слайсы decisions/
@@ -152,9 +153,9 @@ public class LoreDecisionResource extends LoreResourceBase {
                     if (err != null) return err;
                 }
             }
-            // Default date_created=today only where missing (fresh insert without explicit date).
+            // Дата создания по умолчанию — сегодня, только где её нет (вставка без даты при сбое пробы).
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                "UPDATE KnowDecision SET date_created=:d WHERE decision_id=:did AND date_created IS NULL",
+                "UPDATE KnowDecision SET created_at=:d WHERE decision_id=:did AND created_at IS NULL",
                 Map.of("d", java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString(), "did", req.decision_id())))
                 .await().indefinitely();
             // ADR-019: parent link (DECIDED_IN) + tags (TAGGED_WITH → KnowTag),

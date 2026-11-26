@@ -21,7 +21,7 @@ class LoreDictKindTest {
     }
 
     static LoreDictResource.DictEntryRequest req(String dt, Object kind, String reason) {
-        return new LoreDictResource.DictEntryRequest(dt, "X", null, null, null, null, null, null, null, kind, reason);
+        return new LoreDictResource.DictEntryRequest(dt, "X", null, null, null, null, null, null, null, kind, reason, null);
     }
 
     // ── WK-01, правка вида (слово владелицы 20.11.2026): вид продукта — НАБОР (ADR-LORE-044,

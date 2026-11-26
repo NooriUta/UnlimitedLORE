@@ -21,7 +21,7 @@ export function dictEntriesFromRules(rules = RULES) {
     for (const name of SERVER_DICT_ALIASES[dict] || [dict]) {
       d.codes.forEach((c, i) => out.push({
         dict_type: name, code: c.code, label_ru: (c.labels && c.labels.ru) || c.code, label_en: (c.labels && c.labels.en) || null,
-        icon: c.icon ?? null, sort_order: (i + 1) * 10, is_active: true,
+        icon: c.icon ?? null, color: c.color ?? null, sort_order: (i + 1) * 10, is_active: true,
       }));
     }
   }

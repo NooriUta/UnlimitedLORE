@@ -403,7 +403,8 @@ interface SectionSpec {
   kind: string;
   titleKey: AppKey;
   icon: string;
-  fields: [key: string, type: 'text' | 'ref' | 'number' | 'date'][];
+  /** Третий элемент `restricted` — значение сервер отдаёт только с правом; пусто — kit поле не рисует (AP-PEOPLE-PAGE). */
+  fields: [key: string, type: 'text' | 'ref' | 'number' | 'date', opts?: { restricted?: boolean }][];
   statuses?: [code: string, category: Category][];
   /**
    * Свой набор подписей статуса: тот же код значит у типа другое («active» у гейта — «Работает»,
@@ -457,7 +458,11 @@ function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
     kinds: {
       [spec.kind]: {
         title: appT(lang, spec.titleKey), icon: spec.icon,
-        fields: spec.fields.map(([key, type]) => ({ key, title: f(lang, key), type, ...(type === 'ref' ? { refKind: refKindOf(spec.kind, key) } : {}) })),
+        fields: spec.fields.map(([key, type, opts]) => ({
+          key, title: f(lang, key), type,
+          ...(type === 'ref' ? { refKind: refKindOf(spec.kind, key) } : {}),
+          ...(opts?.restricted ? { restricted: true } : {}),
+        })),
       },
     },
     statuses: { items: statusItems(lang, spec.statuses ?? [], spec.statusTitlePrefix) },
@@ -588,7 +593,8 @@ const usersSpec: SectionSpec = {
 /** S9-05 A: агенты — профиль и владелец; статуса нет. */
 const agentsSpec: SectionSpec = {
   kind: 'agent', titleKey: 'lists.agents.title', icon: 'robot-golem',
-  fields: [['clientId', 'text'], ['agentRole', 'text'], ['harness', 'text'], ['owner', 'ref'], ['project', 'ref']],
+  // client_id сервер отдаёт только администратору (AP-PEOPLE-PAGE, решение 1б): зрителю поля на карточке нет вовсе
+  fields: [['clientId', 'text', { restricted: true }], ['agentRole', 'text'], ['harness', 'text'], ['owner', 'ref'], ['project', 'ref']],
   statuses: [],
   views: ['list', 'cards'],
   quick: [['no-owner', 'lists.quick.noOwner', { owner: '' }]],

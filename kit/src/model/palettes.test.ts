@@ -150,3 +150,40 @@ describe('K-14 · оговорки о палитрах — на языке ин�
     expect(palettesFromModel({}).notes[0]).toMatch(/палитр/);
   });
 });
+
+// SPRINT_LORE_ADMIN_POLISH/AP-APPEARANCE (решения владельца 25.11.2026, 1а и 2в): в разделе — наши палитры (builtin),
+// включённые свои стили установки с токенами и набор установки (allowed, default), плюс пары шрифтов.
+describe('AP-APPEARANCE · свои стили и набор установки', () => {
+  const withOwn = () => ({
+    palettes: {
+      source: 'settings:palette', default: 'own-corp', allowed: ['slate', 'own-corp'],
+      entries: [
+        { code: 'slate', title: 'сланец', order: 30, in_dictionary: true, builtin: true },
+        { code: 'own-corp', title: 'Корпоративный', order: 100, in_dictionary: true, builtin: false,
+          tokens: { root: { '--acc': '#3a8fd8', '--bg0': '#0d1117' }, light: { '--bg0': '#fafafa' } } },
+      ],
+      fonts: { entries: ['pair', 'mono'], default: 'pair', allowed: ['pair'] },
+    },
+  });
+
+  it('свой стиль несёт токены, образец — его акцент, и «нет цветов в теме» о нём не говорится', () => {
+    const p = palettesFromModel(withOwn(), { known: ['slate'] });
+    const own = p.entries.find(e => e.code === 'own-corp')!;
+    expect(own.builtin).toBe(false);
+    expect(own.tokens?.root['--acc']).toBe('#3a8fd8');
+    expect(own.tokens?.light?.['--bg0']).toBe('#fafafa');
+    expect(own.swatch).toBe('#3a8fd8');
+    expect(p.entries.find(e => e.code === 'slate')!.builtin).toBe(true);
+    expect(p.notes.join(' ')).not.toContain('own-corp');
+  });
+
+  it('набор установки и пары шрифтов доносятся; старый сервер без них — null, а не «всё запрещено»', () => {
+    const p = palettesFromModel(withOwn());
+    expect(p.allowed).toEqual(['slate', 'own-corp']);
+    expect(p.fonts).toEqual({ entries: ['pair', 'mono'], default: 'pair', allowed: ['pair'] });
+    const old = palettesFromModel(model());
+    expect(old.allowed).toBeNull();
+    expect(old.fonts).toBeNull();
+    expect(old.entries[0].builtin).toBe(true);
+  });
+});

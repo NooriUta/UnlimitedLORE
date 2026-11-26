@@ -131,13 +131,16 @@ public class LoreProductResource extends LoreResourceBase {
     @Path("feature")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertFeature(FeatureRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Response upsertFeature(FeatureRequest req, @HeaderParam("X-Seer-Role") String role,
+                                  @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.feature_id() == null || req.feature_id().isBlank())
             return badParams("feature_id required");
         if (!SAFE_ID.matcher(req.feature_id()).matches())
             return badParams("feature_id contains illegal characters");
+        Response featureTaken = createOnly("feature", req.feature_id(), mode);   // AP-PASSPORT-EDIT: ?mode=create
+        if (featureTaken != null) return featureTaken;
         // D4/D17: у корня рукой ставятся только намерения — как и у любого другого
         // сценария (тип-то один). Прежняя редакция запрещала лишь shipped, и
         // «active» проезжал: корень можно было объявить работающим при нулевой работе.
@@ -164,16 +167,22 @@ public class LoreProductResource extends LoreResourceBase {
             // Уровень обязателен по существу: слайс «Фичи» отбирает корни именно
             // по goal_level, и корень без него был бы невидим в своём же разделе.
             // Умолчание ☁ cloud — самый верхний уровень шкалы.
-            sql.append(", goal_level=:gl");
+            // AP-PASSPORT-EDIT: уровень не задан — у существующей записи он НЕ трогается (паспорт фичи открывает
+            // и сценарии sea-level: правка их названия этим путём опускала бы их на уровень фичи).
+            sql.append(", ").append(featureGoalLevelSql(req.goal_level()));
             p.put("gl", req.goal_level() != null ? req.goal_level() : "cloud");
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
-            // S4-MODEL-TYPES (свежесть): истории у фичи нет — момент заведения/правки на вершине.
+            // S4-MODEL-TYPES (свежесть): момент заведения/правки на вершине (версия SCD2 — versionHistory, AP-PASSPORT-EDIT).
+            // Один момент на запись: тот же — в updated_at и в valid_from версии (иначе changed_at среза уходит на мс позже).
+            java.time.Instant writeMoment = java.time.Instant.now();
             sql.append(", updated_at=:upd");
-            p.put("upd", java.time.Instant.now().toString());
+            p.put("upd", writeMoment.toString());
             sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response featureConflict = versionHistory("feature", req.feature_id(), writeMoment);   // AP-PASSPORT-EDIT: версия SCD2
+            if (featureConflict != null) return featureConflict;
             // NM-03 (ADR-LORE-041): фича писала component_id полем, а слайсы
             // продуктового слоя читают out('BELONGS_TO') — связь, записанная
             // здесь, не доезжала ни до одного экрана.
@@ -187,6 +196,35 @@ public class LoreProductResource extends LoreResourceBase {
             LOG.warnf("[LORE FEATURE] %s: %s", req.feature_id(), e.getMessage());
             return upstream(e);
         }
+    }
+
+    /**
+     * AP-PASSPORT-EDIT (владелец 25.11.2026 «историчность доделываем»): после записи вершины — версия SCD2 по снимку
+     * её полей ({@link ProductHistory#version}): снимок тот же — ничего; другой — закрыть прежнюю, открыть новую;
+     * версии нет — первая. Автор — из проверенного токена. Соседняя запись закрыла открытую версию — 409 (ничего не
+     * записано в историю, повтор безопасен), иначе null.
+     */
+    private Response versionHistory(String type, String id) {
+        return versionHistory(type, id, java.time.Instant.now());
+    }
+
+    /** То же с моментом записи: путь, поставивший updated_at, передаёт его же — версия открывается тем же моментом. */
+    @SuppressWarnings("unchecked")
+    private Response versionHistory(String type, String id, java.time.Instant writeMoment) {
+        ChangeAuthor author = changeAuthor();
+        try {
+            ProductHistory.version((lang, command, params) -> (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
+                new LoreCommandClient.LoreCommand(lang, command, params)).await().indefinitely().result(), type, id, author,
+                writeMoment);
+            return null;
+        } catch (Scd2Guard.ConflictException c) {
+            return c.response();
+        }
+    }
+
+    /** SQL уровня цели фичи: задан — пишется; не задан — умолчание cloud только записи без уровня. */
+    static String featureGoalLevelSql(String given) {
+        return given != null ? "goal_level=:gl" : "goal_level = ifnull(goal_level, :gl)";
     }
 
     /**
@@ -270,14 +308,19 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.priority() != null)      { sql.append(", priority=:pr");      p.put("pr", req.priority()); }
             if (goal != null) { sql.append(", goal_level=:gl"); p.put("gl", goal); }
             if (rigor != null) { sql.append(", rigor=:rg"); p.put("rg", rigor); }
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
-            // S4-MODEL-TYPES (свежесть): истории у сценария нет — момент заведения/правки на вершине.
+            // S4-MODEL-TYPES (свежесть): момент заведения/правки на вершине (версия SCD2 — versionHistory, AP-PASSPORT-EDIT).
+            // Один момент на запись: тот же — в updated_at и в valid_from версии (иначе changed_at среза уходит на мс позже).
+            java.time.Instant writeMoment = java.time.Instant.now();
             sql.append(", updated_at=:upd");
-            p.put("upd", java.time.Instant.now().toString());
+            p.put("upd", writeMoment.toString());
             sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            // AP-PASSPORT-EDIT: сценарий — та же вершина KnowUseCase, что фича, и та же цепочка истории
+            Response ucConflict = versionHistory("feature", req.uc_id(), writeMoment);
+            if (ucConflict != null) return ucConflict;
 
             // parent_uc_id — поле-родитель; ребро DECOMPOSES_INTO держим в синхроне
             // (класс багов «поле есть — ребра нет», relinkParentEdge/SpecComponentEdge).
@@ -614,7 +657,8 @@ public class LoreProductResource extends LoreResourceBase {
     @Path("project-actor")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertProjectActor(ProjectActorRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Response upsertProjectActor(ProjectActorRequest req, @HeaderParam("X-Seer-Role") String role,
+                                  @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.actor_id() == null || req.actor_id().isBlank())
@@ -623,6 +667,8 @@ public class LoreProductResource extends LoreResourceBase {
             return badParams("actor_id contains illegal characters");
         if (req.kind() != null && !PROJECT_ACTOR_KINDS.contains(req.kind()))
             return badParams(projectActorKindError(req.kind()));
+        Response actorTaken = createOnly("actor", req.actor_id(), mode);   // AP-PASSPORT-EDIT: ?mode=create
+        if (actorTaken != null) return actorTaken;
         // Столкновение с личностью ловим ЗДЕСЬ, а не оставляем на потом: один и
         // тот же actor_id в двух реестрах — это ровно та двойная правда, ради
         // разведения которой заведён отдельный тип. Молчаливый upsert создал бы
@@ -642,6 +688,8 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(" UPSERT WHERE actor_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response actorConflict = versionHistory("actor", req.actor_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (actorConflict != null) return actorConflict;
 
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
@@ -1279,7 +1327,10 @@ public class LoreProductResource extends LoreResourceBase {
             out.put("rel", req.rel());
             out.put("target_id", req.target_id());
             out.put("linked", linked);
-            return noStore(Response.ok(out));
+            // ISS-06: исход по факту ребра (общее правило путей связи); снятие — было ли открытое ребро роли
+            boolean hadRole = current != null && !current.isEmpty();
+            return linkFact(out, remove, remove ? hadRole : same, linked,
+                "агент " + req.actor_id() + " или роль " + req.target_id());
         } catch (Exception e) {
             LOG.warnf("[LORE ACTOR LINK] %s: %s", req.actor_id(), e.getMessage());
             return upstream(e);
@@ -1300,13 +1351,16 @@ public class LoreProductResource extends LoreResourceBase {
     @Path("job")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertJob(JobRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Response upsertJob(JobRequest req, @HeaderParam("X-Seer-Role") String role,
+                                  @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.job_id() == null || req.job_id().isBlank())
             return badParams("job_id required");
         if (!SAFE_ID.matcher(req.job_id()).matches())
             return badParams("job_id contains illegal characters");
+        Response jobTaken = createOnly("job", req.job_id(), mode);   // AP-PASSPORT-EDIT: ?mode=create
+        if (jobTaken != null) return jobTaken;
         if (req.kind() != null && !JOB_KINDS.contains(req.kind()))
             return badParams("kind must be one of: " + JOB_KINDS
                 + " (Остервальдер: функциональная | социальная | эмоциональная | вспомогательная)");
@@ -1320,11 +1374,13 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.body_md() != null)    { sql.append(", body_md=:b");    p.put("b", req.body_md()); }
             if (req.kind() != null)       { sql.append(", kind=:k");       p.put("k", req.kind()); }
             if (req.importance() != null) { sql.append(", importance=:i"); p.put("i", req.importance()); }
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             sql.append(" UPSERT WHERE job_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response jobConflict = versionHistory("job", req.job_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (jobConflict != null) return jobConflict;
             return noStore(Response.ok(Map.of("ok", true, "job_id", req.job_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE JOB] %s: %s", req.job_id(), e.getMessage());
@@ -1338,13 +1394,16 @@ public class LoreProductResource extends LoreResourceBase {
     @Path("pain")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertPain(PainRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Response upsertPain(PainRequest req, @HeaderParam("X-Seer-Role") String role,
+                                  @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.pain_id() == null || req.pain_id().isBlank())
             return badParams("pain_id required");
         if (!SAFE_ID.matcher(req.pain_id()).matches())
             return badParams("pain_id contains illegal characters");
+        Response painTaken = createOnly("pain", req.pain_id(), mode);   // AP-PASSPORT-EDIT: ?mode=create
+        if (painTaken != null) return painTaken;
         if (req.severity() != null && !List.of("high", "normal", "low").contains(req.severity()))
             return badParams("severity must be high|normal|low");
         try {
@@ -1354,11 +1413,13 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.title() != null)    { sql.append(", title=:t");    p.put("t", req.title()); }
             if (req.body_md() != null)  { sql.append(", body_md=:b");  p.put("b", req.body_md()); }
             if (req.severity() != null) { sql.append(", severity=:s"); p.put("s", req.severity()); }
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             sql.append(" UPSERT WHERE pain_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response painConflict = versionHistory("pain", req.pain_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (painConflict != null) return painConflict;
             return noStore(Response.ok(Map.of("ok", true, "pain_id", req.pain_id())));
         } catch (Exception e) {
             LOG.warnf("[LORE PAIN] %s: %s", req.pain_id(), e.getMessage());
@@ -1372,13 +1433,16 @@ public class LoreProductResource extends LoreResourceBase {
     @Path("gain")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response upsertGain(GainRequest req, @HeaderParam("X-Seer-Role") String role) {
+    public Response upsertGain(GainRequest req, @HeaderParam("X-Seer-Role") String role,
+                                  @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.gain_id() == null || req.gain_id().isBlank())
             return badParams("gain_id required");
         if (!SAFE_ID.matcher(req.gain_id()).matches())
             return badParams("gain_id contains illegal characters");
+        Response gainTaken = createOnly("gain", req.gain_id(), mode);   // AP-PASSPORT-EDIT: ?mode=create
+        if (gainTaken != null) return gainTaken;
         // Остервальдер ранжирует выгоды — essential не равна unexpected при отборе UC.
         if (req.rank() != null && !GAIN_RANKS.contains(req.rank()))
             return badParams("rank must be one of: " + GAIN_RANKS
@@ -1391,11 +1455,13 @@ public class LoreProductResource extends LoreResourceBase {
             if (req.body_md() != null)   { sql.append(", body_md=:b");   p.put("b", req.body_md()); }
             if (req.metric_md() != null) { sql.append(", metric_md=:m"); p.put("m", req.metric_md()); }
             if (req.rank() != null)      { sql.append(", rank=:r");      p.put("r", req.rank()); }
-            sql.append(", date_created = ifnull(date_created, :d)");
+            sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             sql.append(" UPSERT WHERE gain_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
+            Response gainConflict = versionHistory("gain", req.gain_id());   // AP-PASSPORT-EDIT: версия SCD2
+            if (gainConflict != null) return gainConflict;
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
             out.put("gain_id", req.gain_id());
@@ -1476,8 +1542,9 @@ public class LoreProductResource extends LoreResourceBase {
             boolean had = edgeExists(edge, outField, req.source_id(), inField, req.target_id());
 
             if (remove) {
+                // AP-PASSPORT-EDIT: прежде условие было только на источник — отвязка одной роли стирала ВСЕ рёбра вида.
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                    "DELETE FROM " + edge + " WHERE @out.pain_id=:sid OR @out.gain_id=:sid OR @out.job_id=:sid", p))
+                    vpUnlinkSql(edge, outField, inField), p))
                     .await().indefinitely();
                 return unlinkOutcome(Map.of("ok", true, "source_id", req.source_id(),
                     "rel", req.rel(), "target_id", req.target_id(), "action", "removed"), had);
@@ -1495,6 +1562,11 @@ public class LoreProductResource extends LoreResourceBase {
             LOG.warnf("[LORE VP LINK] %s: %s", req.source_id(), e.getMessage());
             return upstream(e);
         }
+    }
+
+    /** Снять ОДНО ребро профиля клиента: источник И цель (а не все рёбра вида у источника). */
+    static String vpUnlinkSql(String edge, String outField, String inField) {
+        return "DELETE FROM " + edge + " WHERE @out." + outField + " = :sid AND @in." + inField + " = :tid";
     }
 
     // ── Feature links: VP-профиль (pain/gain), стратегическая цель, компонент ──
@@ -1990,7 +2062,7 @@ public class LoreProductResource extends LoreResourceBase {
      */
     private List<Map<String, Object>> computeUcQualityRows() {
         List<Map<String, Object>> rows = ingest.queryPublic(
-            "SELECT uc_id, title, rigor, goal_level, date_created, scenario_md, acceptance_md, " +
+            "SELECT uc_id, title, rigor, goal_level, created_at AS date_created, scenario_md, acceptance_md, " +
             "outE('HAS_ACTOR')[role='primary'].size() AS primary_actors, " +
             "out('TRACED_TO').size() AS traced " +
             "FROM KnowUseCase ORDER BY uc_id", Map.of());
@@ -2121,7 +2193,7 @@ public class LoreProductResource extends LoreResourceBase {
 
     private CheckOutcome checkWorkQualityTasks() {
         List<Map<String, Object>> rows = ingest.queryPublic(
-            "SELECT task_uid, title, work_class, " +
+            "SELECT task_uid, title, work_class, task_type, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "out('HAS_STATE')[effort_days IS NOT NULL].effort_days[0] AS effort_days, " +
             "out('TAGGED_WITH').component_id AS own_components, " +
@@ -2140,8 +2212,8 @@ public class LoreProductResource extends LoreResourceBase {
             Object eff = r.get("effort_days");
             Double effort = eff instanceof Number n ? n.doubleValue() : null;
             WorkQuality.Result res = WorkQuality.evaluateTask(
-                str(r.get("status_raw")), effort, str(r.get("work_class")),
-                comps, r.get("projects"), r.get("realizes_uc"), r.get("justified_by"));
+                str(r.get("status_raw")), effort, str(r.get("work_class")), str(r.get("task_type")),
+                comps, r.get("projects"), r.get("realizes_uc"), r.get("justified_by"), null);
             if (res.score() < res.max()) {
                 found++;
                 if (findings.size() < SELF_CHECK_FINDINGS_CAP) {

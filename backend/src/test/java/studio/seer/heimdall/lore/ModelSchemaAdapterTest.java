@@ -36,11 +36,13 @@ class ModelSchemaAdapterTest {
 
     @Test
     void однозначные_переименования_схемы_тоже_идут_по_новому_имени() {
-        // date_created / created_date → created_at (KnowADR, KnowDecision …): без этого timeline_adrs и timeline_decisions пусты
-        assertEquals("SELECT adr_id, created_at AS date_created FROM KnowADR WHERE created_at IS NOT NULL ORDER BY created_at DESC",
-            ModelSchemaAdapter.rewriteSql("SELECT adr_id, date_created FROM KnowADR WHERE date_created IS NOT NULL ORDER BY date_created DESC"));
+        // KREG-10: код сам обращается к created_at (сторож LegacyCreationNamesCodeGuardTest) — переходник момент
+        // создания больше не переводит, ключ ответа задаёт псевдоним в самом SQL. Запрос проходит как есть.
+        String sql = "SELECT adr_id, created_at AS date_created FROM KnowADR WHERE created_at IS NOT NULL ORDER BY created_at DESC";
+        assertEquals(sql, ModelSchemaAdapter.rewriteSql(sql));
         assertEquals("SELECT created_at AS created_date FROM KnowSprint",
-            ModelSchemaAdapter.rewriteSql("SELECT created_date FROM KnowSprint"));
+            ModelSchemaAdapter.rewriteSql("SELECT created_at AS created_date FROM KnowSprint"));
+        assertEquals(java.util.Set.of("status_raw"), ModelSchemaAdapter.RENAMES.keySet(), "осталось одно однозначное переименование");
     }
 
     @Test

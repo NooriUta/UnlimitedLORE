@@ -185,6 +185,14 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
       <button type="submit" className="sk-btn" disabled={busy}>{kitT(lang, 'kit.record.rel.linkBtn')}</button>
     </form>
   );
+  // AP-PASSPORT-EDIT (1б): «+ боль» — новая запись на другом конце; связь ставит приложение после создания.
+  // Только при праве править (тот же признак, что у привязки): кнопка, которая откажет, хуже её отсутствия.
+  const linked = manage ? ctx.config.hooks?.createLinked?.({
+    type: record.kind, id: record.id, rel: def.rel, dir: def.dir, ...(def.targetKind ? { targetKind: def.targetKind } : {}),
+  }) ?? null : null;
+  const createBtn = linked && (
+    <button type="button" className="sk-btn sk-rel__create" onClick={linked.open}>{linked.label}</button>
+  );
   // Причина отказа — словами и рядом с управлением, а не в консоли.
   const complaint = failed && (
     <p className="sk-rel__failed" role="alert">{kitT(lang, 'kit.record.rel.failed', { reason: failed })}</p>
@@ -193,11 +201,11 @@ function RelationGroup({ record, ctx, def, lang, onRelation, single }: {
   const unknownNote = unknown.length > 0 && (
     <p className="sk-rel__unknown" data-testid="kit-relation-unknown-kind">{kitT(lang, 'kit.record.rel.unknownKind', { ids: unknown.join(', ') })}</p>
   );
-  if (single) return <div className="sk-rel" data-relation={def.relation}>{list}{unknownNote}{form}{complaint}{reasonDialog}</div>;
+  if (single) return <div className="sk-rel" data-relation={def.relation}>{list}{unknownNote}{form}{createBtn}{complaint}{reasonDialog}</div>;
   return (
     <section role="group" aria-label={def.label} className="sk-rel__group" data-relation={def.relation}>
       <h3 className="sk-rel__head"><span className="sk-rel__mark" aria-hidden="true">{RELATION_MARK[def.relation]}</span>{def.label}</h3>
-      {list}{unknownNote}{form}{complaint}{reasonDialog}
+      {list}{unknownNote}{form}{createBtn}{complaint}{reasonDialog}
     </section>
   );
 }

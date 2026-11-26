@@ -12,7 +12,7 @@ import java.util.Map;
  * решений и у даты релиза.
  *
  * <p><b>Почему.</b> news-proof (реальные данные 01–07.11.2026): у создания ADR и
- * решений и у релизов была только дата ({@code date_created} / {@code release_date}
+ * решений и у релизов была только дата (прежнее имя date_created / {@code release_date}
  * как {@code yyyy-MM-dd}). Время до решения (TTD, §7.3) и порядок событий внутри
  * дня из этого не вычисляются.
  *
@@ -35,7 +35,7 @@ final class CreationMoment {
 
     private CreationMoment() {}
 
-    /** Тип вершины → поле момента. Дата живёт в прежнем поле (date_created / release_date). */
+    /** Тип вершины → поле момента. У ADR и решений дата и момент — одно свойство created_at (KREG-10); у релиза дата — release_date. */
     static final Map<String, String> FIELDS = Map.of(
         "KnowADR", "created_at",
         "KnowDecision", "created_at",
@@ -62,6 +62,27 @@ final class CreationMoment {
         if (at != null) return new Resolved(at.atZone(ZoneOffset.UTC).toLocalDate().toString(), at.toString());
         if (isDate(g) && g.equals(today)) return new Resolved(g, now.toString());
         return new Resolved(g, null);
+    }
+
+    /** Присваивание даты создания в UPDATE: фрагмент SQL и значение параметра. */
+    record Set(String sql, String value) {}
+
+    /**
+     * KREG-10: дата создания ADR и решения пишется в ОДНО свойство — {@code created_at} (канон 1.18: момент
+     * {@code _at}, DATETIME). Прежнее {@code date_created} в базе из модели не существует: его на лету переводил
+     * ModelSchemaAdapter, и у новой записи выходило два присваивания created_at подряд (дата, затем момент).
+     *
+     * <ul>
+     *   <li>новая запись: момент, если он известен ({@link #resolve}), иначе присланная дата — полночь дня;</li>
+     *   <li>правка существующей: присланная дата — как есть; не прислана — свойство не трогается ({@code null}).</li>
+     * </ul>
+     */
+    static Set creationSet(boolean isNew, String given, Instant now) {
+        if (isNew) {
+            Resolved r = resolve(given, now);
+            return new Set(", created_at=:created_at", r.moment() != null ? r.moment() : r.date());
+        }
+        return given == null ? null : new Set(", created_at=:created_at", given);
     }
 
     /** Прочитать строку: момент из поля момента, дата — из поля даты. */

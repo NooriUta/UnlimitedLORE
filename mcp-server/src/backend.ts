@@ -528,6 +528,28 @@ export async function lorePost(path: string, body: unknown, extraHeaders?: Recor
   return res.json();
 }
 
+/**
+ * SPRINT_FORGEJO_MINIAPP/FJ-03: POST эндпоинта, отвечающего конвертом v=1 (SPEC-AGENT-SURFACE-061 §4). Отказ —
+ * данные: 4xx/5xx с телом-конвертом ({v:1, outcome, error}) возвращается как есть, а не бросается. Бросается только
+ * транспорт — сеть, не-JSON или ответ не-конверт (например, 403 фильтра записи или 401 токена).
+ */
+export async function loreEnvelope(path: string, body: unknown, extraHeaders?: Record<string, string>): Promise<unknown> {
+  const res = await loreFetch(`POST ${path}`, `${BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await writeAuthHeaders()), ...(extraHeaders ?? {}) },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  let parsed: unknown;
+  try { parsed = JSON.parse(text); } catch { parsed = undefined; }
+  const isEnvelope = !!parsed && typeof parsed === 'object' && (parsed as { v?: unknown }).v === 1
+    && typeof (parsed as { outcome?: unknown }).outcome === 'string';
+  if (res.ok && parsed !== undefined) return parsed;
+  if (isEnvelope) return parsed;
+  const base = `POST ${path} → ${res.status} ${text.slice(0, 500)}`;
+  throw new Error(res.status === 403 && hostedWithoutKeycloak() ? `${HTTP_WRITE_NEEDS_KEYCLOAK} (бэкенд: ${base})` : base);
+}
+
 /** POST a base64-encoded file to a multipart LORE upload endpoint (e.g. BRAGI
  * asset uploads) — agent-driven callers have no filesystem/browser file
  * picker, so they send base64 bytes + filename instead. */
