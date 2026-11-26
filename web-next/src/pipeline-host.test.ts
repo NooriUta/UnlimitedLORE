@@ -1699,6 +1699,16 @@ describe('выпуск в зеркале SeidrStudio: мини-труба и ш�
     expect(wf).toContain('push "${HOST%/}/${DST_REPO}.git"');
   });
 
+  // Прогон 11322 (26.11.2026): «User 'forgejo-actions' is not allowed to push to branch 'main' in
+  // SeidrStudio/UnlimitedLORE». actions/checkout кладёт авторизацию прогона ключом http.<url>.extraheader —
+  // он сильнее общего http.extraheader, и токен зеркала не доходил. Ключ сбрасывается пустым и задаётся заново.
+  it('пуш в зеркало идёт токеном зеркала: url-ключ extraheader сброшен и задан заново', () => {
+    const wf = code(read(MIRROR_REL_WF));
+    expect(wf).toContain('-c "http.${HOST%/}/.extraheader="');
+    expect(wf).toContain('-c "http.${HOST%/}/.extraheader=Authorization: token ${DST_TOKEN}"');
+    expect(wf, 'общий ключ без сброса url-ключа не помогает').not.toMatch(/git -c http\.extraheader=/);
+  });
+
   // Владелец 23.11: «чтение — MIRROR_PULL_TOKEN, PUSH — на запись; нельзя в одном разные права раздавать».
   // Прогон 10897: токен записи для AIDA/UnlimitedLORE отвечал 404, токен прогона веб-скачивание не проходит.
   it('два токена: источник читается MIRROR_PULL_TOKEN, зеркало пишется MIRROR_PUSH_TOKEN — в обеих трубах', () => {
