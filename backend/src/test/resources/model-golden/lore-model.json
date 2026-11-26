@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "4bcf709dd8e3ed51",
+  "version" : "93a47e1ba75ca840",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -17698,15 +17698,15 @@
         "flow" : [ {
           "stage" : "design",
           "produces" : [ "spec" ],
-          "consumes" : [ "uc", "adr" ]
+          "consumes" : [ "uc", "adr", "code" ]
         }, {
           "stage" : "implement",
-          "produces" : [ "branch", "pr" ],
-          "consumes" : [ "spec" ]
+          "produces" : [ "code", "tests", "branch", "pr" ],
+          "consumes" : [ "spec", "code" ]
         }, {
           "stage" : "test",
           "produces" : [ "ci_run" ],
-          "consumes" : [ "pr" ]
+          "consumes" : [ "code", "tests", "pr" ]
         }, {
           "stage" : "stand_check",
           "produces" : [ "stand_report", "release" ],
@@ -17752,11 +17752,12 @@
         } ],
         "flow" : [ {
           "stage" : "diagnose",
-          "produces" : [ "diagnosis" ]
+          "produces" : [ "diagnosis" ],
+          "consumes" : [ "code" ]
         }, {
           "stage" : "fix",
-          "produces" : [ "branch", "pr" ],
-          "consumes" : [ "diagnosis" ]
+          "produces" : [ "code", "tests", "branch", "pr" ],
+          "consumes" : [ "diagnosis", "code" ]
         }, {
           "stage" : "measure",
           "produces" : [ "measurement" ],
@@ -17932,6 +17933,14 @@
         "label" : "док или runbook",
         "source" : "record",
         "evidence" : "lore"
+      },
+      "code" : {
+        "label" : "код (файлы, модули) — новый или изменённый",
+        "source" : "record"
+      },
+      "tests" : {
+        "label" : "автотесты — новые или изменённые",
+        "source" : "record"
       },
       "decision" : {
         "label" : "решение",
