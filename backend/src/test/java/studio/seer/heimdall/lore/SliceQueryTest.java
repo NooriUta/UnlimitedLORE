@@ -133,6 +133,20 @@ class SliceQueryTest {
     }
 
     @Test
+    void шаг2_whereСтрокойJson_дляGetСреза() {
+        List<Object> where = SliceQuery.parseWhere("[{\"field\":\"status\",\"op\":\"in\",\"value\":[\"active\",\"blocked\"]}]");
+        SliceQuery.Filtered f = SliceQuery.filter(ROWS, where, FIELDS);
+        assertEquals(List.of("S/A-1", "S/A-4"), f.rows().stream().map(r -> String.valueOf(r.get("task_uid"))).toList());
+        assertEquals(2, f.matched());
+        assertTrue(f.complete());
+        assertEquals(1, SliceQuery.parseWhere("{\"field\":\"status\",\"op\":\"=\",\"value\":\"done\"}").size(), "одно условие объектом");
+        assertEquals(null, SliceQuery.parseWhere(" "), "пусто — отбора нет");
+        assertEquals("BAD_PARAMS", assertThrows(SliceQuery.Refusal.class, () -> SliceQuery.parseWhere("status=active")).code());
+        assertEquals("UNKNOWN_FIELD", assertThrows(SliceQuery.Refusal.class,
+            () -> SliceQuery.filter(ROWS, SliceQuery.parseWhere("[{\"field\":\"secret\",\"op\":\"=\",\"value\":1}]"), FIELDS)).code());
+    }
+
+    @Test
     void потолокПросмотра20000_completeFalse() {
         List<Map<String, Object>> many = new ArrayList<>();
         for (int i = 0; i < SliceQuery.SCAN_CAP + 5; i++) many.add(row("S/X-" + i, "active", 1.0, "2026-11-20", List.of(), "t"));
