@@ -101,6 +101,18 @@ class KnowRegistryGeneratorTest {
         assertEquals(LoreSlices.ids().size(), sliceKinds, "describe-coverage срезов — 100%, лишних видов нет");
     }
 
+    /** KREG-12 (ADR-LORE-061 шаг 2): where над GET-срезом — общий параметр, описан в карточке каждого среза. */
+    @Test
+    void everySliceCardDescribesWhere() {
+        KnowRegistry.Result r = run();
+        List<String> missing = new ArrayList<>();
+        for (String id : LoreSlices.ids()) {
+            Map<String, Object> k = r.kind("slice:" + id);
+            if (k == null || !names(k, "params", "name").contains("where")) missing.add(id);
+        }
+        assertEquals(List.of(), missing, "срезы без where в карточке");
+    }
+
     @Test
     void sliceSprintsCarriesParamsAndColumns() {
         Map<String, Object> k = run().kind("slice:sprints");
