@@ -191,6 +191,12 @@ final class ForgejoApp {
             meta.put("cursor", hasMore ? cursorOf(page * limit) : null);
             meta.put("has_more", hasMore);
         }
+        if ("log".equals(r.response()) && data instanceof String text) {
+            LogCut cut = cutLog(text, truncate);
+            data = cut.text();
+            meta.put("log", new JsonObject().put("lines_total", cut.total()).put("lines_kept", cut.kept())
+                .put("error_lines", cut.errors()).put("cut", cut.cut()));
+        }
         Map<String, Object> truncated = null;
         if (truncate) {
             ForgejoTruncate.Result tr = ForgejoTruncate.apply(data);
@@ -398,10 +404,40 @@ final class ForgejoApp {
 
     // ── ответ ────────────────────────────────────────────────────────────
 
+    // ── журнал CI (FJ-08) ────────────────────────────────────────────────
+
+    static final int LOG_TAIL_LINES = 300;
+    private static final Pattern LOG_ERROR = Pattern.compile("(?i)(::error::|\\berror\\b|\\bfailed\\b|exception|panic|FAILURE)");
+
+    record LogCut(String text, int total, int kept, int errors, boolean cut) {}
+
+    /**
+     * Журнал в диалог: строки с ошибками (с номером строки) + последние {@link #LOG_TAIL_LINES} строк. Короткий журнал
+     * и truncate=false — целиком. Число строк с ошибками считается всегда — оно и есть сводка «где смотреть».
+     */
+    static LogCut cutLog(String text, boolean truncate) {
+        String[] lines = text.split("\n", -1);
+        int total = text.endsWith("\n") ? lines.length - 1 : lines.length;
+        List<Integer> err = new ArrayList<>();
+        for (int i = 0; i < total; i++) if (LOG_ERROR.matcher(lines[i]).find()) err.add(i);
+        if (!truncate || total <= LOG_TAIL_LINES) return new LogCut(text, total, total, err.size(), false);
+        int from = total - LOG_TAIL_LINES;
+        StringBuilder sb = new StringBuilder();
+        List<Integer> early = err.stream().filter(i -> i < from).toList();
+        if (!early.isEmpty()) {
+            sb.append("--- строки с ошибками до хвоста (").append(early.size()).append(") ---\n");
+            for (int i : early) sb.append(i + 1).append(": ").append(lines[i]).append('\n');
+        }
+        sb.append("--- TRUNCATED: последние ").append(LOG_TAIL_LINES).append(" из ").append(total)
+            .append(" строк; целиком — truncate=false ---\n");
+        for (int i = from; i < total; i++) sb.append(lines[i]).append('\n');
+        return new LogCut(sb.toString(), total, LOG_TAIL_LINES + early.size(), err.size(), true);
+    }
+
     private static Object parse(ForgejoRoutes.Route r, Reply reply) {
         String b = reply.body();
         if (b == null || b.isEmpty()) return null;
-        if ("text".equals(r.response())) return b;
+        if ("text".equals(r.response()) || "log".equals(r.response())) return b;
         String t = b.stripLeading();
         try {
             if (t.startsWith("[")) return new JsonArray(b);
