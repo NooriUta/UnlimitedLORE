@@ -1952,7 +1952,9 @@ public final class LoreSlices {
             "inE('TARGETS_MILESTONE')[valid_to IS NULL].outV().sprint_id AS direct_sprint_ids, " +
             // 11.11 (полнота модели рёбер): фичи, целящие в веху (feature_link rel:milestone).
             "inE('TARGETS_MILESTONE')[valid_to IS NULL].outV()[@this INSTANCEOF 'KnowUseCase'].uc_id AS feature_ids, " +
-            "out('TARGETS_PRODUCT').code       AS products " +
+            "out('TARGETS_PRODUCT').code       AS products, " +
+            // QG-10: какой компонент веха двигает — ребро TAGGED_WITH веха → компонент (milestone/link rel=component).
+            "out('TAGGED_WITH').component_id AS components " +
             "FROM KnowMilestone WHERE milestone_id = :id",
             List.of("id"), Map.of(), "");
 

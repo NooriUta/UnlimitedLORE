@@ -11324,12 +11324,12 @@
         "kind" : "ref",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "multi" : true,
         "ref" : {
           "type" : "component",
-          "rel" : null,
-          "dir" : null
+          "rel" : "TAGGED_WITH",
+          "dir" : "out"
         },
         "relation" : "attribute",
         "label_en" : "Components",
@@ -11345,7 +11345,10 @@
         "description" : null,
         "layer" : null,
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "TAGGED_WITH"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -11538,6 +11541,21 @@
         "target_type" : "product",
         "place" : "prop",
         "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
+        "key" : "components",
+        "label" : "Компоненты",
+        "label_key" : "pp.rel.components",
+        "label_en" : "Components",
+        "label_pl" : "Komponenty",
+        "relation" : "attribute",
+        "rel" : "TAGGED_WITH",
+        "dir" : "out",
+        "target_type" : "component",
+        "place" : "prop",
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
@@ -11798,12 +11816,12 @@
         "kind" : "ref",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "multi" : true,
         "ref" : {
           "type" : "component",
-          "rel" : null,
-          "dir" : null
+          "rel" : "TAGGED_WITH",
+          "dir" : "out"
         },
         "relation" : "attribute",
         "label_en" : "Components",
@@ -11819,7 +11837,10 @@
         "description" : null,
         "layer" : null,
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/record/{type}/{id}/relation",
+          "field" : "TAGGED_WITH"
+        },
         "required_level" : null,
         "required_rules" : [ ]
       }, {
@@ -12012,6 +12033,21 @@
         "target_type" : "product",
         "place" : "prop",
         "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
+        "key" : "components",
+        "label" : "Компоненты",
+        "label_key" : "pp.rel.components",
+        "label_en" : "Components",
+        "label_pl" : "Komponenty",
+        "relation" : "attribute",
+        "rel" : "TAGGED_WITH",
+        "dir" : "out",
+        "target_type" : "component",
+        "place" : "prop",
+        "manageable" : true,
         "inverse_label" : null,
         "inverse_label_en" : null,
         "inverse_label_pl" : null
