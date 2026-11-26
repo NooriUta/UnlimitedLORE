@@ -96,7 +96,9 @@ describe('AP-MACHINE-PASSPORT · данные', () => {
   it('без шлюза — машины графа, у которых нет актора minilore-link-* (решение 3б)', () => {
     const g = parseGraphMachines(GRAPH);
     expect(withoutGateway(g, [{ machine_id: 'lorcetus' }]).map(m => m.machine_id)).toEqual(['argharaga']);
-    expect(edgeAgents(g[0])).toEqual(['AGENT-FULL']);
+    expect(edgeAgents(g.find(m => m.machine_id === 'lorcetus')!)).toEqual(['AGENT-FULL']);
+    // Список отсортирован по имени (срез без ORDER BY — сортирует потребитель).
+    expect(g.map(m => m.machine_id)).toEqual([...g.map(m => m.machine_id)].sort());
   });
 
   it('«были сессией»: агенты сессий без ребра, сессия без агента — отдельной строкой (решение 2б)', () => {

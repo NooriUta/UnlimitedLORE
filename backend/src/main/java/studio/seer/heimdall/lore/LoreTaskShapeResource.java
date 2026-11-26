@@ -192,6 +192,8 @@ public class LoreTaskShapeResource extends LoreResourceBase {
         Map<String, Object> med = new LinkedHashMap<>();
         for (var e : cycleByClass.entrySet()) med.put(e.getKey(), median(e.getValue()));
         m.put("median_cycle_days_by_complexity", med);
+        // MT-TASK-SHAPE-2 п.3: вердикт монотонности и ранговая точность — кодом, не ручным счётом.
+        m.put("calibration", TaskShapeAccuracy.evaluate(g));
         return m;
     }
 

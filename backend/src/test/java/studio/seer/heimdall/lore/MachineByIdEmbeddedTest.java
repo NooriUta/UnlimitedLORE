@@ -92,7 +92,9 @@ class MachineByIdEmbeddedTest {
 
     @Test
     void список_машин_графа_и_со_шлюзом_и_без() {
-        List<Map<String, Object>> rows = run("machines_graph", Map.of());
+        // Порядок строк — у потребителя: срез без ORDER BY (LetCorrelationNoOrderByGuardTest).
+        List<Map<String, Object>> rows = new java.util.ArrayList<>(run("machines_graph", Map.of()));
+        rows.sort(java.util.Comparator.comparing(r -> String.valueOf(r.get("machine_id"))));
         assertEquals(List.of("argharaga", "lorcetus"), rows.stream().map(r -> String.valueOf(r.get("machine_id"))).toList());
         assertNull(rows.get(0).get("gateway"), "argharaga — без шлюза (решение 3б)");
         assertEquals("minilore-link-lorcetus", rows.get(1).get("gateway"));

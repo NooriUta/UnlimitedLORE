@@ -96,7 +96,7 @@ public class LoreForgejoAppResource extends LoreResourceBase {
         JsonObject env = o.envelope();
         JsonObject err = env.getJsonObject("error");
         JsonObject meta = env.getJsonObject("meta");
-        // метрика вызова (SPEC-FORGEJO-APP-060 §11; журнал agent_actions — FJ-09)
+        // метрика вызова (SPEC-FORGEJO-APP-060 §11); точку журнала agent_actions kind#outcome пишет LoreRequestStatsFilter (FJ-09)
         LOG.infof("[FORGEJO-APP] kind=%s role=%s outcome=%s code=%s truncated=%s took_ms=%s http=%d",
             env.getString("kind"), role, env.getString("outcome"), err == null ? "-" : err.getString("code"),
             meta.getValue("truncated") != null, meta.getValue("took_ms"), o.http());
