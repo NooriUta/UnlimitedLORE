@@ -203,6 +203,10 @@ jobs:
       # PL-04: адреса ПРЕПРОДА — имена preprod.* и опубликованные порты 4410/4412.
       CORS_ORIGINS: http://localhost:4410,http://127.0.0.1:4410,http://192.168.3.131:4410,http://localhost:4412,http://127.0.0.1:4412,http://192.168.3.131:4412,https://preprod.lore.odal.seidrstudio.pro,https://preprod.new.lore.odal.seidrstudio.pro
       LORE_PUBLIC_URL: https://preprod.lore.odal.seidrstudio.pro
+      # Владелец 26.11.2026: «как и для прода прописать fallback на IP» — препрод внутренний (CoreDNS 131),
+      # а из сети хоста и контейнеров джоб имя перестало разрешаться (прогоны 11164/11165, HTTP 000).
+      # Пробы (version/post-deploy/bundle) ходят по имени с --resolve на IP 131: TLS проверяется по имени.
+      PREPROD_RESOLVE: preprod.lore.odal.seidrstudio.pro:443:192.168.3.131
       # У v2 свой канонический адрес (оверлей подставляет его lore-app-next).
       LORE_PUBLIC_URL_V2: https://preprod.lore.odal.seidrstudio.pro
       LORE_OIDC_ORIGIN: https://odal.seidrstudio.pro
