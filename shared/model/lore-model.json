@@ -2969,6 +2969,12 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/milestone",
+        "field" : "label",
+        "idKey" : "milestone_id"
+      },
       "required" : true,
       "definition" : "Название вехи: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
@@ -2998,6 +3004,12 @@
       "labelKey" : "pp.field.date",
       "kind" : "text",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/milestone",
+        "field" : "date_display",
+        "idKey" : "milestone_id"
+      },
       "definition" : "Срок вехи: к какой дате она должна быть достигнута.",
       "layer" : "stable",
       "labelEn" : "Date",
@@ -3009,6 +3021,12 @@
       "kind" : "enum",
       "group" : "props",
       "dict" : "priority",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/milestone",
+        "field" : "priority",
+        "idKey" : "milestone_id"
+      },
       "definition" : "Приоритет вехи: насколько срочно его делать относительно других.",
       "layer" : "stable",
       "labelEn" : "Priority",
@@ -3058,6 +3076,12 @@
       "key" : "goal_md",
       "label" : "Цель",
       "labelKey" : "pp.field.goal",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/milestone",
+        "field" : "goal_md",
+        "idKey" : "milestone_id"
+      },
       "definition" : "Цель вехи: что должно быть достигнуто к ней.",
       "layer" : "stable",
       "historic" : true,
@@ -9652,6 +9676,14 @@
       "fields" : [ {
         "key" : "title",
         "body" : "title"
+      } ]
+    },
+    "milestone" : {
+      "endpoint" : "/lore/milestone",
+      "id_field" : "milestone_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "label"
       } ]
     },
     "organization" : {

@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "de64eebf9f9c6f10",
+  "version" : "3dd968311d78d54a",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "skill", "feature", "question" ],
@@ -6442,7 +6442,7 @@
         "kind" : "text",
         "group" : "head",
         "required" : true,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Title",
         "short_label_en" : null,
         "definition_en" : null,
@@ -6456,7 +6456,11 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/milestone",
+          "field" : "label",
+          "idKey" : "milestone_id"
+        },
         "required_level" : "warn",
         "required_rules" : [ {
           "level" : "warn",
@@ -6547,7 +6551,7 @@
         "kind" : "text",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Date",
         "short_label_en" : null,
         "definition_en" : null,
@@ -6561,7 +6565,11 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/milestone",
+          "field" : "date_display",
+          "idKey" : "milestone_id"
+        },
         "required_level" : "warn",
         "required_rules" : [ {
           "level" : "warn",
@@ -6586,7 +6594,7 @@
         "kind" : "enum",
         "group" : "props",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "dict" : "priority",
         "label_en" : "Priority",
         "short_label_en" : null,
@@ -6601,7 +6609,11 @@
         "description" : null,
         "layer" : "stable",
         "historic" : false,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/milestone",
+          "field" : "priority",
+          "idKey" : "milestone_id"
+        },
         "required_level" : null,
         "required_rules" : [ ],
         "visibility" : "visible",
@@ -6742,7 +6754,7 @@
         "kind" : "md",
         "group" : "body",
         "required" : false,
-        "editable" : false,
+        "editable" : true,
         "label_en" : "Goal",
         "short_label_en" : null,
         "definition_en" : null,
@@ -6756,7 +6768,11 @@
         "description" : null,
         "layer" : "stable",
         "historic" : true,
-        "write" : null,
+        "write" : {
+          "endpoint" : "/lore/milestone",
+          "field" : "goal_md",
+          "idKey" : "milestone_id"
+        },
         "required_level" : null,
         "required_rules" : [ ],
         "visibility" : "visible",
@@ -18828,6 +18844,22 @@
       } ],
       "require_one_of" : [ ],
       "absent_check" : "/lore/record/job/{id}",
+      "audience" : "everywhere"
+    },
+    "milestone" : {
+      "endpoint" : "/lore/milestone",
+      "id_field" : "milestone_id",
+      "fields" : [ {
+        "key" : "title",
+        "label" : "Название",
+        "kind" : "text",
+        "multi" : false,
+        "body" : "label",
+        "after_write" : null,
+        "required" : true
+      } ],
+      "require_one_of" : [ ],
+      "absent_check" : "/lore/record/milestone/{id}",
       "audience" : "everywhere"
     },
     "organization" : {

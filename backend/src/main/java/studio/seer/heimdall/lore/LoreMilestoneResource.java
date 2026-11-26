@@ -353,11 +353,17 @@ public class LoreMilestoneResource extends LoreResourceBase {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response upsertMilestone(MilestoneRequest req,
-                                    @HeaderParam("X-Seer-Role") String role) {
+                                    @HeaderParam("X-Seer-Role") String role,
+                                    @jakarta.ws.rs.QueryParam("mode") String mode) {
         if (!enabled) return disabled();
         requireAdmin(role);
         if (req == null || req.milestone_id() == null || req.milestone_id().isBlank())
             return badParams("milestone_id required");
+        // AP-PASSPORT-EDIT, волна 2: «+ Новая» вехи шлёт ?mode=create — на занятый код 409 ID_TAKEN, а не перезапись.
+        if ("create".equals(mode) && !SAFE_ID.matcher(req.milestone_id()).matches())
+            return badParams("milestone_id contains illegal characters");
+        Response taken = createOnly("milestone", req.milestone_id(), mode);
+        if (taken != null) return taken;
         try {
             // Upsert the milestone vertex — LH-44: only SET fields actually provided,
             // a partial call (e.g. priority-only) must not wipe label/week/date_display.

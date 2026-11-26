@@ -15,7 +15,9 @@ import type { Outcome } from './summary.ts';
  */
 // AP-PASSPORT-EDIT, волна 1: продуктовый слой — боль, выгода, работа, роль, фича.
 export const STAND_CREATE_TYPES = ['sprint', 'adr', 'task', 'decision', 'spec', 'organization',
-  'pain', 'gain', 'job', 'actor', 'feature'] as const;
+  'pain', 'gain', 'job', 'actor', 'feature',
+  // AP-PASSPORT-EDIT, волна 2: веха.
+  'milestone'] as const;
 
 export interface CreateCoverage {
   /** Типы модели, у которых в v2 есть форма «+ Новая». */
