@@ -28,9 +28,28 @@ final class LoreModelWorkflow {
      * {@code workflow.moves}; null — вид наследует общие переходы. Статусы у всех видов одни и те же.
      */
     record Kind(String label, List<String> types, List<String> stages, List<String> review_stages,
-                List<Evidence> evidence, String failed, Map<String, List<String>> moves) {}
+                List<Evidence> evidence, String failed, Map<String, List<String>> moves, List<StageIo> flow) {
+        /** Вид без канала артефактов — как до 26.11. */
+        Kind(String label, List<String> types, List<String> stages, List<String> review_stages,
+             List<Evidence> evidence, String failed, Map<String, List<String>> moves) {
+            this(label, types, stages, review_stages, evidence, failed, moves, List.of());
+        }
+    }
 
-    record Workflow(Map<String, List<String>> moves, Map<String, Kind> kinds) {
+    /**
+     * Артефакт канала {@code workflow.artifacts} (владелец 26.11.2026: «сделай канал artifacts и produces/consumes»).
+     * {@code source}: {@code stage} — появляется только как выход стадии; {@code record} — запись LORE (ADR,
+     * сценарий, спека…), может существовать до workflow, поэтому её можно потреблять без производителя.
+     * {@code evidence} — тип доказательства done, которое этот артефакт закрывает; null — не доказательство.
+     */
+    record Artifact(String label, String source, String evidence) {}
+
+    /** Что стадия вида производит и потребляет — узел графа UW-02 читает/пишет канал artifacts. */
+    record StageIo(String stage, List<String> produces, List<String> consumes) {}
+
+    record Workflow(Map<String, List<String>> moves, Map<String, Kind> kinds, Map<String, Artifact> artifacts) {
+        Workflow(Map<String, List<String>> moves, Map<String, Kind> kinds) { this(moves, kinds, Map.of()); }
+
         /** Вид работы по типу задачи; null — тип не отнесён ни к одному виду. */
         String kindOf(String taskType) {
             if (taskType == null) return null;
@@ -60,7 +79,14 @@ final class LoreModelWorkflow {
         Map<String, Kind> kinds = new LinkedHashMap<>();
         if (!(m.get("kinds") instanceof Map<?, ?> kd)) throw new IllegalStateException("файл модели: workflow.kinds — ждали объект");
         kd.forEach((k, v) -> kinds.put(String.valueOf(k), LoreModelCodec.decode(Kind.class, v, "workflow.kinds." + k)));
-        return new Workflow(java.util.Collections.unmodifiableMap(moves), java.util.Collections.unmodifiableMap(kinds));
+        Map<String, Artifact> artifacts = new LinkedHashMap<>();
+        Object ar = m.get("artifacts");
+        if (ar != null) {
+            if (!(ar instanceof Map<?, ?> am)) throw new IllegalStateException("файл модели: workflow.artifacts — ждали объект");
+            am.forEach((k, v) -> artifacts.put(String.valueOf(k), LoreModelCodec.decode(Artifact.class, v, "workflow.artifacts." + k)));
+        }
+        return new Workflow(java.util.Collections.unmodifiableMap(moves), java.util.Collections.unmodifiableMap(kinds),
+            java.util.Collections.unmodifiableMap(artifacts));
     }
 
     /** Согласованность: переходы только между статусами ядра, done — только из review, тип задачи — в одном виде. */
@@ -73,6 +99,9 @@ final class LoreModelWorkflow {
                 if (!LoreWorkflowCore.CORE.contains(t)) out.add("workflow.moves." + from + ": «" + t + "» не статус ядра");
                 if ("done".equals(t) && !"review".equals(from)) out.add("workflow.moves." + from + ": done ставится только из review");
             }
+        });
+        w.artifacts().forEach((id, a) -> {
+            if (!SOURCES.contains(a.source())) out.add("workflow.artifacts." + id + ": source «" + a.source() + "» — ждали stage или record");
         });
         Map<String, String> owner = new TreeMap<>();
         w.kinds().forEach((k, kind) -> {
@@ -88,11 +117,51 @@ final class LoreModelWorkflow {
                         + " вне общих переходов ядра — вид может только сузить их, не расширить");
                 }
             });
+            out.addAll(flowProblems(w, k, kind));
             for (String t : kind.types()) {
                 String prev = owner.put(t, k);
                 if (prev != null) out.add("workflow: тип задачи «" + t + "» в двух видах — " + prev + " и " + k);
             }
         });
+        return out;
+    }
+
+    static final java.util.Set<String> SOURCES = java.util.Set.of("stage", "record");
+
+    /**
+     * Канал артефактов вида: стадия — своя; артефакт — из каталога; потребляемый артефакт стадии
+     * (source=stage) произведён стадией РАНЬШЕ (порядок: stages, затем review_stages); каждое
+     * доказательство done вида производит какая-то стадия. Вид без flow не проверяется.
+     */
+    static List<String> flowProblems(Workflow w, String k, Kind kind) {
+        List<String> out = new ArrayList<>();
+        if (kind.flow() == null || kind.flow().isEmpty()) return out;
+        String where = "workflow.kinds." + k + ".flow";
+        List<String> order = new ArrayList<>(kind.stages());
+        order.addAll(kind.review_stages());
+        java.util.Set<String> producedBefore = new java.util.HashSet<>();
+        java.util.Set<String> producedAll = new java.util.HashSet<>();
+        List<StageIo> sorted = new ArrayList<>(kind.flow());
+        sorted.sort(java.util.Comparator.comparingInt(io -> order.indexOf(io.stage()) < 0 ? Integer.MAX_VALUE : order.indexOf(io.stage())));
+        for (StageIo io : sorted) {
+            if (!order.contains(io.stage())) out.add(where + ": «" + io.stage() + "» не стадия вида (есть: " + order + ")");
+            for (String a : io.consumes()) {
+                Artifact art = w.artifacts().get(a);
+                if (art == null) out.add(where + "." + io.stage() + ".consumes: «" + a + "» нет в workflow.artifacts");
+                else if ("stage".equals(art.source()) && !producedBefore.contains(a))
+                    out.add(where + "." + io.stage() + ".consumes: «" + a + "» не произведён раньше — его выдаёт только стадия");
+            }
+            for (String a : io.produces()) {
+                if (!w.artifacts().containsKey(a)) out.add(where + "." + io.stage() + ".produces: «" + a + "» нет в workflow.artifacts");
+                producedAll.add(a);
+            }
+            producedBefore.addAll(io.produces());
+        }
+        for (Evidence e : kind.evidence()) {
+            boolean covered = producedAll.stream().map(w.artifacts()::get)
+                .anyMatch(a -> a != null && e.type().equals(a.evidence()));
+            if (!covered) out.add("workflow.kinds." + k + ": доказательство «" + e.type() + "» не производит ни одна стадия flow");
+        }
         return out;
     }
 
@@ -105,6 +174,11 @@ final class LoreModelWorkflow {
         Map<String, Object> kinds = new LinkedHashMap<>();
         w.kinds().forEach((k, v) -> kinds.put(k, LoreModelCodec.encode(v)));
         d.put("kinds", kinds);
+        if (!w.artifacts().isEmpty()) {
+            Map<String, Object> arts = new LinkedHashMap<>();
+            w.artifacts().forEach((k, v) -> arts.put(k, LoreModelCodec.encode(v)));
+            d.put("artifacts", arts);
+        }
         return d;
     }
 
