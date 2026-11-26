@@ -2504,7 +2504,9 @@ public final class LoreSlices {
         slice("history_task",
             "SELECT valid_from, valid_to, content_hash, source_commit, status_raw, " +
             // MT-NOTE-APPEND п.3: version_kind = 'text' — версия открыта правкой текста, статус тот же.
-            "effort_days, note_md, version_kind " +
+            "effort_days, note_md, version_kind, " +
+            // Дверь сессии (слово владельца 26.11.2026): кто и из какой сессии открыл версию — видно в истории.
+            "changed_by, changed_by_kind, changed_by_session, changed_by_machine " +
             "FROM KnowTaskHist WHERE in('HAS_STATE').task_uid CONTAINS :id ORDER BY valid_from",
             List.of("id"), Map.of(), "");
 
@@ -3236,6 +3238,16 @@ public final class LoreSlices {
                 "machine", " WHERE machine = :machine")),
             " ORDER BY ts DESC LIMIT 500");
 
+        // Дверь сессии (владелец 26.11.2026: «отказывай сессиям без идентификатора в задачах — посмотрим,
+        // сколько заблокируем»): записи агентов в истории задач с даты — с кодом сессии и без, по агенту,
+        // машине и harness. with_session < writes — это и есть «заблокируем», если включить отказ.
+        slice("session_coverage",
+            "SELECT changed_by AS client, changed_by_machine AS machine, changed_by_harness AS harness, " +
+            "count(*) AS writes, count(changed_by_session) AS with_session " +
+            "FROM KnowTaskHist WHERE changed_by_kind = 'agent' AND valid_from >= :from",
+            List.of("from"), Map.of(),
+            " GROUP BY changed_by, changed_by_machine, changed_by_harness ORDER BY writes DESC");
+
         // SPRINT_UXR_S7B_ADMIN/S7B-02: журнал действий АДМИНКИ — тот же ряд AO-01,
         // только админские семейства (ADMIN_FAMILIES). «Кто» — caller, «человек или
         // агент» — axis, «что» — family + entity_id, «когда» — ts, исход — status (код
@@ -3819,7 +3831,9 @@ public final class LoreSlices {
         "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix",
         // AP-MACHINE-PASSPORT × AP-PEOPLE-PAGE (сборка зонтика 25.11): паспорт машины живёт только в админке
         // и отдаёт client_id агентов машины — поле уровня admin. Не-админу — 403, а не учётка в ответе.
-        "machine_by_id", "machines_graph");
+        "machine_by_id", "machines_graph",
+        // Дверь сессии 26.11: покрытие сессиями по агентам и машинам — журнал админки.
+        "session_coverage");
 
     /** Срез админский, а роль вызывающего — не admin/superadmin: отказ 403, а не пустая выдача. */
     public static boolean adminOnlyDenied(String id, String role) {
