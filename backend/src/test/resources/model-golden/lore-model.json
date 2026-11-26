@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "93a47e1ba75ca840",
+  "version" : "95e0da000e5fcdf4",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -17761,7 +17761,7 @@
         }, {
           "stage" : "measure",
           "produces" : [ "measurement" ],
-          "consumes" : [ "pr" ]
+          "consumes" : [ "pr", "code", "tests" ]
         }, {
           "stage" : "stand_check",
           "produces" : [ "stand_report" ],

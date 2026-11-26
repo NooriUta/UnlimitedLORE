@@ -59,6 +59,8 @@ class LoreModelWorkflowArtifactsTest {
         assertTrue(io.apply("dev", "test").consumes().containsAll(List.of("code", "tests")), "dev:test берёт код и тесты");
         assertTrue(io.apply("ops", "fix").produces().containsAll(List.of("code", "tests")), "ops:fix выдаёт код и тесты");
         assertTrue(io.apply("ops", "diagnose").consumes().contains("code"), "ops:diagnose читает код");
+        // Решение владельца 15а (26.11): после fix код и тесты проверяет замер — прогон тестов часть замера.
+        assertTrue(io.apply("ops", "measure").consumes().containsAll(List.of("code", "tests")), "ops:measure берёт код и тесты");
     }
 
     @Test
