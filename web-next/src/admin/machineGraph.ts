@@ -59,7 +59,9 @@ export function parseGraphMachine(r: Readonly<Record<string, unknown>>): GraphMa
 }
 
 export function parseGraphMachines(rows: ReadonlyArray<Record<string, unknown>>): GraphMachine[] {
-  return rows.map(parseGraphMachine).filter((m): m is GraphMachine => m !== null);
+  // Порядок — здесь: срез machines_graph без ORDER BY (на сервере ArcadeDB сортировка ломает корреляцию в LET).
+  return rows.map(parseGraphMachine).filter((m): m is GraphMachine => m !== null)
+    .sort((a, b) => a.machine_id.localeCompare(b.machine_id));
 }
 
 export async function fetchGraphMachines(signal?: AbortSignal, fetchImpl?: typeof fetch): Promise<GraphMachine[]> {

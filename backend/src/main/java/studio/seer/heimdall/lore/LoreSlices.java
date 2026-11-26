@@ -3072,7 +3072,10 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
         // Решение владельца 3б: машины графа целиком — и без шлюза (появились сами по записи агента), чтобы админка
         // показала их группой «Без шлюза», а не теряла (machine_acl берёт только акторов minilore-link-*).
-        slice("machines_graph", machineCols, List.of(), Map.of(), " ORDER BY machine_id");
+        // Без ORDER BY — намеренно (26.11.2026, v1.19.1 на проде): с сортировкой серверная ArcadeDB теряет корреляцию
+        // $parent.$current в LET (тот же замер, что у question_hygiene), и шлюз с владельцем пустели у всех машин.
+        // Сортирует потребитель (machineGraph.ts, passportAdapters); сторож — LetCorrelationNoOrderByGuardTest.
+        slice("machines_graph", machineCols, List.of(), Map.of(), "");
 
         slice("pr_by_id",
             "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, head_ref, base_ref, " +
