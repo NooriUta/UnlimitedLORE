@@ -78,6 +78,16 @@ final class LoreFind {
         return "COALESCE(" + OPEN + "." + f + "[0], out('HAS_STATE')[" + f + " IS NOT NULL]." + f + "[0])";
     }
 
+    /**
+     * Поле, принадлежащее своему статусу (адресат ожидания, причина), — только из ОТКРЫТОЙ версии, без отката к
+     * прежним. Иначе задача, вышедшая из waiting, показывала старое «ждёт владелицу…» (находка 26.11.2026,
+     * SPRINT_MINILORE_LINK_PIPE/LP-21). То же правило, что у записи: StatusHistoryService не переносит waiting_for
+     * и status_reason в версию другого статуса; и у среза задач (LoreSlices: waiting_for открытой версии).
+     */
+    private static String openOnly(String f) {
+        return OPEN + "." + f + "[0]";
+    }
+
     /** Поле: SQL-выражения (несколько — сливаются в один список) и признак многозначности. */
     record Field(List<String> sql, boolean list) {
         static Field one(String sql) { return new Field(List.of(sql), false); }
@@ -104,7 +114,7 @@ final class LoreFind {
         task.put("work_class", Field.one("work_class"));
         task.put("status_raw", Field.one(scd2("status_raw")));
         task.put("effort_days", Field.one(scd2("effort_days")));
-        task.put("waiting_for", Field.one(scd2("waiting_for")));
+        task.put("waiting_for", Field.one(openOnly("waiting_for")));
         task.put("sprint_id", Field.one("out('PART_OF').sprint_id[0]"));
         task.put("phase_uid", Field.one("outE('IN_PHASE')[valid_to IS NULL].inV().phase_uid[0]"));
         task.put("component", Field.many("out('TAGGED_WITH').component_id"));

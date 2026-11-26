@@ -505,4 +505,31 @@ class LoreFindEmbeddedTest {
             LoreGraphResource.RecordRef.parse("from", "task:SP_A/A-4"), LoreGraphResource.RecordRef.parse("to", "task:NOPE"),
             Set.of(), Set.of(), "both", false, 4, 1, null));
     }
+
+    // Находка соседней сессии (Mobilepoc, 26.11.2026): SPRINT_MINILORE_LINK_PIPE/LP-21 ушла из waiting в uat,
+    // а find по-прежнему отдавал старый waiting_for «владелица: Р3…» — телефон показывал «ждёт ответа».
+    // Причина: scd2() брал поле из открытой версии, иначе из ЛЮБОЙ прежней. Адресат ожидания принадлежит
+    // своему статусу (то же правило, что у записи: StatusHistoryService не переносит waiting_for из waiting).
+    @SuppressWarnings("unchecked")
+    @Test
+    void waitingForOfAPastWaitingVersionIsNotReadIntoTheOpenOne() {
+        String uid = "SP_A/W-1";
+        db.transaction(() -> {
+        db.command("sql", "INSERT INTO KnowTask SET task_uid = ?, task_id = ?, title = ?, work_class = 'feature'", uid, "W-1", "ждала ответа");
+        db.command("sql", "INSERT INTO KnowTaskHist SET task_uid = ?, state_uid = 'w1-old', status_raw = 'WAITING', "
+            + "waiting_for = 'владелица: Р3', effort_days = 2.0, valid_from = '2026-11-18T10:00:00Z', valid_to = '2026-11-19T10:00:00Z'", uid);
+        db.command("sql", "INSERT INTO KnowTaskHist SET task_uid = ?, state_uid = 'w1-new', status_raw = 'UAT', "
+            + "valid_from = '2026-11-19T10:00:00Z'", uid);
+        db.command("sql", "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = ?) TO (SELECT FROM KnowTaskHist WHERE state_uid = 'w1-old')", uid);
+        db.command("sql", "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = ?) TO (SELECT FROM KnowTaskHist WHERE state_uid = 'w1-new')", uid);
+        edge("PART_OF", "KnowTask", "task_uid", uid, "KnowSprint", "sprint_id", "SP_A");
+        });
+
+        Map<String, Object> res = find(req("type", "task", "id_in", List.of(uid), "fields", List.of("waiting_for", "effort_days", "status_raw")));
+        Map<String, Object> row = ((List<Map<String, Object>>) res.get("rows")).get(0);
+        assertEquals("UAT", row.get("status_raw"), "статус — открытой версии");
+        assertNull(row.get("waiting_for"), "адресат ожидания прошлого waiting не тянется в uat");
+        // Положительный контроль: поля без привязки к статусу по-прежнему берутся из последней версии, где заданы.
+        assertEquals(2.0, ((Number) row.get("effort_days")).doubleValue(), 1e-9, "оценка тянется из истории, как раньше");
+    }
 }
