@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "95e0da000e5fcdf4",
+  "version" : "3f146edd1b200a6b",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question" ],
@@ -17871,8 +17871,8 @@
       "content" : {
         "label" : "контент",
         "types" : [ "content" ],
-        "stages" : [ "draft", "ready", "scheduled" ],
-        "review_stages" : [ "scheduled" ],
+        "stages" : [ "draft", "ready" ],
+        "review_stages" : [ "approval", "scheduled" ],
         "evidence" : [ {
           "type" : "url",
           "label" : "URL публикации"
@@ -17882,6 +17882,9 @@
           "produces" : [ "draft" ]
         }, {
           "stage" : "ready",
+          "consumes" : [ "draft" ]
+        }, {
+          "stage" : "approval",
           "consumes" : [ "draft" ]
         }, {
           "stage" : "scheduled",

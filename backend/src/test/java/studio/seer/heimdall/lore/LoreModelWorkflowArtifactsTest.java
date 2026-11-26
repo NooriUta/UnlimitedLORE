@@ -63,6 +63,14 @@ class LoreModelWorkflowArtifactsTest {
         assertTrue(io.apply("ops", "measure").consumes().containsAll(List.of("code", "tests")), "ops:measure берёт код и тесты");
     }
 
+    /** Решение владельца 16 (26.11): у content свой гейт приёмки — согласование публикации до выхода наружу. */
+    @Test
+    void contentHasApprovalGateBeforePublication() {
+        LoreModelWorkflow.Kind c = real().kinds().get("content");
+        assertEquals(List.of("approval", "scheduled"), c.review_stages(), "сначала согласование, потом публикация");
+        assertFalse(c.stages().contains("scheduled"), "публикация — не стадия работы, а шаг после согласования");
+    }
+
     @Test
     void consumedRecordWithoutProducerIsFine_stageArtifactMustBeProducedEarlier() {
         var ok = with(CAT, dev(List.of(
