@@ -58,26 +58,81 @@ final class ForgejoApp {
     private static final class Refusal extends RuntimeException {
         final String code;
         final List<?> allowed;
+        final String hint;
         Refusal(String code, String msg, List<?> allowed) {
+            this(code, msg, allowed, null);
+        }
+        Refusal(String code, String msg, List<?> allowed, String hint) {
             super(msg, null, false, false);
             this.code = code;
             this.allowed = allowed;
+            this.hint = hint;
         }
     }
 
+    /**
+     * FJ-04: реестр проектов LORE — слаг KnowGitProject → primary-хост и owner/name на нём (ForgejoBridge.resolve).
+     * Снимает ловушку «два пространства слагов»: агент даёт либо owner+repo хоста, либо git_project.
+     */
+    @FunctionalInterface
+    interface Projects {
+        java.util.Optional<ForgejoBridge.Repo> resolve(String gitProjectSlug);
+    }
+
+    static final String GIT_PROJECT = "git_project";
+
     static Outcome execute(ForgejoRoutes reg, String routeName, JsonObject args, String role, String approval,
                            boolean truncate, Upstream upstream) {
+        return execute(reg, routeName, args, role, approval, truncate, upstream, null, null);
+    }
+
+    /**
+     * @param ourBase  база нашего Forgejo (схема+хост), куда ходит миниапп; нужна, чтобы git_project чужого хоста
+     *                 получил отказ, а не вызов нашим токеном
+     * @param projects резолв git_project; null — приём git_project не подключён (отказ с подсказкой owner+repo)
+     */
+    static Outcome execute(ForgejoRoutes reg, String routeName, JsonObject args, String role, String approval,
+                           boolean truncate, Upstream upstream, String ourBase, Projects projects) {
+        return execute(reg, routeName, args, role, approval, truncate, upstream, ourBase, projects, null);
+    }
+
+    /**
+     * FJ-07: контекст гейта рисковых операций — гейт, владелец сессии (человек, от чьего имени работает агент) и
+     * «сейчас». null — гейт не подключён: risk=high отвечает 428, а подтверждение не принимается (verifier_not_ready).
+     */
+    record Approvals(ForgejoApproval gate, String sessionOwner, long now) {}
+
+    static Outcome execute(ForgejoRoutes reg, String routeName, JsonObject args, String role, String approval,
+                           boolean truncate, Upstream upstream, String ourBase, Projects projects, Approvals approvals) {
         long t0 = System.nanoTime();
         String kind = "forgejo:" + routeName;
         ForgejoRoutes.Route r = reg.get(routeName);
         if (r == null)
             return fail(kind, t0, 404, "UNKNOWN_KIND", "маршрута «" + routeName + "» нет в реестре",
                 reg.candidates(routeName, 5), "describe forgejo:* (forgejo_describe) и повторить с именем из allowed", null);
-        if (!r.allows(role))
+        // FJ-06: правила по значению аргумента — escalate поднимает роли/риск, refuse запрещает навсегда
+        JsonObject raw = args == null ? new JsonObject() : args;
+        List<String> roles = r.roles();
+        String risk = r.risk();
+        String escalated = null;
+        for (ForgejoRoutes.Rule rule : r.rules())
+            if ("escalate".equals(rule.kind()) && rule.matches(raw.getValue(rule.param()))) {
+                if (rule.roles() != null) roles = rule.roles();
+                if (rule.risk() != null) risk = rule.risk();
+                escalated = rule.reason();
+            }
+        if (role == null || !roles.contains(role))
             return fail(kind, t0, 403, "FORBIDDEN_FOR_ROLE", "профилю " + (role == null ? "(нет)" : "agent-" + role)
-                + " маршрут " + r.name() + " (группа " + r.group() + ") не разрешён", r.roles(),
+                + " маршрут " + r.name() + " (группа " + r.group() + ") не разрешён" + (escalated == null ? "" : ": " + escalated), roles,
                 "кого спросить: full | architect; переложить вызов на роль из allowed", null);
-        if ("high".equals(r.risk())) {
+        for (ForgejoRoutes.Rule rule : r.rules())
+            if ("refuse".equals(rule.kind()) && rule.matches(raw.getValue(rule.param())))
+                return fail(kind, t0, 409, "REFUSED", "«" + rule.param() + "» = " + raw.getValue(rule.param()) + ": " + rule.reason(),
+                    null, "это не делается через миниапп ни с каким подтверждением", null);
+        boolean gated = "high".equals(risk) && approvals != null && approvals.gate() != null;
+        boolean dryRun = gated && Boolean.TRUE.equals(raw.getValue("dry_run"));
+        String intent = gated ? ForgejoApproval.intentHash(r.name(), raw) : null;
+        if ("high".equals(risk) && !gated) {
             if (approval == null || approval.isBlank())
                 return fail(kind, t0, 428, "APPROVAL_REQUIRED", "маршрут " + r.name() + " (risk=high) требует подтверждения человеком",
                     null, "цитата диалога: карточка в канал link → повтор с заголовком X-Lore-Human-Approval "
@@ -91,11 +146,17 @@ final class ForgejoApp {
                 null, r.via() + " — merge строго по зелёному гейту CI с автолинковкой графа", null);
 
         JsonObject a = args == null ? new JsonObject() : args;
+        if (gated && a.containsKey("dry_run")) {
+            a = a.copy();
+            a.remove("dry_run");
+        }
         Map<String, Object> clean;
         try {
+            a = resolveGitProject(r, a, ourBase, projects);
             clean = validate(r, a);
         } catch (Refusal e) {
-            return fail(kind, t0, 400, e.code, e.getMessage(), e.allowed, "describe forgejo:" + r.name() + " и исправить args", null);
+            return fail(kind, t0, 400, e.code, e.getMessage(), e.allowed,
+                e.hint != null ? e.hint : "describe forgejo:" + r.name() + " и исправить args", null);
         }
         if (r.capability() != null)
             return fail(kind, t0, 501, "REFUSED", "маршрут " + r.name() + " — не REST, capability «" + r.capability()
@@ -126,6 +187,34 @@ final class ForgejoApp {
             return fail(kind, t0, 400, e.code, e.getMessage(), e.allowed, "describe forgejo:" + r.name() + " и исправить args", null);
         }
 
+        // FJ-07: рисковая операция — план (dry_run), выдача слова-вызова (428) или проверка двух факторов
+        if (gated) {
+            JsonObject plan = new JsonObject().put("dry_run", true).put("route", r.name()).put("method", r.method())
+                .put("path", pathAndQuery).put("intent_hash", intent);
+            if (body != null) plan.put("body", body.length() > 2000 ? body.substring(0, 2000) + "…" : body);
+            if (dryRun) {
+                JsonObject env = new JsonObject().put("v", 1).put("kind", kind).put("outcome", "found").put("data", plan)
+                    .put("meta", new JsonObject().put("took_ms", (System.nanoTime() - t0) / 1_000_000)).putNull("error");
+                return new Outcome(200, env);
+            }
+            if (approval == null || approval.isBlank()) {
+                ForgejoApproval.Challenge ch = approvals.gate().issue(r.name(), intent, approvals.now());
+                Outcome o = fail(kind, t0, 428, "APPROVAL_REQUIRED", "маршрут " + r.name()
+                    + " (risk=high) — два фактора: подтверждение в диалоге и ввод слова в LORE", null,
+                    "1) спросите человека в диалоге, покажите plan; 2) попросите ввести в LORE слово «" + ch.word()
+                        + "»; 3) повторите вызов с заголовком X-Lore-Human-Approval {message_ref, at, human, intent_hash, challenge_id}",
+                    null);
+                o.envelope().getJsonObject("error").put("intent_hash", intent).put("challenge", ch.toJson()).put("plan", plan)
+                    .put("human", approvals.sessionOwner());
+                return o;
+            }
+            String failed = approvals.gate().verify(ForgejoApproval.parseHeader(approval), intent, approvals.sessionOwner(), approvals.now());
+            if (failed != null)
+                return fail(kind, t0, 403, "APPROVAL_INVALID", "подтверждение не принято: проверка «" + failed + "» не прошла", null,
+                    "lore_factor — слово не введено в LORE этим человеком или уже использовано; intent_hash — подтверждена другая "
+                        + "операция; ttl — подтверждение устарело. Повторите вызов без заголовка — получите новое слово", failed);
+        }
+
         Reply reply;
         try {
             reply = upstream.call(r.method(), pathAndQuery, body);
@@ -148,6 +237,12 @@ final class ForgejoApp {
             meta.put("cursor", hasMore ? cursorOf(page * limit) : null);
             meta.put("has_more", hasMore);
         }
+        if ("log".equals(r.response()) && data instanceof String text) {
+            LogCut cut = cutLog(text, truncate);
+            data = cut.text();
+            meta.put("log", new JsonObject().put("lines_total", cut.total()).put("lines_kept", cut.kept())
+                .put("error_lines", cut.errors()).put("cut", cut.cut()));
+        }
         Map<String, Object> truncated = null;
         if (truncate) {
             ForgejoTruncate.Result tr = ForgejoTruncate.apply(data);
@@ -161,6 +256,51 @@ final class ForgejoApp {
             .put("v", 1).put("kind", kind).put("outcome", empty ? "empty" : "found")
             .put("data", data).put("meta", meta).putNull("error");
         return new Outcome(200, env);
+    }
+
+    // ── git_project → owner/repo (FJ-04) ─────────────────────────────────
+
+    /** У маршрута есть пара path-параметров owner+repo — значит, ему можно дать git_project. */
+    static boolean takesRepo(ForgejoRoutes.Route r) {
+        ForgejoRoutes.Param o = r.params().get("owner");
+        ForgejoRoutes.Param p = r.params().get("repo");
+        return o != null && p != null && "path".equals(o.in()) && "path".equals(p.in());
+    }
+
+    /**
+     * Подставляет owner/repo из git_project. Маршрут без owner+repo — args как есть (валидация назовёт git_project
+     * лишним). git_project вместе с owner/repo — BAD_PARAMS (что-то одно). Проект не зарегистрирован или primary на
+     * чужом хосте — INVALID_VALUE с подсказкой; апстрим в этих случаях не зовётся.
+     */
+    static JsonObject resolveGitProject(ForgejoRoutes.Route r, JsonObject args, String ourBase, Projects projects) {
+        Object gp = args.getValue(GIT_PROJECT);
+        if (gp == null || !takesRepo(r)) return args;
+        if (args.containsKey("owner") || args.containsKey("repo"))
+            throw new Refusal("BAD_PARAMS", "git_project и owner/repo вместе — дайте что-то одно", List.of(GIT_PROJECT, "owner", "repo"));
+        if (!(gp instanceof String slug) || slug.isBlank())
+            throw new Refusal("BAD_PARAMS", "«git_project» — строка, слаг проекта LORE (например NooriUta/UnlimitedLORE)", null);
+        String hint = "дайте owner+repo нашего Forgejo (например AIDA/UnlimitedLORE) или зарегистрируйте проект в LORE";
+        if (projects == null)
+            throw new Refusal("INVALID_VALUE", "приём git_project не подключён", null, hint);
+        java.util.Optional<ForgejoBridge.Repo> repo = projects.resolve(slug);
+        if (repo.isEmpty())
+            throw new Refusal("INVALID_VALUE", "проект «" + slug + "» не зарегистрирован в LORE или у него нет primary-хоста", null, hint);
+        String host = hostOf(repo.get().apiBase());
+        if (ourBase != null && !java.util.Objects.equals(host, hostOf(ourBase)))
+            throw new Refusal("INVALID_VALUE", "primary-хост проекта «" + slug + "» — " + host + ", а миниапп ходит только в наш Forgejo ("
+                + hostOf(ourBase) + ")", null, "этот проект живёт не в нашем Forgejo — миниапп его не читает");
+        JsonObject out = args.copy();
+        out.remove(GIT_PROJECT);
+        out.put("owner", repo.get().owner()).put("repo", repo.get().name());
+        return out;
+    }
+
+    private static String hostOf(String base) {
+        try {
+            return URI.create(base).getHost();
+        } catch (RuntimeException e) {
+            return base;
+        }
     }
 
     // ── валидация args ───────────────────────────────────────────────────
@@ -310,10 +450,40 @@ final class ForgejoApp {
 
     // ── ответ ────────────────────────────────────────────────────────────
 
+    // ── журнал CI (FJ-08) ────────────────────────────────────────────────
+
+    static final int LOG_TAIL_LINES = 300;
+    private static final Pattern LOG_ERROR = Pattern.compile("(?i)(::error::|\\berror\\b|\\bfailed\\b|exception|panic|FAILURE)");
+
+    record LogCut(String text, int total, int kept, int errors, boolean cut) {}
+
+    /**
+     * Журнал в диалог: строки с ошибками (с номером строки) + последние {@link #LOG_TAIL_LINES} строк. Короткий журнал
+     * и truncate=false — целиком. Число строк с ошибками считается всегда — оно и есть сводка «где смотреть».
+     */
+    static LogCut cutLog(String text, boolean truncate) {
+        String[] lines = text.split("\n", -1);
+        int total = text.endsWith("\n") ? lines.length - 1 : lines.length;
+        List<Integer> err = new ArrayList<>();
+        for (int i = 0; i < total; i++) if (LOG_ERROR.matcher(lines[i]).find()) err.add(i);
+        if (!truncate || total <= LOG_TAIL_LINES) return new LogCut(text, total, total, err.size(), false);
+        int from = total - LOG_TAIL_LINES;
+        StringBuilder sb = new StringBuilder();
+        List<Integer> early = err.stream().filter(i -> i < from).toList();
+        if (!early.isEmpty()) {
+            sb.append("--- строки с ошибками до хвоста (").append(early.size()).append(") ---\n");
+            for (int i : early) sb.append(i + 1).append(": ").append(lines[i]).append('\n');
+        }
+        sb.append("--- TRUNCATED: последние ").append(LOG_TAIL_LINES).append(" из ").append(total)
+            .append(" строк; целиком — truncate=false ---\n");
+        for (int i = from; i < total; i++) sb.append(lines[i]).append('\n');
+        return new LogCut(sb.toString(), total, LOG_TAIL_LINES + early.size(), err.size(), true);
+    }
+
     private static Object parse(ForgejoRoutes.Route r, Reply reply) {
         String b = reply.body();
         if (b == null || b.isEmpty()) return null;
-        if ("text".equals(r.response())) return b;
+        if ("text".equals(r.response()) || "log".equals(r.response())) return b;
         String t = b.stripLeading();
         try {
             if (t.startsWith("[")) return new JsonArray(b);
