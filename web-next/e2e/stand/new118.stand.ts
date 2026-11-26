@@ -243,8 +243,14 @@ test('N6b Подписи связей из модели с обратной по
   expect(navSecs.length, 'nav в модели').toBeGreaterThan(0);
   await openStand(page, '/?sec=task', page.locator('.sk-shell__side'));
   await expect(page.locator('.sk-shell__side a.sk-shell__item').first(), 'меню показано').toBeVisible({ timeout: 30_000 });
-  // Свёрнутые группы прячут пункты — раскрыть все.
-  for (const h of await page.locator('.sk-shell__side section h2 button[aria-expanded="false"]').all()) await h.click().catch(() => undefined);
-  const menuSecs = await page.locator('.sk-shell__side a.sk-shell__item').evaluateAll(as => as.map(a => new URL((a as HTMLAnchorElement).href).searchParams.get('sec') ?? ''));
-  expect(navSecs.filter(s => !menuSecs.includes(s)), 'разделы nav модели, которых нет в меню').toEqual([]);
+  // KREG-13 (стенд 26.11.2026, v1.19.1): пока /lore/model не пришёл, оболочка рисует запасное рукописное меню.
+  // Раньше каждый раздел nav был и в нём, и тест читал меню после первого пункта; раздел только из модели
+  // («Скиллы») ловил запасное меню. Ждём, пока меню соберётся из модели; раздела нет и после предела — падение.
+  const missing = async () => {
+    // Свёрнутые группы прячут пункты — раскрыть все.
+    for (const h of await page.locator('.sk-shell__side section h2 button[aria-expanded="false"]').all()) await h.click().catch(() => undefined);
+    const menuSecs = await page.locator('.sk-shell__side a.sk-shell__item').evaluateAll(as => as.map(a => new URL((a as HTMLAnchorElement).href).searchParams.get('sec') ?? ''));
+    return navSecs.filter(s => !menuSecs.includes(s));
+  };
+  await expect.poll(missing, { message: 'разделы nav модели, которых нет в меню', timeout: 30_000 }).toEqual([]);
 });
