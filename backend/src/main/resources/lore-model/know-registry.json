@@ -4464,8 +4464,8 @@
       "type" : "ref",
       "required" : false,
       "desc" : "Компоненты, к которым относится запись; по ним фильтруют и собирают паспорт компонента.",
-      "layer" : "model",
-      "property" : "components",
+      "layer" : "edge",
+      "rel" : "TAGGED_WITH",
       "ref_kind" : "entity:component",
       "multi" : true
     }, {
@@ -4672,6 +4672,12 @@
       "keys" : [ "history" ],
       "edge_fields" : [ ]
     }, {
+      "rel" : "TAGGED_WITH",
+      "dir" : "out",
+      "target_kind" : "entity:component",
+      "keys" : [ "components" ],
+      "edge_fields" : [ "changed_at", "changed_by", "fields", "tagged_at", "tagged_by" ]
+    }, {
       "rel" : "TARGETS_MILESTONE",
       "dir" : "in",
       "target_kind" : "entity:feature",
@@ -4702,7 +4708,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowMilestone",
     "hist" : "KnowMilestoneHist",
-    "content_hash" : "sha256:7a3d29b1076504a1cfc53a1bffca3f8f4ded662962017355ae32c08d981bf37e"
+    "content_hash" : "sha256:a586b69d594132ad421408bb3f1e946ceaa6d99cc2bf7e1b7558dfc13f57057e"
   }, {
     "kind" : "entity:organization",
     "id_field" : "org_id",
@@ -8446,6 +8452,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "actor_id",
@@ -8479,7 +8490,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:6b83e3e105cadceaec4e344995b92b9982f5f7a78aa74212b2a01ec938f89919"
+    "content_hash" : "sha256:dd0ea70db2595b433366ba3fa9f949f93cea1b846a8298315d7e891681a320d4"
   }, {
     "kind" : "slice:actor_identity_orphans",
     "id_field" : null,
@@ -8496,6 +8507,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -8533,7 +8549,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:55cf5b133aec6982d35d3ec9d3281b6f52af8614dbcf0312961ca6178d58b669"
+    "content_hash" : "sha256:4c42524f527d1c27f11f55c6416a7aa6c912df89a708af5d8f7a964de1c4c6f8"
   }, {
     "kind" : "slice:actor_load",
     "id_field" : null,
@@ -8555,6 +8571,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -8603,7 +8624,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:40915ee6b45ee1bd5d72e35187a8fb6c98732d8d04bd128163ef4789900c6d9a"
+    "content_hash" : "sha256:d69a4be971aca9628accbf2b6a0f77bf6b10f253d3e584a7d1a7558424c8a749"
   }, {
     "kind" : "slice:actor_pairs",
     "id_field" : null,
@@ -8620,6 +8641,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -8657,7 +8683,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:569d94f2b390bbc4dbccc34e4be399c7ce004d1560f5e58d5e6f6f4a9ec8fd82"
+    "content_hash" : "sha256:5022dd6bea7ddf1ec22740b9ad7c952b246d799d4b145693ad25f5bf48e900ca"
   }, {
     "kind" : "slice:actors",
     "id_field" : null,
@@ -8679,6 +8705,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -8720,7 +8751,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:bb86e20a19584a1c43d6c3d52007138f13d0a0650948f906ea627aed5e625c91"
+    "content_hash" : "sha256:cf3713d1b7c9fe04fcbffedfc0689834c12a17f41e6adba1c0cded70a4aee3e4"
   }, {
     "kind" : "slice:admin_actions",
     "id_field" : null,
@@ -8752,6 +8783,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -8797,7 +8833,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:7a7e665d5db6a12ad83edde69a13e0a0abfd46c30df01b2f291229e630d38e5b"
+    "content_hash" : "sha256:fab8305dad61683c3f46086079e997cb84b67f87c6eca54edd2fc7d4c2fcfb61"
   }, {
     "kind" : "slice:adr",
     "id_field" : null,
@@ -8819,6 +8855,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -8923,7 +8964,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:6db8829f69baebdd9e41a7fc38a47cd0bd9d3a488e72afc13330ca0e33f64002"
+    "content_hash" : "sha256:33c3b858c90f01dd52db3a8ea93be533dbbb3ad4df9f43f9bd1362a849ca5af1"
   }, {
     "kind" : "slice:adr_history",
     "id_field" : null,
@@ -8945,6 +8986,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -8989,7 +9035,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:ccedd7fc53842cae67e4091853b56f221ade5c81f0d7e333ece49822b18cb1fe"
+    "content_hash" : "sha256:c68ada66c742476354ad97900d55d18884fe2088053ba96b6fb0f3d5212b9816"
   }, {
     "kind" : "slice:adr_history_all",
     "id_field" : null,
@@ -9006,6 +9052,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9047,7 +9098,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:a28f72ddb2473dbd7644e694857181f5445a9fb8cad61b9ed3059b31745e7cf9"
+    "content_hash" : "sha256:8d14352c76cbb03f2e2d542a7796d766e11301490cfdb115e63370da7386df56"
   }, {
     "kind" : "slice:adrs",
     "id_field" : null,
@@ -9069,6 +9120,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9126,7 +9182,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:29f46b6f908a63fe1276eb209bcc4602f1b2c6641f69a2c7112ebb05712bd174"
+    "content_hash" : "sha256:7dd94447039023c276b4498a492eb396c7cbb9d8347d6c5cb70248efae05ee4b"
   }, {
     "kind" : "slice:adrs_of_task",
     "id_field" : null,
@@ -9148,6 +9204,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9180,7 +9241,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d8d31083afdd9697fa47bd324bf8b1a6e4773ebe702a99e59b9178b95a59a6e2"
+    "content_hash" : "sha256:9773e5a8e82756375a78bfbbe17159a8655552a973828c813070da8ad9c8df91"
   }, {
     "kind" : "slice:agent_action_points",
     "id_field" : null,
@@ -9210,6 +9271,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "ts",
@@ -9236,7 +9302,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d44187202b69d10873e05cd4994201def22c0f27149522c55adcf2dbe7d90184"
+    "content_hash" : "sha256:89cc066eac19a10c8d3971a3355618b8660cbab67913310fcddc9e91a05d6c00"
   }, {
     "kind" : "slice:agent_actions",
     "id_field" : null,
@@ -9273,6 +9339,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9318,7 +9389,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:c1777881430f917311d6e3353707017a33650dc2d326bafc3baf0216c5f36f49"
+    "content_hash" : "sha256:f97b731c7e8429bd4dc3edd91a474d113bdb76ffc07ab7433019be8096ccb6bd"
   }, {
     "kind" : "slice:agent_by_id",
     "id_field" : null,
@@ -9340,6 +9411,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9388,7 +9464,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:018c29cbc29434d30520bf8b31a9cd51b8bef414b6a6b860c3953697b7e24b3b"
+    "content_hash" : "sha256:4eb1e7567f116617891778c5b3f5e191ed2fd9277d1b8a94a505f6267e9954d9"
   }, {
     "kind" : "slice:agent_owners",
     "id_field" : null,
@@ -9405,6 +9481,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9474,7 +9555,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:cc9cff38051a149339770b904bafd0b9e5f65860ff2338301fe8524fc18a01c7"
+    "content_hash" : "sha256:bf7b9863ef50c82f6417190805a8a80844d0212e2c6f7676771f52533e4165ed"
   }, {
     "kind" : "slice:agent_session_by_id",
     "id_field" : null,
@@ -9496,6 +9577,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9544,7 +9630,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d0f30079ccac521a794866ce92465b0ff2f597fece28b5fd243b6c15468a01aa"
+    "content_hash" : "sha256:44c6535eeca6ddeec8ac2f8791c1b58d6190baafbe7fa9049ae4e368821ac69b"
   }, {
     "kind" : "slice:agent_sessions",
     "id_field" : null,
@@ -9571,6 +9657,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9616,7 +9707,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:b512c43a3bb55e9affe1f1930d16f31989ec54a70afa06acd4ffcfe4b8cea729"
+    "content_hash" : "sha256:f762e1514913e729275a2957a41decb4cb95b6c083b59e09b159f2628948e1af"
   }, {
     "kind" : "slice:agent_task_status_versions",
     "id_field" : null,
@@ -9638,6 +9729,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9678,7 +9774,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d47a6c2ba9d351661aeea991d846f6dff9136b03fe85ef0f78206a1061ef4922"
+    "content_hash" : "sha256:d0f2109b5c1764ccebabcafca851e42bdc7dbab0acdcf755ccbf20c816416bfb"
   }, {
     "kind" : "slice:agent_tasks",
     "id_field" : null,
@@ -9700,6 +9796,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9752,7 +9853,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:91071e51bd65289edf75a48eec87a4c4d7c339d46c38995c5f4a24ed1016da0e"
+    "content_hash" : "sha256:c478d3277be5d4fc249f139a9f3992053b2eff9c4e93210824711be2efdeb576"
   }, {
     "kind" : "slice:agents",
     "id_field" : null,
@@ -9769,6 +9870,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9814,7 +9920,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:8207ceb0b2e41cb5e4f0d1c36a5303f3e2fc6cecef51b621e55d8f4c0e4bd7ad"
+    "content_hash" : "sha256:f8473410980c2b7986a207100b9395ad9e990bf6478ff035b48194e6c1fe6b74"
   }, {
     "kind" : "slice:all_tasks",
     "id_field" : null,
@@ -9836,6 +9942,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9905,7 +10016,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:a273e77ac1be702e26860cc5f3f52891cdb70ee9cde1b54f77814df202d622bb"
+    "content_hash" : "sha256:4ac036e0c76c0e185e5b6ce9f9f448313ac01a6a3f2f47ac420c463c0c891619"
   }, {
     "kind" : "slice:asset_orphans",
     "id_field" : null,
@@ -9922,6 +10033,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -9959,7 +10075,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:776f29196dd38d7f43a6dd811a45a7ac09e100f0b48b29857a612e76eb248787"
+    "content_hash" : "sha256:6dfcaa0d2a4ef03d478f2ab702e21431067c842f2396b2b89e896886e513eb6f"
   }, {
     "kind" : "slice:backlog_tasks",
     "id_field" : null,
@@ -9976,6 +10092,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10017,7 +10138,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:958b5a64d936ecff7ca4e24ca7f440935ea516f7697ea2a8ec331309bc8578e0"
+    "content_hash" : "sha256:b1aaaff3ebadbabb0d3058b6996d99ad03a81daca667d514484e735ff3f7980b"
   }, {
     "kind" : "slice:blocked_sprints",
     "id_field" : null,
@@ -10037,6 +10158,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "sprint_id",
@@ -10051,7 +10177,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:ad0e597d33cba2919d45128dfc581909fff3776caf5cd5e9618db9b36f96ec70"
+    "content_hash" : "sha256:e34c86f2c31152de43d52653292b778fec2d1121bfa60d0b1e2d2da39cb11c4a"
   }, {
     "kind" : "slice:blocked_sprints_reason",
     "id_field" : null,
@@ -10068,6 +10194,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10113,7 +10244,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:44b1109e235d01a883688555815c085e241a6165e0390765f5bed1027f223495"
+    "content_hash" : "sha256:4381e19ccf9e9d42a14bb3e2d58c70a4b37f2c6d7ec8c7933eda7ccb68f8fe00"
   }, {
     "kind" : "slice:bragi_analytics",
     "id_field" : null,
@@ -10130,6 +10261,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10171,7 +10307,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:94e5c3fc8d077269dfb1b15981dc4ab8412ac981f0d6bd5e93e6e2a98c111666"
+    "content_hash" : "sha256:0966397c4da883992cbe12c5e944576ab6f2d16206d84c018d14bcb10878e614"
   }, {
     "kind" : "slice:bragi_calendar",
     "id_field" : null,
@@ -10188,6 +10324,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10233,7 +10374,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:ae96ec542926a56ee3ea3d016e3a70371abaab1786d21a89e52d19e7e83ebe4f"
+    "content_hash" : "sha256:a03c52a82b017b2144781e311a0ff10855c0f50ed0f0882271fdea337ce2063b"
   }, {
     "kind" : "slice:bragi_channels",
     "id_field" : null,
@@ -10250,6 +10391,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10283,7 +10429,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:530d9eb8d5d285a423300c72740f79ed1ec40c341be8546bb153d447369ba2e5"
+    "content_hash" : "sha256:3791d7a955f261587b5bbb4d3be7f899c023d71fc0879455b6f3576885af2a3b"
   }, {
     "kind" : "slice:bragi_competitors",
     "id_field" : null,
@@ -10300,6 +10446,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10321,7 +10472,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:94b4e1dcd587f9cf1694e40be48deab879573a6af6484b2fe7a025fe0aad67c2"
+    "content_hash" : "sha256:01b6ab6e424ba4cc9edfb70aecce4af84c61a1add6c1bcdb9c65025c61b4a86d"
   }, {
     "kind" : "slice:bragi_insights",
     "id_field" : null,
@@ -10338,6 +10489,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10379,7 +10535,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f536d3fb3d593edbeef94d83238a2991bdb1a4bf43bf75fa23ec70812d32c05a"
+    "content_hash" : "sha256:967bfabcdc648613e924613df26966306a18bd8c4f6f5e8e75ace3d58be8ad68"
   }, {
     "kind" : "slice:bragi_integrations",
     "id_field" : null,
@@ -10396,6 +10552,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10441,7 +10602,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:3f888cdbdbef3c71c153db3bd08dc2ab8035b975519d3ae3217eeaf19fda8363"
+    "content_hash" : "sha256:bee08faf9450dd563d5288651957729cae3881d15b5e20ae3027057856a97901"
   }, {
     "kind" : "slice:bragi_keys",
     "id_field" : null,
@@ -10458,6 +10619,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10519,7 +10685,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:477989fcff5a74c82fa535ca6a02043459e51ca5612ea066ecc24daced0d4d5d"
+    "content_hash" : "sha256:b9b963074c80e70f2f58eccff3b4f741ab2f2679bad2fa6049c181708a996745"
   }, {
     "kind" : "slice:bragi_overview",
     "id_field" : null,
@@ -10536,6 +10702,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10557,7 +10728,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:e8a89fe25a51decf79fdf85424cd3711b68ef11ef710d7592af275ca38fe4b4b"
+    "content_hash" : "sha256:669fcace8298fe08b4117ace11cc8f97fb1c1bac04c181e7c4be238945e6c15d"
   }, {
     "kind" : "slice:bragi_pages",
     "id_field" : null,
@@ -10574,6 +10745,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10599,7 +10775,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:b3ef6fc2ed433743614a8173caa97a245058c4554d09f730e5f3ef3adaf697f0"
+    "content_hash" : "sha256:2fbe1243644953007933cd761de3325fbf31258591d04a34ddf07f79da0ef9c9"
   }, {
     "kind" : "slice:bragi_publications",
     "id_field" : null,
@@ -10616,6 +10792,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10725,7 +10906,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:b5e4b406dd33208c457afaba24609ca614d2ad4d1d3d15c96e2ea406334b134f"
+    "content_hash" : "sha256:69a93c63546dac89429a3f5f14c5005c56c5192365a82dd081c9ebd3c8629a74"
   }, {
     "kind" : "slice:bragi_rubrics",
     "id_field" : null,
@@ -10742,6 +10923,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10771,7 +10957,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:648da9efd98d7ee7eeb497c82a7b07b2366693bd8ea6ba3b28dac20948f01e4e"
+    "content_hash" : "sha256:281584c06a33ebc32dc974c2bcd3aff5f3c857fa280ef20d0c13ff64695f7c08"
   }, {
     "kind" : "slice:closed_sprints_with_open_tasks",
     "id_field" : null,
@@ -10788,6 +10974,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10821,7 +11012,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:2ac4749b8f984846051c5b71803163d5dc0ec7afadcb4981080015d82e00639c"
+    "content_hash" : "sha256:e84952368f968deca4f46a32a52e21d4c7586b78204e7fb128fddcaa7bc5f4ed"
   }, {
     "kind" : "slice:closed_tasks",
     "id_field" : null,
@@ -10858,6 +11049,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -10919,7 +11115,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:e2cfac8d51a683a0a765645d2d9653c9ee911e438159ea481c4428f4087497b9"
+    "content_hash" : "sha256:c6e7ce346d4da5c045d1220b16f96a137d130e6f906ee5c54ab92ba76bfb03b1"
   }, {
     "kind" : "slice:component",
     "id_field" : null,
@@ -10941,6 +11137,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11029,7 +11230,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f8197ea679ed64f07eee43a63ec0a79083496453661c47e9de8f7ac45c4de84c"
+    "content_hash" : "sha256:4297d1bc1a9443e0f3e0559f18383267dc0eb8f51e6b34b44a724daa5e5436b3"
   }, {
     "kind" : "slice:component_sprints",
     "id_field" : null,
@@ -11056,6 +11257,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11112,7 +11318,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:09659be3a3d3367b6dc3b030183a9b073d1f69634c24d8e01acae2b61e4a22c5"
+    "content_hash" : "sha256:eb3d5f5ae15379576246c26a3920dd2a7c8ff45e377f4cc7d6b455a7b7e9b2b8"
   }, {
     "kind" : "slice:component_tasks",
     "id_field" : null,
@@ -11134,6 +11340,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11186,7 +11397,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:989ebf76240ab738eef45202ff4c97b9c392c41b5e763eb59fe1335461ace218"
+    "content_hash" : "sha256:e146f385527cf55e6eae782636c7b1ed6c5c93691797c818780ed32c956f0c90"
   }, {
     "kind" : "slice:components",
     "id_field" : null,
@@ -11208,6 +11419,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11289,7 +11505,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:8bac2ee3e2a7af798666dd36ff90bbab786d7a70d893d010b714a860b0651500"
+    "content_hash" : "sha256:172497526111ea9966acfa2b39573c2dc8d1b2fe0346e19c46b5e97ef9e6cff9"
   }, {
     "kind" : "slice:components_in_area",
     "id_field" : null,
@@ -11311,6 +11527,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11343,7 +11564,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:b42e9663c43e0bb283758e364d9d99eecf1f0c2157dc416fcad1101ad0ccdf09"
+    "content_hash" : "sha256:65b30a007ca9974fc3e77130c9f9f55cc4e1e93c7cef5ccb1af12b9b46e4b7bd"
   }, {
     "kind" : "slice:decision",
     "id_field" : null,
@@ -11365,6 +11586,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11461,7 +11687,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:085f688d147041275b58555cf26885d6797a79b467ec6d97022314c05bbe3ec7"
+    "content_hash" : "sha256:d05143c8f8996cb96efcc2bbc4f31a7d5199edaf109ff0cba3e2423974715283"
   }, {
     "kind" : "slice:decision_history_all",
     "id_field" : null,
@@ -11478,6 +11704,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11511,7 +11742,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:e9184b917f1d78819a10874b3c3cc3f818ebe7067ed70a766a03169cbfd25d7d"
+    "content_hash" : "sha256:95aaa3bca366a323c59b9a838f9826747cf0c4b29fe784c7ece85538ffd10052"
   }, {
     "kind" : "slice:decision_status_versions",
     "id_field" : null,
@@ -11528,6 +11759,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11561,7 +11797,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:c3ca584b1bcca9c5077f85937d5bc95b3c54c8e24bee72ce04f76062b13af0d1"
+    "content_hash" : "sha256:c5b08874c5c21d332f4b549e2e57743717d2706aa15f8284f42983a948db9420"
   }, {
     "kind" : "slice:decisions",
     "id_field" : null,
@@ -11578,6 +11814,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11635,7 +11876,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:b4f6f6dc7b87f08dfe02eef3dd6b3517a35a2c016a1757e12bf9ca788492d0cb"
+    "content_hash" : "sha256:f7f7ae0a9cd7bd60e78e9a308b5845726456c680319becca2f116c914a95df9c"
   }, {
     "kind" : "slice:decisions_of_adr",
     "id_field" : null,
@@ -11657,6 +11898,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11705,7 +11951,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:83e1660c20525184fb0be9de6cd11f28f9de80345aad15e7e9efb532da4cbbc7"
+    "content_hash" : "sha256:363201e6a513018a03cfd3facd54a80ca697e721105c80ec7955201c18d138cd"
   }, {
     "kind" : "slice:deps",
     "id_field" : null,
@@ -11732,6 +11978,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11781,7 +12032,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:df529803d3ed00bab5748f56c4e09ffb103ebcb006c5f3f64604088ccc3da504"
+    "content_hash" : "sha256:d7c12858403f51d4df8608c08606aa3aa1f54abe6b58344920b876449790fc6a"
   }, {
     "kind" : "slice:deps_of",
     "id_field" : null,
@@ -11808,6 +12059,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11852,7 +12108,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d2fced85bcbe5ecd8ad1ec213958204c58425c42c7d5af208647c7bab062e97e"
+    "content_hash" : "sha256:bebbe9a69a86ba4fad58d2d783cdcc9b8bd8949206935818cf483c7df7125943"
   }, {
     "kind" : "slice:dictionary",
     "id_field" : null,
@@ -11874,6 +12130,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -11931,7 +12192,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:7fc38d879bede16d129cc7b198fe17c7cf29c6bb156310e8c698dadc59fc4361"
+    "content_hash" : "sha256:9c8c1e3ca2b4039694d0661d3531f13194b371fe339597dae7432dde21f77a83"
   }, {
     "kind" : "slice:doc_by_id",
     "id_field" : null,
@@ -11953,6 +12214,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12053,7 +12319,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:664edcc33fe0c75414248077dfe82fd8e93b2f1ebb7799b3626859898d21537c"
+    "content_hash" : "sha256:976fcc36f86bf9389936034b90de00e3832183681675410f6dc06edf0578f055"
   }, {
     "kind" : "slice:docs",
     "id_field" : null,
@@ -12085,6 +12351,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12162,7 +12433,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:7a967d7408dc28a3af06e2e92ca26bd7c7d2bfb0c33ad392e9bafafb48e7d6c4"
+    "content_hash" : "sha256:22a1f27690e1c74a56a22a08aaa714f992b7b1bf3a5eca11047848c65a8fcde6"
   }, {
     "kind" : "slice:entities_without_project",
     "id_field" : null,
@@ -12179,6 +12450,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12204,7 +12480,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:e4f84d08205f9d237d9b65782f9026a522f03538574e2bea8fcab7da01a9a7e6"
+    "content_hash" : "sha256:4dfd638ae19276bc7ba2522a052ffc0ecce917e937a8482769ea3d40a8962135"
   }, {
     "kind" : "slice:feature_vp_analytics",
     "id_field" : null,
@@ -12221,6 +12497,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12294,7 +12575,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:4f5473f4054e488896138b8c5c732eb7a561a74d683d5f796b0d943f66d56570"
+    "content_hash" : "sha256:cb0367953755391e23cecce2af435205db05dd5ed48f8fae0eb4b8d4c16c1651"
   }, {
     "kind" : "slice:features",
     "id_field" : null,
@@ -12316,6 +12597,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12421,7 +12707,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:93b7b82b4047147b719a357c49543de4ad7ff25c5a8a3a0115af9cba725b2c0c"
+    "content_hash" : "sha256:50271c9ebe25e6fef2cb526b038adf66f87310ce07932bf4e659f66068c67b34"
   }, {
     "kind" : "slice:files_of_task",
     "id_field" : null,
@@ -12443,6 +12729,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12479,7 +12770,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:3c0883a31ee78b2e2f4cd02a22ce2560acf4ca55985f36879b0b27b0aea8b20c"
+    "content_hash" : "sha256:68e0ca8b75758f2659aaf45f6ee7f8501bd3dc08fee6c87a4000d9664eeea1c1"
   }, {
     "kind" : "slice:finding_by_id",
     "id_field" : null,
@@ -12501,6 +12792,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12537,7 +12833,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:df8b515bdf92167648f60ecd1b89929ddb6f16db4c1c25195af7b86d22831095"
+    "content_hash" : "sha256:c474da64c9ca530c6a7ee3b7449958c57acc4be6e1810a60963abe5ac2c22ea3"
   }, {
     "kind" : "slice:findings",
     "id_field" : null,
@@ -12559,6 +12855,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12588,7 +12889,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:827ae75e3897ae8b1e9dc3d8f89d1fd05576b4c060863f28c8d8148d2db08d5b"
+    "content_hash" : "sha256:9863ea479c1f189a1f42adff7f494458d1af43dda04d0ee7d4faa0bf90eb5745"
   }, {
     "kind" : "slice:gain_by_id",
     "id_field" : null,
@@ -12610,6 +12911,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12650,7 +12956,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:aade4c8946b8323fc0714533469f2bf151b62a21ec1e9b6dc7b18cec24923ca7"
+    "content_hash" : "sha256:0e92c012ef8c452249e436a17d5e7782d4ee891313eb48ba7ce44286b4ecf731"
   }, {
     "kind" : "slice:gains",
     "id_field" : null,
@@ -12672,6 +12978,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12733,7 +13044,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:51498cb37f260638627923c8a7f773ca0d2af8df3843867bbbd6c204795056bd"
+    "content_hash" : "sha256:64ccef2bf5edf9079e8052a8dbc3041c5eabdf085d1c3e10f0dfd408cd99bb8f"
   }, {
     "kind" : "slice:gating_questions_of_task",
     "id_field" : null,
@@ -12755,6 +13066,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12787,7 +13103,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:4ffb5d6da6447f74cbda9da3749f8ea56172f986259c395aeb80394e7ebcac20"
+    "content_hash" : "sha256:98bdf881002bd606d69dd67a7f8914eab8eb34b22d8c7fcf1976609d77bc4a2f"
   }, {
     "kind" : "slice:git_projects",
     "id_field" : null,
@@ -12804,6 +13120,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12853,7 +13174,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:5e2481a09194080c7ef96efab83325ff21ed055e8f6e90f1521d533f862c2773"
+    "content_hash" : "sha256:d5c62fab4c0db46d6eff658740e3d8c551df1ec0d3800c8cf2646697160f93bd"
   }, {
     "kind" : "slice:history_dict",
     "id_field" : null,
@@ -12880,6 +13201,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12932,7 +13258,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:4d5d5ade8b0f29cd1b1537f593e6105273d131b195f292fc8c9e031b5d2b90aa"
+    "content_hash" : "sha256:9d1f233ab88fe0ed27d3187cb7892bfdabb76a8c67be0d56ce827540ef415f4f"
   }, {
     "kind" : "slice:history_hygiene",
     "id_field" : null,
@@ -12949,6 +13275,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -12982,7 +13313,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:a2986d4df1f4c202b8d0072628b7abc3c84eca08762a5ee3ec3e29ea3990ae74"
+    "content_hash" : "sha256:99a7f8b46c99a5e727c7fc16dd6147583d78179a2d2f7ea2d549fde53e376fff"
   }, {
     "kind" : "slice:history_sprint",
     "id_field" : null,
@@ -13004,6 +13335,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13072,7 +13408,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:a37def3bf70a6f991d3649a15b7d7c9307c131ead799a727c7fe9cf8eb99119a"
+    "content_hash" : "sha256:adea764751ece06b88dec4dd7ca4fb771200c7f31d605f92c1856ca0082c4d4e"
   }, {
     "kind" : "slice:history_task",
     "id_field" : null,
@@ -13094,6 +13430,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13158,7 +13499,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:4adb6aa1a20f1424819450024f4254418e26bd542f4a1a0093d66b2ba6efdbef"
+    "content_hash" : "sha256:d2834c0532bd450c33e8ee6988eb8473e6ab4c12c299261bed70a7bdea38b0bf"
   }, {
     "kind" : "slice:invest_profile",
     "id_field" : null,
@@ -13175,6 +13516,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13220,7 +13566,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d5335a0ffe4c77cf8a3aab5cab84eda440aa64829f262a7b31b6d770340f7a58"
+    "content_hash" : "sha256:3c199442451c90aee84aa153e3aa083e63819d2aa228ab475254a8deeabdf621"
   }, {
     "kind" : "slice:job_by_id",
     "id_field" : null,
@@ -13242,6 +13588,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13282,7 +13633,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f0c89b0fac96932caa85482b675b2df70e76e53832b2e98549292d92bce7fa37"
+    "content_hash" : "sha256:4dad21dd222382fdba3e577acd03ce15cf43b2f89ecec46832be126e63a29398"
   }, {
     "kind" : "slice:jobs",
     "id_field" : null,
@@ -13304,6 +13655,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13373,7 +13729,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:3355735898dc53e0c273f11c83716c95e10e6038d0505a654aaab78ae1cfe998"
+    "content_hash" : "sha256:fe90486e69d23791cc27aae1f6334249fc848b4b3ad487a0b11b96fa6448535e"
   }, {
     "kind" : "slice:kind_by_id",
     "id_field" : null,
@@ -13395,6 +13751,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13431,7 +13792,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:6cd75384009bb4dea87fd69df61edcb18b80114be0147c5e42d01e8e3db37990"
+    "content_hash" : "sha256:14961185b260b2f872dce9f9420a3f298b7628dc675a90e5506534d015d5b44b"
   }, {
     "kind" : "slice:know_kinds",
     "id_field" : null,
@@ -13448,6 +13809,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13477,7 +13843,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:319d66d38ed50869a26a638baceef2c9a695be4ea780efdd746a6b077138732a"
+    "content_hash" : "sha256:5bdc3b5f3aa08002b6ca16d3ddc1e63935c7f911f3d5415518fb3e67d2cea191"
   }, {
     "kind" : "slice:logins_by_user",
     "id_field" : null,
@@ -13494,6 +13860,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13515,7 +13886,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d1a1ea9a7f7482950235f97e9dd2d01694707b07380a60b60972f54e3472fa7a"
+    "content_hash" : "sha256:8e0aea83791006c589ecb6a0b396b23a264223c7dc02ca49a2f19222bca3e41c"
   }, {
     "kind" : "slice:logins_recent",
     "id_field" : null,
@@ -13532,6 +13903,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13557,7 +13933,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:9a5892a331ab5d0e6ca354add6aa8c40531fd7b1f578eb18052769ec86d268c9"
+    "content_hash" : "sha256:c7359440086ef53c2d1887860adeca5a72ae96649a0becabc3e8131403dda6a0"
   }, {
     "kind" : "slice:machine_acl",
     "id_field" : null,
@@ -13584,6 +13960,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13657,7 +14038,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:4cc65d27eb933e5c2b5e343b57e1cb6b1fa3b3628ccf88d4a9ca942a772425b3"
+    "content_hash" : "sha256:6fee42db1ace4b4cce0334e94c0884f6d8392083049225049892ca5cc74480b2"
   }, {
     "kind" : "slice:machine_by_id",
     "id_field" : null,
@@ -13679,6 +14060,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13735,7 +14121,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:0da78325c81333306cb22713a7f46639826b913c36ab4f7c5ecd9905977bb586"
+    "content_hash" : "sha256:db0e34bb73626e8ea73a28d7702c5e21a27858d31c596c450153b46c143c44f2"
   }, {
     "kind" : "slice:machines_graph",
     "id_field" : null,
@@ -13752,6 +14138,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13805,7 +14196,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:fbacb04194db7b5ba3f83b18029f6108cd46eaeb0a0b09706b305d7a610db88d"
+    "content_hash" : "sha256:468d099d24b3d23a20b51d8969ae3e5ca61627ab570f4271d82f4b6933214b85"
   }, {
     "kind" : "slice:mcp_connections",
     "id_field" : null,
@@ -13827,6 +14218,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13852,7 +14248,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:880b94f5767b84aaaefdfe7b7b972132a497984f081ac2e25c4b15b992418bd9"
+    "content_hash" : "sha256:cb3969cf7c35ef209f100ef1f2098ab88f6f0fd65f7058d1232a678a80844ecc"
   }, {
     "kind" : "slice:mcp_failure_rows",
     "id_field" : null,
@@ -13884,6 +14280,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -13925,7 +14326,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:90a01eb1f7ecadccdf7bfad96cf0c77a72d9c01e8828af24f03735eecd98f801"
+    "content_hash" : "sha256:c3e43ce483a5d8253bf843aaeff3ee6ddafaba5551c220b40f26eb673e666bb8"
   }, {
     "kind" : "slice:mcp_failures",
     "id_field" : null,
@@ -13960,6 +14361,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "caller",
@@ -13982,7 +14388,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:4be99cf8c44157128e3326ca3e3a20127e31dac7a1195d98d27011c6121f501c"
+    "content_hash" : "sha256:7535a8097ca2377ef9a12085c90e48585a608a245482d027c595b54ae5502e6d"
   }, {
     "kind" : "slice:milestone_by_id",
     "id_field" : null,
@@ -14004,6 +14410,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14052,6 +14463,10 @@
       "name" : "products",
       "required" : false,
       "layer" : "slice"
+    }, {
+      "name" : "components",
+      "required" : false,
+      "layer" : "slice"
     } ],
     "links" : [ ],
     "guards" : [ {
@@ -14064,7 +14479,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:5c63b328374195c3c4a44626b855fc1e574936b0d115669626a1d8ccc1f5919f"
+    "content_hash" : "sha256:0f8f7c110bae51bf97f3f7a928f288df252cb560ca296cd03225006abe2a0d32"
   }, {
     "kind" : "slice:milestone_sprints",
     "id_field" : null,
@@ -14086,6 +14501,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14130,7 +14550,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:615f4a70326867ca05e58319cd0ca3fc8ca1db78c41994590bf981897d20fece"
+    "content_hash" : "sha256:5e3f04e0bba86df92ff278be05d73c521f7db2cd8bd5964a43c389fda621f227"
   }, {
     "kind" : "slice:milestones",
     "id_field" : null,
@@ -14147,6 +14567,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14208,7 +14633,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:ae4a25ab34291d47a6eb8d9097f026674e50eb22af6dd6c4bca263a58c99e778"
+    "content_hash" : "sha256:499a0e594dd2028cbe322d9bd1edcf779b6eda2fdaa1e56e701f15e422a069b9"
   }, {
     "kind" : "slice:model_config_history",
     "id_field" : null,
@@ -14225,6 +14650,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14266,7 +14696,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:52930a701dcbd2073d38f7feedc92c133bf08154e77af2902ff52dcb63a5ba1f"
+    "content_hash" : "sha256:d5a6775884cf0f959264dda41917a02cb6567fa8d361dd1f1ca7aca5e20c0257"
   }, {
     "kind" : "slice:open_questions",
     "id_field" : null,
@@ -14283,6 +14713,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14384,7 +14819,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:99d916fa0766a8d17c68aa0c1e0f61de577ba2226c87041bab38a8e0ae8104e7"
+    "content_hash" : "sha256:5e8b60fe29afee3fc47fcc02a3572c7f3fa758ed40fb340018b2e94a6a28fcbc"
   }, {
     "kind" : "slice:open_tasks",
     "id_field" : null,
@@ -14421,6 +14856,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14482,7 +14922,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d5f4d9a8bd0233b184319bd6c9f8107581c4e1cdf6c2af92165d6767488f4969"
+    "content_hash" : "sha256:352d873ae9caa314f64e64c4ac7bc690d86fba90e26912abf664c76f5593437d"
   }, {
     "kind" : "slice:org_by_id",
     "id_field" : null,
@@ -14507,6 +14947,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "org_id",
@@ -14528,7 +14973,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:872b8048f1755753aa393798c5a8a2094954c9ffc2a2ec26f46138a29c9465e0"
+    "content_hash" : "sha256:4484d0eea15f6965e4291afa5fb12df1be83136901cfc9f55706719853a27cbb"
   }, {
     "kind" : "slice:organizations",
     "id_field" : null,
@@ -14545,6 +14990,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14566,7 +15016,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:e1a1b49c7b4f854ef294a06e1492a8434b16a96a3bdaf466d59d87573115fdb9"
+    "content_hash" : "sha256:adb176d576f62ef67fa9fa49dd21575607c27206b0c2d646440b807d11be7181"
   }, {
     "kind" : "slice:pain_by_id",
     "id_field" : null,
@@ -14588,6 +15038,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14624,7 +15079,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:7fa5cb5d472409234889f943f46895bf9c1f0528e4c804f08cf166dc7971161a"
+    "content_hash" : "sha256:b743d75e9dbf97f75a57f51099375934c3411efd53d18b15e4cb26960cea03c5"
   }, {
     "kind" : "slice:pains",
     "id_field" : null,
@@ -14646,6 +15101,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14703,7 +15163,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:71d63bf9993c26ee1af5b2d9fa90ffda61c9d3f780a035928a5dcd5c493056c0"
+    "content_hash" : "sha256:3406d970fdf3b32e2094ac922b9bddc883a6f2aed27f9a12405435bfeadd254f"
   }, {
     "kind" : "slice:phases_of_sprint",
     "id_field" : null,
@@ -14725,6 +15185,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14769,7 +15234,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:11059ad84f5a68871be8a963eff9adec68ff0ad9375270432f20e68bed6d65dd"
+    "content_hash" : "sha256:a4d74c306e27c3f0b452bb8563390cb23d754b77444c9969188d2e493b134d70"
   }, {
     "kind" : "slice:plan_checkpoints",
     "id_field" : null,
@@ -14786,6 +15251,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14815,7 +15285,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:0e0472a7862a51e3768b5503f4d6270c56512c57c0682c78d40d77962156033d"
+    "content_hash" : "sha256:3386bad45c8cf98d6825b65aa7e748cc4e3cf93ec156d069f4fac2995e6869bd"
   }, {
     "kind" : "slice:plan_config",
     "id_field" : null,
@@ -14832,6 +15302,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14857,7 +15332,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:ecec8d8d5107f6cf9bac03643b9eb41117fa5e921cd57eb2c6366388c9309cf5"
+    "content_hash" : "sha256:c2194a5682bb47e610fd27c16bdf5fa79994441d9ff3a35a08f47945e57ef034"
   }, {
     "kind" : "slice:plan_sections",
     "id_field" : null,
@@ -14874,6 +15349,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14907,7 +15387,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:6474c29f1bec6d53c25850c589ba95b612a76cc71046fa3a293c62aea399d583"
+    "content_hash" : "sha256:3b4f9b73c9f49a903afb1e8f461f9f39d4fd1f8f2a6ef0d81b31a5c285f68229"
   }, {
     "kind" : "slice:plan_tracks",
     "id_field" : null,
@@ -14924,6 +15404,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14949,7 +15434,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:21e1fe5b0bee0cd1220ee2050e2f903f3941eaee369a65704a6f22edbb8c8c64"
+    "content_hash" : "sha256:2a3fe52374037acdbb10d8cf4c8e53640187488a1479f37eef355f0a0c716621"
   }, {
     "kind" : "slice:plan_versions",
     "id_field" : null,
@@ -14966,6 +15451,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -14991,7 +15481,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:b212ad00400e48595abbb16a51cefced35c977af65cf58c0a0510d64f41d3798"
+    "content_hash" : "sha256:859b4529ca9f590b2adb10ccf9df0bd8b23e7f0fbd61c8792a71f64c4f2951f3"
   }, {
     "kind" : "slice:pr_by_id",
     "id_field" : null,
@@ -15013,6 +15503,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15081,7 +15576,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:0db6894e3a6091af75214fb620dcf4462b2ae42c222b9c470be5294314f703be"
+    "content_hash" : "sha256:314d90e44df2c11ce81e38d79f99c3ebb17ba2d2ed609f1c35f6ce2aa02556b2"
   }, {
     "kind" : "slice:pr_ship_lag",
     "id_field" : null,
@@ -15103,6 +15598,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15144,7 +15644,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:90f35b2da1fbd4fed95793e7f02393c1d2ea3878da63c8a596b99062728f516e"
+    "content_hash" : "sha256:af2b67d9bdf6092a4e0349a7f17741d74eb677e55b95358ba33067dbfc0453d1"
   }, {
     "kind" : "slice:pr_tasks",
     "id_field" : null,
@@ -15166,6 +15666,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15214,7 +15719,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:92c97274752f65575cc5a294157304c6e681543390a3826ee9d1868c8aa8a1c4"
+    "content_hash" : "sha256:f47bda12183bd0a23aafa316b1f323b968805f998745f9a7eb77ff4a9002835b"
   }, {
     "kind" : "slice:product_actors",
     "id_field" : null,
@@ -15236,6 +15741,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15264,7 +15774,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:44e90b2958a1c5740cd2785fa52155fda625d486876f21aa4a2f46af060cb951"
+    "content_hash" : "sha256:8a02a9dfa4f9f5682d15b11a477d7a0981285ea8f673cf285556d0d5c4e7899f"
   }, {
     "kind" : "slice:product_by_id",
     "id_field" : null,
@@ -15286,6 +15796,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15366,7 +15881,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:21d96ebb778dbb43b6dd55777c0ac881fcc201877f3a8cbdb26a1c7b49e77a6e"
+    "content_hash" : "sha256:1e1e2e52177aef7f458bacb740ab36cc23628a894e9ba34f9671bc9c39cd8c22"
   }, {
     "kind" : "slice:product_features",
     "id_field" : null,
@@ -15388,6 +15903,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15420,7 +15940,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:e57ebd5eee2366d5fe7289fdb1fb46cffbbe2496568b8de1320a130bd93756cf"
+    "content_hash" : "sha256:50a16975f655ad518c212c441bcf512521d3f9c0b4429242eeb1cf9e0aef537c"
   }, {
     "kind" : "slice:product_gains",
     "id_field" : null,
@@ -15442,6 +15962,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15470,7 +15995,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:c7dc0a40540e84daeb98461562999e99252edadae4258b6aab55fe7b4b722048"
+    "content_hash" : "sha256:b460a6a7f3de8d4c4e2baf8ab990a371b7242f4a64e3c2efdd7981e9d8523141"
   }, {
     "kind" : "slice:product_hygiene",
     "id_field" : null,
@@ -15487,6 +16012,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15520,7 +16050,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:a8503f545c7b37ea7906acedd9f0352707c4942fdda8278327a2fe1a8e30db91"
+    "content_hash" : "sha256:605b9d75fce3353f446d1ff13b524874f8c88968471297624918fb8a0eeb16ae"
   }, {
     "kind" : "slice:product_jobs",
     "id_field" : null,
@@ -15542,6 +16072,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15570,7 +16105,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f50f2936aa3f9830819e4180b35e5746027d520c43560ad2ad8c66549aa1d3c9"
+    "content_hash" : "sha256:949cfb34af7815510927f496d2ed29e1ad3e0305f4257d1c4e4f80cd712b4110"
   }, {
     "kind" : "slice:product_pains",
     "id_field" : null,
@@ -15592,6 +16127,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15620,7 +16160,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f71d30f058959f1bc2be918293faf5ae8b3b7226bbe1f58176bac72f433de9d8"
+    "content_hash" : "sha256:5a48676214d5f08123f24dda2e1e6a4220a7c1ff67b7f5527ed883782e08ab4c"
   }, {
     "kind" : "slice:product_sprints",
     "id_field" : null,
@@ -15642,6 +16182,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15674,7 +16219,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:981237ad92d54af830f400016ddbca6d86ed1b0d528825e212192643cfe421d1"
+    "content_hash" : "sha256:f2799c592c84ddc08069bccda8ae84986fa015207a36a754e75d48178091b38e"
   }, {
     "kind" : "slice:products",
     "id_field" : null,
@@ -15691,6 +16236,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15768,7 +16318,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:a402c91b564d8b3299512c0f874911092a3d536b94bfd5094313833e87d79a15"
+    "content_hash" : "sha256:7840d8fc5e885b60f6f546041a73c09e3044d3b0fb73d6664f01731b6f08e274"
   }, {
     "kind" : "slice:project_actors",
     "id_field" : null,
@@ -15790,6 +16340,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15818,7 +16373,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:404a39ed48f92805a75fdc1b23ab6528412ec489cd6771005d49fe27f2471a58"
+    "content_hash" : "sha256:de966c48c23b1218dec3d50426841ebb6d9d88f78a8cb3ee16746e634c650b8c"
   }, {
     "kind" : "slice:project_adrs",
     "id_field" : null,
@@ -15840,6 +16395,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -15868,7 +16428,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:413feb5719401704415d5e71dd94ecdb991a5e0d34ce8cbbc4902b2c97199585"
+    "content_hash" : "sha256:cf0b451f3bacc2f05e82c00a1993af24032a18cfc5f9ce35c2c5da32742392f6"
   }, {
     "kind" : "slice:project_agents",
     "id_field" : null,
@@ -15893,6 +16453,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "actor_id",
@@ -15922,7 +16487,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:8468c870705359aae1532f7a70be9d91efab872d24c7eedc280d76d36a86cbbd"
+    "content_hash" : "sha256:558279ccc063db11a24925f20006f3b30ea148007f36667baf415cf89f3443d2"
   }, {
     "kind" : "slice:project_bound_agents",
     "id_field" : null,
@@ -15947,6 +16512,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "actor_id",
@@ -15976,7 +16546,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:aa01e4d6626b29e63bcc5ca710a5bb5770f9148c848296d8ebe8262ab2d23e00"
+    "content_hash" : "sha256:c32b6e41f4e03893559b5b72f6f081edc6a8ea837eba78a28b6a19522a8144ed"
   }, {
     "kind" : "slice:project_by_id",
     "id_field" : null,
@@ -15998,6 +16568,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16074,7 +16649,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:73975cf0b078df8961ea23711b3242092c6e02debc790a5e930aed5f1bd1d22b"
+    "content_hash" : "sha256:7f748b974d4dd48d40fa58305b324d86f948d1ed523a3064e504b4fe3de1f222"
   }, {
     "kind" : "slice:project_components",
     "id_field" : null,
@@ -16099,6 +16674,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "component_id",
@@ -16120,7 +16700,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:3566f98fffb9603e43a5d994333e20603e8dab0f1d1a8e31e029ddc40b3bc4f7"
+    "content_hash" : "sha256:fb8c164cf77fa61d3a20309d66fbeaa50f764a5c06a4e9a06f81c53cb9c7d511"
   }, {
     "kind" : "slice:project_decisions",
     "id_field" : null,
@@ -16142,6 +16722,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16170,7 +16755,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:8bd656dec7e98120e0aabb8bb0eab256c14db6ca74cc448945efc517e5700f2a"
+    "content_hash" : "sha256:ef5bee65a2b55c9a89bc2d072166f569bb62ac3027878d205dde5baa39eb0b12"
   }, {
     "kind" : "slice:project_docs",
     "id_field" : null,
@@ -16192,6 +16777,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16220,7 +16810,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:37dbd312aeb55ded5fa793cab6b3abe1780ee28327dfda56a4c3c7fd081940bd"
+    "content_hash" : "sha256:020fb5a8125f70759a23a8d678501e82c020a44d7d2cc5c3c1c2eea5096d7791"
   }, {
     "kind" : "slice:project_features",
     "id_field" : null,
@@ -16242,6 +16832,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16274,7 +16869,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:7b6560b2f0591bb8f2e297c0b7bcd7f218072d4a0438b204502211d4e9519a8a"
+    "content_hash" : "sha256:02a819de03efd79869d012e89577f47314910b77aea57959f234a08eee7046ee"
   }, {
     "kind" : "slice:project_files",
     "id_field" : null,
@@ -16296,6 +16891,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16324,7 +16924,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d74c6f7e0befe356e0ac21fa4084acbb5dfdc8b25557a3580c247e72207ca1f3"
+    "content_hash" : "sha256:f7176ff68905c68d4cac610a81ddcd3aa2f7560992138436cebbaa25331f74cb"
   }, {
     "kind" : "slice:project_people",
     "id_field" : null,
@@ -16346,6 +16946,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16374,7 +16979,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:c35ff0c3b2159bcf7aebe09759e747d4c0d9fb3d656bcf7b1f1134da5a877814"
+    "content_hash" : "sha256:88da9af4bb9ce3902d6af0bc9c87ba591a9abf025e4802f53f96e80b16d1dfaf"
   }, {
     "kind" : "slice:project_prs",
     "id_field" : null,
@@ -16396,6 +17001,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16432,7 +17042,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:58d2595e8817bc7b991305ec076550c29d72684d445ae9e7576b0bf79a2a3c76"
+    "content_hash" : "sha256:62829a15047003055e444f565e4321a028682cef51b66e68f688b38a7835bed8"
   }, {
     "kind" : "slice:project_questions",
     "id_field" : null,
@@ -16454,6 +17064,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16482,7 +17097,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:bb6decaa6577312140ae34dc2f0594230c8a02eda9d1495277cb820f3d33824e"
+    "content_hash" : "sha256:825ba42f835e5581e136410d72580bcbfa09c45f6a1de8aed73651a984dba8cc"
   }, {
     "kind" : "slice:project_releases",
     "id_field" : null,
@@ -16504,6 +17119,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16540,7 +17160,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d8f2881d1b216b0256331e8ad3436df09fa9e8594c7d07c42fb9fecda96ade25"
+    "content_hash" : "sha256:6fd85c5c735fbf87eb6900a5787e60ef8dccb50f43ee6bee99b6357346dcf317"
   }, {
     "kind" : "slice:project_role_events",
     "id_field" : null,
@@ -16567,6 +17187,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16608,7 +17233,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:48dc79808890f1bea046b9510a5a54e25cf526f9c4279ef677f82ec3d62261f8"
+    "content_hash" : "sha256:68f3b8a56737d6249eb287c5d7867c4e3145e894c3c9d98edd2411c31ea9ac0c"
   }, {
     "kind" : "slice:project_runbooks",
     "id_field" : null,
@@ -16630,6 +17255,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16658,7 +17288,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f90754f2f9a5c7ca8e0a6df37915e1ac32a72c4dc2872cc2109b3ede73c74cfa"
+    "content_hash" : "sha256:60676a7fadbb2348e9e85b64fd88c5eb8418f814ac76fb87fb1683dd31aa980b"
   }, {
     "kind" : "slice:project_specs",
     "id_field" : null,
@@ -16680,6 +17310,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16708,7 +17343,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:8b1d5690f322e5e10b4c7f4f5fd2b60a45015c01fe6835aad7c79bafa6851c23"
+    "content_hash" : "sha256:68b630b635542304296653683966f7e4221a4b2fe187323df9ff1ad7360c4135"
   }, {
     "kind" : "slice:project_sprints",
     "id_field" : null,
@@ -16730,6 +17365,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16774,7 +17414,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:79e32013ff6c90b20040d2d15d5ae417d266089001e2709ae976e39bee8ca78e"
+    "content_hash" : "sha256:e2fc20a5b8f71f69db1193fbfba42eea820fdc3d11296a56f13da23a4e6eebca"
   }, {
     "kind" : "slice:project_users",
     "id_field" : null,
@@ -16796,6 +17436,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16828,7 +17473,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:7ff4ec31faeccd5b28539bdeb61c9a48dca51294919b77d57c80aed9e86ccee7"
+    "content_hash" : "sha256:ac7f0ea23a927236f95fce8b8bf17f0b9f981768c8eba9b29d848feb84dcb52b"
   }, {
     "kind" : "slice:projects_without_role",
     "id_field" : null,
@@ -16845,6 +17490,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16870,7 +17520,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:4af605ecc18615fd08f440f609ac8dad7c28f0a4074458a8b160947611fdde07"
+    "content_hash" : "sha256:6e0b143aa0865c087934b8ee3b64acc34731ceb72e595f199a18dceb91909bd2"
   }, {
     "kind" : "slice:prs",
     "id_field" : null,
@@ -16887,6 +17537,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -16956,7 +17611,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d3fe4fbde2aa633d0a0a486fa2dfb4fefff2932552a3611acf0744aa006e7014"
+    "content_hash" : "sha256:5148b764267bf9040bae90c6c0d457eabc8a2550012b636519d19aac37b70019"
   }, {
     "kind" : "slice:qg_job_tasks",
     "id_field" : null,
@@ -16978,6 +17633,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17018,7 +17678,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:8624ba1a775526ce88f2f323253f59d0c38efbdcdbba6d613cdd60b3b87ac521"
+    "content_hash" : "sha256:3fedf8c74ded0f38bf3a6034e6e4dfec727f06ccf4f171e7f3d702d65a3640a3"
   }, {
     "kind" : "slice:qg_metrics",
     "id_field" : null,
@@ -17040,6 +17700,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17084,7 +17749,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:b637f5a95025ca0c1f8f5b54a51e73dff3ffe23995eaf23fe2997caa8aecb636"
+    "content_hash" : "sha256:cb780987ef41c2b727272b76030df872f47fb174eea5b55ceaea310bf5ab013b"
   }, {
     "kind" : "slice:qg_metrics_latest",
     "id_field" : null,
@@ -17101,6 +17766,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17142,7 +17812,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:058cade64b594969d1fa86fecbf870405ebcbad382e95c545c54c161f6324d62"
+    "content_hash" : "sha256:0bc7d09e04b4ed2f39f7299b1d724d3bf49e78304bfd82db64d238b7114accae"
   }, {
     "kind" : "slice:qg_pending_recs",
     "id_field" : null,
@@ -17159,6 +17829,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17224,7 +17899,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:0d7786ea47dca46be279f92fd318fc305ae986ab2624888cc92c4b09d246412a"
+    "content_hash" : "sha256:b4e01e170d8ada1295c4a3243e0d5bd5888dd42d1518065e4d81f4856be900d0"
   }, {
     "kind" : "slice:qg_recommendations",
     "id_field" : null,
@@ -17246,6 +17921,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17298,7 +17978,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:1634081f4e5e3d455ae152dd19ce4969e44a05018b4a271ff4e7132e61f66d95"
+    "content_hash" : "sha256:97f45b071f8e0cc06ad4b5411eb19b11dba2941c6d1afdd0776200d2ea034662"
   }, {
     "kind" : "slice:qg_routine_runs",
     "id_field" : null,
@@ -17315,6 +17995,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17356,7 +18041,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:262420565a37bf858e9e8ffdb5cc4020402bd01cc91593e8188cfa37f88245ee"
+    "content_hash" : "sha256:e01e83cc9606e69964b26572593ecced937b4230dcd8c74bd64d78793dbc3a01"
   }, {
     "kind" : "slice:qg_run_history",
     "id_field" : null,
@@ -17378,6 +18063,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17422,7 +18112,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:9b0ad9714b8bd67ae7e80cf0edbd5d36c24c94678c7205d80c62392348cc58a0"
+    "content_hash" : "sha256:bc41bbd6ecb5aaa6d8d2473dfdc6657d1e11a2a349e66daad5cffb758e59664a"
   }, {
     "kind" : "slice:qg_run_metrics",
     "id_field" : null,
@@ -17444,6 +18134,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17492,7 +18187,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:8dddd3ddf3a5b7a895b3ae436494ae7ea104b4f7592e63b4a6cc97b9a0aa18d8"
+    "content_hash" : "sha256:e321c63fdde69c3a85edb91815690824a6dce7af01a0894f22c94d37ed5975d4"
   }, {
     "kind" : "slice:qg_run_outcomes",
     "id_field" : null,
@@ -17514,6 +18209,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17543,7 +18243,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:458e37006e13921a124058f102e618b805c9ccfef29ac211ae64bdcaca4112f1"
+    "content_hash" : "sha256:59e9252c94ca0509094138c299e9fd5d9bedf6dc0b9ffba9a7592662641dcf5a"
   }, {
     "kind" : "slice:qg_violations",
     "id_field" : null,
@@ -17560,6 +18260,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17605,7 +18310,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:771715c73d4495d423eaee8b4e905aa66f784aff6e717f52ca55e0e90412c63b"
+    "content_hash" : "sha256:85139657b319e24733c0681cd240fa60cc999471a68c94dbc5b4840d722d69de"
   }, {
     "kind" : "slice:quality_gate_by_id",
     "id_field" : null,
@@ -17627,6 +18332,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17699,7 +18409,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:a14a3d00c1ecb0963bc4d75e28d52061c4823ed48f4fbac22505783e32cdd14a"
+    "content_hash" : "sha256:fe0d84b6149ebd0284c71387c8d13f3635f11b7cf268fb3f0e9410ebf329fb8b"
   }, {
     "kind" : "slice:quality_gates",
     "id_field" : null,
@@ -17721,6 +18431,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17782,7 +18497,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:11cb21668185f159ad3285f992398b96618e16df1d48f4a7b214c4fd644c485e"
+    "content_hash" : "sha256:56c5070aa3f6b7a057343eeae31dcfb01d02191817c9c534e164830d4ddb560e"
   }, {
     "kind" : "slice:query_errors",
     "id_field" : null,
@@ -17822,6 +18537,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "slice",
@@ -17856,7 +18576,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:76c0a2333029d46ae6464db9afd426ba2bfb60e29ec0176f4aae436484ed2b61"
+    "content_hash" : "sha256:2dd93a8a51ecba14be6c339405cd617be9d413a1926d9205aed66ebc6a6c6fe3"
   }, {
     "kind" : "slice:question_by_id",
     "id_field" : null,
@@ -17878,6 +18598,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -17970,7 +18695,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:5e4189b0d650a500b01318187e0ce191c57764002f79c0678d537b8b662b536f"
+    "content_hash" : "sha256:cd700f488791253294a6c826c537d85f44282215105e387293082a2c5c2e8141"
   }, {
     "kind" : "slice:question_hygiene",
     "id_field" : null,
@@ -17987,6 +18712,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -18048,7 +18778,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:a862fd611675c983df5513a22bbd8c14711bac3e417d99b526fe4998c993cee2"
+    "content_hash" : "sha256:c215ff688cd7e36752f1abef44763bb18b28b1ee27d6a615b90c954def170cf2"
   }, {
     "kind" : "slice:questions",
     "id_field" : null,
@@ -18065,6 +18795,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -18166,7 +18901,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:9305171384fadcbeedbd7a0dc80690272cbd65bb8ebcb9e88e9f4ffa20fdc99b"
+    "content_hash" : "sha256:57752e60a58f2f78ef395dd38cf6fdcbfc926d2d967bbce42739da210d82148b"
   }, {
     "kind" : "slice:questions_gating_closed_tasks",
     "id_field" : null,
@@ -18183,6 +18918,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -18228,7 +18968,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:15bcbf0f82f0f4b675695e9dffd7ce86bef77ed81606332e6e616f0fcb2f7c4b"
+    "content_hash" : "sha256:5d0dd1e9aeb11e7e8b464fcff246cc0fb801565db1d917594c268bf17f586a13"
   }, {
     "kind" : "slice:questions_of_adr",
     "id_field" : null,
@@ -18253,6 +18993,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "question_id",
@@ -18298,7 +19043,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:b8cf1de3f89908fff105bb0b640da5345cb16695de9425bb3a87a2eeaae754ef"
+    "content_hash" : "sha256:781cbb6c6b8e41d955d438c2d62015ec5f6834c8ee30fae6160ce4878037eb55"
   }, {
     "kind" : "slice:questions_of_sprint",
     "id_field" : null,
@@ -18323,6 +19068,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "question_id",
@@ -18364,7 +19114,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d6cfdcbab6455530b4f6061446bcd8abd75325778acd071d9793ffd4f5e9e0c5"
+    "content_hash" : "sha256:5107f5d7d2eee98744306f3be3b9be61dd81119271071707d2d334b7ee6ed7fc"
   }, {
     "kind" : "slice:questions_of_task",
     "id_field" : null,
@@ -18386,6 +19136,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -18434,7 +19189,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:fde69b8399880d8d5647b932a96fee287cd881c69a850791a8ee2a5d102b4e46"
+    "content_hash" : "sha256:f64a90c6adeec796ce902128680348c8a2a75cd16ce03a261a4443f33bba8480"
   }, {
     "kind" : "slice:reeng_load",
     "id_field" : null,
@@ -18451,6 +19206,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -18496,7 +19256,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:02745ce5b77841c3ed8884dae9ec7bf96660a5626434b79793d37f74ad2b1c0a"
+    "content_hash" : "sha256:bb5e9fb98f11660ea6158e45ff69586272eea43a39548720754674cd2a7bfab8"
   }, {
     "kind" : "slice:release_by_id",
     "id_field" : null,
@@ -18518,6 +19278,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -18590,7 +19355,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:383f343ab91f4a45bf79f18ac729795312461820181c09b01e9abb28078414fe"
+    "content_hash" : "sha256:945991070761270b0d9715fd0dc29bfeff71a5ea0e8905b3be2f1a033c9aff6b"
   }, {
     "kind" : "slice:release_decisions",
     "id_field" : null,
@@ -18612,6 +19377,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -18640,7 +19410,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:55ebdef85b6d3386ce6dcf6b71c47edb98ff418df94aa026351567be1add2ba9"
+    "content_hash" : "sha256:26093b4c71ac65a915d8a9426ecffd07b0a122496b412120fd8a6154c35f70e3"
   }, {
     "kind" : "slice:release_prs",
     "id_field" : null,
@@ -18662,6 +19432,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -18702,7 +19477,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:b9a226e125c8386ec7a2359680ebc39392ecf3f688a718eb9add17c4d48572bf"
+    "content_hash" : "sha256:262ef97279730b721ce1af1fe0d5fd1f5342f4b971d301c2f43551a69e6acfc8"
   }, {
     "kind" : "slice:release_prs_by_tag",
     "id_field" : null,
@@ -18729,6 +19504,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -18769,7 +19549,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:e614cfff8937684063675dabce3022e55a649195589bfb2d75e4ad1dc8bb32c0"
+    "content_hash" : "sha256:efd1f3d1c14c134e28ffaccb2cee9a21a3a56b12c25c0e4c51e7ab7e750c8cc4"
   }, {
     "kind" : "slice:release_sprints",
     "id_field" : null,
@@ -18791,6 +19571,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -18835,7 +19620,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:3576541b4d2e829833316d7a0d39bcb5619ca191a59b8f22a223781ea97b4cb6"
+    "content_hash" : "sha256:92b05b8dd6727f6f9a22ab9a4d73feba3bb161aa98d854b60fd92c967dbdc7a4"
   }, {
     "kind" : "slice:release_sprints_by_tag",
     "id_field" : null,
@@ -18865,6 +19650,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "sprint_id",
@@ -18890,7 +19680,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:54360eea68deeee29666a979d21ae75203662c694e8338d33ba9a815af951959"
+    "content_hash" : "sha256:fab5b6d9a16b502f4709c5f81c98bd8aed74f303675c4195e46b48b47cf8c391"
   }, {
     "kind" : "slice:release_tasks_by_tag",
     "id_field" : null,
@@ -18917,6 +19707,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -18953,7 +19748,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:b782933bcb997185abe82f518750397d1755219c22410d76d09031c23a14a29e"
+    "content_hash" : "sha256:3533a259f7a96544a0d2f5cf93663ec54c5325fd7c5e5ad25438bf1e5fc1fe13"
   }, {
     "kind" : "slice:releases",
     "id_field" : null,
@@ -18975,6 +19770,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -19052,7 +19852,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:6fcf58410dbc82092070ceeccd55f14507fe054c5bf9c5d124c4755a40e60000"
+    "content_hash" : "sha256:72f66192f518a0a7794af5a08075fe6d2460132ef4d996083eb99f676180428c"
   }, {
     "kind" : "slice:releases_since",
     "id_field" : null,
@@ -19079,6 +19879,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -19119,7 +19924,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:8ddc0caf58c942ad91b93ec815223d347015df7bffe14c436f89515ed3698d37"
+    "content_hash" : "sha256:f774c55c571ba88d52f876ef132082ea24cbad01f17cff4837163b6eada60535"
   }, {
     "kind" : "slice:repo_by_id",
     "id_field" : null,
@@ -19144,6 +19949,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "repo_id",
@@ -19221,7 +20031,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:ae0046e668adf185be8fb676073d8060333c71110c21d9666845fd5333937b9d"
+    "content_hash" : "sha256:27aa7c0581cd7fd37cd32d224dd848d9dfbf8fce0d5457a07197cb59c90a1765"
   }, {
     "kind" : "slice:repos_of_component",
     "id_field" : null,
@@ -19246,6 +20056,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "repo_id",
@@ -19323,7 +20138,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:4855631a0cfc2264252bdd40f669f673f31c3ee4a65f9a29e45aa10625b5c30e"
+    "content_hash" : "sha256:a94c4e261cb4cb91079ea752ed3e0df17aac59dfde3cb7ae9a768ed9cc897b64"
   }, {
     "kind" : "slice:repos_of_project",
     "id_field" : null,
@@ -19345,6 +20160,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -19425,7 +20245,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:44648535591b98fae38be951dbb910f37b70108208b0cb51ba4929487a716b76"
+    "content_hash" : "sha256:55f255385364ffbef26ef24f74790d6e9bdefacb6e5112a0f00df5ff9f2dfc8f"
   }, {
     "kind" : "slice:repositories",
     "id_field" : null,
@@ -19442,6 +20262,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -19519,7 +20344,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:bdfe0d0ef0d2d0491bc91ba11c6a22a4c986399fc6872056afdbd2e3d9c6aa76"
+    "content_hash" : "sha256:b1701c83edc6cab814d511a3a12f4ec3009f22cca49db141b033af1995cd22e2"
   }, {
     "kind" : "slice:requests_by_caller",
     "id_field" : null,
@@ -19536,6 +20361,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -19565,7 +20395,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f6cbf734633ae45989d99ac5322332da0ce8c9740d0b5a8307691095446dc30c"
+    "content_hash" : "sha256:75ddb73b737d8dec4407e7d2885885e65dbfc008408051a9ca87c8234d1230ca"
   }, {
     "kind" : "slice:requests_total",
     "id_field" : null,
@@ -19582,6 +20412,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -19607,7 +20442,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:0cf62b4913c6ec2682de6073f02db919f3c697eb714ec885883d48f080e75b10"
+    "content_hash" : "sha256:40a2278c7ff949385ba8f8d97950eb7700ca0143900ba8c771e284f32570f256"
   }, {
     "kind" : "slice:roadmap",
     "id_field" : null,
@@ -19629,6 +20464,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -19681,7 +20521,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:050b53b84aa9d03ff1a8874d5f34ad3e69074407e498c3663433aad8cf5c4279"
+    "content_hash" : "sha256:135bf1b10ef3eaa4bed80107841319ea7e36e33958f0fe6fc589bf4373053fd2"
   }, {
     "kind" : "slice:roadmap_unplanned",
     "id_field" : null,
@@ -19703,6 +20543,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -19735,7 +20580,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:7ede594472d7a36abc5b54ee5bf261742418396512031f1dff2bc8170cdbe418"
+    "content_hash" : "sha256:087758cd046f14d621614b417da1696244a4895094b56649d5f4527c52e0b823"
   }, {
     "kind" : "slice:role_matrix",
     "id_field" : null,
@@ -19752,6 +20597,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -19781,7 +20631,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:95e3afbdb53ef410b7f7c9b8b6e78256e5aab01d08e0b85d9225e4e1b3575335"
+    "content_hash" : "sha256:dacffceb0d73c31f5dbf2059f3b6bccf943f48e5c60dd82dc8d56969336c0485"
   }, {
     "kind" : "slice:role_profile_coverage",
     "id_field" : null,
@@ -19798,6 +20648,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -19823,7 +20678,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:1e7ee4487add4101b381d8cd7435ce7e79898fddc8d91317ec2dd9c417fddfec"
+    "content_hash" : "sha256:dc26f68081e0ed3d99f4613363f2e6e3d4159a38ee59e0cd0701360bbf03f5cb"
   }, {
     "kind" : "slice:routine_last_run",
     "id_field" : null,
@@ -19845,6 +20700,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -19885,7 +20745,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:1a692f89161cdac9e3911bfef7869e01843d2ba1e7ec5eae0109599c703302ea"
+    "content_hash" : "sha256:bd50e2b53f6201fa5920ec75dc86bcc9f5043810b9322ccae786cac2a4040f0b"
   }, {
     "kind" : "slice:routine_latest",
     "id_field" : null,
@@ -19907,6 +20767,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -19943,7 +20808,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:6b311e50de6ab626b728999858e9b087417f64b292df977b23dcece084c3763d"
+    "content_hash" : "sha256:7dc3beae68b367a3097b4b5523eda68a461b85bfb17aeff2c8863fe999adce9f"
   }, {
     "kind" : "slice:routine_output_by_type",
     "id_field" : null,
@@ -19970,6 +20835,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20002,7 +20872,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:6ccb360f9e03cf3ac86316330e87e7365963921a81966717c4de940c8efc95f4"
+    "content_hash" : "sha256:bd3d51fae2022a1ba77859b8832e6b0c5ab6bcd4640660d8715199b87b6ca940"
   }, {
     "kind" : "slice:routine_outputs",
     "id_field" : null,
@@ -20024,6 +20894,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20052,7 +20927,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:c4ee971bac757f9f836904e185112b5c73b0e518cefe3ebc3a615cfac4daf27a"
+    "content_hash" : "sha256:dc836447da5bcfd44bcbee4003856a1b7f6e599b08103dc732f4700d0cffcf4c"
   }, {
     "kind" : "slice:runbook_by_id",
     "id_field" : null,
@@ -20074,6 +20949,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20122,7 +21002,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:0ab315d843e0b2257fb52e164fd7a172811b6fdb502e2d63bef564c8386ca654"
+    "content_hash" : "sha256:435fbd3f9f616eb096eae5728d6cd9f60e03e3e8a73e9ef8cff736454253e2ca"
   }, {
     "kind" : "slice:runbooks",
     "id_field" : null,
@@ -20144,6 +21024,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20181,7 +21066,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:72789a79773c4d0c1dcb25bbe67f8a933acba6373345fe8ac3ca93cf9663e127"
+    "content_hash" : "sha256:e575e26eee11ca7e8a13a81ae58e5af96148a4c67c53c5c7446289e30046d6bb"
   }, {
     "kind" : "slice:scope_orphans",
     "id_field" : null,
@@ -20198,6 +21083,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20223,7 +21113,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:860a5b43078e2fd2745adf6caad311d743a0b1727b04d16db6b20d83bff660b3"
+    "content_hash" : "sha256:e26db4a17d21ad228a5467f353861c4918265733b0d8bf558de43ce079334112"
   }, {
     "kind" : "slice:search",
     "id_field" : null,
@@ -20245,6 +21135,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20273,7 +21168,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:73777da4db3df3a617543cc6dded11ab3a87c99dd64142f559bab1a2c51dda1c"
+    "content_hash" : "sha256:da81c8f850f83f29f8ba7eb5ca80a0cdc63b9cc463633e504971ac820df86ac5"
   }, {
     "kind" : "slice:session_coverage",
     "id_field" : null,
@@ -20295,6 +21190,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20331,7 +21231,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:7bb2389b9e31bceb2217ca8c4b417a50d3dda9734f363cb48028982b605ba106"
+    "content_hash" : "sha256:47670f3f3ff095d79e39d1915d161e93a9d51150c50d1e4b15fa252c353f1ebc"
   }, {
     "kind" : "slice:sessions_recent",
     "id_field" : null,
@@ -20348,6 +21248,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20373,7 +21278,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:83ddf4de1acba39c27fb41dc126acf6eec6d6d1b7ce5028868251f77e2fb0913"
+    "content_hash" : "sha256:b07b3fa2765960fe3c37f13ff3d5a32eadca429c65b3d91173fc7cb1d12a96a5"
   }, {
     "kind" : "slice:shipped_dynamics",
     "id_field" : null,
@@ -20390,6 +21295,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20435,7 +21345,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f9b561d6ee9d31e8b96aee8269e247f029e744310a1fad67b0612bae9f12a3e5"
+    "content_hash" : "sha256:45386cca6fb72ab55675b73ac26059cb0cad4cdf146e91f8645c9082c3fdac2a"
   }, {
     "kind" : "slice:skill_by_id",
     "id_field" : null,
@@ -20457,6 +21367,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20521,7 +21436,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:8a3d914bb2ecd577df015308e62c76d95ebf16e54dd8c58bb7c0675b5443cbfc"
+    "content_hash" : "sha256:3f56d7e7c89993d3adba368e1160ad9b0672761fead10e08cd4a7d400ddff334"
   }, {
     "kind" : "slice:skills",
     "id_field" : null,
@@ -20553,6 +21468,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20610,7 +21530,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:48de8cb6dc02132ad19cfbc41ed5ce7c423f07c3971acb903a60b78db463ffc9"
+    "content_hash" : "sha256:2e490af1372020b7884c595ce159df6effb799b886cb7e43db82c3f65dad7495"
   }, {
     "kind" : "slice:skills_dangling",
     "id_field" : null,
@@ -20627,6 +21547,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20656,7 +21581,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:862577a84387d2765cb4bcef15e476f540feb480e4183755640faf20e33e7f60"
+    "content_hash" : "sha256:b796c3af2896390824f3cc141ca80c4500cff299b067ed5458d9a77994f6f27f"
   }, {
     "kind" : "slice:skills_full",
     "id_field" : null,
@@ -20688,6 +21613,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20749,7 +21679,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:cab7ead8706dcdc40d81a852c9f19198806fbd885d95081968fee15c2db5efa3"
+    "content_hash" : "sha256:372b8b7baefd13b4bf3daa83f0f46493de8c37fe69ab20bbf13f62518ae54870"
   }, {
     "kind" : "slice:spec_by_id",
     "id_field" : null,
@@ -20771,6 +21701,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20827,7 +21762,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:7cd0aa2aef71eec14affe1b8970c8cf04ea778716a62496c9b3e45a12a9674ff"
+    "content_hash" : "sha256:57b6a26defe236eb389b345294d8fd361093e73568b479349239902bbc051a77"
   }, {
     "kind" : "slice:spec_history_all",
     "id_field" : null,
@@ -20844,6 +21779,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20881,7 +21821,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:01c27346c7de877c261d077952059bbf0d4eba27a3bf9c3e4de664e2b901ebcf"
+    "content_hash" : "sha256:3aae16e3182fe8a3bf5c2a0e04510b30f2042b552fb71fdf3803307da8f530f9"
   }, {
     "kind" : "slice:specs",
     "id_field" : null,
@@ -20908,6 +21848,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -20961,7 +21906,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:ae14830c7dbd526ce505cd4b5404216d8289520e488ba2729ed2bd5bac469ac9"
+    "content_hash" : "sha256:4d1fc56df7c39709b4621c7a0dbfaa4ee2cb8472dd9056d95ae0ac68655b1db7"
   }, {
     "kind" : "slice:sprint_deps",
     "id_field" : null,
@@ -20978,6 +21923,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21007,7 +21957,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:69814290b22299e0be3cff9d30f344c4aab223e0e277289a8602af84b5b1b101"
+    "content_hash" : "sha256:dd2beae05cf536c336b87b65cbd340becf51f152b7f3425716ea4775c22b94b8"
   }, {
     "kind" : "slice:sprint_deps_of",
     "id_field" : null,
@@ -21032,6 +21982,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "depends_on",
@@ -21053,7 +22008,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:dacea532bc7cb3461ec0a72fda4e5b74772e692e4850befd692e90e99ac03f80"
+    "content_hash" : "sha256:780867e2979bbfacef9f56ab69bbf64727728705815c0d2075e47dfa0bd32833"
   }, {
     "kind" : "slice:sprint_done_dates",
     "id_field" : null,
@@ -21070,6 +22025,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21091,7 +22051,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:dbafadf005c7ce843e5c11968ff3d099796f9cc48949540c212de5d89ad98cbe"
+    "content_hash" : "sha256:1950808355175799c1660b6711fdc4550bb31105c673c136384dbc78230f74be"
   }, {
     "kind" : "slice:sprint_starts",
     "id_field" : null,
@@ -21108,6 +22068,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21129,7 +22094,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:dab6b9bcdb0af1d14339be5308289716780fbff422e7e5321b041bbedbc3221e"
+    "content_hash" : "sha256:2257a6c74ecd3b227f8b89a16ebe8127f7de8363a3e8de27a88fb2628dfe89cc"
   }, {
     "kind" : "slice:sprint_totals",
     "id_field" : null,
@@ -21151,6 +22116,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21183,7 +22153,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f615e6a56b7cbe6ab2b3643a39ab2917af522bee343bc8510aa81916ac163657"
+    "content_hash" : "sha256:fcd856f9008d7539e1364b1e81dc6ba11637889561d86db86e3aefc59446d941"
   }, {
     "kind" : "slice:sprint_tree",
     "id_field" : null,
@@ -21205,6 +22175,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21309,7 +22284,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:ad74f2ed7da2ade226820708333a5a03c144a74365ce4192a70416371f22b943"
+    "content_hash" : "sha256:813cafe0bd8bd4ded444c0aee2beac23978536a1f293fbdcc156fc046534fc65"
   }, {
     "kind" : "slice:sprints",
     "id_field" : null,
@@ -21336,6 +22311,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21441,7 +22421,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:8e4dc2f0a2def583ead4102b9ae438acb4b4f0cbe63be8db10a85b7e0332efe0"
+    "content_hash" : "sha256:9d94798035eaf31b9b96d4db2a848793b2fee015a7f86f0f9b82759ab657eec3"
   }, {
     "kind" : "slice:strategic_coverage",
     "id_field" : null,
@@ -21458,6 +22438,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21487,7 +22472,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:4ac220ae22d8f91e0c70688108e53b278227cd2a207dfe9e81169140260a74bb"
+    "content_hash" : "sha256:d64eec7835a247697431967fe7286027ef0bb96ce1d49aa4099a9de17a076f11"
   }, {
     "kind" : "slice:tag_by_id",
     "id_field" : null,
@@ -21509,6 +22494,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21549,7 +22539,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:469798bb29c79b60d6650eae8b8bccb640f7071a291822991f52280aa04faf9b"
+    "content_hash" : "sha256:84cab7a5b6ea3dbbe317cf5403c509d0402cbb09a445a634aac9b6ad064196e3"
   }, {
     "kind" : "slice:tag_entities",
     "id_field" : null,
@@ -21571,6 +22561,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21619,7 +22614,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:a5e0c18f5905c1e5691c3c9e51eeeb87128a394932b8c1677103ed226c2e0e2d"
+    "content_hash" : "sha256:28f3283038d2f99f0283d6f288dda4fffefab0a485626dd9cd29ae5f74e710f0"
   }, {
     "kind" : "slice:tags_usage",
     "id_field" : null,
@@ -21636,6 +22631,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21657,7 +22657,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d4ff4674ad37931f5a09003d4a6b1993d3b315c9725e466bd9f6e17bdb303b26"
+    "content_hash" : "sha256:a7b635a7ae264277e744c0fc8294a4c99b16853b63b064dc6966566d99a5f742"
   }, {
     "kind" : "slice:task_close_path",
     "id_field" : null,
@@ -21684,6 +22684,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21745,7 +22750,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:4345e81593f4473b9cf5daf560a3d4745f6b3b2bcf33b1a985079e6c4ce2ed06"
+    "content_hash" : "sha256:fb600525c10d179e923d4ded619a8e2cb73e1072ae6ba0024edac7977eeacfc9"
   }, {
     "kind" : "slice:task_created_dates",
     "id_field" : null,
@@ -21762,6 +22767,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21791,7 +22801,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:d090c08996394a6f6fc4f921049d2aed23346068d162c3273354476d49eae7ce"
+    "content_hash" : "sha256:53aa8c88909d44dcb73cabdbaa169b3746896ebc3e892bbcefd1af3405e010ac"
   }, {
     "kind" : "slice:task_done_dates",
     "id_field" : null,
@@ -21808,6 +22818,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21849,7 +22864,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:130db778389a8ac54624906f039457acdafa45d0220aaa4a8e4369d6f01f57d5"
+    "content_hash" : "sha256:fd685073325de8397779392cfda2128d1bdffcbdc0100c1ce8a76003a3d92abf"
   }, {
     "kind" : "slice:task_identities",
     "id_field" : null,
@@ -21874,6 +22889,11 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
     } ],
     "fields" : [ {
       "name" : "task_uid",
@@ -21895,7 +22915,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f0e9df34092f09f83427ce878e81b4a8db23701b3a9ebc8792bc13d3493560a3"
+    "content_hash" : "sha256:9d12b265db8d4304149f2369452731987487bccdb52d80ce211a7c5cf0a300c8"
   }, {
     "kind" : "slice:task_roles",
     "id_field" : null,
@@ -21917,6 +22937,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -21965,7 +22990,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:ae5a03ebff90fc5f9faf52d2b4a513c8c614ab4268a58712d426f989c33b02cc"
+    "content_hash" : "sha256:93a171bccd8c8558b947546050e661fbf3f116fca2b1b54d7eb2b08ec80a21ac"
   }, {
     "kind" : "slice:task_roles_history",
     "id_field" : null,
@@ -21987,6 +23012,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22039,7 +23069,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:5a46d2eca84dcde65fc3a95347732fbca7492454ca2038a21991530d4cfed153"
+    "content_hash" : "sha256:8b859c90f05e1df39464244e957c3df121885957c14bcde526e0672ce7d828b7"
   }, {
     "kind" : "slice:task_roles_lost_on_move",
     "id_field" : null,
@@ -22056,6 +23086,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22113,7 +23148,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f8f84c393490167df794715405a938f4ee9298fc697585207e8ca4334f9d8dd2"
+    "content_hash" : "sha256:0d5c7f6724ec70a1874fe03c288c67a3df214227e7643513a33d3f669664c1bf"
   }, {
     "kind" : "slice:task_starts",
     "id_field" : null,
@@ -22130,6 +23165,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22159,7 +23199,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:9e0d1e0f6c6155c66853ae4bc619eae9ffd38e0859ef898f7238ce9dc6864fb1"
+    "content_hash" : "sha256:ae08c6f7ff6a1bdf2856cba5a5eefbcf2dbdd5fa2c45ce5615bfd1431fc8d90d"
   }, {
     "kind" : "slice:task_status_by_sprint",
     "id_field" : null,
@@ -22176,6 +23216,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22197,7 +23242,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:741992f4bc694004c4218e7327049d83e09dbb2a9709c6d9db81f9d1479cc9a8"
+    "content_hash" : "sha256:57d6f2359505b3cce7e8d8621a50925eb6186a289c3c1517b5e0ad28d3e91cf9"
   }, {
     "kind" : "slice:task_status_versions",
     "id_field" : null,
@@ -22224,6 +23269,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22261,7 +23311,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:06d02671eae3acb0547c11addd00826d2d5e4a501e21db0babfed43ed8ab0aec"
+    "content_hash" : "sha256:4e6412a67e77c79a03667435902a42a81f7f3fdd02836cea501d5e13b4b74640"
   }, {
     "kind" : "slice:tasks_by_uids",
     "id_field" : null,
@@ -22283,6 +23333,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22379,7 +23434,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:c264aace0bc504e39569d43e30faa9dc18aa9f0dad53f680c211356eafc27678"
+    "content_hash" : "sha256:51283c6afe34660e4cf135a226679921677a975f6f6a323ffc2842b10a41618a"
   }, {
     "kind" : "slice:tasks_of_adr",
     "id_field" : null,
@@ -22401,6 +23456,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22445,7 +23505,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:b4ff669e575df97125382f93e3cfb3bac3fe0193da83fff325a477bf495f6ad9"
+    "content_hash" : "sha256:a169bdbd52666eb5d63afc23ea61cee0064201f07f91e80aab233333dc02b834"
   }, {
     "kind" : "slice:tasks_of_phase",
     "id_field" : null,
@@ -22467,6 +23527,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22531,7 +23596,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:2a88a829fcea96a577db8695e3893661d5dc342fd261a576a645f3d638ad1518"
+    "content_hash" : "sha256:15474a8cffcd99d1466e42cae4e4ef9d9f0540be474bef4cdc9fbb0d2229050e"
   }, {
     "kind" : "slice:tasks_of_sprint",
     "id_field" : null,
@@ -22553,6 +23618,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22649,7 +23719,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f7590e88bb3be890db356cb394d6293a9e4acce762b4766b4a124186c282f85f"
+    "content_hash" : "sha256:bf5830974c012b31c8c7428e869314dd7ef42234a62e7c295a84a2cf36012d3d"
   }, {
     "kind" : "slice:tasks_of_sprints_batch",
     "id_field" : null,
@@ -22671,6 +23741,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22771,7 +23846,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:8680a418e22e79dfaf528d98ea6fbc169e0ce430a3a7c5d138741ceee404046b"
+    "content_hash" : "sha256:2b309f1e953da527599b9bf33cb73ed5eaa0f78dfcde4f29b0163ecc8f9cdfa4"
   }, {
     "kind" : "slice:tasks_of_uc",
     "id_field" : null,
@@ -22793,6 +23868,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22845,7 +23925,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:953ac81d13e18825a341ad2320383c5e6ba1e5cb65eb90043090bde1c1999ba3"
+    "content_hash" : "sha256:8c8105336b45d1ee4789fc3dbf4e5779454cfcf9b5730b9e4bb2f013d8910d57"
   }, {
     "kind" : "slice:tech_by_id",
     "id_field" : null,
@@ -22867,6 +23947,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22907,7 +23992,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f60632484278fec4aac259aff0fd1c24164a4f032eea079940dfc218982c5097"
+    "content_hash" : "sha256:e1c0d09b934bbb1dafddccf1cc84e3256f7a25c7d78888b6488824b01df4db56"
   }, {
     "kind" : "slice:tech_registry",
     "id_field" : null,
@@ -22929,6 +24014,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -22974,7 +24064,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:067104c351a856a336d77efba840bfe6d04f2475038335a75bd7eafbf02ede5d"
+    "content_hash" : "sha256:cca3e6651e1c3f4b7a19fea8f78c4b8ca7884efcf1a5d0aefddfd98cbd9985cc"
   }, {
     "kind" : "slice:timeline_adrs",
     "id_field" : null,
@@ -22991,6 +24081,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23020,7 +24115,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:c58900aa0f918e7f32625a202dba73e2ecaf6e36a01f5f47e0e7b96f60ab2ec7"
+    "content_hash" : "sha256:b17cdf74257a6e587c68e9f4a6cc99722efcb5425347a17aae4dd7fd2b3d70e6"
   }, {
     "kind" : "slice:timeline_decisions",
     "id_field" : null,
@@ -23037,6 +24132,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23074,7 +24174,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:6d3c00c038360c680824dd1ea8e4e3c3b8799dbe56753902d475702d232aff45"
+    "content_hash" : "sha256:1449e7fafdbac2aa3989082380989b3ef0bbe2eff9ba884d7edd730dee8f63ee"
   }, {
     "kind" : "slice:timeline_releases",
     "id_field" : null,
@@ -23091,6 +24191,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23124,7 +24229,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:42e40dd0ef2f04f18f3883aa26dfe6f21cca128fc0b56b43b44c01ef9e05ded2"
+    "content_hash" : "sha256:d96912c0d5999a6aa8edcd68331b26683b744839f5364c7b27528502f0cb1c21"
   }, {
     "kind" : "slice:timeline_specs",
     "id_field" : null,
@@ -23141,6 +24246,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23174,7 +24284,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:1df2546164f3b258dbdbbecf652cbb2d8c0a70346e68f58883fc80f1d8b1077e"
+    "content_hash" : "sha256:01b8e1267bb7869a0e2f760cdb527d162bcf6b448b0c9d89cb5449c0e91147d2"
   }, {
     "kind" : "slice:timeline_sprints",
     "id_field" : null,
@@ -23191,6 +24301,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23220,7 +24335,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:0e2bc89e15091865776e920e2580d3aa3b4b20023313368c0555dd50592be668"
+    "content_hash" : "sha256:ecb5023a4087d11eb8d7829f98ff367a337b2193dad42660c97a42b5c44e6fa4"
   }, {
     "kind" : "slice:track_by_id",
     "id_field" : null,
@@ -23242,6 +24357,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23270,7 +24390,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:a2c261fc6bef149379fc0e74cedc21beee38ad2b30e1a8c40b106198f4dadc8c"
+    "content_hash" : "sha256:55d17edcac394ab6e401d266814bcc3b61631af115f79068c1c34a7506894edb"
   }, {
     "kind" : "slice:track_options",
     "id_field" : null,
@@ -23287,6 +24407,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23308,7 +24433,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f720a9b806106e23cbf9a1e7f371ae50ceaa163e62c87ee81717d778c8d82bcc"
+    "content_hash" : "sha256:c9a220f8bca4375590e566455e013602e70504fad143bad0c7bc18c8993ae450"
   }, {
     "kind" : "slice:track_sprints",
     "id_field" : null,
@@ -23330,6 +24455,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23378,7 +24508,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:3847821c39ac02848c21c9eeec2cbd48ce02d3901f8be0f26fa1d55cc322d88a"
+    "content_hash" : "sha256:812c000ca5b605395b136d98c93f0cbb3de63ffe3d4b88a17e4b8c45b1826a69"
   }, {
     "kind" : "slice:uc_actors",
     "id_field" : null,
@@ -23400,6 +24530,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23433,7 +24568,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:fb393ee7ba68fcae95c8a9e701dca189aa81be99f2fd9ba3920b9fc7cff24680"
+    "content_hash" : "sha256:463f89cc522fc2de52cbabaee09d259f2e7f3bd48cccd7f19b2aff43947977b5"
   }, {
     "kind" : "slice:uc_by_id",
     "id_field" : null,
@@ -23455,6 +24590,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23611,7 +24751,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:75c2b8b50fc7da245a255fe374ea20d2841b61b307c557a5dc40a07a54368abc"
+    "content_hash" : "sha256:3f5b5d5443f085a399cf0bad0bc25aeacc1f278eade2e9b04765424a7b9a851d"
   }, {
     "kind" : "slice:unlinked_enb_tasks",
     "id_field" : null,
@@ -23631,53 +24771,8 @@
       "type" : "string",
       "required" : false,
       "role" : "common"
-    } ],
-    "fields" : [ {
-      "name" : "task_uid",
-      "required" : false,
-      "layer" : "slice"
     }, {
-      "name" : "task_id",
-      "required" : false,
-      "layer" : "slice"
-    }, {
-      "name" : "title",
-      "required" : false,
-      "layer" : "slice"
-    }, {
-      "name" : "work_class",
-      "required" : false,
-      "layer" : "slice"
-    }, {
-      "name" : "sprint_id",
-      "required" : false,
-      "layer" : "slice"
-    } ],
-    "links" : [ ],
-    "guards" : [ {
-      "name" : "value-whitelist",
-      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
-    } ],
-    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
-    "replaces" : [ ],
-    "source" : "slice-registry",
-    "content_hash" : "sha256:d963048fb8f0d78742c282f9375f8a7708d97afb0c872c069151fac6584a2430"
-  }, {
-    "kind" : "slice:unlinked_uc_tasks",
-    "id_field" : null,
-    "title" : "unlinked_uc_tasks",
-    "params" : [ {
-      "name" : "limit",
-      "type" : "number",
-      "required" : false,
-      "role" : "common"
-    }, {
-      "name" : "offset",
-      "type" : "number",
-      "required" : false,
-      "role" : "common"
-    }, {
-      "name" : "fields",
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23711,7 +24806,62 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:f7ec9f9a5e25d1a3669446454ce0ba9f7c61fc6525b9c77d95fcf7d1dd70f2d5"
+    "content_hash" : "sha256:2c0b4d526497e372467061cd743881d69e1cb67ca6f82a56a8a36036164b0342"
+  }, {
+    "kind" : "slice:unlinked_uc_tasks",
+    "id_field" : null,
+    "title" : "unlinked_uc_tasks",
+    "params" : [ {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "task_uid",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "task_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "title",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "work_class",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "sprint_id",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:5009a63b72b77db3dabfeb21c7696b0765a8826a04154e8fde44d11add509a29"
   }, {
     "kind" : "slice:use_cases",
     "id_field" : null,
@@ -23738,6 +24888,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23831,7 +24986,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:440e419a6f356e559e54c39dc113ba518180e104b75e2f7c275e485d1378246a"
+    "content_hash" : "sha256:0bf37f24d09fc9bf0ccfca6f0f608365a81ee352fdbe1b03bc6eea036d5dd70b"
   }, {
     "kind" : "slice:use_cases_of_component",
     "id_field" : null,
@@ -23853,6 +25008,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -23901,7 +25061,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:c7589b97c0f74089821cf8201d794a5f36cef15c17e46c02c3d284c8cd0da821"
+    "content_hash" : "sha256:1289702f5534240b71412fb3d450b8b5db942195aedbae1fb61cf1b2b1ca5b68"
   }, {
     "kind" : "slice:use_cases_of_feature",
     "id_field" : null,
@@ -23923,6 +25083,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -24047,7 +25212,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:c7e02ba362cd3a0f1601fbde2da6c54b48a546bf6705805e76fd7250807389ba"
+    "content_hash" : "sha256:537a68114fef51eb9ceed7ad7fea150cc2112fb9e39cbb4cd8650dd0c007e944"
   }, {
     "kind" : "slice:user_by_id",
     "id_field" : null,
@@ -24069,6 +25234,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -24105,7 +25275,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:bb18ae774a8205412d40e7b41192fd1e9adc3b47f7e43c191f64b311af356438"
+    "content_hash" : "sha256:cca5ff5f2903eeaa928c1e7b28e7f5105dc343a1fec08c344a409c4ab87cd33a"
   }, {
     "kind" : "slice:user_project_roles",
     "id_field" : null,
@@ -24127,6 +25297,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -24159,7 +25334,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:6353a845818678f512f5aa0ad7425cdf6b61657a3f241b9e0d9efe4d186761ac"
+    "content_hash" : "sha256:ba8b2f57125aba94f43c7d40c9c0b0d9a911c7c6eb0c4e78d963f14a75d7f631"
   }, {
     "kind" : "slice:user_task_status_versions",
     "id_field" : null,
@@ -24181,6 +25356,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -24221,7 +25401,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:b20596d945ab39eeb55e5b2b30a4af2387be81e580f968e9da047c7189dae536"
+    "content_hash" : "sha256:2743a2b0f0a5d5ab00206bdd02f5c5c00f1a0621575f597c2efcd7c27c20079a"
   }, {
     "kind" : "slice:user_tasks",
     "id_field" : null,
@@ -24243,6 +25423,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -24295,7 +25480,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:5516a1726cbafff5b6100b64d28d643ee5abb388c7f4f00c26ffc74ffbac1f7d"
+    "content_hash" : "sha256:3f86f4d2abb844d99fc964610795e28c45962332f2d991c2936bada864633306"
   }, {
     "kind" : "slice:users",
     "id_field" : null,
@@ -24312,6 +25497,11 @@
       "role" : "common"
     }, {
       "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
       "type" : "string",
       "required" : false,
       "role" : "common"
@@ -24345,6 +25535,6 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:5fdda7b9286dc0efd191ed14b93ecf550fef5eb9559d765e18d827b0e33bb2b6"
+    "content_hash" : "sha256:07ce5e670b0e7b7c9a52415644baacc6c8665b870e84b85462e17bdb5f9f3081"
   } ]
 }
