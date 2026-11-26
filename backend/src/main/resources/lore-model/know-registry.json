@@ -6,7 +6,7 @@
     "ddl" : 46,
     "entity" : 33,
     "skill" : 1,
-    "slice" : 235
+    "slice" : 236
   },
   "kinds" : [ {
     "kind" : "ddl:AgentActionLog",
@@ -17783,6 +17783,80 @@
     "replaces" : [ ],
     "source" : "slice-registry",
     "content_hash" : "sha256:11cb21668185f159ad3285f992398b96618e16df1d48f4a7b214c4fd644c485e"
+  }, {
+    "kind" : "slice:query_errors",
+    "id_field" : null,
+    "title" : "query_errors",
+    "params" : [ {
+      "name" : "caller",
+      "type" : "string",
+      "required" : false,
+      "role" : "filter"
+    }, {
+      "name" : "code",
+      "type" : "string",
+      "required" : false,
+      "role" : "filter"
+    }, {
+      "name" : "since",
+      "type" : "string",
+      "required" : false,
+      "role" : "filter"
+    }, {
+      "name" : "slice",
+      "type" : "string",
+      "required" : false,
+      "role" : "filter"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "slice",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "code",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "caller",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "axis",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "errors",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "last_error",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:76c0a2333029d46ae6464db9afd426ba2bfb60e29ec0176f4aae436484ed2b61"
   }, {
     "kind" : "slice:question_by_id",
     "id_field" : null,

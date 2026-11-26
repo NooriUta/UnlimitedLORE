@@ -49,7 +49,8 @@ public final class LoreSlices {
     static final Map<String, Map<String, String>> TYPED_PARAMS = Map.of(
         "mcp_failures", Map.of("since", "epoch_ms", "code", "http_code"),
         "agent_action_points", Map.of("since", "epoch_ms"),
-        "mcp_failure_rows", Map.of("since", "epoch_ms", "code", "http_code"));
+        "mcp_failure_rows", Map.of("since", "epoch_ms", "code", "http_code"),
+        "query_errors", Map.of("since", "epoch_ms", "code", "http_code"));
 
     static Object typedValue(String name, String kind, String value) {
         String v = value.trim();
@@ -3305,6 +3306,18 @@ public final class LoreSlices {
         // Сбои агентских записей: ответ с кодом ≥ 400 (AO-01 пишет код в value).
         // S7B-26: since (ISO-дата/момент, UTC → epoch-мс числом: ts — LONG) и code (точный код) —
         // Главной админки нужно «403 за сутки», а не «≥ 400 за всё время» (TYPED_PARAMS).
+        // SPRINT_LORE_KNOW_REGISTRY/KREG-12, шаг 7 ADR-LORE-061: ошибки срезов — по срезу, коду и вызывающему.
+        // Пишет их LoreRequestStatsFilter (journalledCall: GET-срез с кодом ≥ 400 → точка slice:<имя>).
+        slice("query_errors",
+            "SELECT object_id AS slice, value AS code, source AS caller, segment AS axis, count(*) AS errors, max(ts) AS last_error " +
+            "FROM AgentActionLog WHERE object_type = 'slice' AND value >= 400",
+            List.of(), new LinkedHashMap<>(Map.of(
+                "caller", " AND source = :caller",
+                "since", " AND ts >= :since",
+                "slice", " AND object_id = :slice",
+                "code", " AND value = :code")),
+            " GROUP BY object_id, value, source, segment ORDER BY last_error DESC LIMIT 200");
+
         slice("mcp_failures",
             "SELECT source AS caller, count(*) AS failures, max(ts) AS last_failure " +
             "FROM AgentActionLog WHERE segment = 'agent' AND value >= 400",
@@ -3853,7 +3866,7 @@ public final class LoreSlices {
      * пометкой «админский/журнал/телеметрия» без места здесь не проходит.
      */
     public static final Set<String> ADMIN_ONLY = Set.of(
-        "mcp_failures", "mcp_failure_rows", "mcp_connections", "agent_actions", "admin_actions", "agent_action_points",
+        "mcp_failures", "mcp_failure_rows", "mcp_connections", "agent_actions", "admin_actions", "agent_action_points", "query_errors",
         "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix",
         // AP-MACHINE-PASSPORT × AP-PEOPLE-PAGE (сборка зонтика 25.11): паспорт машины живёт только в админке
         // и отдаёт client_id агентов машины — поле уровня admin. Не-админу — 403, а не учётка в ответе.
@@ -3939,6 +3952,7 @@ public final class LoreSlices {
         Map.entry("role_matrix", "матрица ролей проект × люди (S7B-11) — админская, как project_users для всех; решение"),
         Map.entry("mcp_connections", "подключения MCP (S7B-07) — телеметрия агентов, админская; решение"),
         Map.entry("mcp_failures", "сбои записей агентов (S7B-07) — ряд AO-01, админский; решение"),
+        Map.entry("query_errors", "ошибки срезов (KREG-12, шаг 7 ADR-LORE-061) — ряд AO-01, админский, как mcp_failures"),
         Map.entry("mcp_failure_rows", "отказы записей агентов построчно (S7B-30) — ряд AO-01, админский; решение"),
         Map.entry("agent_action_points", "действия агентов точками для графиков (19.11) — ряд AO-01, админский; решение"),
         Map.entry("logins_recent", "журнал входов — админский, решение"),
