@@ -181,6 +181,28 @@ public class LoreRequestStats {
         }
     }
 
+    /** Дверь сессии: не чаще раза в 5 минут на сессию (первый вызов — сразу). */
+    private final AgentSessionDoor.Throttle sessionThrottle = new AgentSessionDoor.Throttle(300);
+
+    /**
+     * Дверь сессии в MCP (слово владельца 26.11.2026): агент прислал X-Lore-Session-Id — сервер сам
+     * заводит {@code KnowAgentSession} и LOGGED_BY к агенту. Асинхронно и без права уронить вызов:
+     * сбой — строка в логе.
+     */
+    void touchAgentSession(String rawSession, String clientId, String machine) {
+        if (!statsEnabled || !loreEnabled) return;
+        String sid = AgentSessionDoor.canon(rawSession);
+        if (sid == null || !sessionThrottle.due(sid, Instant.now())) return;
+        AgentSessionDoor.Script s = AgentSessionDoor.script(sid, clientId, machine, Instant.now().toString());
+        try {
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript", s.sql(), s.params()))
+                .subscribe().with(ok -> { }, e ->
+                    LOG.warnf("[LORE SESSION] сессия %s не записана: %s", sid, LoreUpstream.detail(e)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE SESSION] сессия %s не записана: %s", sid, LoreUpstream.detail(e));
+        }
+    }
+
     /** Тег TIMESERIES ограничен длиной — длинный путь/имя ужимаем, а не роняем точку. */
     private static String trim256(String s) {
         if (s == null) return "";
