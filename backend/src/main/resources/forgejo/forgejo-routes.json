@@ -2282,6 +2282,44 @@
       }
     },
     {
+      "name": "get_job",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/jobs/{job_id}",
+      "desc": "Get a workflow run job with its steps, Forgejo >= 17",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "job_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path",
+          "desc": "id from list_run_jobs (jobs[].id)"
+        }
+      }
+    },
+    {
       "name": "get_job_log",
       "method": "GET",
       "pathTemplate": null,
@@ -2327,7 +2365,54 @@
         }
       },
       "capability": "actions-log-volume",
-      "note": "не REST: чтение .log.zst с диска Forgejo; вольюм логов не подключён к бэкенду LORE (OQ-060-LOGS-VOLUME)"
+      "note": "капабилити «том журналов» не подключена: на Forgejo 17 журнал отдаёт REST — маршрут get_job_logs (job_id из list_run_jobs)"
+    },
+    {
+      "name": "get_job_logs",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/jobs/{job_id}/logs",
+      "desc": "Plain-text log of a job via Forgejo REST (>= 17). In the dialogue: tail + error lines with meta.log; full log only with truncate=false",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "response": "log",
+      "note": "замена get_job_log (том .log.zst) на REST Forgejo 17; job_id — из list_run_jobs, не task_id. Читает ли журналы из базы (log_in_storage=f) — проверить живым прогоном",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "job_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path",
+          "desc": "id from list_run_jobs (jobs[].id)"
+        },
+        "step": {
+          "required": false,
+          "type": "int",
+          "min": 0,
+          "in": "query",
+          "desc": "only this step"
+        }
+      }
     },
     {
       "name": "get_label",
@@ -4061,6 +4146,90 @@
           "pattern": "^[a-zA-Z0-9_.-]+$",
           "max": 255,
           "in": "path"
+        }
+      }
+    },
+    {
+      "name": "list_run_jobs",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/runs/{run_id}/jobs",
+      "desc": "List jobs of a workflow run (job ids for get_job_logs), Forgejo >= 17",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "run_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path",
+          "desc": "id from list_runs (workflow_runs[].id)"
+        }
+      }
+    },
+    {
+      "name": "list_runs",
+      "method": "GET",
+      "pathTemplate": "/repos/{owner}/{repo}/actions/runs",
+      "desc": "List workflow runs of a repository (run ids for list_run_jobs), Forgejo >= 17",
+      "group": "actions-read",
+      "roles": [
+        "full",
+        "architect",
+        "developer",
+        "tester"
+      ],
+      "risk": "low",
+      "origin": "lore",
+      "list": true,
+      "params": {
+        "owner": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "repo": {
+          "required": true,
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path"
+        },
+        "page": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "in": "query"
+        },
+        "limit": {
+          "required": false,
+          "type": "int",
+          "min": 1,
+          "max": 50,
+          "in": "query",
+          "default": 20
         }
       }
     },

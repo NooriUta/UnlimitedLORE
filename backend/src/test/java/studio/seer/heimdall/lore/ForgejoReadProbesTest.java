@@ -70,6 +70,11 @@ class ForgejoReadProbesTest {
             if (p.equals("/repos/AIDA/UnlimitedLORE")) return ok(new JsonObject().put("full_name", "AIDA/UnlimitedLORE").encode());
             if (p.equals("/orgs/AIDA")) return ok(new JsonObject().put("username", "AIDA").encode());
             if (p.endsWith("/branches/develop")) return ok(new JsonObject().put("name", "develop").encode());
+            // FJ-08: формы ответа Actions Forgejo 17 — объект со списком внутри
+            if (p.endsWith("/actions/runs")) return ok(new JsonObject().put("workflow_runs", new JsonArray().add(new JsonObject().put("id", 77))).encode());
+            if (p.endsWith("/actions/runs/77/jobs")) return ok(new JsonObject().put("jobs", new JsonArray().add(new JsonObject().put("id", 88))).encode());
+            if (p.endsWith("/actions/jobs/88")) return ok(new JsonObject().put("id", 88).put("status", "success").encode());
+            if (p.endsWith("/actions/jobs/88/logs")) return new ForgejoApp.Reply(200, "строка 1\nстрока 2\n", "text/plain");
             if (p.startsWith("/markdown") || p.startsWith("/markup")) return new ForgejoApp.Reply(200, "<p><strong>ok</strong></p>", "text/html");
             if (p.endsWith(".diff")) return new ForgejoApp.Reply(200, "diff --git a/x b/x", "text/plain");
             if (p.startsWith("/gitignore/templates") && !p.equals("/gitignore/templates")) return ok(new JsonObject().put("name", "Java").encode());
