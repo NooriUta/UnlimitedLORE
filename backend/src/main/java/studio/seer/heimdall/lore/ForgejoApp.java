@@ -93,6 +93,17 @@ final class ForgejoApp {
      */
     static Outcome execute(ForgejoRoutes reg, String routeName, JsonObject args, String role, String approval,
                            boolean truncate, Upstream upstream, String ourBase, Projects projects) {
+        return execute(reg, routeName, args, role, approval, truncate, upstream, ourBase, projects, null);
+    }
+
+    /**
+     * FJ-07: контекст гейта рисковых операций — гейт, владелец сессии (человек, от чьего имени работает агент) и
+     * «сейчас». null — гейт не подключён: risk=high отвечает 428, а подтверждение не принимается (verifier_not_ready).
+     */
+    record Approvals(ForgejoApproval gate, String sessionOwner, long now) {}
+
+    static Outcome execute(ForgejoRoutes reg, String routeName, JsonObject args, String role, String approval,
+                           boolean truncate, Upstream upstream, String ourBase, Projects projects, Approvals approvals) {
         long t0 = System.nanoTime();
         String kind = "forgejo:" + routeName;
         ForgejoRoutes.Route r = reg.get(routeName);
@@ -118,7 +129,10 @@ final class ForgejoApp {
             if ("refuse".equals(rule.kind()) && rule.matches(raw.getValue(rule.param())))
                 return fail(kind, t0, 409, "REFUSED", "«" + rule.param() + "» = " + raw.getValue(rule.param()) + ": " + rule.reason(),
                     null, "это не делается через миниапп ни с каким подтверждением", null);
-        if ("high".equals(risk)) {
+        boolean gated = "high".equals(risk) && approvals != null && approvals.gate() != null;
+        boolean dryRun = gated && Boolean.TRUE.equals(raw.getValue("dry_run"));
+        String intent = gated ? ForgejoApproval.intentHash(r.name(), raw) : null;
+        if ("high".equals(risk) && !gated) {
             if (approval == null || approval.isBlank())
                 return fail(kind, t0, 428, "APPROVAL_REQUIRED", "маршрут " + r.name() + " (risk=high) требует подтверждения человеком",
                     null, "цитата диалога: карточка в канал link → повтор с заголовком X-Lore-Human-Approval "
@@ -132,6 +146,10 @@ final class ForgejoApp {
                 null, r.via() + " — merge строго по зелёному гейту CI с автолинковкой графа", null);
 
         JsonObject a = args == null ? new JsonObject() : args;
+        if (gated && a.containsKey("dry_run")) {
+            a = a.copy();
+            a.remove("dry_run");
+        }
         Map<String, Object> clean;
         try {
             a = resolveGitProject(r, a, ourBase, projects);
@@ -167,6 +185,34 @@ final class ForgejoApp {
             body = buildBody(r, clean);
         } catch (Refusal e) {
             return fail(kind, t0, 400, e.code, e.getMessage(), e.allowed, "describe forgejo:" + r.name() + " и исправить args", null);
+        }
+
+        // FJ-07: рисковая операция — план (dry_run), выдача слова-вызова (428) или проверка двух факторов
+        if (gated) {
+            JsonObject plan = new JsonObject().put("dry_run", true).put("route", r.name()).put("method", r.method())
+                .put("path", pathAndQuery).put("intent_hash", intent);
+            if (body != null) plan.put("body", body.length() > 2000 ? body.substring(0, 2000) + "…" : body);
+            if (dryRun) {
+                JsonObject env = new JsonObject().put("v", 1).put("kind", kind).put("outcome", "found").put("data", plan)
+                    .put("meta", new JsonObject().put("took_ms", (System.nanoTime() - t0) / 1_000_000)).putNull("error");
+                return new Outcome(200, env);
+            }
+            if (approval == null || approval.isBlank()) {
+                ForgejoApproval.Challenge ch = approvals.gate().issue(r.name(), intent, approvals.now());
+                Outcome o = fail(kind, t0, 428, "APPROVAL_REQUIRED", "маршрут " + r.name()
+                    + " (risk=high) — два фактора: подтверждение в диалоге и ввод слова в LORE", null,
+                    "1) спросите человека в диалоге, покажите plan; 2) попросите ввести в LORE слово «" + ch.word()
+                        + "»; 3) повторите вызов с заголовком X-Lore-Human-Approval {message_ref, at, human, intent_hash, challenge_id}",
+                    null);
+                o.envelope().getJsonObject("error").put("intent_hash", intent).put("challenge", ch.toJson()).put("plan", plan)
+                    .put("human", approvals.sessionOwner());
+                return o;
+            }
+            String failed = approvals.gate().verify(ForgejoApproval.parseHeader(approval), intent, approvals.sessionOwner(), approvals.now());
+            if (failed != null)
+                return fail(kind, t0, 403, "APPROVAL_INVALID", "подтверждение не принято: проверка «" + failed + "» не прошла", null,
+                    "lore_factor — слово не введено в LORE этим человеком или уже использовано; intent_hash — подтверждена другая "
+                        + "операция; ttl — подтверждение устарело. Повторите вызов без заголовка — получите новое слово", failed);
         }
 
         Reply reply;

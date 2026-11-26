@@ -90,7 +90,8 @@ public class LoreForgejoAppResource extends LoreResourceBase {
             String ourBase = bridge.configured() ? bridge.resolve(gitProject).map(ForgejoBridge.Repo::apiBase).orElse(null) : null;
             o = ForgejoApp.execute(reg, route, args == null ? new JsonObject() : args, role,
                 AgentScopeFilter.humanApproval(approval), !"false".equalsIgnoreCase(truncate), up,
-                ourBase, ourBase == null ? null : (ForgejoApp.Projects) bridge::resolve);
+                ourBase, ourBase == null ? null : (ForgejoApp.Projects) bridge::resolve,
+                new ForgejoApp.Approvals(APPROVALS, sessionOwner(), System.currentTimeMillis()));
         }
         JsonObject env = o.envelope();
         JsonObject err = env.getJsonObject("error");
@@ -107,6 +108,79 @@ public class LoreForgejoAppResource extends LoreResourceBase {
      * ходит во все read-маршруты токеном моста. Ответ — вердикт PASS / PARTIAL / FAIL и строка на пробу; запись
      * в qg_run_log делает вызывающий агент (MCP), бэкенд ничего не пишет.
      */
+    // ── FJ-07: подтверждение рисковых операций — фактор LORE ─────────────
+
+    /**
+     * Гейт подтверждений — один на процесс (вызов живёт минуты; схема базы не меняется — заморозка схемы).
+     * Перезапуск бэкенда сбрасывает незавершённые подтверждения: человек подтверждает заново.
+     */
+    static final ForgejoApproval APPROVALS = new ForgejoApproval();
+
+    /** Владелец сессии: у агента — kc_sub владельца (KnowActor → OWNED_BY), у человека — его собственный kc_sub. */
+    String sessionOwner() {
+        String scope = identity == null || identity.isAnonymous() ? null : AgentScopeFilter.agentScopeOf(identity);
+        if (scope == null) return callerKcSub();
+        String client = callerClientId();
+        if (client == null) return null;
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT out('OWNED_BY').kc_sub AS owners FROM KnowActor WHERE kind = 'agent' AND client_id = :c",
+                Map.of("c", client));
+            if (rows.isEmpty() || !(rows.get(0).get("owners") instanceof List<?> l) || l.isEmpty()) return null;
+            return String.valueOf(l.get(0));
+        } catch (RuntimeException e) {
+            LOG.warnf("[FORGEJO-APP] владелец сессии %s не прочитан: %s", client, e.getMessage());
+            return null;
+        }
+    }
+
+    /** Только человек: у агента нет «пальца» для фактора LORE — слово вводит сам человек под своей учёткой. */
+    private Response humanOnly() {
+        boolean agent = identity != null && !identity.isAnonymous() && AgentScopeFilter.agentScopeOf(identity) != null;
+        if (!agent && callerKcSub() != null) return null;
+        return noStore(Response.status(403).entity(new JsonObject().put("error", "HUMAN_ONLY")
+            .put("detail", "слово-вызов вводит человек в LORE под своей учёткой, не агент").encode()).type(MediaType.APPLICATION_JSON));
+    }
+
+    /** Что подтверждается: маршрут, отпечаток, срок — экран подтверждения в LORE. */
+    @GET
+    @Path("approvals/{id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response approval(@PathParam("id") String id) {
+        if (!enabled) return disabled();
+        Response deny = humanOnly();
+        if (deny != null) return deny;
+        ForgejoApproval.Challenge c = APPROVALS.get(id);
+        if (c == null)
+            return noStore(Response.status(404).entity(new JsonObject().put("error", "NOT_FOUND")
+                .put("detail", "подтверждение не найдено или бэкенд перезапущен — пусть агент повторит вызов").encode())
+                .type(MediaType.APPLICATION_JSON));
+        return noStore(Response.ok(new JsonObject().put("id", c.id()).put("route", c.route()).put("intent_hash", c.intentHash())
+            .put("expires_at", c.expiresAt()).put("confirmed", c.confirmedBy() != null).put("used", c.used()).encode())
+            .type(MediaType.APPLICATION_JSON));
+    }
+
+    /** Фактор LORE: человек вводит слово, которое ему назвал агент. Ответ: ok | wrong_word | expired | used | unknown. */
+    @POST
+    @Path("approvals/{id}/confirm")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response confirm(@PathParam("id") String id, String body) {
+        if (!enabled) return disabled();
+        Response deny = humanOnly();
+        if (deny != null) return deny;
+        String word;
+        try {
+            word = body == null || body.isBlank() ? null : new JsonObject(body).getString("word");
+        } catch (RuntimeException e) {
+            word = null;
+        }
+        String r = APPROVALS.confirm(id, word, callerKcSub(), System.currentTimeMillis());
+        LOG.infof("[FORGEJO-APP] approval %s confirm by human → %s", id, r);
+        int http = "ok".equals(r) ? 200 : "unknown".equals(r) ? 404 : 409;
+        return noStore(Response.status(http).entity(new JsonObject().put("result", r).encode()).type(MediaType.APPLICATION_JSON));
+    }
+
     /** Имя служебного маршрута QG-прогона для инструмента forgejo (в реестре маршрутов Forgejo его нет — это не REST Forgejo). */
     static final String QG_READ = "qg_read";
 
