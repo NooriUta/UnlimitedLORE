@@ -133,6 +133,16 @@ final class ProductHistory {
      * (409 у вызывающего): ничего не записано, повтор безопасен.
      */
     static Step version(Exec exec, String type, String id, ChangeAuthor author) {
+        return version(exec, type, id, author, Instant.now());
+    }
+
+    /**
+     * То же с моментом записи от вызывающего. Путь записи ставит этот же момент в {@code updated_at} вершины, а срез
+     * отдаёт в changed_at максимум из valid_from открытой версии и updated_at: версия на своих часах всегда чуть позже
+     * отметки, и changed_at уходил от момента записи на миллисекунды (CI #1827, FreshnessChangedAtLiveDbTest).
+     * Один момент на одну запись — и закрытие прежней версии (valid_to), и открытие новой (valid_from).
+     */
+    static Step version(Exec exec, String type, String id, ChangeAuthor author, Instant now) {
         Spec s = spec(type);
         List<Map<String, Object>> cur = exec.run("sql", currentSql(s), Map.of("id", id));
         if (cur == null || cur.isEmpty()) return Step.NONE;
@@ -141,7 +151,7 @@ final class ProductHistory {
         boolean hasOpen = open != null && !open.isEmpty();
         Step step = decide(hash, hasOpen, hasOpen ? open.get(0).get("content_hash") : null);
         if (step == Step.NONE) return step;
-        Map<String, Object> p = params(s, id, cur.get(0), hash, hasOpen ? open.get(0).get("rid") : null, author, Instant.now());
+        Map<String, Object> p = params(s, id, cur.get(0), hash, hasOpen ? open.get(0).get("rid") : null, author, now);
         List<Map<String, Object>> res = exec.run("sqlscript", script(s, step), p);
         if (Scd2Guard.isConflict(res))
             throw new Scd2Guard.ConflictException(type + " '" + id
