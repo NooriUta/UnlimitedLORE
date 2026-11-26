@@ -1353,6 +1353,24 @@ public final class LoreSlices {
             "FROM KnowJob",
             List.of(), new LinkedHashMap<>(Map.of("kind", " WHERE kind = :kind")), " ORDER BY job_id");
 
+        // SPRINT_LORE_PRODUCT_BACKLOG/FIT-04: сравнение сегментов СОСТАВОМ. Строка на каждую
+        // боль/выгоду/работу с её ролями (FELT_BY / DESIRED_BY / PERFORMED_BY) — одной осью
+        // value_type, чтобы «общая / только у A» считалось по всем трём столпам разом.
+        // Пересечение — в Java (VpSegmentCompare, эндпоинт /lore/product/segment-compare):
+        // сырые факты из БД, агрегация выше, как у feature_vp_analytics. LET без $parent —
+        // подзапросы не коррелированы, ORDER BY только внешний.
+        slice("segment_values",
+            "SELECT value_type, value_id, title, actor_ids, actor_names " +
+            "FROM (SELECT expand(unionall($p, $g, $j)) LET " +
+            "$p = (SELECT 'pain' AS value_type, pain_id AS value_id, title, " +
+            "      out('FELT_BY').actor_id AS actor_ids, out('FELT_BY').name AS actor_names FROM KnowPain), " +
+            "$g = (SELECT 'gain' AS value_type, gain_id AS value_id, title, " +
+            "      out('DESIRED_BY').actor_id AS actor_ids, out('DESIRED_BY').name AS actor_names FROM KnowGain), " +
+            "$j = (SELECT 'job' AS value_type, job_id AS value_id, title, " +
+            "      out('PERFORMED_BY').actor_id AS actor_ids, out('PERFORMED_BY').name AS actor_names FROM KnowJob)" +
+            ") ORDER BY value_type, value_id",
+            List.of(), Map.of(), "");
+
         // D12: реестр проектируемых ролей/акторов + карта «сценарии роли».
         slice("actors",
             "SELECT actor_id, name, kind, body_md, " +
@@ -3828,6 +3846,7 @@ public final class LoreSlices {
         Map.entry("jobs", "работа (JTBD) — глобальная вершина по построению (AL-113)"),
         Map.entry("pains", "боли сегмента — общий продуктовый профиль"),
         Map.entry("gains", "выгоды сегмента — общий продуктовый профиль"),
+        Map.entry("segment_values", "FIT-04: боли/выгоды/работы с ролями — общий продуктовый профиль, как pains/gains/jobs"),
         Map.entry("agent_owners", "реестр агентов и владельцев — служебный"),
         Map.entry("machine_acl", "допуски к машинам (S7B-ACL-1) — служебный: по нему miniLORE решает видимость диалогов машины"),
         Map.entry("agent_sessions", "журнал сессий агентов — служебный"),

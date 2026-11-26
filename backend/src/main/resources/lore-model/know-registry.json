@@ -6,7 +6,7 @@
     "ddl" : 46,
     "entity" : 33,
     "skill" : 1,
-    "slice" : 236
+    "slice" : 237
   },
   "kinds" : [ {
     "kind" : "ddl:AgentActionLog",
@@ -21169,6 +21169,61 @@
     "replaces" : [ ],
     "source" : "slice-registry",
     "content_hash" : "sha256:da81c8f850f83f29f8ba7eb5ca80a0cdc63b9cc463633e504971ac820df86ac5"
+  }, {
+    "kind" : "slice:segment_values",
+    "id_field" : null,
+    "title" : "segment_values",
+    "params" : [ {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "value_type",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "value_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "title",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "actor_ids",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "actor_names",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:343dff69c4a8ced042d8efd4d806ee353db7d0f856cdea9f162b5aaef86e3f21"
   }, {
     "kind" : "slice:session_coverage",
     "id_field" : null,
