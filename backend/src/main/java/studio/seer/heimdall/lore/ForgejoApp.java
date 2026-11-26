@@ -58,15 +58,41 @@ final class ForgejoApp {
     private static final class Refusal extends RuntimeException {
         final String code;
         final List<?> allowed;
+        final String hint;
         Refusal(String code, String msg, List<?> allowed) {
+            this(code, msg, allowed, null);
+        }
+        Refusal(String code, String msg, List<?> allowed, String hint) {
             super(msg, null, false, false);
             this.code = code;
             this.allowed = allowed;
+            this.hint = hint;
         }
     }
 
+    /**
+     * FJ-04: реестр проектов LORE — слаг KnowGitProject → primary-хост и owner/name на нём (ForgejoBridge.resolve).
+     * Снимает ловушку «два пространства слагов»: агент даёт либо owner+repo хоста, либо git_project.
+     */
+    @FunctionalInterface
+    interface Projects {
+        java.util.Optional<ForgejoBridge.Repo> resolve(String gitProjectSlug);
+    }
+
+    static final String GIT_PROJECT = "git_project";
+
     static Outcome execute(ForgejoRoutes reg, String routeName, JsonObject args, String role, String approval,
                            boolean truncate, Upstream upstream) {
+        return execute(reg, routeName, args, role, approval, truncate, upstream, null, null);
+    }
+
+    /**
+     * @param ourBase  база нашего Forgejo (схема+хост), куда ходит миниапп; нужна, чтобы git_project чужого хоста
+     *                 получил отказ, а не вызов нашим токеном
+     * @param projects резолв git_project; null — приём git_project не подключён (отказ с подсказкой owner+repo)
+     */
+    static Outcome execute(ForgejoRoutes reg, String routeName, JsonObject args, String role, String approval,
+                           boolean truncate, Upstream upstream, String ourBase, Projects projects) {
         long t0 = System.nanoTime();
         String kind = "forgejo:" + routeName;
         ForgejoRoutes.Route r = reg.get(routeName);
@@ -93,9 +119,11 @@ final class ForgejoApp {
         JsonObject a = args == null ? new JsonObject() : args;
         Map<String, Object> clean;
         try {
+            a = resolveGitProject(r, a, ourBase, projects);
             clean = validate(r, a);
         } catch (Refusal e) {
-            return fail(kind, t0, 400, e.code, e.getMessage(), e.allowed, "describe forgejo:" + r.name() + " и исправить args", null);
+            return fail(kind, t0, 400, e.code, e.getMessage(), e.allowed,
+                e.hint != null ? e.hint : "describe forgejo:" + r.name() + " и исправить args", null);
         }
         if (r.capability() != null)
             return fail(kind, t0, 501, "REFUSED", "маршрут " + r.name() + " — не REST, capability «" + r.capability()
@@ -161,6 +189,51 @@ final class ForgejoApp {
             .put("v", 1).put("kind", kind).put("outcome", empty ? "empty" : "found")
             .put("data", data).put("meta", meta).putNull("error");
         return new Outcome(200, env);
+    }
+
+    // ── git_project → owner/repo (FJ-04) ─────────────────────────────────
+
+    /** У маршрута есть пара path-параметров owner+repo — значит, ему можно дать git_project. */
+    static boolean takesRepo(ForgejoRoutes.Route r) {
+        ForgejoRoutes.Param o = r.params().get("owner");
+        ForgejoRoutes.Param p = r.params().get("repo");
+        return o != null && p != null && "path".equals(o.in()) && "path".equals(p.in());
+    }
+
+    /**
+     * Подставляет owner/repo из git_project. Маршрут без owner+repo — args как есть (валидация назовёт git_project
+     * лишним). git_project вместе с owner/repo — BAD_PARAMS (что-то одно). Проект не зарегистрирован или primary на
+     * чужом хосте — INVALID_VALUE с подсказкой; апстрим в этих случаях не зовётся.
+     */
+    static JsonObject resolveGitProject(ForgejoRoutes.Route r, JsonObject args, String ourBase, Projects projects) {
+        Object gp = args.getValue(GIT_PROJECT);
+        if (gp == null || !takesRepo(r)) return args;
+        if (args.containsKey("owner") || args.containsKey("repo"))
+            throw new Refusal("BAD_PARAMS", "git_project и owner/repo вместе — дайте что-то одно", List.of(GIT_PROJECT, "owner", "repo"));
+        if (!(gp instanceof String slug) || slug.isBlank())
+            throw new Refusal("BAD_PARAMS", "«git_project» — строка, слаг проекта LORE (например NooriUta/UnlimitedLORE)", null);
+        String hint = "дайте owner+repo нашего Forgejo (например AIDA/UnlimitedLORE) или зарегистрируйте проект в LORE";
+        if (projects == null)
+            throw new Refusal("INVALID_VALUE", "приём git_project не подключён", null, hint);
+        java.util.Optional<ForgejoBridge.Repo> repo = projects.resolve(slug);
+        if (repo.isEmpty())
+            throw new Refusal("INVALID_VALUE", "проект «" + slug + "» не зарегистрирован в LORE или у него нет primary-хоста", null, hint);
+        String host = hostOf(repo.get().apiBase());
+        if (ourBase != null && !java.util.Objects.equals(host, hostOf(ourBase)))
+            throw new Refusal("INVALID_VALUE", "primary-хост проекта «" + slug + "» — " + host + ", а миниапп ходит только в наш Forgejo ("
+                + hostOf(ourBase) + ")", null, "этот проект живёт не в нашем Forgejo — миниапп его не читает");
+        JsonObject out = args.copy();
+        out.remove(GIT_PROJECT);
+        out.put("owner", repo.get().owner()).put("repo", repo.get().name());
+        return out;
+    }
+
+    private static String hostOf(String base) {
+        try {
+            return URI.create(base).getHost();
+        } catch (RuntimeException e) {
+            return base;
+        }
     }
 
     // ── валидация args ───────────────────────────────────────────────────

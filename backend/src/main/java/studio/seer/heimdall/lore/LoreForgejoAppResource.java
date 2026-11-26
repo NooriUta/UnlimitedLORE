@@ -71,6 +71,8 @@ public class LoreForgejoAppResource extends LoreResourceBase {
                          @HeaderParam(AgentScopeFilter.ACT_AS_HEADER) String actAs,
                          @HeaderParam(AgentScopeFilter.HUMAN_APPROVAL_HEADER) String approval) {
         if (!enabled) return disabled();
+        // FJ-04: служебный маршрут QG-прогона read-группы — достижим и MCP-инструментом forgejo (route=qg_read)
+        if (QG_READ.equals(route)) return qgRead(seerRole, actAs);
         ForgejoRoutes reg = ForgejoRoutes.load();
         Caller c = caller(seerRole, actAs);
         JsonObject args;
@@ -85,8 +87,10 @@ public class LoreForgejoAppResource extends LoreResourceBase {
         if (args == null && reg.get(route) != null && reg.get(route).allows(role)) {
             o = new ForgejoApp.Outcome(400, envelopeError(route, 400, "BAD_PARAMS", "тело — не JSON-объект args"));
         } else {
+            String ourBase = bridge.configured() ? bridge.resolve(gitProject).map(ForgejoBridge.Repo::apiBase).orElse(null) : null;
             o = ForgejoApp.execute(reg, route, args == null ? new JsonObject() : args, role,
-                AgentScopeFilter.humanApproval(approval), !"false".equalsIgnoreCase(truncate), up);
+                AgentScopeFilter.humanApproval(approval), !"false".equalsIgnoreCase(truncate), up,
+                ourBase, ourBase == null ? null : (ForgejoApp.Projects) bridge::resolve);
         }
         JsonObject env = o.envelope();
         JsonObject err = env.getJsonObject("error");
@@ -96,6 +100,31 @@ public class LoreForgejoAppResource extends LoreResourceBase {
             env.getString("kind"), role, env.getString("outcome"), err == null ? "-" : err.getString("code"),
             meta.getValue("truncated") != null, meta.getValue("took_ms"), o.http());
         return noStore(Response.status(o.http()).entity(env.encode()).type(MediaType.APPLICATION_JSON));
+    }
+
+    /**
+     * FJ-04: QG-прогон read-группы против нашего Forgejo (пробы {@link ForgejoReadProbes}). Только full: прогон
+     * ходит во все read-маршруты токеном моста. Ответ — вердикт PASS / PARTIAL / FAIL и строка на пробу; запись
+     * в qg_run_log делает вызывающий агент (MCP), бэкенд ничего не пишет.
+     */
+    /** Имя служебного маршрута QG-прогона для инструмента forgejo (в реестре маршрутов Forgejo его нет — это не REST Forgejo). */
+    static final String QG_READ = "qg_read";
+
+    @POST
+    @Path("qg/read")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response qgRead(@HeaderParam("X-Seer-Role") String seerRole,
+                           @HeaderParam(AgentScopeFilter.ACT_AS_HEADER) String actAs) {
+        if (!enabled) return disabled();
+        Caller c = caller(seerRole, actAs);
+        if (c.refusal() != null || !"full".equals(c.role()))
+            return noStore(Response.status(403).entity(new JsonObject().put("error", "FORBIDDEN_FOR_ROLE")
+                .put("detail", "QG-прогон read-группы — только профиль full").put("allowed", new io.vertx.core.json.JsonArray().add("full"))
+                .encode()).type(MediaType.APPLICATION_JSON));
+        ForgejoReadProbes.Report rep = ForgejoReadProbes.run(ForgejoRoutes.load(), ForgejoReadProbes.load(), upstream());
+        LOG.infof("[FORGEJO-APP] qg/read verdict=%s total=%d passed=%d failed=%d skipped=%d",
+            rep.verdict(), rep.total(), rep.passed(), rep.failed(), rep.skipped());
+        return noStore(Response.ok(rep.toJson().encode()).type(MediaType.APPLICATION_JSON));
     }
 
     /** Апстрим: мост не сконфигурирован или проект-база не резолвится — UPSTREAM_5XX 503 с причиной, без похода. */
@@ -160,6 +189,9 @@ public class LoreForgejoAppResource extends LoreResourceBase {
             List<Map<String, Object>> params = new ArrayList<>();
             for (ForgejoRoutes.Param p : r.params().values()) params.add(p.toMap());
             card.put("params", params);
+            if (ForgejoApp.takesRepo(r))
+                card.put(ForgejoApp.GIT_PROJECT, "вместо owner+repo можно дать git_project — слаг проекта LORE (например "
+                    + "NooriUta/UnlimitedLORE); резолв только в наш Forgejo, что-то одно из двух");
             card.put("allowed_for_you", r.allows(role));
             card.put("envelope", "{v:1, kind, outcome: found|empty|failed, data, meta{took_ms" + (r.list() ? ", cursor, has_more" : "")
                 + ", truncated}, error{code,status,allowed,hint}}");
@@ -174,6 +206,7 @@ public class LoreForgejoAppResource extends LoreResourceBase {
         return new JsonObject().put("v", 1).put("kind", "forgejo:*").put("outcome", total == 0 ? "empty" : "found")
             .put("data", new JsonObject().put("role", role).put("groups", new JsonObject(new LinkedHashMap<>(byGroup)))
                 .put("total", total).put("registry_total", reg.all().size())
+                .put("qg", "full: forgejo route=qg_read — QG-прогон всех read-маршрутов против нашего Forgejo, вердикт PASS/PARTIAL/FAIL")
                 .put("hint", "forgejo_describe route=<name> — карточка; forgejo route=<name> args={…} — вызов"))
             .put("meta", new JsonObject()).putNull("error");
     }
