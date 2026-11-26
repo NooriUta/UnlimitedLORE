@@ -538,6 +538,14 @@ export function registerLoreRead(server: McpServer): void {
     depth: z.number().int().min(1).max(3).optional().describe('1..3 hops, default 1'),
     dir: z.enum(['in', 'out', 'both']).optional().describe('direction FROM the found record; default both'),
   });
+  const findNeighbors = z.object({
+    as: z.string().regex(/^[a-z][a-z0-9_]{0,39}$/).optional()
+      .describe('row field for this set, default "neighbors"; required to differ when several sets are given'),
+    rels: z.array(z.string()).min(1).describe('edge types to walk ONE hop, e.g. ["DEPENDS_ON"], ["TAGGED_WITH"]'),
+    dir: z.enum(['in', 'out', 'both']).optional().describe('FROM the found record: out = what it points to, in = who points to it (impact); default both'),
+    types: z.array(z.string()).min(1).optional().describe('keep only neighbors of these graph types (task, sprint, adr, component, …)'),
+    limit: z.number().int().min(1).max(500).optional().describe('neighbors per row, default 50; cut rows are listed in meta.neighbors[].truncated_ids'),
+  });
   server.tool(
     'find',
     'Structured query "type + fields + link" in ONE call (POST /lore/find, SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-05) — instead of ' +
@@ -554,7 +562,12 @@ export function registerLoreRead(server: McpServer): void {
       'links_to:{id:"component:FORSETI", rels:["TAGGED_WITH"]}}; tasks of a repository = {type:"task", links_to:{id:' +
       '"repository:https://…"}}. READ meta FIRST: complete:false / truncated:true + capped_at:N + total — not the whole ' +
       'answer; hidden_by_scope = matching rows outside your projects; an EMPTY answer carries empty_reason: hidden_by_scope ' +
-      '(found, but not yours) or no_match. neighbors / edge_fields / neighbor / view are not executed yet (400 NOT_IMPLEMENTED). ' +
+      '(found, but not yours) or no_match. neighbors {rels, dir?, types?, as?, limit?} (or a list of up to 5 with distinct as) ' +
+      'adds to EVERY returned row a list of its one-hop neighbors [{id, type, title, status_category, rel, dir, kind?}] over ' +
+      'CURRENT edges — "found and its context" in one call, e.g. {type:"task", id_in:["SPRINT_X/CO-11"], neighbors:{rels:' +
+      '["DEPENDS_ON"], dir:"in"}} = who depends on it; meta.neighbors[] carries hidden_by_scope (neighbors outside your ' +
+      'projects, not shown) and truncated_ids (rows cut at limit). edge_fields / neighbor / view are not executed yet ' +
+      '(400 NOT_IMPLEMENTED). ' +
       'GC-05 (21.11): project = the ONE project param of find and of every project slice — a project key (short code like ' +
       '"LORE", case-insensitive, or the former "owner/repo" via aliases) or a list (= any of them); unknown → 404, outside ' +
       'your projects → 403. scope_projects is the former name: still accepted, the answer carries _warning. search = text ' +
@@ -575,6 +588,8 @@ export function registerLoreRead(server: McpServer): void {
       fields: z.array(z.string()).optional().describe('fields to return besides id/type/title'),
       sort: z.array(z.object({ field: z.string(), dir: z.enum(['asc', 'desc']).optional() })).optional(),
       limit: z.number().int().min(1).max(2000).optional().describe('row cap, default 500'),
+      neighbors: z.union([findNeighbors, z.array(findNeighbors).min(1).max(5)]).optional()
+        .describe('one-hop neighbors of every returned row, by edge types; a list = several named sets'),
       search: z.string().min(1).max(160).optional()
         .describe('text: every word must occur in the record key or title (case-insensitive); combine with where/project'),
       project: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]).optional()
