@@ -67,8 +67,29 @@ class LoreModelWorkflowArtifactsTest {
     @Test
     void contentHasApprovalGateBeforePublication() {
         LoreModelWorkflow.Kind c = real().kinds().get("content");
-        assertEquals(List.of("approval", "scheduled"), c.review_stages(), "сначала согласование, потом публикация");
+        // 26.11 перед согласованием встала внутренняя приёмка агентом (agent_review) — порядок важен, а не точный список
+        List<String> rv = c.review_stages();
+        assertTrue(rv.indexOf("approval") >= 0 && rv.indexOf("approval") < rv.indexOf("scheduled"), "сначала согласование, потом публикация: " + rv);
         assertFalse(c.stages().contains("scheduled"), "публикация — не стадия работы, а шаг после согласования");
+    }
+
+    /**
+     * Владелец 26.11: «из rfd в uat — внутренняя приёмка агентом»; «если это не читается из workflow — нужно добавить».
+     * У каждого вида с внутренним результатом приёмка начинается с агентской стадии (stand_check у dev/ops,
+     * agent_review у остальных) и она выдаёт review_report. У external и funnel исход приходит извне — их не трогаем.
+     */
+    @Test
+    void internalAgentAcceptanceIsExplicit() {
+        LoreModelWorkflow.Workflow w = real();
+        assertEquals("stage", w.artifacts().get("review_report").source());
+        for (String k : List.of("dev", "ops", "doc", "research", "content", "routine", "hardware")) {
+            LoreModelWorkflow.Kind kind = w.kinds().get(k);
+            String agentStage = k.equals("dev") || k.equals("ops") ? "stand_check" : "agent_review";
+            assertTrue(kind.review_stages().contains(agentStage), k + ": нет стадии внутренней приёмки агентом " + agentStage);
+            assertTrue(kind.flow().stream().anyMatch(x -> x.stage().equals(agentStage) && x.produces().contains("review_report")),
+                k + ": " + agentStage + " не выдаёт review_report");
+        }
+        assertEquals(List.of("decision_in"), w.kinds().get("external").review_stages(), "external: исход приходит извне");
     }
 
     @Test
