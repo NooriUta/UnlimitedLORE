@@ -1688,6 +1688,17 @@ describe('выпуск в зеркале SeidrStudio: мини-труба и ш�
     expect(wf).toMatch(/secrets\.MIRROR_PUSH_TOKEN/);
   });
 
+  // Исключение для патча (владелец 26.11.2026: «и выпусти отдельно в SeidrStudio, мимо нашего правила, 19.1»):
+  // вход allow_patch строкой — Forgejo не разбирает выражения в булевых полях (workflowForgejoBools); при «да»
+  // труба сама пушит main и тег в зеркало, иначе выпуск там не завести. Основная труба правило не меняет.
+  it('мини-труба: вход allow_patch и пуш main + тег в зеркало только при «да»', () => {
+    const wf = code(read(MIRROR_REL_WF));
+    expect(wf).toMatch(/^ {6}allow_patch:$/m);
+    expect(wf).toContain("ALLOW_PATCH: ${{ inputs.allow_patch == 'да' && '1' || '0' }}");
+    expect(wf).toContain("if: ${{ inputs.allow_patch == 'да' }}");
+    expect(wf).toContain('push "${HOST%/}/${DST_REPO}.git"');
+  });
+
   // Владелец 23.11: «чтение — MIRROR_PULL_TOKEN, PUSH — на запись; нельзя в одном разные права раздавать».
   // Прогон 10897: токен записи для AIDA/UnlimitedLORE отвечал 404, токен прогона веб-скачивание не проходит.
   it('два токена: источник читается MIRROR_PULL_TOKEN, зеркало пишется MIRROR_PUSH_TOKEN — в обеих трубах', () => {
@@ -1800,6 +1811,20 @@ exit 0
   it('догонка vX.Y.Z (Z>0) не переносится — зеркала выносятся при смене x.y', () => {
     const r = mirror({ TAG: 'v9.9.1' });
     expect(r.code).toBe(0);
+    expect(r.out).toMatch(/не трогаем/);
+    expect(r.calls).toEqual([]);
+  });
+
+  // Владелец 26.11.2026 (v1.19.1): исключение — только явным входом ручной трубы (ALLOW_PATCH=1).
+  it('патч с явным разрешением ALLOW_PATCH=1 переносится — исключение руками, а не по умолчанию', () => {
+    const r = mirror({ TAG: 'v9.9.1', ALLOW_PATCH: '1' });
+    expect(r.code).toBe(0);
+    expect(r.out).not.toMatch(/не трогаем/);
+    expect(r.calls.some((c) => c.startsWith(`POST ${DST}/releases`)), 'выпуск заведён в зеркале').toBe(true);
+  });
+
+  it('ALLOW_PATCH не «1» — правило действует, как без него', () => {
+    const r = mirror({ TAG: 'v9.9.1', ALLOW_PATCH: 'нет' });
     expect(r.out).toMatch(/не трогаем/);
     expect(r.calls).toEqual([]);
   });

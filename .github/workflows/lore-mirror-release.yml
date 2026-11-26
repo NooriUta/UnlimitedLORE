@@ -13,6 +13,12 @@ on:
       tag:
         description: Тег выпуска (vX.Y.0)
         required: true
+      # Исключение из правила «в зеркало только vX.Y.0» (владелец 26.11.2026, v1.19.1: «выпусти отдельно в
+      # SeidrStudio, мимо нашего правила»). Строкой «да»/«нет»: Forgejo не разбирает выражения в булевых полях.
+      allow_patch:
+        description: 'да — перенести и патч vX.Y.Z (main + тег + выпуск); по умолчанию нет'
+        required: false
+        default: 'нет'
 
 concurrency:
   group: lore-mirror-release-${{ inputs.tag }}
@@ -23,9 +29,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Патч основная труба в зеркало не пушит, поэтому тега там нет — без него выпуск не завести. Тот же пуш,
+      # что шаг «Mirror main + tag to SeidrStudio» в lore-release.yml: тег обязан быть в main.
+      - name: main + тег → зеркало SeidrStudio (только allow_patch = да)
+        if: ${{ inputs.allow_patch == 'да' }}
+        env:
+          TAG: ${{ inputs.tag }}
+          HOST: ${{ github.server_url }}
+          DST_REPO: ${{ vars.SEIDR_MIRROR_REPO || 'SeidrStudio/UnlimitedLORE' }}
+          DST_TOKEN: ${{ secrets.MIRROR_PUSH_TOKEN }}
+        run: |
+          set -u
+          if [ -z "${DST_TOKEN:-}" ]; then
+            echo "::error::BLOCKED: нет секрета MIRROR_PUSH_TOKEN — тег $TAG в зеркало ${DST_REPO} не отправлен."
+            exit 1
+          fi
+          git fetch origin main:refs/remotes/origin/main --force
+          git fetch origin "refs/tags/$TAG:refs/tags/$TAG" --force
+          if ! git merge-base --is-ancestor "refs/tags/$TAG" origin/main; then
+            echo "::error::тег $TAG не содержится в main — в зеркало не отправляю (зеркало отражает релизы)."
+            exit 1
+          fi
+          git -c http.extraheader="Authorization: token ${DST_TOKEN}" push "${HOST%/}/${DST_REPO}.git" \
+            "refs/remotes/origin/main:refs/heads/main" "refs/tags/$TAG"
+          echo "зеркало обновлено: main + $TAG -> ${DST_REPO}"
 
       - name: Выпуск → зеркало SeidrStudio
         env:
+          ALLOW_PATCH: ${{ inputs.allow_patch == 'да' && '1' || '0' }}
           TAG: ${{ inputs.tag }}
           HOST: ${{ github.server_url }}
           SRC_REPO: ${{ github.repository }}
