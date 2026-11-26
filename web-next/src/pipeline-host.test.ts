@@ -116,14 +116,14 @@ describe('PL-04: lore-cd.yml катит ПРЕПРОД, а не прод', () =>
   });
 
   it('публичная страница v2 и бандлы проверяются на именах препрода', () => {
-    expect(cdSteps().find((x) => /post-deploy-probe\.sh v2-page\s+https:\/\/preprod\.new\.lore\.odal\.seidrstudio\.pro/.test(x.body))).toBeDefined();
-    // S8-02 (владелица 18.11.2026: «отключить v1 и все перевести на v2», «что бы не писать new», «и на препроде»):
-    // основное имя препрода отдаёт v2; имя с new — тоже v2; v1 — только запасной вход по IP :4410.
+    // Владелец 26.11.2026: «new уже не нужно, у нас одна версия осталась» — страница и бандл проверяются
+    // по основному имени препрода; пробы по имени с new нет (и её возврат — красный).
+    expect(cdSteps().find((x) => /post-deploy-probe\.sh v2-page\s+https:\/\/preprod\.lore\.odal\.seidrstudio\.pro/.test(x.body))).toBeDefined();
     const main = cdSteps().find((x) => /bundle-probe\.sh\b.*container:lore-app-next\s+https:\/\/preprod\.lore\.odal\.seidrstudio\.pro/.test(x.body));
-    const alias = cdSteps().find((x) => /bundle-probe\.sh\b.*container:lore-app-next\s+https:\/\/preprod\.new\.lore\.odal\.seidrstudio\.pro/.test(x.body));
+    const alias = cdSteps().find((x) => /https:\/\/preprod\.new\.lore\.odal\.seidrstudio\.pro/.test(x.body) && /probe\.sh/.test(x.body));
     const v1 = cdSteps().find((x) => /bundle-probe\.sh\b.*container:lore-app\s+http:\/\/192\.168\.3\.131:4410\//.test(x.body));
     expect(main, 'нет пробы: основное имя препрода отдаёт бандл v2').toBeDefined();
-    expect(alias, 'нет пробы: имя с new по-прежнему отдаёт v2').toBeDefined();
+    expect(alias, 'проба по имени с new снята — одна версия, одно имя').toBeUndefined();
     // LORE CD 8968 (18.11.2026): v1 по IP :4410 отвечает 301 на основное имя (его LORE_PUBLIC_URL) — то есть
     // страницы v1 больше нет вовсе, а проба «v1 отдаёт свой бандл» роняла выкатку и отменяла тег образов (PL-05).
     expect(v1, 'v1 выключен — пробы его бандла быть не должно').toBeUndefined();
