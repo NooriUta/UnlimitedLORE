@@ -43,7 +43,17 @@ public class LoreProjectResource extends LoreResourceBase {
 
     // hosts = JSON array string (ADR-018); default_branch = repo default branch.
     // JSON field names map 1:1 to record components (snake_case kept deliberately).
-    public record ProjectCreateRequest(String slug, String name, String hosts, String default_branch) {}
+    // 22.11.2026: полей стало тринадцать. Состав держит сторож ProjectFieldParityTest — «что паспорт ПОКАЗЫВАЕТ,
+    // то и должно записываться». До этого их было четыре, и короткий код проекта изменить было нечем НИКОМУ:
+    // ни агенту (дверь не принимала), ни человеку (паспорт проекта в вебе только читается — его нет в
+    // PASSPORT_TYPES). Выяснилось, когда владелица попросила переименовать MIGGEN → UDWE.
+    // Не принимаются намеренно: slug (он и есть ключ), title и short_title (вычисляются из name/slug),
+    // aliases (собираются из адресов репозиториев).
+    public record ProjectCreateRequest(String slug, String name, String hosts, String default_branch,
+                                       String short_code, String short_title_en, String short_title_pl,
+                                       String title_en, String title_pl,
+                                       String description, String description_en, String description_pl,
+                                       Boolean is_private) {}
 
     @POST
     @Path("project")
@@ -68,6 +78,20 @@ public class LoreProjectResource extends LoreResourceBase {
             if (req.name() != null) { sql.append(", name=:name"); p.put("name", req.name()); }
             if (req.hosts() != null) { sql.append(", hosts=:hosts"); p.put("hosts", req.hosts()); }
             if (req.default_branch() != null) { sql.append(", default_branch=:db"); p.put("db", req.default_branch()); }
+            // Тем же правилом «пишем только переданное»: вызов с одним полем не стирает остальные.
+            // Имя поля в SQL совпадает с именем в запросе — иначе сторож паритета их не сопоставит.
+            String[][] plain = {
+                {"short_code", req.short_code()}, {"short_title_en", req.short_title_en()},
+                {"short_title_pl", req.short_title_pl()}, {"title_en", req.title_en()},
+                {"title_pl", req.title_pl()}, {"description", req.description()},
+                {"description_en", req.description_en()}, {"description_pl", req.description_pl()},
+            };
+            for (String[] kv : plain) {
+                if (kv[1] == null) continue;
+                sql.append(", ").append(kv[0]).append("=:").append(kv[0]);
+                p.put(kv[0], kv[1]);
+            }
+            if (req.is_private() != null) { sql.append(", is_private=:is_private"); p.put("is_private", req.is_private()); }
             sql.append(" UPSERT WHERE slug=:slug");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                 sql.toString(), p)).await().indefinitely();

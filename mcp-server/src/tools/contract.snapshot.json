@@ -1649,9 +1649,18 @@
   "project_new": {
     "input": {
       "default_branch": "string?",
+      "description": "string?",
+      "description_en": "string?",
+      "description_pl": "string?",
       "hosts": "{base_url:string,default_branch:string?,file_url_template:string,pr_url_template:string,remote:string,role:enum(mirror|primary)}[]?",
+      "is_private": "boolean?",
       "name": "string?",
-      "slug": "string"
+      "short_code": "string?",
+      "short_title_en": "string?",
+      "short_title_pl": "string?",
+      "slug": "string",
+      "title_en": "string?",
+      "title_pl": "string?"
     },
     "output": {
       "content": [
