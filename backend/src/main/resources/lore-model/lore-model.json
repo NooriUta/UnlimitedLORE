@@ -9304,7 +9304,7 @@
         }, {
           "stage" : "measure",
           "produces" : [ "measurement" ],
-          "consumes" : [ "pr" ]
+          "consumes" : [ "pr", "code", "tests" ]
         }, {
           "stage" : "stand_check",
           "produces" : [ "stand_report" ],
