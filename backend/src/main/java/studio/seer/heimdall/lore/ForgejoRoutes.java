@@ -74,9 +74,23 @@ final class ForgejoRoutes {
     /** Маршрут реестра. {@code via} — исполняется штатным инструментом моста; {@code capability} — не REST. */
     record Route(String name, String method, String pathTemplate, String desc, String group, List<String> roles,
                  String risk, boolean list, String via, String capability, String response, String origin, String note,
-                 Map<String, Param> params) {
+                 Map<String, Param> params, List<Rule> rules) {
 
         boolean allows(String role) { return role != null && roles.contains(role); }
+    }
+
+    /**
+     * FJ-06: правило маршрута по значению аргумента. {@code refuse} — значение из {@code values} или под {@code pattern}
+     * не исполняется никогда (409 REFUSED, даже с подтверждением); {@code escalate} — такое значение поднимает маршрут
+     * до {@code risk}/{@code roles} (тег релиза v* — только full и с подтверждением).
+     */
+    record Rule(String kind, String param, List<String> values, String pattern, String risk, List<String> roles, String reason) {
+
+        boolean matches(Object raw) {
+            if (!(raw instanceof String s)) return false;
+            if (values != null && values.contains(s)) return true;
+            return pattern != null && java.util.regex.Pattern.compile(pattern).matcher(s).find();
+        }
     }
 
     private final Map<String, Route> routes;
@@ -131,7 +145,7 @@ final class ForgejoRoutes {
             Route route = new Route(r.getString("name"), r.getString("method"), r.getString("pathTemplate"),
                 r.getString("desc"), r.getString("group"), List.copyOf(roles), r.getString("risk"),
                 r.getBoolean("list", false), r.getString("via"), r.getString("capability"), r.getString("response"),
-                r.getString("origin"), r.getString("note"), java.util.Collections.unmodifiableMap(params));
+                r.getString("origin"), r.getString("note"), java.util.Collections.unmodifiableMap(params), rulesOf(r));
             if (out.put(route.name(), route) != null)
                 throw new IllegalStateException("реестр маршрутов: двойник имени " + route.name());
         }
@@ -157,6 +171,29 @@ final class ForgejoRoutes {
             .filter(e -> e.getValue() <= Math.max(3, q.length() / 3))
             .sorted(Map.Entry.<String, Integer>comparingByValue().thenComparing(Map.Entry.comparingByKey()))
             .limit(limit).map(Map.Entry::getKey).toList();
+    }
+
+    private static List<Rule> rulesOf(JsonObject r) {
+        List<Rule> out = new ArrayList<>();
+        for (Object o : r.getJsonArray("rules", new JsonArray())) {
+            JsonObject x = (JsonObject) o;
+            List<String> values = null;
+            if (x.getJsonArray("values") != null) {
+                values = new ArrayList<>();
+                for (Object v : x.getJsonArray("values")) values.add(String.valueOf(v));
+            }
+            List<String> roles = null;
+            if (x.getJsonArray("roles") != null) {
+                roles = new ArrayList<>();
+                for (Object v : x.getJsonArray("roles")) roles.add(String.valueOf(v));
+            }
+            String kind = x.getString("kind");
+            if (!"refuse".equals(kind) && !"escalate".equals(kind))
+                throw new IllegalStateException("реестр маршрутов: " + r.getString("name") + " — правило вида «" + kind + "» неизвестно");
+            out.add(new Rule(kind, x.getString("param"), values == null ? null : List.copyOf(values), x.getString("pattern"),
+                x.getString("risk"), roles == null ? null : List.copyOf(roles), x.getString("reason")));
+        }
+        return List.copyOf(out);
     }
 
     private static int score(String q, String n) {

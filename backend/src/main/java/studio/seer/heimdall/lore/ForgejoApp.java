@@ -99,11 +99,26 @@ final class ForgejoApp {
         if (r == null)
             return fail(kind, t0, 404, "UNKNOWN_KIND", "маршрута «" + routeName + "» нет в реестре",
                 reg.candidates(routeName, 5), "describe forgejo:* (forgejo_describe) и повторить с именем из allowed", null);
-        if (!r.allows(role))
+        // FJ-06: правила по значению аргумента — escalate поднимает роли/риск, refuse запрещает навсегда
+        JsonObject raw = args == null ? new JsonObject() : args;
+        List<String> roles = r.roles();
+        String risk = r.risk();
+        String escalated = null;
+        for (ForgejoRoutes.Rule rule : r.rules())
+            if ("escalate".equals(rule.kind()) && rule.matches(raw.getValue(rule.param()))) {
+                if (rule.roles() != null) roles = rule.roles();
+                if (rule.risk() != null) risk = rule.risk();
+                escalated = rule.reason();
+            }
+        if (role == null || !roles.contains(role))
             return fail(kind, t0, 403, "FORBIDDEN_FOR_ROLE", "профилю " + (role == null ? "(нет)" : "agent-" + role)
-                + " маршрут " + r.name() + " (группа " + r.group() + ") не разрешён", r.roles(),
+                + " маршрут " + r.name() + " (группа " + r.group() + ") не разрешён" + (escalated == null ? "" : ": " + escalated), roles,
                 "кого спросить: full | architect; переложить вызов на роль из allowed", null);
-        if ("high".equals(r.risk())) {
+        for (ForgejoRoutes.Rule rule : r.rules())
+            if ("refuse".equals(rule.kind()) && rule.matches(raw.getValue(rule.param())))
+                return fail(kind, t0, 409, "REFUSED", "«" + rule.param() + "» = " + raw.getValue(rule.param()) + ": " + rule.reason(),
+                    null, "это не делается через миниапп ни с каким подтверждением", null);
+        if ("high".equals(risk)) {
             if (approval == null || approval.isBlank())
                 return fail(kind, t0, 428, "APPROVAL_REQUIRED", "маршрут " + r.name() + " (risk=high) требует подтверждения человеком",
                     null, "цитата диалога: карточка в канал link → повтор с заголовком X-Lore-Human-Approval "

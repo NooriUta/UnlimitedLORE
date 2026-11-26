@@ -989,6 +989,66 @@
       }
     },
     {
+      "name": "create_tag",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/tags",
+      "desc": "Create a tag (v* release tag — full only, with human approval)",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "tag_name": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "in": "body"
+        },
+        "target": {
+          "required": false,
+          "type": "string",
+          "max": 255,
+          "in": "body",
+          "desc": "branch or commit sha"
+        },
+        "message": {
+          "required": false,
+          "type": "string",
+          "in": "body"
+        }
+      },
+      "rules": [
+        {
+          "kind": "escalate",
+          "param": "tag_name",
+          "pattern": "^v[0-9]",
+          "risk": "high",
+          "roles": [
+            "full"
+          ],
+          "reason": "тег релиза v* — только по слову владельца (CLAUDE.md проекта: релиз preprod → main + тег)"
+        }
+      ]
+    },
+    {
       "name": "create_team",
       "method": "POST",
       "pathTemplate": "/orgs/{org}/teams",
@@ -1075,7 +1135,19 @@
           "max": 255,
           "in": "path"
         }
-      }
+      },
+      "rules": [
+        {
+          "kind": "refuse",
+          "param": "branch",
+          "values": [
+            "develop",
+            "preprod",
+            "main"
+          ],
+          "reason": "защищённая ветка (develop → preprod → main, CLAUDE.md проекта) — удаляется только владельцем в Forgejo, не агентом"
+        }
+      ]
     },
     {
       "name": "delete_file",
@@ -1272,6 +1344,48 @@
       }
     },
     {
+      "name": "delete_release_asset",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}/releases/{id}/assets/{attachment_id}",
+      "desc": "Delete a release attachment",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "attachment_id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        }
+      }
+    },
+    {
       "name": "delete_repo",
       "method": "DELETE",
       "pathTemplate": "/repos/{owner}/{repo}",
@@ -1296,6 +1410,41 @@
           "pattern": "^[a-zA-Z0-9_.-]+$",
           "max": 255,
           "in": "path"
+        }
+      }
+    },
+    {
+      "name": "delete_tag",
+      "method": "DELETE",
+      "pathTemplate": "/repos/{owner}/{repo}/tags/{tag}",
+      "desc": "Delete a tag",
+      "group": "repo-destructive",
+      "roles": [
+        "full"
+      ],
+      "risk": "high",
+      "origin": "lore",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "tag": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "in": "path",
+          "format": "branch"
         }
       }
     },
@@ -4752,6 +4901,50 @@
           "items": "string",
           "desc": "List of topic names to set",
           "in": "body"
+        }
+      }
+    },
+    {
+      "name": "upload_release_asset",
+      "method": "POST",
+      "pathTemplate": "/repos/{owner}/{repo}/releases/{id}/assets",
+      "desc": "Upload a release attachment (multipart — not supported by the miniapp yet)",
+      "group": "file-write",
+      "roles": [
+        "full",
+        "architect",
+        "developer"
+      ],
+      "risk": "medium",
+      "origin": "lore",
+      "capability": "multipart-upload",
+      "note": "исполнитель шлёт только JSON; загрузка файла (multipart) — отдельная capability, пока не подключена",
+      "params": {
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "max": 255,
+          "in": "path",
+          "required": true
+        },
+        "id": {
+          "required": true,
+          "type": "int",
+          "min": 1,
+          "in": "path"
+        },
+        "name": {
+          "required": true,
+          "type": "string",
+          "max": 255,
+          "in": "query"
         }
       }
     }
