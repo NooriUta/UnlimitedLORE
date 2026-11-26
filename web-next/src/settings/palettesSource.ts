@@ -18,6 +18,7 @@
 // к списку kit выглядел бы как выбор модели, которого не было.
 import { PALETTES, loadModel, palettesFromModel, type ModelPaletteEntry } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
+import { setOwnStyles } from './ownStyles';
 
 export interface PaletteOption {
   value: string;
@@ -34,7 +35,15 @@ export interface PalettesView {
   fromModel: boolean;
   /** Что случилось — словами, на экран. */
   notes: string[];
+  /**
+   * Пары шрифтов, из которых человек выбирает (AP-APPEARANCE, 2в): набор установки; сервер набора не шлёт —
+   * обе пары бандла.
+   */
+  fonts?: string[];
 }
+
+/** Пары шрифтов бандла (kit FONT_PAIRS): набор установки их сужает, но не расширяет (4а). */
+export const FONT_PAIRS_FALLBACK: readonly string[] = ['pair', 'mono'];
 
 export interface PalettesOptions {
   fetchImpl?: typeof fetch;
@@ -84,17 +93,23 @@ export async function fetchPalettes(opts: PalettesOptions = {}): Promise<Palette
 
   const p = palettesFromModel(res.model, { known: PALETTES.map(x => x.id as string), lang });
   notes.push(...p.notes);
+  // AP-APPEARANCE: токены своих стилей — применению настроек; выбор — только внутри набора установки (2в).
+  setOwnStyles(Object.fromEntries(p.entries.filter(e => e.tokens).map(e => [e.code, e.tokens!])));
+  const fonts = p.fonts ? [...p.fonts.allowed] : [...FONT_PAIRS_FALLBACK];
+  const allowed = p.allowed;
 
   // Пришёл пустой список — выбирать нечего; подставляем умолчание темы, но
   // оговорка от `palettesFromModel` остаётся на экране.
   if (!p.sent || p.entries.length === 0) {
-    return { options: paletteFallback(), default: p.default, fromModel: false, notes };
+    return { options: paletteFallback(), default: p.default, fromModel: false, notes, fonts };
   }
 
   return {
-    options: p.entries.map(e => ({ value: e.code, label: label(e, lang), swatch: e.swatch })),
+    options: p.entries.filter(e => !allowed || allowed.includes(e.code))
+      .map(e => ({ value: e.code, label: label(e, lang), swatch: e.swatch })),
     default: p.default,
     fromModel: true,
     notes,
+    fonts,
   };
 }

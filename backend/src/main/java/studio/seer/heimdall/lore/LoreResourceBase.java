@@ -366,7 +366,14 @@ public abstract class LoreResourceBase {
         "adr", "SELECT adr_id FROM KnowADR WHERE adr_id = :id LIMIT 1",
         "spec", "SELECT spec_id FROM KnowSpec WHERE spec_id = :id LIMIT 1",
         "decision", "SELECT decision_id FROM KnowDecision WHERE decision_id = :id LIMIT 1",
-        "task", "SELECT task_uid FROM KnowTask WHERE task_uid = :id LIMIT 1");
+        "task", "SELECT task_uid FROM KnowTask WHERE task_uid = :id LIMIT 1",
+        // AP-PASSPORT-EDIT, волна 1: «+ Новая» продуктового слоя. Пути pain/gain/job/project-actor/feature — UPSERT,
+        // на занятый код он переписал бы чужую запись; паспорт создания шлёт mode=create.
+        "pain", "SELECT pain_id FROM KnowPain WHERE pain_id = :id LIMIT 1",
+        "gain", "SELECT gain_id FROM KnowGain WHERE gain_id = :id LIMIT 1",
+        "job", "SELECT job_id FROM KnowJob WHERE job_id = :id LIMIT 1",
+        "actor", "SELECT actor_id FROM KnowProjectActor WHERE actor_id = :id LIMIT 1",
+        "feature", "SELECT uc_id FROM KnowUseCase WHERE uc_id = :id LIMIT 1");
 
     /** Режим записи: пусто или {@code upsert} — прежнее поведение, {@code create} — строгий; прочее — 400. */
     Response modeError(String mode) {
@@ -666,6 +673,11 @@ public abstract class LoreResourceBase {
      * бессмысленна, ребра нет в обоих случаях, и «снято» стало бы утверждением
      * без факта.
      */
+    /** ISS-06: исход связи по факту ребра до/после записи (путь со своей пробой графа) — {@link LoreOutcome#fact}. */
+    Response linkFact(Map<String, Object> base, boolean remove, boolean hadBefore, boolean hasAfter, String what) {
+        return noStore(Response.ok(LoreOutcome.fact(base, remove, hadBefore, hasAfter, what)));
+    }
+
     Response unlinkOutcome(Map<String, Object> base, boolean had) {
         return noStore(Response.ok(LoreOutcome.unlink(base, had)));
     }

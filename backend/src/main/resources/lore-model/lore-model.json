@@ -1425,7 +1425,7 @@
       "editable" : true,
       "write" : {
         "endpoint" : "/lore/adr",
-        "field" : "date_created"
+        "field" : "created_at"
       },
       "definition" : "Дата, когда ADR заведён.",
       "layer" : "stable",
@@ -4041,6 +4041,11 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/feature",
+        "field" : "title"
+      },
       "required" : true,
       "definition" : "Название фичи: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
@@ -4192,6 +4197,11 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/feature",
+        "field" : "body_md"
+      },
       "definition" : "Текст фичи в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
@@ -4200,6 +4210,11 @@
       "key" : "context_md",
       "label" : "Контекст",
       "labelKey" : "pp.adr.context",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/feature",
+        "field" : "context_md"
+      },
       "definition" : "Контекст фичи: зачем она, кому и в какой ситуации.",
       "layer" : "stable",
       "labelEn" : "Context",
@@ -4412,7 +4427,8 @@
       "dir" : "out",
       "targetType" : "pain",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "gains",
       "label" : "Выгоды",
@@ -4423,7 +4439,8 @@
       "dir" : "out",
       "targetType" : "gain",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "jobs",
       "label" : "Работы",
@@ -4434,7 +4451,8 @@
       "dir" : "out",
       "targetType" : "job",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "relieves",
       "label" : "Снимает боли",
@@ -4589,6 +4607,17 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Feature",
     "labelPl" : "Funkcja"
@@ -5303,6 +5332,11 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/project-actor",
+        "field" : "name"
+      },
       "required" : true,
       "definition" : "Название роли: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
@@ -5314,6 +5348,11 @@
       "labelKey" : "pp.field.roleKind",
       "kind" : "text",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/project-actor",
+        "field" : "kind"
+      },
       "definition" : "Вид роли: человек, автоматизация или система.",
       "layer" : "stable",
       "labelEn" : "Role kind",
@@ -5337,6 +5376,11 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/project-actor",
+        "field" : "body_md"
+      },
       "definition" : "Текст роли в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
@@ -5417,7 +5461,8 @@
       "dir" : "in",
       "targetType" : "pain",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "gains",
       "label" : "Выгоды",
@@ -5428,7 +5473,8 @@
       "dir" : "in",
       "targetType" : "gain",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "jobs",
       "label" : "Работы",
@@ -5439,7 +5485,8 @@
       "dir" : "in",
       "targetType" : "job",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "agents",
       "label" : "Агенты",
@@ -5473,6 +5520,17 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Product role",
     "labelPl" : "Rola produktu"
@@ -5487,6 +5545,11 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/pain",
+        "field" : "title"
+      },
       "required" : true,
       "definition" : "Название боли: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
@@ -5498,6 +5561,11 @@
       "labelKey" : "pp.field.severity",
       "kind" : "text",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/pain",
+        "field" : "severity"
+      },
       "definition" : "Острота боли: насколько сильно она мешает клиенту — высокая или обычная.",
       "layer" : "stable",
       "labelEn" : "Severity",
@@ -5517,6 +5585,11 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/pain",
+        "field" : "body_md"
+      },
       "definition" : "Текст боли в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
@@ -5587,7 +5660,8 @@
       "dir" : "in",
       "targetType" : "feature",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "relievedBy",
       "label" : "Снимают сценарии",
@@ -5609,7 +5683,8 @@
       "dir" : "out",
       "targetType" : "actor",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "jobs",
       "label" : "Мешает работам",
@@ -5620,7 +5695,8 @@
       "dir" : "out",
       "targetType" : "job",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
@@ -5643,6 +5719,17 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Pain",
     "labelPl" : "Ból"
@@ -5657,6 +5744,11 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/gain",
+        "field" : "title"
+      },
       "required" : true,
       "definition" : "Название выгоды: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
@@ -5668,6 +5760,11 @@
       "labelKey" : "pp.field.rank",
       "kind" : "text",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/gain",
+        "field" : "rank"
+      },
       "definition" : "Ранг выгоды по канве ценности: обязательная, ожидаемая, желательная или неожиданная для клиента.",
       "layer" : "stable",
       "labelEn" : "Rank",
@@ -5687,6 +5784,11 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/gain",
+        "field" : "body_md"
+      },
       "definition" : "Текст выгоды в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
@@ -5695,6 +5797,11 @@
       "key" : "metric_md",
       "label" : "Метрика",
       "labelKey" : "pp.field.metric",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/gain",
+        "field" : "metric_md"
+      },
       "definition" : "Как измеряется выгода: метрика и порог.",
       "layer" : "stable",
       "labelEn" : "Metric",
@@ -5765,7 +5872,8 @@
       "dir" : "in",
       "targetType" : "feature",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "deliveredBy",
       "label" : "Дают сценарии",
@@ -5787,7 +5895,8 @@
       "dir" : "out",
       "targetType" : "actor",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "jobs",
       "label" : "Успех в работах",
@@ -5798,7 +5907,8 @@
       "dir" : "out",
       "targetType" : "job",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
@@ -5821,6 +5931,17 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Gain",
     "labelPl" : "Korzyść"
@@ -5835,6 +5956,11 @@
       "labelKey" : "pp.field.title",
       "kind" : "text",
       "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/job",
+        "field" : "title"
+      },
       "required" : true,
       "definition" : "Название работы: под ним запись видна в списках и по нему её ищут.",
       "layer" : "stable",
@@ -5846,6 +5972,11 @@
       "labelKey" : "pp.field.jobKind",
       "kind" : "text",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/job",
+        "field" : "kind"
+      },
       "definition" : "Вид работы клиента: функциональная, социальная или поддерживающая.",
       "layer" : "stable",
       "labelEn" : "Job kind",
@@ -5856,6 +5987,11 @@
       "labelKey" : "pp.field.importance",
       "kind" : "text",
       "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/job",
+        "field" : "importance"
+      },
       "definition" : "Важность работы для клиента — высокая или обычная.",
       "layer" : "stable",
       "labelEn" : "Importance",
@@ -5875,6 +6011,11 @@
       "key" : "body_md",
       "label" : "Описание",
       "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/job",
+        "field" : "body_md"
+      },
       "definition" : "Текст работы в Markdown — основное содержание записи.",
       "layer" : "stable",
       "labelEn" : "Text",
@@ -5950,7 +6091,8 @@
       "dir" : "in",
       "targetType" : "feature",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "performedBy",
       "label" : "Выполняют сценарии",
@@ -5972,7 +6114,8 @@
       "dir" : "out",
       "targetType" : "actor",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "pains",
       "label" : "Мешают боли",
@@ -5983,7 +6126,8 @@
       "dir" : "in",
       "targetType" : "pain",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "gains",
       "label" : "Успех — выгоды",
@@ -5994,7 +6138,8 @@
       "dir" : "in",
       "targetType" : "gain",
       "relation" : "association",
-      "place" : "link_tab"
+      "place" : "link_tab",
+      "manageable" : true
     }, {
       "key" : "refsOut",
       "label" : "Ссылается",
@@ -6017,6 +6162,17 @@
       "targetType" : "any",
       "relation" : "association",
       "place" : "link_tab"
+    }, {
+      "key" : "history",
+      "label" : "История",
+      "labelKey" : "pp.rel.history",
+      "labelEn" : "History",
+      "labelPl" : "Historia",
+      "rel" : "HAS_STATE",
+      "dir" : "out",
+      "targetType" : "hist",
+      "relation" : "composition",
+      "place" : "history"
     } ],
     "labelEn" : "Job",
     "labelPl" : "Praca"
@@ -7440,6 +7596,7 @@
   "graph" : {
     "actor" : {
       "vertex" : "KnowProjectActor",
+      "hist" : "KnowProjectActorHist",
       "key" : "actor_id"
     },
     "adr" : {
@@ -7466,14 +7623,17 @@
     },
     "feature" : {
       "vertex" : "KnowUseCase",
+      "hist" : "KnowUseCaseHist",
       "key" : "uc_id"
     },
     "gain" : {
       "vertex" : "KnowGain",
+      "hist" : "KnowGainHist",
       "key" : "gain_id"
     },
     "job" : {
       "vertex" : "KnowJob",
+      "hist" : "KnowJobHist",
       "key" : "job_id"
     },
     "machine" : {
@@ -7491,6 +7651,7 @@
     },
     "pain" : {
       "vertex" : "KnowPain",
+      "hist" : "KnowPainHist",
       "key" : "pain_id"
     },
     "pr" : {
@@ -7562,6 +7723,7 @@
       "title" : "name"
     },
     "adr" : {
+      "date" : "created_at",
       "status" : "status",
       "title" : "name"
     },
@@ -7576,7 +7738,7 @@
     },
     "decision" : {
       "code" : "decision_id",
-      "date" : "date_created",
+      "date" : "created_at",
       "status" : "status_raw"
     },
     "doc" : {
@@ -7584,14 +7746,14 @@
     },
     "feature" : {
       "code" : "uc_id",
-      "date" : "date_created",
+      "date" : "created_at",
       "parent" : "parent_uc_id"
     },
     "gain" : {
-      "date" : "date_created"
+      "date" : "created_at"
     },
     "job" : {
-      "date" : "date_created"
+      "date" : "created_at"
     },
     "machine" : {
       "code" : "machine_id",
@@ -7607,7 +7769,7 @@
       "title" : "name"
     },
     "pain" : {
-      "date" : "date_created"
+      "date" : "created_at"
     },
     "pr" : {
       "code" : "pr_uid"
@@ -7620,7 +7782,7 @@
       "title" : "name"
     },
     "quality_gate" : {
-      "date" : "date_created",
+      "date" : "created_at",
       "sprint" : "sprint_id",
       "title" : "name"
     },
@@ -7638,7 +7800,7 @@
       "title" : "name"
     },
     "runbook" : {
-      "date" : "date_created",
+      "date" : "created_at",
       "title" : "name"
     },
     "spec" : {
@@ -7646,7 +7808,7 @@
       "status" : "status"
     },
     "sprint" : {
-      "created" : "created_date",
+      "created" : "created_at",
       "no_release" : "no_release_required",
       "planned_start" : "planned_start_date",
       "status" : "status_raw",
@@ -7713,19 +7875,20 @@
   },
   "time" : {
     "actor" : {
-      "history" : "none",
+      "history" : "scd2",
       "created" : [ ],
-      "changed" : [ ]
+      "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+      } ]
     },
     "adr" : {
       "history" : "scd2",
       "created" : [ {
         "source" : "created_at",
         "precision" : "datetime",
-        "note" : "момент — у ADR, заведённых после S2-10"
-      }, {
-        "source" : "date_created",
-        "precision" : "date"
+        "note" : "момент создания; у ADR до S2-10 — полночь дня прежней даты (перенос 1.18)"
       } ],
       "changed" : [ {
         "source" : "version.valid_from",
@@ -7737,9 +7900,6 @@
       }, {
         "source" : "created_at",
         "precision" : "datetime"
-      }, {
-        "source" : "date_created",
-        "precision" : "date"
       } ]
     },
     "agent" : {
@@ -7761,10 +7921,7 @@
       "created" : [ {
         "source" : "created_at",
         "precision" : "datetime",
-        "note" : "момент — у решений, заведённых после S2-10"
-      }, {
-        "source" : "date_created",
-        "precision" : "date"
+        "note" : "момент создания; у решений до S2-10 — полночь дня прежней даты (перенос 1.18)"
       } ],
       "changed" : [ {
         "source" : "version.valid_from",
@@ -7777,9 +7934,6 @@
       }, {
         "source" : "created_at",
         "precision" : "datetime"
-      }, {
-        "source" : "date_created",
-        "precision" : "date"
       } ]
     },
     "doc" : {
@@ -7788,12 +7942,16 @@
       "changed" : [ ]
     },
     "feature" : {
-      "history" : "none",
+      "history" : "scd2",
       "created" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ],
       "changed" : [ {
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+      }, {
         "source" : "updated_at",
         "precision" : "datetime",
         "note" : "момент заведения или последней правки (ISO-строка), ставит каждый путь записи; бэкфилла нет — у записей, не правленных после её введения, её нет, и правка падает на следующий источник"
@@ -7801,29 +7959,37 @@
         "source" : "shipped_at",
         "precision" : "date"
       }, {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
     "gain" : {
-      "history" : "none",
+      "history" : "scd2",
       "created" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ],
       "changed" : [ {
-        "source" : "date_created",
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+      }, {
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
     "job" : {
-      "history" : "none",
+      "history" : "scd2",
       "created" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ],
       "changed" : [ {
-        "source" : "date_created",
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+      }, {
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
@@ -7851,13 +8017,17 @@
       "changed" : [ ]
     },
     "pain" : {
-      "history" : "none",
+      "history" : "scd2",
       "created" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ],
       "changed" : [ {
-        "source" : "date_created",
+        "source" : "version.valid_from",
+        "precision" : "datetime",
+        "note" : "версию открывает правка паспорта (запись меняет поле — закрыть прежнюю, открыть новую); у записей до доводки v5 — начальная версия «как есть»"
+      }, {
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
@@ -7883,11 +8053,11 @@
     "quality_gate" : {
       "history" : "none",
       "created" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ],
       "changed" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
@@ -7942,7 +8112,7 @@
     "runbook" : {
       "history" : "scd2",
       "created" : [ {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ],
       "changed" : [ {
@@ -7950,7 +8120,7 @@
         "precision" : "datetime",
         "note" : "версию открывает первая запись тела; правка тела идёт в открытую версию на месте"
       }, {
-        "source" : "date_created",
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
@@ -7972,7 +8142,7 @@
     "sprint" : {
       "history" : "scd2",
       "created" : [ {
-        "source" : "created_date",
+        "source" : "created_at",
         "precision" : "date",
         "note" : "пусто у спринтов, заведённых до отметки; у части — момент массового импорта 03.07.2026, а не заведения"
       } ],
@@ -7984,7 +8154,7 @@
         "precision" : "datetime",
         "note" : "отметка правки на месте (ISO-строка); у записей, не правленных после её введения, её нет"
       }, {
-        "source" : "created_date",
+        "source" : "created_at",
         "precision" : "date"
       } ]
     },
@@ -8200,6 +8370,7 @@
     "status_backfilled" : "Статус версии восстановлен задним числом при переносе, а не записан в момент смены. Служебное истории (SCD2), в паспорте не показывается.",
     "status_category" : "Категория статуса (не начато, в работе, закрыто…), вычисляется из статуса для поиска и отбора. Служебное поиска.",
     "status_known_from" : "С какого момента статус версии достоверно известен. Служебное истории (SCD2), в паспорте не показывается.",
+    "tokens_json" : "Токены своего стиля установки (JSON «токен → цвет», SPRINT_LORE_ADMIN_POLISH/AP-APPEARANCE): только у статьи справочника palette с кодом own-…, у прочих статей (и у продукта) пусто. Служебное оформления, в паспорте не показывается.",
     "updated_at" : "Время последнего изменения вершины; ставит сервер. Служебное хранения.",
     "valid_from" : "Начало действия версии записи. Служебное истории (SCD2), в паспорте не показывается.",
     "valid_to" : "Конец действия версии записи; у текущей версии пусто. Служебное истории (SCD2), в паспорте не показывается.",
@@ -8962,6 +9133,14 @@
     "user" : "everywhere"
   },
   "create" : {
+    "actor" : {
+      "endpoint" : "/lore/project-actor",
+      "id_field" : "actor_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "name"
+      } ]
+    },
     "decision" : {
       "endpoint" : "/lore/decision",
       "id_field" : "decision_id",
@@ -8977,12 +9156,44 @@
       } ],
       "require_one_of" : [ "projects", "adr" ]
     },
+    "feature" : {
+      "endpoint" : "/lore/feature",
+      "id_field" : "feature_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "title"
+      } ]
+    },
+    "gain" : {
+      "endpoint" : "/lore/gain",
+      "id_field" : "gain_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "title"
+      } ]
+    },
+    "job" : {
+      "endpoint" : "/lore/job",
+      "id_field" : "job_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "title"
+      } ]
+    },
     "organization" : {
       "endpoint" : "/lore/organization",
       "id_field" : "org_id",
       "fields" : [ {
         "key" : "title",
         "body" : "name"
+      } ]
+    },
+    "pain" : {
+      "endpoint" : "/lore/pain",
+      "id_field" : "pain_id",
+      "fields" : [ {
+        "key" : "title",
+        "body" : "title"
       } ]
     },
     "spec" : {

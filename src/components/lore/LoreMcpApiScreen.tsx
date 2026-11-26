@@ -431,6 +431,13 @@ const TOOLS: ToolDoc[] = [
   { name: 'forgejo_ci_status', kind: 'read', entity: 'Forgejo', backend: 'GET /lore/forgejo/ci',
     params: 'git_project, ref',
     desc: 'Статус CI-гейта (словарь §10) для произвольной ветки или коммита — проверить, что ветка GREEN, до открытия PR. Логи и перезапуски — через forgejo-mcp, не этим инструментом.' },
+  // ── Forgejo-миниапп (ADR-LORE-060, SPRINT_FORGEJO_MINIAPP/FJ-03): весь операционный Forgejo одним инструментом ──
+  { name: 'forgejo', kind: 'write', entity: 'Forgejo', backend: 'POST /lore/forgejo-app/{route}',
+    params: 'route, args?, truncate?',
+    desc: 'Любой маршрут реестра миниаппа (107 маршрутов бывшего forgejo-mcp + добавленные записью): route — имя (list_issues, get_file_contents, …), args — его параметры. Ответ — конверт v=1 {kind, outcome found|empty|failed, data, meta{cursor, has_more, truncated}, error{code,status,allowed,hint}}; отказ — данные с подсказкой, не пустой список. RBAC по roles[] маршрута до разбора args, SSRF-защита, page=1 при limit, срез 6k. Мерж — только forgejo_pr_merge.' },
+  { name: 'forgejo_describe', kind: 'read', entity: 'Forgejo', backend: 'GET /lore/forgejo-app/describe',
+    params: 'route?, group?',
+    desc: 'Каталог миниаппа: без аргументов — группы и имена маршрутов, разрешённые роли вызывающего; group — одна группа матрицы; route — карточка маршрута: метод, путь, параметры, роли, риск, гарды и каталог отказов со следующим шагом.' },
   { name: 'forgejo_branch_protection', kind: 'read', entity: 'Forgejo', backend: 'GET /lore/forgejo/branch-protection',
     params: 'git_project, branch?',
     desc: 'ЧИТАТЬ защиту веток основного Forgejo-репозитория проекта (решение 136: мост защиту никогда не пишет — менять её может только человек). Без branch — полный список.' },

@@ -11,7 +11,7 @@
     "modelSchemaEdgesNotInModel": 0,
     "listTypesWithIssues": 0,
     "unclassified": 6,
-    "writtenWithoutSchema": 1
+    "writtenWithoutSchema": 0
   },
   "fieldsWithoutLabelKey": [],
   "modelSchemaEdgesNotInModel": [],
@@ -65,12 +65,5 @@
       "property": "repo_url"
     }
   ],
-  "writtenWithoutSchema": [
-    {
-      "type": "adr",
-      "field": "date",
-      "writeField": "date_created",
-      "vertex": "KnowADR"
-    }
-  ]
+  "writtenWithoutSchema": []
 }

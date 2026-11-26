@@ -68,6 +68,22 @@ final class LoreOutcome {
         return out;
     }
 
+    /**
+     * SPRINT_LORE_EXT_ISSUES_W2/ISS-06-LINK-FALSE-SUCCESS · исход связи по факту ребра ДО и ПОСЛЕ записи — для путей,
+     * которые сами пробуют граф (своим запросом), а не через {@code edgeExists}. Не появилось — {@link #NOOP} с
+     * причиной: {@code CREATE EDGE … TO (SELECT …)} по пустой выборке молча ничего не пишет.
+     *
+     * @param remove    снятие (тогда hasAfter не читается)
+     * @param hadBefore было ли ребро до записи
+     * @param hasAfter  есть ли ребро после записи
+     */
+    static Map<String, Object> fact(Map<String, Object> base, boolean remove, boolean hadBefore,
+                                    boolean hasAfter, String what) {
+        if (remove) return unlink(base, hadBefore);
+        if (hadBefore) return link(base, false, true, what);
+        return link(base, hasAfter, false, what);
+    }
+
     /** Исход снятия связи. Нечего снимать — это {@link #UNCHANGED}, а не ошибка. */
     static Map<String, Object> unlink(Map<String, Object> base, boolean removed) {
         Map<String, Object> out = new LinkedHashMap<>(base);

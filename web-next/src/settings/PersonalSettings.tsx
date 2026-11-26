@@ -9,7 +9,7 @@
 // Пока у него своё хранилище kit, а не /lore/me/settings — сведение в одно — отдельной задачей.
 import { ICON_CANON, RECORD_PLACEMENTS } from '@seidr/kit';
 import { GameIcon, LoadError, Skeleton, SettingRow, Segmented, TextScaleSlider, errorDetail } from '@seidr/kit';
-import { paletteFallback, type PalettesView } from './palettesSource';
+import { FONT_PAIRS_FALLBACK, paletteFallback, type PalettesView } from './palettesSource';
 import type { UserSettings } from '../api/contracts/s2';
 import { t, type Lang, type MessageKey } from '../i18n/messages';
 import { switchNavUrl } from '../nav/navVersion';
@@ -128,6 +128,11 @@ export function PersonalSettings({ lang, state, onChange, onRetry, onOpenMemory,
       {row('palette', 'settings.palette.label', s.palette === 'amber' ? 'amber-forest' : s.palette,
         (palettes?.options ?? paletteFallback()).map(p => ({ value: p.value, label: p.label })),
         v => onChange({ palette: v }))}
+      {/* AP-APPEARANCE (2в, 4а): пара шрифтов — своей строкой, независимо от палитры; варианты — набор установки. */}
+      {row('font_pair', 'settings.font.label', s.font_pair,
+        (palettes?.fonts ?? FONT_PAIRS_FALLBACK).filter((f): f is 'pair' | 'mono' => f === 'pair' || f === 'mono')
+          .map(f => ({ value: f, label: t(lang, f === 'mono' ? 'settings.font.mono' : 'settings.font.pair') })),
+        v => onChange({ font_pair: v }), 'settings.font.hint')}
       {row('density', 'settings.density.label', s.density,
         opts(lang, [['roomy', 'settings.density.roomy'], ['compact', 'settings.density.compact'], ['comfortable', 'settings.density.comfortable']] as const),
         v => onChange({ density: v }))}

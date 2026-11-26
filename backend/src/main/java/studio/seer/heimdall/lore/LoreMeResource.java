@@ -614,11 +614,38 @@ public class LoreMeResource extends LoreResourceBase {
         }
     }
 
-    private static Map<String, Object> settingsOut(Map<String, Object> row) {
+    /**
+     * AP-APPEARANCE (2в): умолчание и разрешённый набор палитр и пар шрифтов установки (app_setting appearance.* и
+     * включённые свои стили own-…). Не прочиталось — набор кода (всё разрешено) и строка в журнал: настройки человека
+     * отдаются, а не 502 из-за оформления.
+     */
+    private LoreAppearance.Install installAppearance() {
+        try {
+            List<Map<String, Object>> rows = ingestService.queryPublic(
+                "SELECT dict_type, code, label_ru, ifnull(is_active, true) AS is_active FROM KnowDictEntry "
+                + "WHERE dict_type = 'app_setting' OR dict_type = 'palette'", Map.of());
+            List<String> own = new java.util.ArrayList<>();
+            for (Map<String, Object> r : rows)
+                if ("palette".equals(r.get("dict_type")) && !Boolean.FALSE.equals(r.get("is_active"))
+                        && LoreAppearance.isOwn(String.valueOf(r.get("code")))) own.add(String.valueOf(r.get("code")));
+            return LoreAppearance.install(rows, own);
+        } catch (Exception e) {
+            LOG.warnf("[LORE ME] набор оформления установки не прочитан — действует набор кода: %s", e.getMessage());
+            return LoreAppearance.installDefaults();
+        }
+    }
+
+    private Map<String, Object> settingsOut(Map<String, Object> row) {
+        return settingsOut(row, installAppearance());
+    }
+
+    private static Map<String, Object> settingsOut(Map<String, Object> row, LoreAppearance.Install inst) {
         Map<String, Object> stored = parseStored(row);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("ok", true);
-        out.put("settings", LoreMePrefs.effective(stored));
+        out.put("settings", LoreAppearance.overlay(LoreMePrefs.effective(stored), stored, inst));
+        out.put("appearance", Map.of("palette_default", inst.paletteDefault(), "palettes_allowed", inst.palettesAllowed(),
+            "font_default", inst.fontDefault(), "fonts_allowed", inst.fontsAllowed()));
         out.put("stored", stored);
         out.put("version", row == null ? 0 : intOf(row.get("row_version")));
         out.put("updated_at", row == null ? null : row.get("updated_at"));
@@ -743,6 +770,9 @@ public class LoreMeResource extends LoreResourceBase {
         if (req == null || req.settings() == null) return badParams("settings required");
         List<String> errs = LoreMePrefs.validateSettingsPatch(req.settings());
         if (!errs.isEmpty()) return badParams(String.join("; ", errs));
+        // 2в: личный выбор палитры и пары шрифтов — только внутри набора установки
+        String outside = LoreAppearance.personalRefusal(req.settings(), installAppearance());
+        if (outside != null) return badParams(outside);
         try {
             Map<String, Object> row = readSettingsRow(me);
             int cv = row == null ? 0 : intOf(row.get("row_version"));

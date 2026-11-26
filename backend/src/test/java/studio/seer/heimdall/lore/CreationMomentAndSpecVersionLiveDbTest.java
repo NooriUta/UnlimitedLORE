@@ -56,13 +56,35 @@ class CreationMomentAndSpecVersionLiveDbTest {
             what + ": дата и момент обязаны совпадать по UTC-дню");
     }
 
+    /**
+     * KREG-10 (#1832): у ADR и решения дата и момент создания — ОДНО свойство {@code created_at};
+     * прежнего date_created в схеме 1.18 нет, и код к нему больше не обращается (сторож
+     * LegacyCreationNamesCodeGuardTest). Новая запись — полный момент «сейчас»; база отдаёт его
+     * ISO-Z либо формой рендера DATETIME — обе приводятся к Instant.
+     */
+    private static void assertCreatedNow(Object createdAt, Instant before, String what) {
+        assertNotNull(createdAt, what + ": момент создания (created_at) не записан");
+        String s = String.valueOf(createdAt);
+        assertTrue(s.length() > 10, what + ": записана одна дата, а не момент: " + s);
+        Instant m = DataHygieneMigrationsLiveDbTest.at(s);
+        assertTrue(!m.isBefore(before.minusSeconds(1)) && !m.isAfter(Instant.now().plusSeconds(1)),
+            what + ": момент " + m + " вне окна записи");
+    }
+
+    /** KREG-10: дата в прошлом — время неизвестно: в created_at сам день (или его полночь), не «сейчас». */
+    private static void assertPastDateOnly(Object createdAt, String day, String what) {
+        String s = String.valueOf(createdAt);
+        assertTrue(s.matches(java.util.regex.Pattern.quote(day) + "([ T]00:00(:00(\\.0+)?)?Z?)?"),
+            what + ": дата в прошлом — момент не выдумывается, ждали " + day + " без времени: " + s);
+    }
+
     @Test
     void newAdrCarriesCreationMoment_pastDateDoesNot() {
         Instant before = Instant.now();
         admin().body(Map.of("adr_id", "ADR-S210-MOMENT", "name", "s210"))
             .when().post("/lore/adr").then().statusCode(200);
-        Map<String, Object> r = one("SELECT date_created, created_at FROM KnowADR WHERE adr_id='ADR-S210-MOMENT'", Map.of());
-        assertMomentOfToday(r.get("created_at"), r.get("date_created"), before, "ADR");
+        Map<String, Object> r = one("SELECT created_at FROM KnowADR WHERE adr_id='ADR-S210-MOMENT'", Map.of());
+        assertCreatedNow(r.get("created_at"), before, "ADR");
 
         // Правка существующего ADR момент создания не переписывает.
         Object first = r.get("created_at");
@@ -73,9 +95,8 @@ class CreationMomentAndSpecVersionLiveDbTest {
         // Положительный контроль: ADR с датой в прошлом — время неизвестно, не «сейчас».
         admin().body(Map.of("adr_id", "ADR-S210-PAST", "name", "s210", "date_created", "2026-07-02"))
             .when().post("/lore/adr").then().statusCode(200);
-        Map<String, Object> p = one("SELECT date_created, created_at FROM KnowADR WHERE adr_id='ADR-S210-PAST'", Map.of());
-        assertEquals("2026-07-02", p.get("date_created"));
-        assertNull(p.get("created_at"), "дата в прошлом — момент не выдумывается: " + p);
+        Map<String, Object> p = one("SELECT created_at FROM KnowADR WHERE adr_id='ADR-S210-PAST'", Map.of());
+        assertPastDateOnly(p.get("created_at"), "2026-07-02", "ADR");
     }
 
     @Test
@@ -83,8 +104,8 @@ class CreationMomentAndSpecVersionLiveDbTest {
         Instant before = Instant.now();
         admin().body(Map.of("decision_id", "D-2026-S210-MOMENT", "title", "s210"))
             .when().post("/lore/decision").then().statusCode(200);
-        Map<String, Object> r = one("SELECT date_created, created_at FROM KnowDecision WHERE decision_id='D-2026-S210-MOMENT'", Map.of());
-        assertMomentOfToday(r.get("created_at"), r.get("date_created"), before, "решение");
+        Map<String, Object> r = one("SELECT created_at FROM KnowDecision WHERE decision_id='D-2026-S210-MOMENT'", Map.of());
+        assertCreatedNow(r.get("created_at"), before, "решение");
 
         Object first = r.get("created_at");
         admin().body(Map.of("decision_id", "D-2026-S210-MOMENT", "title", "s210 правка"))
@@ -94,9 +115,8 @@ class CreationMomentAndSpecVersionLiveDbTest {
 
         admin().body(Map.of("decision_id", "D-2026-S210-PAST", "title", "s210", "date_created", "2026-07-02"))
             .when().post("/lore/decision").then().statusCode(200);
-        Map<String, Object> p = one("SELECT date_created, created_at FROM KnowDecision WHERE decision_id='D-2026-S210-PAST'", Map.of());
-        assertEquals("2026-07-02", p.get("date_created"));
-        assertNull(p.get("created_at"), "дата в прошлом — момент не выдумывается: " + p);
+        Map<String, Object> p = one("SELECT created_at FROM KnowDecision WHERE decision_id='D-2026-S210-PAST'", Map.of());
+        assertPastDateOnly(p.get("created_at"), "2026-07-02", "решение");
     }
 
     @Test

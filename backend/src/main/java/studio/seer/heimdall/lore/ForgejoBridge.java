@@ -220,6 +220,22 @@ public class ForgejoBridge {
     }
 
     /**
+     * SPRINT_FORGEJO_MINIAPP/FJ-02: вызов маршрута миниаппа. Адрес — только база нашего Forgejo
+     * ({@link ForgejoApp#targetUri} отвергает всё, что уводит с её хоста), токен — серверный секрет моста,
+     * в ответ и в лог не попадает. Тело — текст как есть (JSON, diff), разбирает исполнитель.
+     */
+    ForgejoApp.Reply appCall(String apiBase, String method, String pathAndQuery, String json) throws Exception {
+        HttpRequest.Builder b = HttpRequest.newBuilder(ForgejoApp.targetUri(apiBase, pathAndQuery))
+            .header("Authorization", "token " + token())
+            .header("Accept", "application/json, text/plain;q=0.9")
+            .timeout(java.time.Duration.ofSeconds(30));
+        if (json != null) b.header("Content-Type", "application/json");
+        b.method(method, json == null ? HttpRequest.BodyPublishers.noBody() : HttpRequest.BodyPublishers.ofString(json));
+        HttpResponse<String> r = HTTP.get().send(b.build(), HttpResponse.BodyHandlers.ofString());
+        return new ForgejoApp.Reply(r.statusCode(), r.body(), r.headers().firstValue("Content-Type").orElse(""));
+    }
+
+    /**
      * Чистая функция гейта §10 — юнит-тестируема без Forgejo (FJ-07).
      *
      * @param statusByContext контекст → state Forgejo commit-status

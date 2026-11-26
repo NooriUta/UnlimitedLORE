@@ -38,7 +38,7 @@ import { sliceToKitData, sliceWarnings } from '../lists/records';
 import { loreValueIcon } from '../lists/loreFilters';
 import { paintRecords, productIndex, productValueIcon, withProductColumn, type ProductIndex } from '../lists/productPaint';
 import { appliedCollapseNavOnRead, appliedPassportPlace } from '../settings/applied';
-import { NEW_RECORD_ID, fetchCanCreate, isCreateType } from '../record/recordCreate';
+import { NEW_RECORD_ID, fetchCanCreate, isCreateType, type CreateLink, type CreateType } from '../record/recordCreate';
 import { useProjectScope } from '../scope/ProjectScope';
 import { useProductScope } from '../scope/ProductScope';
 import { fetchTypeStatuses, type TypeStatuses } from '../record/passportStatuses';
@@ -644,6 +644,11 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
     fetchCanCreate(createType, fetchImpl).then(r => { if (live) setCanCreate(r.can); });
     return () => { live = false; };
   }, [createType, fetchImpl]);
+  // AP-PASSPORT-EDIT (1б): «+ боль» из вкладки паспорта — черновик другого типа в том же доке; после записи
+  // связь ставится сама, и док возвращается к паспорту-источнику (он перечитается).
+  const [linkedCreate, setLinkedCreate] = useState<{ type: CreateType; link: CreateLink } | null>(null);
+  // Ушли к другой записи — черновик «+ боль» остаётся у своей и не всплывает при возврате.
+  useEffect(() => { setLinkedCreate(c => (c && c.link.id !== open.id ? null : c)); }, [open.id]);
   const newAction = createType && canCreate ? (
     <button type="button" className="sk-btn sk-btn--primary" data-testid="list-new" title={t('create.newHint')}
       onClick={() => setOpen({ ...open, id: NEW_RECORD_ID })}>
@@ -791,7 +796,12 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
   content = (
     <ListWithRecord list={content} open={open} onOpen={setOpen} ready={ready} modal={shell == null} controls="bar"
       collapseNavOnRead={collapseOnRead} defaultPlace={defaultPlace()}
-      record={slot => (slot.id === NEW_RECORD_ID && createType ? (
+      record={slot => (linkedCreate && slot.id === linkedCreate.link.id ? (
+        <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
+          <RecordCreate key={`${linkedCreate.type}:${linkedCreate.link.rel}`} type={linkedCreate.type} link={linkedCreate.link} fetchImpl={fetchImpl}
+            onCreated={() => setLinkedCreate(null)} onCancel={() => setLinkedCreate(null)} />
+        </Suspense>
+      ) : slot.id === NEW_RECORD_ID && createType ? (
         // Черновик новой — в ТОМ ЖЕ доке и месте, что запись; сохранили — в
         // доке открывается сама запись (то, что открывает «Читать целиком»).
         <Suspense fallback={<Skeleton lines={8} label={t('pp.loading')} />}>
@@ -808,6 +818,7 @@ export function ListScreen({ screen, fetchImpl, urlState, heading = true, titleI
             // MP2-11: место меняет экран — и состояние, и адрес одним путём (setOpen пишет ?place=).
             onPlace={slot.setPlace}
             readOnly={!managed}
+            onCreateLinked={managed ? setLinkedCreate : undefined}
             onClose={slot.close} />
         </Suspense>
       ) : (

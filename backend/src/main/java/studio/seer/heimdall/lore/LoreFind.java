@@ -120,7 +120,7 @@ final class LoreFind {
         sprint.put("title", Field.one("coalesce(title, name)"));
         sprint.put("status_raw", Field.one(scd2("status_raw")));
         sprint.put("priority", Field.one(scd2("priority")));
-        sprint.put("created_date", Field.one("created_date"));
+        sprint.put("created_date", Field.one("created_at"));
         sprint.put("planned_start_date", Field.one(scd2("planned_start_date")));
         sprint.put("planned_end_date", Field.one(scd2("planned_end_date")));
         sprint.put("milestone_ids", Field.many("outE('TARGETS_MILESTONE')[valid_to IS NULL].inV().milestone_id"));
@@ -134,7 +134,7 @@ final class LoreFind {
         Map<String, Field> adr = new LinkedHashMap<>();
         adr.put("title", Field.one("name"));
         adr.put("status", Field.one("status"));
-        adr.put("date_created", Field.one("date_created"));
+        adr.put("date_created", Field.one("created_at"));
         adr.put("component", Field.many("out('BELONGS_TO').component_id"));
         adr.put("project", Field.many("out('BELONGS_TO_PROJECT').slug"));
         put(new TypeDef("adr", "KnowADR", "adr_id", adr, "status", List.of(

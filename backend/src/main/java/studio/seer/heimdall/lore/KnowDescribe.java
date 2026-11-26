@@ -137,6 +137,24 @@ final class KnowDescribe {
                 case "rename-guard" -> add(byCode, "partial_failure", "rename тега с несопоставленными телами",
                     "добавить синоним в KnowTag или переписать тело", null);
                 case "read-only-surface" -> add(byCode, "REFUSED", "тип только для чтения в UI-поверхности", "писать через свой write-тул", null);
+                // SPRINT_FORGEJO_MINIAPP/FJ-01: гарды исполнителя маршрутов forgejo:* (SPEC-FORGEJO-APP-060 §6)
+                case "approval-gate" -> {
+                    add(byCode, "APPROVAL_REQUIRED", "risk=high без подтверждения человеком (428)",
+                        "цитата диалога → повтор с заголовком X-Lore-Human-Approval", null);
+                    add(byCode, "APPROVAL_INVALID", "подтверждение не прошло проверку (403, failed_check)", "свежая цитата в окне TTL", null);
+                }
+                case "route-params", "page-on-limit" -> add(byCode, "BAD_PARAMS", "args вне схемы params маршрута",
+                    "describe " + kind.get("kind") + " и исправить args", null);
+                case "ssrf-host" -> add(byCode, "BAD_PARAMS", "path-переменная выводит запрос за пределы пути (.., %, ://)",
+                    "передать имя сегмента без спецсимволов", null);
+                case "bridge-alias" -> add(byCode, "REFUSED", "маршрут исполняется только штатным мостом (409)",
+                    "звать " + params, null);
+                case "capability" -> add(byCode, "REFUSED", "capability " + params + " не подключена (501)",
+                    "OQ-060-LOGS-VOLUME", null);
+                case "upstream" -> {
+                    add(byCode, "UPSTREAM_4XX", "Forgejo ответил 4xx — статус исходный", "404 → owner/repo; 401/403 → токен; 429 → backoff", null);
+                    add(byCode, "UPSTREAM_5XX", "Forgejo ответил 5xx или не ответил", "повторить позже", null);
+                }
                 default -> { /* гард без отказа в каталоге — только в guards */ }
             }
         }
@@ -188,6 +206,8 @@ final class KnowDescribe {
             return null;
         }
         if (k.equals("tag:*")) return KnowRegistry.tagKind(model, "*", List.of(), AgentScopeFilter.FAMILY_AGENTS);
+        // FJ-01: forgejo:<route> — вид из реестра маршрутов миниаппа (тот же, что импортируется в KnowKind)
+        if (k.startsWith("forgejo:")) return ForgejoRoutes.load().kind(k.substring("forgejo:".length()));
         return null;
     }
 }

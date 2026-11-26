@@ -42,6 +42,7 @@ import { saveMerging, type MdFieldState as FieldState } from '@seidr/kit/content
 import { fetchLoreRecord } from '../api/liveRecord';
 import { saveRelation } from './relationSave';
 import { relationOptionsHook } from './relationOptions';
+import { linkedCreateOf, type CreateLink, type CreateType } from './recordCreate';
 import { saveRecordStatus, statusEntity } from './statusSave';
 import { fetchPassportOrder } from './passportOrder';
 import { fetchTypeStatuses } from './passportStatuses';
@@ -115,6 +116,11 @@ export interface ListPassportProps {
    */
   readOnly?: boolean;
   /**
+   * AP-PASSPORT-EDIT (1б): «+ боль / + выгода / + работа» во вкладках фичи и роли — завести запись типа `type`;
+   * после создания связь `link` ставится сама. Нет обработчика — кнопок нет.
+   */
+  onCreateLinked?: (c: { type: CreateType; link: CreateLink }) => void;
+  /**
    * Смена места паспорта (MP2-11): меню «право / низ / полный». Экран может
    * задать свой обработчик; без него место пишется в адрес (?place=), где его
    * и читает список, — адрес остаётся одной правдой о месте записи.
@@ -130,7 +136,7 @@ export interface ListPassportProps {
   win?: UrlWindow;
 }
 
-export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win, backPlace, onClose, readOnly = false }: ListPassportProps) {
+export default function ListPassport({ type, id, placement, fetchImpl, backLabel, backHref, onBack, ids = [], onGo, onFull, onPlace, win, backPlace, onClose, readOnly = false, onCreateLinked }: ListPassportProps) {
   const t = useAppT();
   const lang = useKitLang();
   // Вкладка живёт в адресе (D-21): ссылкой на «Связи» или «Историю» можно
@@ -423,6 +429,16 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     await saveRelation({ type, id: view.record.id, rel, dir, target, action, ...(reason !== undefined ? { reason } : {}) }, fetchImpl);
     pp.reload();
   };
+  // 1б: «+ боль» во вкладке связи — только там, где связь знает тип новой записи (linkedCreateOf); kit покажет
+  // кнопку лишь при праве править. Связь ставится после создания со стороны этой записи.
+  const createLinked = onCreateLinked
+    ? ({ rel, dir }: { rel: string; dir: 'out' | 'in' }) => {
+      const target = linkedCreateOf(type, rel, dir);
+      if (!target) return null;
+      const label = target === 'pain' ? t('create.linked.pain') : target === 'gain' ? t('create.linked.gain') : t('create.linked.job');
+      return { label, open: () => onCreateLinked({ type: target, link: { type, id: view.record.id, rel, dir } }) };
+    }
+    : undefined;
   // Спринт: вкладка «Задачи» — дерево спринт → [фаза] → задача (S4-TREE-NESTED,
   // решение владелицы 10.11) из того же ответа /lore/record, и вторым видом —
   // прежняя таблица задач (группировка, правка, массовый статус) со строкой сгорания.
@@ -453,7 +469,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
     // причина уже названа в строке замечаний.
     // Меню смены статуса — цикл своего типа (items); строки других типов — их цикл (byKind).
     statuses: { ...baseConfig.statuses, ...(statuses.items.length ? { items: statuses.items } : {}), ...(statuses.byKind ? { byKind: statuses.byKind } : {}) },
-    hooks: readOnly ? { ...baseConfig.hooks } : { ...baseConfig.hooks, onSave, onRelation, relationOptions },
+    hooks: readOnly ? { ...baseConfig.hooks } : { ...baseConfig.hooks, onSave, onRelation, relationOptions, ...(createLinked ? { createLinked } : {}) },
     // Граф (GC-03): выбранный узел — карточка Peek этой записи, та же, что в списке и в тексте.
     graph: baseConfig.graph ? { ...baseConfig.graph, peek: graphPeek.render, types: LORE_GRAPH_TYPES(lang) } : baseConfig.graph,
   }, data: graphData, role: 'reader',

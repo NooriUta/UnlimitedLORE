@@ -43,6 +43,10 @@ public class LoreSkillResource extends LoreResourceBase {
 
     private static final Logger LOG = Logger.getLogger(LoreSkillResource.class);
 
+    /** Создание скилла — всегда draft (§5). Константа: тот же SQL проверяет SkillStatusFilterEngineTest (SKILL-04). */
+    static final String CREATE_SQL = "INSERT INTO KnowSkill SET skill_id = :id, name = :name, title = :title, body_md = :body, "
+        + "version = :ver, status = 'draft', source = :src, created_at = :now, updated_at = :now";
+
     public record SkillRequest(String skill_id, String name, String title, String body_md, String version,
                                String status, String source, List<String> projects, List<String> roles,
                                String owner, List<String> extends_ids) {}
@@ -199,8 +203,7 @@ public class LoreSkillResource extends LoreResourceBase {
                 String miss = firstMissing(edges);
                 if (miss != null) return targetNotFound(miss + " не найден");
                 String source = req.source() != null ? req.source() : callerAgentScope() != null ? "agent" : "human";
-                sql("INSERT INTO KnowSkill SET skill_id = :id, name = :name, title = :title, body_md = :body, "
-                    + "version = :ver, status = 'draft', source = :src, created_at = :now, updated_at = :now",
+                sql(CREATE_SQL,
                     mapOfNullable("id", id, "name", req.name() != null && !req.name().isBlank() ? req.name().strip() : SkillRules.slug(id),
                         "title", req.title().strip(), "body", req.body_md(), "ver", req.version(), "src", source, "now", now));
                 edges.forEach((rel, ts) -> ts.forEach(t -> addEdge(id, rel, t)));

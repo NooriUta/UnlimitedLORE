@@ -61,6 +61,10 @@ export function AccountMenu({ client, lang, root, jar, name, subtitle, navTarget
     if (target) applySettings(target, s, jar);
   }, [root, jar]);
   const { state, set, reload } = useSettings(client, apply);
+  // AP-APPEARANCE: модель принесла токены своих стилей — применить настройки заново (свой стиль мог быть выбран
+  // раньше, чем пришла модель, и до того рисовалась база amber forest).
+  const settingsNow = state.status === 'ok' ? state.settings : null;
+  useEffect(() => { if (palettes && settingsNow) apply(settingsNow); }, [palettes]); // eslint-disable-line react-hooks/exhaustive-deps
   // AP-07: свой аватар и имя профиля — запросом с токеном (people/avatars.ts). Нет входа — ничего не запрашивается.
   const me = usePerson(sub ?? null, fetchImpl ?? loreFetch, view === 'profile' ? 0 : 1);
   const shownName = me.row?.display_name?.trim() || name;

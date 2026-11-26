@@ -80,7 +80,9 @@ public final class LoreSlices {
         "project", " WHERE out('BELONGS_TO_PROJECT').slug CONTAINS :project"));
     static {
         SKILL_FILTERS.put("role", " WHERE out('APPLIES_TO_ROLE').code CONTAINS :role");
-        SKILL_FILTERS.put("status", " WHERE status = :status");
+        // код словаря skill_status — строчными; toLowerCase() — строки, которые дверь записи до правки SKILL-04
+        // успела поднять переходником до DRAFT/ACTIVE (стенд), тоже попадают под фильтр
+        SKILL_FILTERS.put("status", " WHERE status.toLowerCase() = :status");
     }
 
     /** MT-03: с этой даты заведения enb-задача обязана нести JUSTIFIED_BY (раньше — вне правила). Константа времени компиляции. */
@@ -357,7 +359,13 @@ public final class LoreSlices {
         Map.entry("KnowSprintHist",    new HistParent("sprint",     "sprint_id")),
         Map.entry("KnowDictEntryHist", new HistParent("dict_entry", "code")),
         // KREG-01 (V94): SCD2-история рантайм-реестра видов — родитель KnowKind, id = kind.
-        Map.entry("KnowKindHist",      new HistParent("kind",       "kind")));
+        Map.entry("KnowKindHist",      new HistParent("kind",       "kind")),
+        // AP-PASSPORT-EDIT (доводка v5): история боли, выгоды, работы, роли продукта и фичи (ProductHistory.SPECS).
+        Map.entry("KnowPainHist",      new HistParent("pain",       "pain_id")),
+        Map.entry("KnowGainHist",      new HistParent("gain",       "gain_id")),
+        Map.entry("KnowJobHist",       new HistParent("job",        "job_id")),
+        Map.entry("KnowProjectActorHist", new HistParent("actor",   "actor_id")),
+        Map.entry("KnowUseCaseHist",   new HistParent("feature",    "uc_id")));
 
     /** Все цепочки SCD2 корпуса в устойчивом порядке — иначе SQL среза плывёт между прогонами. */
     static List<String> histChains() {
@@ -478,12 +486,12 @@ public final class LoreSlices {
         // No UNION in ArcadeDB /api/v1/query. Frontend fetches all 3, merges by date.
 
         slice("timeline_adrs",
-            "SELECT adr_id, date_created, " +
+            "SELECT adr_id, created_at AS date_created, " +
             "out('BELONGS_TO').component_id[0] AS component, " +
             // ADRPROJ-01: у ADR есть BELONGS_TO_PROJECT — отдаём в ленту, иначе
             // новые ADR со связкой на проект падали в «без проекта» (владелец).
             "out('BELONGS_TO_PROJECT').slug AS projects " +
-            "FROM KnowADR WHERE date_created IS NOT NULL ORDER BY date_created DESC",
+            "FROM KnowADR WHERE created_at IS NOT NULL ORDER BY created_at DESC",
             List.of(), Map.of(), " LIMIT 150");
 
         // ML-NEWS project derivation for decisions: the feed grouped them under
@@ -493,11 +501,11 @@ public final class LoreSlices {
         // →BELONGS_TO_PROJECT, ADRPROJ-01). news() prefers the own edge, then the
         // ADR's. Same shape as the spec row (projects[]).
         slice("timeline_decisions",
-            "SELECT decision_id, title, date_created, updated_at, " +
+            "SELECT decision_id, title, created_at AS date_created, updated_at, " +
             "out('BELONGS_TO_PROJECT').slug                  AS projects, " +
             "out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug AS adr_projects " +
             "FROM KnowDecision " +
-            "WHERE date_created IS NOT NULL ORDER BY date_created DESC",
+            "WHERE created_at IS NOT NULL ORDER BY created_at DESC",
             List.of(), Map.of(), "");
 
         // Порядок ПО ДАТЕ, а не по release_id. Было `ORDER BY release_id DESC` —
@@ -562,8 +570,8 @@ public final class LoreSlices {
 
         // ── §2 ADRs ──────────────────────────────────────────────────────────
         slice("adrs",
-            "SELECT adr_id, name, status, date_created, " +
-            changedAtSql("created_at", "date_created") + ", " +
+            "SELECT adr_id, name, status, created_at AS date_created, " +
+            changedAtSql("created_at") + ", " +
             "out('BELONGS_TO').component_id[0] AS component, " +
             "out('BELONGS_TO').component_id    AS components, " +
             "out('TAGGED_WITH').tag_id         AS tags, " +
@@ -580,7 +588,7 @@ public final class LoreSlices {
 
         // ADR passport — full context with traversals
         slice("adr",
-            "SELECT adr_id, name, status, file_path, date_created, " +
+            "SELECT adr_id, name, status, file_path, created_at AS date_created, " +
             "out('HAS_STATE').context_md[0]      AS context_md, " +
             "out('HAS_STATE').decision_md[0]     AS decision_md, " +
             "out('HAS_STATE').consequences_md[0] AS consequences_md, " +
@@ -671,11 +679,11 @@ public final class LoreSlices {
         // parent_adr (out DECIDED_IN) is the "rule → why" link. ORDER BY/LIMIT live
         // in the suffix so a future optional WHERE lands before them.
         slice("decisions",
-            "SELECT decision_id, title, date_created, status_raw, out('BELONGS_TO').component_id[0] AS component_id, " +
+            "SELECT decision_id, title, created_at AS date_created, status_raw, out('BELONGS_TO').component_id[0] AS component_id, " +
             // Свежесть (вопрос №49): правка полей ставит updated_at на вершине (версию
             // не открывает), смена статуса — версию KnowDecisionHist; changed_at — более
             // поздняя из двух (раньше updated_at брался первым и прятал смену статуса).
-            changedAtSql("created_at", "date_created") + ", " +
+            changedAtSql("created_at") + ", " +
             "out('BELONGS_TO').component_id     AS components, " +
             "out('BELONGS_TO_PROJECT').slug     AS projects, " +
             "out('TAGGED_WITH').tag_id  AS tags, " +
@@ -695,11 +703,11 @@ public final class LoreSlices {
             // рабочей отсечкой. Сообщить об обрезке в ответе слайс не может:
             // он отдаёт строки, и места под признак в контракте нет — поэтому
             // единственная честная настройка та, при которой обрезки не бывает.
-            List.of(), Map.of(), " ORDER BY date_created DESC, decision_id");
+            List.of(), Map.of(), " ORDER BY created_at DESC, decision_id");
 
         // Decisions that belong to one ADR (in('DECIDED_IN') from the ADR side).
         slice("decisions_of_adr",
-            "SELECT decision_id, title, date_created, status_raw, out('BELONGS_TO').component_id[0] AS component_id, " +
+            "SELECT decision_id, title, created_at AS date_created, status_raw, out('BELONGS_TO').component_id[0] AS component_id, " +
             "out('BELONGS_TO').component_id AS components, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "out('TAGGED_WITH').tag_id AS tags " +
@@ -717,7 +725,7 @@ public final class LoreSlices {
         slice("decision",
             // AL-79: status_raw в паспорте — раньше статус был виден в списках,
             // но не в карточке одного решения.
-            "SELECT decision_id, title, date_created, status_raw, " +
+            "SELECT decision_id, title, created_at AS date_created, status_raw, " +
             "body_md, rationale_md, refs_raw, " +
             // MDL-08 ч.2 (владелица 20.11.2026: «refs … пересадить на связи»): ссылки — по связям, а не полями-строками.
             // ADR — родитель (DECIDED_IN) и упомянутые (REFERENCES); спринты, PR, релизы — REFERENCES. Выражения те же,
@@ -864,7 +872,7 @@ public final class LoreSlices {
         // означало бы «вопрос закрыт». Поэтому здесь БЕЗ фильтра по статусу.
         slice("uc_by_id",
             "SELECT uc_id, title, body_md, context_md, scenario_md, acceptance_md, " +
-            "status, goal_level, rigor, priority, date_created, shipped_at, parent_uc_id, " +
+            "status, goal_level, rigor, priority, created_at AS date_created, shipped_at, parent_uc_id, " +
             "out('BELONGS_TO').component_id[0] AS component_id, " +
             "out('BELONGS_TO').component_id    AS component_ids, " +
             "out('BELONGS_TO_PROJECT').slug    AS projects, " +
@@ -946,7 +954,7 @@ public final class LoreSlices {
             List.of("id"), Map.of(), " ORDER BY task_uid");
 
         slice("adrs_of_task",
-            "SELECT adr_id, name, status, date_created " +
+            "SELECT adr_id, name, status, created_at AS date_created " +
             "FROM KnowADR WHERE in('JUSTIFIED_BY').task_uid CONTAINS :id",
             List.of("id"), Map.of(), " ORDER BY adr_id");
 
@@ -993,8 +1001,8 @@ public final class LoreSlices {
         // ── §3 Sprints ───────────────────────────────────────────────────────
         // [field IS NOT NULL] filter: skip sparse hist entries where field absent
         slice("sprints",
-            "SELECT sprint_id, coalesce(title, name) AS name, created_date, no_release_required, unplanned_intentional, " +
-            changedAtSql("created_date") + ", " +
+            "SELECT sprint_id, coalesce(title, name) AS name, created_at AS created_date, no_release_required, unplanned_intentional, " +
+            changedAtSql("created_at") + ", " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].priority[0], out('HAS_STATE')[priority IS NOT NULL].priority[0])     AS priority, " +
             "out('HAS_STATE')[valid_from IS NOT NULL].valid_from[0] AS valid_from, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
@@ -1032,7 +1040,7 @@ public final class LoreSlices {
             " ORDER BY sprint_id");
 
         slice("sprint_tree",
-            "SELECT sprint_id, coalesce(title, name) AS name, COALESCE(out('HAS_STATE')[valid_to IS NULL].context_md[0], context_md) AS context_md, COALESCE(out('HAS_STATE')[valid_to IS NULL].outcome_md[0], outcome_md) AS outcome_md, created_date, no_release_required, " +
+            "SELECT sprint_id, coalesce(title, name) AS name, COALESCE(out('HAS_STATE')[valid_to IS NULL].context_md[0], context_md) AS context_md, COALESCE(out('HAS_STATE')[valid_to IS NULL].outcome_md[0], outcome_md) AS outcome_md, created_at AS created_date, no_release_required, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].status_raw[0], out('HAS_STATE')[status_raw IS NOT NULL].status_raw[0]) AS status_raw, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].pr_refs[0], out('HAS_STATE')[pr_refs IS NOT NULL].pr_refs[0])       AS pr_refs, " +
             "COALESCE(out('HAS_STATE')[valid_to IS NULL].priority[0], out('HAS_STATE')[priority IS NOT NULL].priority[0])     AS priority, " +
@@ -1185,10 +1193,10 @@ public final class LoreSlices {
         // «Фича целиком» — вычисляемый факт (D4): shipped ⇔ все дочерние shipped.
         // Слайс отдаёт счётчики, вывод статуса — на клиенте/потребителе.
         slice("features",
-            "SELECT uc_id, title, body_md, context_md, status, out('BELONGS_TO').component_id[0] AS component_id, date_created, " +
+            "SELECT uc_id, title, body_md, context_md, status, out('BELONGS_TO').component_id[0] AS component_id, created_at AS date_created, " +
             "goal_level, shipped_at, parent_uc_id, " +
             // Свежесть (S4-MODEL-TYPES): тот же источник, что у use_cases.
-            changedAtSql("shipped_at", "date_created") + ", " +
+            changedAtSql("shipped_at", "created_at") + ", " +
             // PL-10: компоненты и проекты — рёбрами, а не плоским component_id.
             // Плоское поле не давало ни множественности, ни проектной оси.
             "out('BELONGS_TO').component_id      AS component_ids, " +
@@ -1241,11 +1249,11 @@ public final class LoreSlices {
         // компонент — раздела «все сценарии» собрать было не из чего. Тел нет: список
         // несёт заголовки, тело — в паспорте (/lore/record/feature/<uc_id>).
         slice("use_cases",
-            "SELECT uc_id, title, status, goal_level, rigor, priority, parent_uc_id, date_created, shipped_at, " +
+            "SELECT uc_id, title, status, goal_level, rigor, priority, parent_uc_id, created_at AS date_created, shipped_at, " +
             // Свежесть (вопрос №49): SCD2 у сценария нет — последнее известное изменение
             // это поставка (shipped_at ставит система), иначе заведение.
             // S4-MODEL-TYPES: пути записи ставят updated_at (момент) — максимум с днём в LoreChangedAt.
-            changedAtSql("shipped_at", "date_created") + ", " +
+            changedAtSql("shipped_at", "created_at") + ", " +
             "out('BELONGS_TO').component_id AS component_ids, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             // Просьба kit: у детей своих рёбер нет — без наследуемого поля «компонент» и
@@ -1270,7 +1278,7 @@ public final class LoreSlices {
         // Дочерние сценарии корня. Источник истины — ребро DECOMPOSES_INTO;
         // parent_uc_id рядом с ним денормализация для индекса, а не вторая правда.
         slice("use_cases_of_feature",
-            "SELECT uc_id, title, scenario_md, acceptance_md, status, parent_uc_id, date_created, " +
+            "SELECT uc_id, title, scenario_md, acceptance_md, status, parent_uc_id, created_at AS date_created, " +
             // ADR-027 (D1/§2): классификация Коберна — уровень цели, вес оформления,
             // приоритет; shipped_at ставит система (ADR-029 §2).
             "goal_level, rigor, priority, shipped_at, " +
@@ -1306,7 +1314,7 @@ public final class LoreSlices {
         // НЕСКОЛЬКИМИ фичами — потому реестр проектный, а не «внутри фичи»; отсюда же
         // растёт кросс-фичевая канва по актору и «самая горячая боль» (AN-01/AN-07).
         slice("pains",
-            "SELECT pain_id, title, body_md, severity, date_created, " +
+            "SELECT pain_id, title, body_md, severity, created_at AS date_created, " +
             "out('FELT_BY').actor_id       AS actor_ids, " +   // чья боль
             "out('BLOCKS').job_id          AS blocks_job_ids, " + // Остервальдер: какой работе мешает
             "in('ADDRESSES').uc_id          AS claimed_by_ucs, " + // кто заявил, что адресует
@@ -1318,7 +1326,7 @@ public final class LoreSlices {
             " ORDER BY pain_id");
 
         slice("gains",
-            "SELECT gain_id, title, body_md, metric_md, rank, date_created, " +
+            "SELECT gain_id, title, body_md, metric_md, rank, created_at AS date_created, " +
             "out('DESIRED_BY').actor_id    AS actor_ids, " +
             "out('SUCCESS_OF').job_id      AS success_of_job_ids, " + // успех в какой работе
             "in('PROMISES').uc_id           AS claimed_by_ucs, " +
@@ -1332,7 +1340,7 @@ public final class LoreSlices {
         // производны от работы («боль мешает работе», «выгода — успех в работе»),
         // поэтому реестр работ отдаёт и то, и другое: вокруг чего вообще всё крутится.
         slice("jobs",
-            "SELECT job_id, title, body_md, kind, importance, date_created, " +
+            "SELECT job_id, title, body_md, kind, importance, created_at AS date_created, " +
             "out('PERFORMED_BY').actor_id AS actor_ids, " +       // чья работа
             "in('BLOCKS').pain_id         AS blocking_pain_ids, " + // что мешает
             "in('BLOCKS').size()          AS blocked_by, " +
@@ -1365,13 +1373,13 @@ public final class LoreSlices {
             "FROM KnowProjectActor WHERE actor_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
         slice("pain_by_id",
-            "SELECT pain_id, title, body_md, severity, date_created FROM KnowPain WHERE pain_id = :id LIMIT 1",
+            "SELECT pain_id, title, body_md, severity, created_at AS date_created FROM KnowPain WHERE pain_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
         slice("gain_by_id",
-            "SELECT gain_id, title, body_md, metric_md, rank, date_created FROM KnowGain WHERE gain_id = :id LIMIT 1",
+            "SELECT gain_id, title, body_md, metric_md, rank, created_at AS date_created FROM KnowGain WHERE gain_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
         slice("job_by_id",
-            "SELECT job_id, title, body_md, kind, importance, date_created FROM KnowJob WHERE job_id = :id LIMIT 1",
+            "SELECT job_id, title, body_md, kind, importance, created_at AS date_created FROM KnowJob WHERE job_id = :id LIMIT 1",
             List.of("id"), Map.of(), "");
 
         // ADR-LORE-031 §3: ассеты, потерявшие вход ATTACHED_TO (сущность удалена) —
@@ -2674,7 +2682,7 @@ public final class LoreSlices {
 
         // ── §9 KnowRunbook (Phase 5 LAL-29) ─────────────────────────────────
         slice("runbooks",
-            "SELECT runbook_id, name, area, date_created, " +
+            "SELECT runbook_id, name, area, created_at AS date_created, " +
             "out('REFERENCES_ADR').adr_id AS adr_ids, " +
             "out('BELONGS_TO_PROJECT').slug AS projects " + // AL-92: проектная ось
             "FROM KnowRunbook",
@@ -2684,7 +2692,7 @@ public final class LoreSlices {
             " ORDER BY runbook_id");
 
         slice("runbook_by_id",
-            "SELECT runbook_id, name, area, date_created, " +
+            "SELECT runbook_id, name, area, created_at AS date_created, " +
             "COALESCE(out('HAS_STATE').content_md[0], content_md) AS content_md, " +
             "out('HAS_STATE').valid_from[0] AS valid_from, " +
             "out('REFERENCES_ADR').adr_id AS adr_ids, " +
@@ -2695,7 +2703,7 @@ public final class LoreSlices {
 
         // ── §10 QualityGate (Phase 5 LAL-28) ─────────────────────────────────
         slice("quality_gates",
-            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, scope, last_run_status, date_created, sprint_id, content_md, " +
+            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, scope, last_run_status, created_at AS date_created, sprint_id, content_md, " +
             "out('BELONGS_TO').component_id AS components, out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM QualityGate",
             List.of(),
@@ -2707,7 +2715,7 @@ public final class LoreSlices {
             // MD-04 (второй заход по QG): паспорт гейта. Владелец — проект ребром BELONGS_TO_PROJECT
             // (ADR-LORE-053 D7), компонент — связью списком; retired_at и retired_reason пишет путь
             // записи при переходе в retired. component_id (первый) оставлен прежним читателям.
-            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, date_created, content_md, sprint_id, " +
+            "SELECT qg_id, name, description, out('BELONGS_TO').component_id[0] AS component_id, status, last_run_status, created_at AS date_created, content_md, sprint_id, " +
             "retired_at, retired_reason, scope, " +
             "out('BELONGS_TO').component_id AS components, out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM QualityGate WHERE qg_id = :id LIMIT 1",
@@ -3391,7 +3399,7 @@ public final class LoreSlices {
             // (defaults are set in a second, IS NULL-gated statement) — readers
             // always see the effective defaults, never NULL.
             "SELECT dict_type, code, label_ru, label_en, color, icon, sort_order, " +
-            "ifnull(is_active, true) AS is_active, ifnull(is_extensible, false) AS is_extensible, kind FROM KnowDictEntry",
+            "ifnull(is_active, true) AS is_active, ifnull(is_extensible, false) AS is_extensible, kind, tokens_json FROM KnowDictEntry",
             List.of(),
             new LinkedHashMap<>(Map.of(
                 "dict_type", " WHERE dict_type = :dict_type")),

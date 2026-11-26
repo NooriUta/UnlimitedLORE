@@ -66,7 +66,8 @@ export function splitSettings(rows: readonly DictRow[]): { known: KnownValue[]; 
       const r = active.find(a => a.code === def.key);
       return { def, value: r && r.label_ru && r.label_ru.trim() !== '' ? r.label_ru : null };
     }),
-    unknown: active.filter(a => !KNOWN_SETTINGS.some(k => k.key === a.code)),
+    // appearance.* — умолчание и набор оформления установки (AP-APPEARANCE): их пишет и читает раздел «Оформление».
+    unknown: active.filter(a => !KNOWN_SETTINGS.some(k => k.key === a.code) && !a.code.startsWith('appearance.')),
   };
 }
 

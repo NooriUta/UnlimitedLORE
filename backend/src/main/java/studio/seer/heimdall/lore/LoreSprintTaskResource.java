@@ -868,20 +868,19 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     return badParams("task and phase belong to different sprints: "
                         + taskSprint + " vs " + phaseSprint);
             }
+            String where = req.phase_uid() != null
+                ? "@out.task_uid=:t AND @in.phase_uid=:p"
+                : "@out.task_uid=:t";
+            Map<String, Object> params = req.phase_uid() != null
+                ? Map.of("t", req.task_uid(), "p", req.phase_uid())
+                : Map.of("t", req.task_uid());
+            String probe = "SELECT @rid FROM IN_PHASE WHERE " + where + " AND valid_to IS NULL";
+            boolean had = !ingestService.queryPublic(probe, params).isEmpty();
             if (remove) {
-                String where = req.phase_uid() != null
-                    ? "@out.task_uid=:t AND @in.phase_uid=:p"
-                    : "@out.task_uid=:t";
-                Map<String, Object> params = req.phase_uid() != null
-                    ? Map.of("t", req.task_uid(), "p", req.phase_uid())
-                    : Map.of("t", req.task_uid());
                 // MDL-02: IN_PHASE историчная — снятие закрывает ребро (valid_to), а не стирает его.
                 deleteEdges("IN_PHASE", where, params);
             } else {
-                List<Map<String, Object>> existing = ingestService.queryPublic(
-                    "SELECT @rid FROM IN_PHASE WHERE @out.task_uid=:t AND @in.phase_uid=:p AND valid_to IS NULL",
-                    Map.of("t", req.task_uid(), "p", req.phase_uid()));
-                if (existing.isEmpty()) {
+                if (!had) {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         String.format(
                             "CREATE EDGE IN_PHASE FROM (SELECT FROM KnowTask WHERE task_uid='%s') " +
@@ -895,7 +894,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             out.put("task_uid", req.task_uid());
             out.put("phase_uid", req.phase_uid());
             out.put("action", remove ? "removed" : "added");
-            return noStore(Response.ok(out));
+            // ISS-06: исход по факту ребра (общее правило путей связи)
+            return linkFact(out, remove, had, had || (!remove && !ingestService.queryPublic(probe, params).isEmpty()),
+                "задача " + req.task_uid() + " или фаза " + req.phase_uid());
         } catch (Exception e) {
             LOG.warnf("[LORE TASK PHASE] %s / %s: %s", req.task_uid(), req.phase_uid(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -1558,6 +1559,9 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             return badParams("sprint_id and git_project required");
         boolean remove = "remove".equalsIgnoreCase(req.action());
         try {
+            // ISS-06: исход — по факту ребра, а не по факту выполнения команды. CREATE EDGE в пустую выборку
+            // (проект не зарегистрирован, спринта нет) — тихий no-op; прежде ответ был безусловным «added».
+            boolean had = edgeExists("BELONGS_TO_PROJECT", "sprint_id", req.sprint_id(), "slug", req.git_project());
             if (remove) {
                 // DELETE EDGE doesn't work in ArcadeDB — SELECT @rid + DELETE FROM
                 List<Map<String, Object>> edges = ingestService.queryPublic(
@@ -1568,26 +1572,20 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "DELETE FROM BELONGS_TO_PROJECT WHERE @rid=" + rid, null)).await().indefinitely();
                 }
-            } else {
-                // Idempotent: create edge only if not already linked
-                List<Map<String, Object>> existing = ingestService.queryPublic(
-                    "SELECT out('BELONGS_TO_PROJECT').slug AS gps FROM KnowSprint WHERE sprint_id=:sid",
-                    Map.of("sid", req.sprint_id()));
-                @SuppressWarnings("unchecked")
-                List<String> current = existing.isEmpty() ? List.of()
-                    : (List<String>) existing.get(0).getOrDefault("gps", List.of());
-                if (!current.contains(req.git_project())) {
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        "CREATE EDGE BELONGS_TO_PROJECT " +
-                        "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
-                        "TO   (SELECT FROM KnowGitProject WHERE slug=:gp)",
-                        Map.of("sid", req.sprint_id(), "gp", req.git_project()))).await().indefinitely();
-                }
+            } else if (!had) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    "CREATE EDGE BELONGS_TO_PROJECT " +
+                    "FROM (SELECT FROM KnowSprint WHERE sprint_id=:sid) " +
+                    "TO   (SELECT FROM KnowGitProject WHERE slug=:gp)",
+                    Map.of("sid", req.sprint_id(), "gp", req.git_project()))).await().indefinitely();
             }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true); out.put("sprint_id", req.sprint_id());
             out.put("git_project", req.git_project()); out.put("action", remove ? "removed" : "added");
-            return noStore(Response.ok(out));
+            if (remove) return unlinkOutcome(out, had);
+            return linkOutcome(had, out, false, "BELONGS_TO_PROJECT", "sprint_id", req.sprint_id(),
+                "slug", req.git_project(), "спринт " + req.sprint_id() + " или проект " + req.git_project()
+                + " (проект заводится через project_new)");
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT PROJECT] %s / %s: %s", req.sprint_id(), req.git_project(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -1627,36 +1625,34 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     "SELECT component_id FROM LoreComponent WHERE component_id=:c LIMIT 1",
                     Map.of("c", req.component_id())).isEmpty())
                 return badParams("component not found: " + req.component_id());
+            String probe = "SELECT @rid FROM BELONGS_TO WHERE @out.sprint_id=:s AND @in.component_id=:c";
+            Map<String, Object> pp = Map.of("s", req.sprint_id(), "c", req.component_id());
+            List<Map<String, Object>> existing = ingestService.queryPublic(probe, pp);
             if (remove) {
                 // DELETE EDGE doesn't work in ArcadeDB — SELECT @rid + DELETE FROM
-                List<Map<String, Object>> edges = ingestService.queryPublic(
-                    "SELECT @rid FROM BELONGS_TO WHERE @out.sprint_id=:s AND @in.component_id=:c",
-                    Map.of("s", req.sprint_id(), "c", req.component_id()));
-                for (Map<String, Object> e : edges) {
+                for (Map<String, Object> e : existing) {
                     String rid = e.get("@rid").toString();
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "DELETE FROM BELONGS_TO WHERE @rid=" + rid, null)).await().indefinitely();
                 }
-            } else {
+            } else if (existing.isEmpty()) {
                 // Idempotent: skip if already linked
-                List<Map<String, Object>> existing = ingestService.queryPublic(
-                    "SELECT @rid FROM BELONGS_TO WHERE @out.sprint_id=:s AND @in.component_id=:c",
-                    Map.of("s", req.sprint_id(), "c", req.component_id()));
-                if (existing.isEmpty()) {
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        String.format(
-                            "CREATE EDGE BELONGS_TO FROM (SELECT FROM KnowSprint WHERE sprint_id='%s') " +
-                            "TO (SELECT FROM LoreComponent WHERE component_id='%s')",
-                            req.sprint_id(), req.component_id()),
-                        null)).await().indefinitely();
-                }
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    String.format(
+                        "CREATE EDGE BELONGS_TO FROM (SELECT FROM KnowSprint WHERE sprint_id='%s') " +
+                        "TO (SELECT FROM LoreComponent WHERE component_id='%s')",
+                        req.sprint_id(), req.component_id()),
+                    null)).await().indefinitely();
             }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
             out.put("sprint_id", req.sprint_id());
             out.put("component_id", req.component_id());
             out.put("action", remove ? "removed" : "added");
-            return noStore(Response.ok(out));
+            // ISS-06: исход по факту ребра (общее правило путей связи)
+            boolean had = !existing.isEmpty();
+            return linkFact(out, remove, had, had || !ingestService.queryPublic(probe, pp).isEmpty(),
+                "спринт " + req.sprint_id() + " или компонент " + req.component_id());
         } catch (Exception e) {
             LOG.warnf("[LORE SPRINT COMPONENT] %s / %s: %s", req.sprint_id(), req.component_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -1693,34 +1689,32 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     "SELECT component_id FROM LoreComponent WHERE component_id=:c LIMIT 1",
                     Map.of("c", req.component_id())).isEmpty())
                 return badParams("component not found: " + req.component_id());
+            String probe = "SELECT @rid FROM TAGGED_WITH WHERE @out.task_uid=:t AND @in.component_id=:c";
+            Map<String, Object> pp = Map.of("t", req.task_uid(), "c", req.component_id());
+            List<Map<String, Object>> existing = ingestService.queryPublic(probe, pp);
             if (remove) {
-                List<Map<String, Object>> edges = ingestService.queryPublic(
-                    "SELECT @rid FROM TAGGED_WITH WHERE @out.task_uid=:t AND @in.component_id=:c",
-                    Map.of("t", req.task_uid(), "c", req.component_id()));
-                for (Map<String, Object> e : edges) {
+                for (Map<String, Object> e : existing) {
                     String rid = e.get("@rid").toString();
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "DELETE FROM TAGGED_WITH WHERE @rid=" + rid, null)).await().indefinitely();
                 }
-            } else {
-                List<Map<String, Object>> existing = ingestService.queryPublic(
-                    "SELECT @rid FROM TAGGED_WITH WHERE @out.task_uid=:t AND @in.component_id=:c",
-                    Map.of("t", req.task_uid(), "c", req.component_id()));
-                if (existing.isEmpty()) {
-                    writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
-                        String.format(
-                            "CREATE EDGE TAGGED_WITH FROM (SELECT FROM KnowTask WHERE task_uid='%s') " +
-                            "TO (SELECT FROM LoreComponent WHERE component_id='%s')",
-                            req.task_uid(), req.component_id()),
-                        null)).await().indefinitely();
-                }
+            } else if (existing.isEmpty()) {
+                writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
+                    String.format(
+                        "CREATE EDGE TAGGED_WITH FROM (SELECT FROM KnowTask WHERE task_uid='%s') " +
+                        "TO (SELECT FROM LoreComponent WHERE component_id='%s')",
+                        req.task_uid(), req.component_id()),
+                    null)).await().indefinitely();
             }
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("ok", true);
             out.put("task_uid", req.task_uid());
             out.put("component_id", req.component_id());
             out.put("action", remove ? "removed" : "added");
-            return noStore(Response.ok(out));
+            // ISS-06: исход по факту ребра (общее правило путей связи)
+            boolean had = !existing.isEmpty();
+            return linkFact(out, remove, had, had || !ingestService.queryPublic(probe, pp).isEmpty(),
+                "задача " + req.task_uid() + " или компонент " + req.component_id());
         } catch (Exception e) {
             LOG.warnf("[LORE TASK COMPONENT] %s / %s: %s", req.task_uid(), req.component_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -1894,7 +1888,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             out.put("task_uid", req.task_uid());
             out.put("adr_id", req.adr_id());
             out.put("action", remove ? "removed" : "added");
-            return noStore(Response.ok(out));
+            // ISS-06: исход по факту ребра (общее правило путей связи)
+            boolean had = !existing.isEmpty();
+            return linkFact(out, remove, had, had || edgeExists("JUSTIFIED_BY", "task_uid", req.task_uid(), "adr_id", req.adr_id()),
+                "задача " + req.task_uid() + " или ADR " + req.adr_id());
         } catch (Exception e) {
             LOG.warnf("[LORE TASK ADR] %s / %s: %s", req.task_uid(), req.adr_id(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)
@@ -1933,10 +1930,22 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                     Map.of("t", req.task_uid())).isEmpty())
                 return badParams("task not found: " + req.task_uid());
             String p = req.project(), f = req.file_path();
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("ok", true);
+            out.put("task_uid", req.task_uid());
+            out.put("project", p);
+            out.put("file_path", f);
+            out.put("action", remove ? "removed" : "added");
+            String probe = "SELECT @rid FROM EDITED_IN WHERE @out.project=:p AND @out.file_path=:f AND @in.task_uid=:t";
+            Map<String, Object> pp = Map.of("p", p, "f", f, "t", req.task_uid());
+            List<Map<String, Object>> edges = ingestService.queryPublic(probe, pp);
+            boolean had = !edges.isEmpty();
+            // ISS-06: проект файла не зарегистрирован — ребро BELONGS_TO_PROJECT молча не ляжет, файл повиснет без
+            // проекта. Отказ ДО записи: outcome=noop с кандидатами реестра, а не «added».
+            if (!remove && !exists("KnowGitProject", "slug", p))
+                return noStore(Response.ok(withSlugCandidates(LoreOutcome.link(out, false, false,
+                    "проект " + p + " (проект заводится через project_new)"), p, registeredSlugs())));
             if (remove) {
-                List<Map<String, Object>> edges = ingestService.queryPublic(
-                    "SELECT @rid FROM EDITED_IN WHERE @out.project=:p AND @out.file_path=:f AND @in.task_uid=:t",
-                    Map.of("p", p, "f", f, "t", req.task_uid()));
                 for (Map<String, Object> e : edges) {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "DELETE FROM EDITED_IN WHERE @rid=" + e.get("@rid").toString(), null)).await().indefinitely();
@@ -1959,13 +1968,8 @@ public class LoreSprintTaskResource extends LoreResourceBase {
                 writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript",
                     script, null)).await().indefinitely();
             }
-            Map<String, Object> out = new LinkedHashMap<>();
-            out.put("ok", true);
-            out.put("task_uid", req.task_uid());
-            out.put("project", p);
-            out.put("file_path", f);
-            out.put("action", remove ? "removed" : "added");
-            return noStore(Response.ok(out));
+            return linkFact(out, remove, had, had || (!remove && !ingestService.queryPublic(probe, pp).isEmpty()),
+                "задача " + req.task_uid() + " или файл " + p + ":" + f);
         } catch (Exception e) {
             LOG.warnf("[LORE TASK FILE] %s / %s: %s", req.task_uid(), req.file_path(), e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY)

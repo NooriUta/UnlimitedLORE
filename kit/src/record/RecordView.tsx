@@ -284,8 +284,15 @@ const WEB_URL = /^https?:\/\/[^\s"'<>]+$/i;
 /** Виды, которые правятся на месте FieldEditor'ом. ref и md идут своими путями (связи, MD-редактор). */
 const INLINE_KINDS = new Set(['text', 'number', 'date', 'enum', 'bool']);
 
+/** Значения нет: null, пустая строка, пустой список. */
+function emptyValue(x: unknown): boolean {
+  return x === null || x === undefined || x === '' || (Array.isArray(x) && x.length === 0);
+}
+
 function Fields({ record, kind, ctx, lang, edit, fieldSave }: { record: KitRecord; kind: KindConfig; ctx: KitCtx; lang: KitLang; edit?: EditSlot; fieldSave?: FieldSaver }) {
-  const fields = kind.fields ?? [];
+  // AP-PEOPLE-PAGE: поле с правом (restricted) без значения не рисуется — сервер не отдал его этому зрителю,
+  // и подпись с «—» выдавала бы, что поле есть, но скрыто. Обычное пустое поле — прочерком, как прежде.
+  const fields = (kind.fields ?? []).filter(f => !(f.restricted && emptyValue(record.fields[f.key])));
   if (fields.length === 0) return null;
   const row = (f: (typeof fields)[number]) => (
     <div key={f.key} className="sk-rec-fields__row" data-type={f.type}>

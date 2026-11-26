@@ -1230,6 +1230,7 @@
   "kit.record.create.saving": "Сохраняем…",
   "kit.record.create.cancel": "Отмена",
   "kit.record.create.why": "Не заполнено: {fields}",
+  "kit.record.create.checking": "проверяю…",
   "kit.record.create.noPath": "Запись некуда сохранить: приложение не дало пути создания",
   "kit.record.create.failed": "Не сохранено: {reason}",
   "kit.record.rel.inherited": "Унаследовано — снять можно только там, откуда пришло",

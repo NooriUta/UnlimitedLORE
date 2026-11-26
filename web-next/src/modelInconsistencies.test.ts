@@ -6,7 +6,9 @@
 //   • поле-связь (rel, edge_fields: роли задачи — ROLE_HELD_BY) считалось свойством;
 //   • запись шла по имени параметра API, а свойство нашлось по ключу или псевдониму (sprint.title → name/title);
 //   • служебные колонки (service_fields модели, *_uid, системные) шли в «неописанные».
-// Настоящий случай — ADR date_created: пишется, в схеме нет ни на вершине, ни в версии — должен остаться.
+// Настоящий случай был — ADR: поле «Дата» писалось в date_created, которого в схеме 1.18 нет. KREG-10 (25.11, «колонка
+// пустая — удалить»): поле пишется в created_at — «пишется без схемы» больше нет; положительный контроль — та же схема
+// без created_at у KnowADR.
 import { afterAll, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -28,10 +30,10 @@ const schema = [
   v('KnowADRHist', ['status']),
 ];
 
-function run() {
-  const schemaPath = join(dir, 'schema.json');
-  const out = join(dir, 'out.json');
-  writeFileSync(schemaPath, JSON.stringify(schema));
+function run(sch: unknown[] = schema, tag = 'a') {
+  const schemaPath = join(dir, `schema-${tag}.json`);
+  const out = join(dir, `out-${tag}.json`);
+  writeFileSync(schemaPath, JSON.stringify(sch));
   const r = spawnSync(process.execPath, [join(repo, 'scripts', 'model-inconsistencies.mjs'), '--schema', schemaPath, '--out', out], { encoding: 'utf8' });
   expect(r.status, r.stderr).toBe(0);
   return JSON.parse(readFileSync(out, 'utf8'));
@@ -42,8 +44,14 @@ describe('диагностика модели: ложные срабатыван
   const written = (rep.writtenWithoutSchema as { type: string; field: string }[]).map((x) => `${x.type}.${x.field}`);
   const uncl = (rep.unclassified as { type: string; property: string }[]).map((x) => `${x.type}.${x.property}`);
 
-  it('настоящее «пишется без схемы» остаётся: adr.date → date_created', () => {
-    expect(written).toContain('adr.date');
+  it('поле «Дата» ADR пишется в created_at — в схеме оно есть (KREG-10)', () => {
+    expect(written).not.toContain('adr.date');
+  });
+
+  it('положительный контроль: без created_at у KnowADR поле «Дата» — «пишется без схемы»', () => {
+    const noCreated = schema.map((t) => (t.name === 'KnowADR' ? v('KnowADR', ['adr_id', 'name', 'status']) : t));
+    const r = run(noCreated, 'b');
+    expect((r.writtenWithoutSchema as { type: string; field: string }[]).map((x) => `${x.type}.${x.field}`)).toContain('adr.date');
   });
 
   it('поле из версии записи (*Hist) — не «без схемы»', () => {

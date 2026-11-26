@@ -46,10 +46,10 @@ class KnowKindImportTest {
         for (Map<String, Object> k : desired()) db.put((String) k.get("kind"), (String) k.get("content_hash"));
         db.put("entity:sprint", "sha256:old");
         db.put("slice:zz_retired", "sha256:x");
-        db.put("forgejo:list_issues", "sha256:y");
+        db.put("custom:list_issues", "sha256:y");
         KnowKindImport.Plan p = KnowKindImport.plan(db, desired(), MANAGED);
         assertEquals(List.of("entity:sprint"), p.updates().stream().map(k -> k.get("kind")).toList());
-        assertEquals(List.of("slice:zz_retired"), p.stale(), "чужие виды (forgejo:*) импорт не считает своими");
+        assertEquals(List.of("slice:zz_retired"), p.stale(), "чужие виды (вне MANAGED; forgejo:* с FJ-01 — свои) импорт не считает своими");
     }
 
     @Test
