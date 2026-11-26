@@ -65,8 +65,10 @@ public class LoreRequestStatsFilter implements ContainerResponseFilter {
 
         stats.record(caller, axis, whatOf(req));
         // AO-01: мутирующий вызов — точкой в журнал действий, вместе с исходом.
-        if (LoreRequestStats.isJournalled(req.getMethod())) {
-            String entity = LoreAuditLogFilter.entityIdOf(res.getEntity());
+        if (LoreRequestStats.journalledCall(req.getMethod(), family, res.getStatus())) {
+            // Отказ среза — точкой slice:<имя>, а не путём: так их считает query_errors (KREG-12, шаг 7).
+            String entity = "slice".equals(family) && LoreRequestStats.isJournalled(req.getMethod()) == false
+                ? whatOf(req) : LoreAuditLogFilter.entityIdOf(res.getEntity());
             boolean agent = "agent".equals(axis);
             stats.journalAction(caller, axis, family, entity != null ? entity : req.getUriInfo().getPath(), res.getStatus(),
                 AgentActionLog.clientMark(agent, agent ? clientIdOf(identity) : null),
