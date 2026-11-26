@@ -47,6 +47,20 @@ class LoreModelWorkflowArtifactsTest {
         assertEquals(List.of(), LoreModelWorkflow.problems(w));
     }
 
+    /** Владелец 26.11: «в workflow develop ты не упоминаешь код как артефакт (новый, изменённый) — и в ops, и в test». */
+    @Test
+    void codeAndTestsAreArtifactsOfDevAndOps() {
+        LoreModelWorkflow.Workflow w = real();
+        assertEquals("record", w.artifacts().get("code").source(), "код живёт в репозитории до задачи");
+        assertEquals("record", w.artifacts().get("tests").source());
+        java.util.function.BiFunction<String, String, LoreModelWorkflow.StageIo> io = (k, st) ->
+            w.kinds().get(k).flow().stream().filter(x -> x.stage().equals(st)).findFirst().orElseThrow();
+        assertTrue(io.apply("dev", "implement").produces().containsAll(List.of("code", "tests")), "dev:implement выдаёт код и тесты");
+        assertTrue(io.apply("dev", "test").consumes().containsAll(List.of("code", "tests")), "dev:test берёт код и тесты");
+        assertTrue(io.apply("ops", "fix").produces().containsAll(List.of("code", "tests")), "ops:fix выдаёт код и тесты");
+        assertTrue(io.apply("ops", "diagnose").consumes().contains("code"), "ops:diagnose читает код");
+    }
+
     @Test
     void consumedRecordWithoutProducerIsFine_stageArtifactMustBeProducedEarlier() {
         var ok = with(CAT, dev(List.of(
