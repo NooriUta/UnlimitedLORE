@@ -180,7 +180,7 @@ class LoreModelTest {
     @Test
     void describedStatusTypesAreListedAndTheRestIsMarkedMissing() {
         Map<String, Object> m = LoreModel.build(taskDict());
-        assertEquals(List.of("task", "sprint", "adr", "spec", "decision", "quality_gate", "feature", "question"),
+        assertEquals(List.of("task", "sprint", "adr", "spec", "decision", "quality_gate", "skill", "feature", "question"),
             m.get("statuses_known"));
         assertTrue(String.valueOf(m.get("missing")).contains("statuses:*"),
             "пока описаны не все типы, раздел statuses помечен неполным");

@@ -3052,6 +3052,20 @@ public final class LoreSlices {
             "out('OWNED_BY').kc_sub[0] AS owner, out('OWNED_BY').display_name[0] AS owner_name FROM KnowActor " +
             "WHERE kind = 'agent' AND client_id = ('" + MachineAccess.PREFIX + "' + $parent.$current.machine_id))";
         slice("machine_by_id", machineCols + " WHERE machine_id = :id", List.of("id"), Map.of(), "");
+        // KREG-13 (контракт модели полный, слово владельца 26.11.2026): паспорта четырёх типов выпуска 1.19.1.
+        slice("skill_by_id",
+            "SELECT skill_id, name, title, status, version, source, body_md, " + SKILL_LINK_COLS + ", updated_at FROM KnowSkill WHERE skill_id = :id",
+            List.of("id"), Map.of(), "");
+        slice("tag_by_id",
+            "SELECT tag_id, name, title, owner, source, synonyms FROM KnowTag WHERE tag_id = :id",
+            List.of("id"), Map.of(), "");
+        slice("kind_by_id",
+            "SELECT kind, title, source, id_field, replaces FROM KnowKind WHERE kind = :id",
+            List.of("id"), Map.of(), "");
+        slice("agent_session_by_id",
+            "SELECT session_id, dialogue_name, machine_id, project, entrypoint, started_at, last_activity_at, " +
+            "out('LOGGED_BY').actor_id AS actor_ids FROM KnowAgentSession WHERE session_id = :id",
+            List.of("id"), Map.of(), "");
         // Решение владельца 3б: машины графа целиком — и без шлюза (появились сами по записи агента), чтобы админка
         // показала их группой «Без шлюза», а не теряла (machine_acl берёт только акторов minilore-link-*).
         slice("machines_graph", machineCols, List.of(), Map.of(), " ORDER BY machine_id");
@@ -3629,6 +3643,7 @@ public final class LoreSlices {
         // SKILL-04: скилл виден по проекту (BELONGS_TO_PROJECT, §5 «чтение — по скоупам проекта»)
         Map.entry("skills",      "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("skills_full", "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("skill_by_id", "out('BELONGS_TO_PROJECT').slug"),
         // Решение: своё ребро ИЛИ проект родительского ADR (DECIDED_IN).
         Map.entry("decisions",
             "out('BELONGS_TO_PROJECT').slug|out('DECIDED_IN').out('BELONGS_TO_PROJECT').slug"),
@@ -3794,6 +3809,9 @@ public final class LoreSlices {
         Map.entry("agent_owners", "реестр агентов и владельцев — служебный"),
         Map.entry("machine_acl", "допуски к машинам (S7B-ACL-1) — служебный: по нему miniLORE решает видимость диалогов машины"),
         Map.entry("agent_sessions", "журнал сессий агентов — служебный"),
+        Map.entry("agent_session_by_id", "паспорт сессии агента (KREG-13) — служебный, только админка"),
+        Map.entry("tag_by_id", "паспорт супертега (KREG-13) — теги общие"),
+        Map.entry("kind_by_id", "паспорт вида реестра (KREG-13) — реестр общий, только админка"),
         Map.entry("actor_identity_orphans", "сторож учёток — служебный"),
         Map.entry("projects_without_role", "сторож ролей — служебный"),
         Map.entry("project_role_events", "журнал смены ролей — служебный"),
@@ -3833,7 +3851,9 @@ public final class LoreSlices {
         // и отдаёт client_id агентов машины — поле уровня admin. Не-админу — 403, а не учётка в ответе.
         "machine_by_id", "machines_graph",
         // Дверь сессии 26.11: покрытие сессиями по агентам и машинам — журнал админки.
-        "session_coverage");
+        "session_coverage",
+        // KREG-13: паспорта служебных типов — только админка (слово владельца 26.11: agent_session — только в админке).
+        "agent_session_by_id", "kind_by_id");
 
     /** Срез админский, а роль вызывающего — не admin/superadmin: отказ 403, а не пустая выдача. */
     public static boolean adminOnlyDenied(String id, String role) {

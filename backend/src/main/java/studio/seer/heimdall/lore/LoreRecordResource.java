@@ -134,6 +134,11 @@ public class LoreRecordResource extends LoreResourceBase {
             case "organization" -> new Source("org_by_id", "id", false);
             // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: паспорт PR — строка KnowPR по pr_uid «проект#номер».
             case "pr" -> new Source("pr_by_id", "id", false);
+            // KREG-13: типы выпуска 1.19.1 — скилл, супертег, вид реестра, сессия агента.
+            case "skill" -> new Source("skill_by_id", "id", false);
+            case "tag" -> new Source("tag_by_id", "id", false);
+            case "kind" -> new Source("kind_by_id", "id", false);
+            case "agent_session" -> new Source("agent_session_by_id", "id", false);
             default -> null;
         };
     }

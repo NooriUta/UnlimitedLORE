@@ -7002,6 +7002,388 @@
     "labelEn" : "PR",
     "labelPl" : "PR"
   }, {
+    "type" : "skill",
+    "label" : "Скилл",
+    "labelKey" : "pp.kind.skill",
+    "icon" : "scroll-unfurled",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/skill",
+        "field" : "title"
+      },
+      "required" : true,
+      "definition" : "Название скилла: под ним он виден в списках и в describe-карточке.",
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Код скилла skill:<slug> — ключ вершины KnowSkill, по нему на скилл ссылаются агенты и роли.",
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    }, {
+      "key" : "status",
+      "label" : "Статус",
+      "labelKey" : "pp.field.status",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Статус скилла: draft — черновик, active — опубликован и выдаётся агентам ролей.",
+      "layer" : "stable",
+      "labelEn" : "Status",
+      "labelPl" : "Status"
+    }, {
+      "key" : "version",
+      "label" : "Версия",
+      "labelKey" : "pp.field.version",
+      "kind" : "text",
+      "group" : "props",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/skill",
+        "field" : "version"
+      },
+      "definition" : "Версия текста скилла; меняет автор при правке.",
+      "layer" : "stable",
+      "labelEn" : "Version",
+      "labelPl" : "Wersja"
+    }, {
+      "key" : "name",
+      "label" : "Имя",
+      "labelKey" : "pp.field.skillName",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Короткое имя скилла (slug без префикса skill:).",
+      "layer" : "stable",
+      "labelEn" : "Name",
+      "labelPl" : "Nazwa krótka"
+    }, {
+      "key" : "source",
+      "label" : "Источник",
+      "labelKey" : "pp.field.source",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Кто завёл скилл: human — человек, agent — агент, seed — посев установки.",
+      "layer" : "stable",
+      "labelEn" : "Source",
+      "labelPl" : "Źródło"
+    }, {
+      "key" : "updated_at",
+      "label" : "Изменён",
+      "labelKey" : "pp.field.updatedAt",
+      "kind" : "date",
+      "group" : "props",
+      "definition" : "Когда скилл последний раз правили.",
+      "layer" : "stable",
+      "labelEn" : "Updated",
+      "labelPl" : "Zmieniono"
+    } ],
+    "body" : [ {
+      "key" : "body_md",
+      "label" : "Текст скилла",
+      "labelKey" : "pp.field.body",
+      "editable" : true,
+      "write" : {
+        "endpoint" : "/lore/skill",
+        "field" : "body_md"
+      },
+      "definition" : "Текст скилла в Markdown — то, что получает агент роли.",
+      "layer" : "stable",
+      "labelEn" : "Text",
+      "labelPl" : "Tekst"
+    } ],
+    "props" : [ {
+      "fields" : [ "version", "name", "source", "updated_at" ]
+    } ],
+    "labelEn" : "Skill",
+    "labelPl" : "Umiejętność"
+  }, {
+    "type" : "tag",
+    "label" : "Супертег",
+    "labelKey" : "pp.kind.tag",
+    "icon" : "price-tag",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "definition" : "Название супертега, как его видят в списках.",
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Код супертега — ключ вершины KnowTag (tag_id).",
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    }, {
+      "key" : "name",
+      "label" : "Имя",
+      "labelKey" : "pp.field.tagName",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Имя тега, которым его ставят на записи (#имя).",
+      "layer" : "stable",
+      "labelEn" : "Name",
+      "labelPl" : "Nazwa krótka"
+    }, {
+      "key" : "owner",
+      "label" : "Владелец",
+      "labelKey" : "pp.field.owner",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Кто отвечает за схему полей супертега.",
+      "layer" : "stable",
+      "labelEn" : "Owner",
+      "labelPl" : "Właściciel"
+    }, {
+      "key" : "synonyms",
+      "label" : "Синонимы",
+      "labelKey" : "pp.field.synonyms",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Другие написания тега, которые сводятся к нему.",
+      "layer" : "optional",
+      "labelEn" : "Synonyms",
+      "labelPl" : "Synonimy"
+    }, {
+      "key" : "source",
+      "label" : "Источник",
+      "labelKey" : "pp.field.source",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Откуда тег: заведён человеком, агентом или импортом реестра.",
+      "layer" : "stable",
+      "labelEn" : "Source",
+      "labelPl" : "Źródło"
+    }, {
+      "key" : "field_schema",
+      "label" : "Схема полей",
+      "labelKey" : "pp.field.fieldSchema",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Схема свободных полей супертега (JSON) — что можно указать на ребре TAGGED_WITH.",
+      "layer" : "optional",
+      "labelEn" : "Field schema",
+      "labelPl" : "Schemat pól"
+    } ],
+    "props" : [ {
+      "fields" : [ "name", "owner", "synonyms", "source", "field_schema" ]
+    } ],
+    "labelEn" : "Supertag",
+    "labelPl" : "Supertag"
+  }, {
+    "type" : "kind",
+    "label" : "Вид реестра",
+    "labelKey" : "pp.kind.kind",
+    "icon" : "card-pick",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "definition" : "Название вида в реестре видов KnowRegistry.",
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Код вида: entity:*, ddl:*, slice:*, skill:*, tag:*, forgejo:* — ключ вершины KnowKind.",
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    }, {
+      "key" : "source",
+      "label" : "Источник",
+      "labelKey" : "pp.field.source",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Откуда вид пришёл в реестр: модель, DDL, срез, импорт.",
+      "layer" : "stable",
+      "labelEn" : "Source",
+      "labelPl" : "Źródło"
+    }, {
+      "key" : "id_field",
+      "label" : "Поле ключа",
+      "labelKey" : "pp.field.idField",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Имя поля, которое служит ключом записей этого вида.",
+      "layer" : "stable",
+      "labelEn" : "Key field",
+      "labelPl" : "Pole klucza"
+    }, {
+      "key" : "replaces",
+      "label" : "Заменяет",
+      "labelKey" : "pp.field.replaces",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Код вида, который этот вид заменил (переименование).",
+      "layer" : "optional",
+      "labelEn" : "Replaces",
+      "labelPl" : "Zastępuje"
+    }, {
+      "key" : "fields",
+      "label" : "Поля",
+      "labelKey" : "pp.field.fields",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Описание полей вида (JSON): имя, тип, обязательность — как их видит агент в describe.",
+      "layer" : "optional",
+      "labelEn" : "Fields",
+      "labelPl" : "Pola"
+    }, {
+      "key" : "guards",
+      "label" : "Гарды",
+      "labelKey" : "pp.field.guards",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Правила записи вида (JSON): какие проверки сервер делает до записи.",
+      "layer" : "optional",
+      "labelEn" : "Guards",
+      "labelPl" : "Strażnicy"
+    }, {
+      "key" : "lifecycle",
+      "label" : "Жизненный цикл",
+      "labelKey" : "pp.field.lifecycle",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Статусы и переходы вида (JSON).",
+      "layer" : "optional",
+      "labelEn" : "Lifecycle",
+      "labelPl" : "Cykl życia"
+    }, {
+      "key" : "links",
+      "label" : "Связи",
+      "labelKey" : "pp.field.links",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Связи вида с другими видами (JSON): ребро, направление, тип конца.",
+      "layer" : "optional",
+      "labelEn" : "Links",
+      "labelPl" : "Powiązania"
+    }, {
+      "key" : "roles",
+      "label" : "Роли",
+      "labelKey" : "pp.field.roles",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Какие роли агентов могут читать и писать вид (JSON).",
+      "layer" : "optional",
+      "labelEn" : "Roles",
+      "labelPl" : "Role"
+    } ],
+    "props" : [ {
+      "fields" : [ "source", "id_field", "replaces", "fields", "guards", "lifecycle", "links", "roles" ]
+    } ],
+    "labelEn" : "Registry kind",
+    "labelPl" : "Rodzaj rejestru"
+  }, {
+    "type" : "agent_session",
+    "label" : "Сессия агента",
+    "labelKey" : "pp.kind.agentSession",
+    "icon" : "console",
+    "fields" : [ {
+      "key" : "title",
+      "label" : "Название",
+      "labelKey" : "pp.field.title",
+      "kind" : "text",
+      "group" : "head",
+      "definition" : "Название диалога сессии; пусто — показывается код сессии.",
+      "layer" : "stable",
+      "labelEn" : "Title",
+      "labelPl" : "Nazwa"
+    }, {
+      "key" : "code",
+      "label" : "Код",
+      "labelKey" : "pp.field.code",
+      "kind" : "text",
+      "group" : "head",
+      "required" : true,
+      "definition" : "Код сессии (CLAUDE_CODE_SESSION_ID) — ключ вершины KnowAgentSession.",
+      "layer" : "stable",
+      "labelEn" : "Code",
+      "labelPl" : "Kod"
+    }, {
+      "key" : "machine",
+      "label" : "Машина",
+      "labelKey" : "pp.field.machine",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Машина, с которой сессия писала в LORE (X-Lore-Machine).",
+      "layer" : "stable",
+      "labelEn" : "Machine",
+      "labelPl" : "Maszyna"
+    }, {
+      "key" : "project",
+      "label" : "Проект",
+      "labelKey" : "pp.field.project",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Проект или папка, в которой работала сессия.",
+      "layer" : "optional",
+      "labelEn" : "Project",
+      "labelPl" : "Projekt"
+    }, {
+      "key" : "entrypoint",
+      "label" : "Вход",
+      "labelKey" : "pp.field.entrypoint",
+      "kind" : "text",
+      "group" : "props",
+      "definition" : "Откуда запущена сессия: cli или claude-desktop.",
+      "layer" : "optional",
+      "labelEn" : "Entrypoint",
+      "labelPl" : "Wejście"
+    }, {
+      "key" : "started_at",
+      "label" : "Начата",
+      "labelKey" : "pp.field.startedAt",
+      "kind" : "date",
+      "group" : "props",
+      "definition" : "Первая запись сессии: ставится только при заведении строки.",
+      "layer" : "stable",
+      "labelEn" : "Started",
+      "labelPl" : "Rozpoczęta"
+    }, {
+      "key" : "last_activity_at",
+      "label" : "Активность",
+      "labelKey" : "pp.field.lastActivity",
+      "kind" : "date",
+      "group" : "props",
+      "definition" : "Последний вызов сессии: сервер двигает не чаще раза в 5 минут.",
+      "layer" : "stable",
+      "labelEn" : "Last activity",
+      "labelPl" : "Ostatnia aktywność"
+    } ],
+    "props" : [ {
+      "fields" : [ "machine", "project", "entrypoint", "started_at", "last_activity_at" ]
+    } ],
+    "labelEn" : "Agent session",
+    "labelPl" : "Sesja agenta"
+  }, {
     "type" : "project",
     "label" : "Проект",
     "labelKey" : "pp.kind.project",
@@ -7592,7 +7974,7 @@
     "labelEn" : "Gate metric",
     "labelPl" : "Metryka bramki"
   } ],
-  "read_only" : [ "actor", "agent", "component", "decision", "feature", "gain", "job", "machine", "milestone", "organization", "pain", "pr", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tech", "track", "user" ],
+  "read_only" : [ "actor", "agent", "agent_session", "component", "decision", "feature", "gain", "job", "kind", "machine", "milestone", "organization", "pain", "pr", "product", "project", "quality_gate", "question", "release", "repository", "runbook", "tag", "tech", "track", "user" ],
   "graph" : {
     "actor" : {
       "vertex" : "KnowProjectActor",
@@ -7607,6 +7989,10 @@
     "agent" : {
       "vertex" : "KnowActor",
       "key" : "actor_id"
+    },
+    "agent_session" : {
+      "vertex" : "KnowAgentSession",
+      "key" : "session_id"
     },
     "component" : {
       "vertex" : "LoreComponent",
@@ -7635,6 +8021,10 @@
       "vertex" : "KnowJob",
       "hist" : "KnowJobHist",
       "key" : "job_id"
+    },
+    "kind" : {
+      "vertex" : "KnowKind",
+      "key" : "kind"
     },
     "machine" : {
       "vertex" : "KnowMachine",
@@ -7689,6 +8079,10 @@
       "hist" : "KnowRunbookHist",
       "key" : "runbook_id"
     },
+    "skill" : {
+      "vertex" : "KnowSkill",
+      "key" : "skill_id"
+    },
     "spec" : {
       "vertex" : "KnowSpec",
       "hist" : "KnowSpecHist",
@@ -7698,6 +8092,10 @@
       "vertex" : "KnowSprint",
       "hist" : "KnowSprintHist",
       "key" : "sprint_id"
+    },
+    "tag" : {
+      "vertex" : "KnowTag",
+      "key" : "tag_id"
     },
     "task" : {
       "vertex" : "KnowTask",
@@ -7730,6 +8128,11 @@
     "agent" : {
       "title" : "name"
     },
+    "agent_session" : {
+      "code" : "session_id",
+      "machine" : "machine_id",
+      "title" : "dialogue_name"
+    },
     "component" : {
       "code" : "component_id",
       "icon" : "game_icon",
@@ -7754,6 +8157,9 @@
     },
     "job" : {
       "date" : "created_at"
+    },
+    "kind" : {
+      "code" : "kind"
     },
     "machine" : {
       "code" : "machine_id",
@@ -7803,6 +8209,9 @@
       "date" : "created_at",
       "title" : "name"
     },
+    "skill" : {
+      "code" : "skill_id"
+    },
     "spec" : {
       "body_md" : "content_md",
       "status" : "status"
@@ -7814,6 +8223,9 @@
       "status" : "status_raw",
       "title" : "name",
       "track" : "track_id"
+    },
+    "tag" : {
+      "code" : "tag_id"
     },
     "task" : {
       "actual" : "actual_days",
@@ -7848,9 +8260,11 @@
     "sprint" : "section-sprints",
     "tech" : "section-tech"
   },
-  "no_type_color" : [ "agent", "doc", "machine", "organization", "pr", "product", "project", "quality_gate", "question", "repository", "runbook", "spec", "task", "track", "user" ],
+  "no_type_color" : [ "agent", "agent_session", "doc", "kind", "machine", "organization", "pr", "product", "project", "quality_gate", "question", "repository", "runbook", "skill", "spec", "tag", "task", "track", "user" ],
   "precision" : {
     "adr.date" : "datetime",
+    "agent_session.last_activity_at" : "datetime",
+    "agent_session.started_at" : "datetime",
     "decision.date" : "datetime",
     "feature.date" : "date",
     "feature.shipped_at" : "date",
@@ -7868,6 +8282,7 @@
     "release.date" : "date",
     "release.released_at" : "datetime",
     "runbook.date" : "date",
+    "skill.updated_at" : "datetime",
     "sprint.created" : "date",
     "sprint.planned_end_date" : "date",
     "sprint.planned_start" : "date",
@@ -7903,6 +8318,11 @@
       } ]
     },
     "agent" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
+    },
+    "agent_session" : {
       "history" : "none",
       "created" : [ ],
       "changed" : [ ]
@@ -7992,6 +8412,11 @@
         "source" : "created_at",
         "precision" : "date"
       } ]
+    },
+    "kind" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
     },
     "machine" : {
       "history" : "none",
@@ -8124,6 +8549,11 @@
         "precision" : "date"
       } ]
     },
+    "skill" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
+    },
     "spec" : {
       "history" : "scd2",
       "created" : [ {
@@ -8157,6 +8587,11 @@
         "source" : "created_at",
         "precision" : "date"
       } ]
+    },
+    "tag" : {
+      "history" : "none",
+      "created" : [ ],
+      "changed" : [ ]
     },
     "task" : {
       "history" : "scd2",
@@ -8458,6 +8893,7 @@
       "key" : "roles",
       "slot" : "own"
     } ],
+    "agent_session" : [ ],
     "component" : [ {
       "key" : "specs",
       "slot" : "own"
@@ -8647,6 +9083,7 @@
       "key" : "refsIn",
       "slot" : "own"
     } ],
+    "kind" : [ ],
     "machine" : [ {
       "key" : "agents",
       "slot" : "own"
@@ -8872,6 +9309,7 @@
       "key" : "refsIn",
       "slot" : "own"
     } ],
+    "skill" : [ ],
     "spec" : [ {
       "key" : "content",
       "slot" : "own"
@@ -8916,6 +9354,7 @@
       "key" : "publications",
       "slot" : "own"
     } ],
+    "tag" : [ ],
     "task" : [ {
       "key" : "content",
       "slot" : "own"
@@ -9104,12 +9543,14 @@
     "actor" : "everywhere",
     "adr" : "everywhere",
     "agent" : "detail",
+    "agent_session" : "admin",
     "component" : "everywhere",
     "decision" : "everywhere",
     "doc" : "everywhere",
     "feature" : "everywhere",
     "gain" : "everywhere",
     "job" : "everywhere",
+    "kind" : "admin",
     "machine" : "admin",
     "milestone" : "everywhere",
     "news" : "everywhere",
@@ -9125,8 +9566,10 @@
     "repository" : "everywhere",
     "runbook" : "everywhere",
     "settings" : "everywhere",
+    "skill" : "everywhere",
     "spec" : "everywhere",
     "sprint" : "everywhere",
+    "tag" : "everywhere",
     "tags" : "everywhere",
     "task" : "everywhere",
     "tech" : "everywhere",
