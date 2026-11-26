@@ -996,6 +996,33 @@ public class LoreProductResource extends LoreResourceBase {
     }
 
     /**
+     * SPRINT_LORE_PRODUCT_BACKLOG/FIT-04: сравнение сегментов СОСТАВОМ — какие боли/выгоды/работы
+     * общие для выбранных ролей, какие только у одной ({@link VpSegmentCompare}).
+     * {@code segments=A,B[,C…]} — actor_id ролей. Меньше двух известных — {@code comparable=false},
+     * неизвестная роль — {@code unknown_segments}, а не молча выкинута. Отказ БД — 502, не пустой состав.
+     */
+    @GET
+    @Path("product/segment-compare")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response segmentCompare(@jakarta.ws.rs.QueryParam("segments") String segments) {
+        if (!enabled) return disabled();
+        List<String> picked;
+        try { picked = VpSegmentCompare.parseSegments(segments); }
+        catch (IllegalArgumentException e) { return badParams(e.getMessage()); }
+        if (picked.size() < 2) return badParams("segments: at least two actor_id, comma-separated");
+        try {
+            List<Map<String, Object>> rows = ingest.queryPublic(
+                LoreSlices.get("segment_values").baseSql(), Map.of());
+            Map<String, String> known = dictOf("SELECT actor_id AS k, COALESCE(name, actor_id) AS v FROM KnowProjectActor");
+            return noStore(Response.ok(VpSegmentCompare.compare(rows, picked, known)));
+        } catch (RuntimeException e) {
+            LOG.warnf("[LORE SEGMENT-COMPARE] %s", LoreUpstream.detail(e));
+            return noStore(Response.status(Response.Status.BAD_GATEWAY)
+                .entity(LoreUpstream.error(e, LoreUpstream.detail(e))));
+        }
+    }
+
+    /**
      * AL-104: {@code agent_role} — роль агента из справочника {@code agent_role}.
      * Необязателен: старые вызовы (до V21) роль не передавали, и затирать её
      * пустым значением при повторной привязке владельца нельзя.

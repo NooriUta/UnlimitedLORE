@@ -74,6 +74,16 @@ public class LoreRequestStats {
         return method != null && !AgentScopeFilter.READ_METHODS.contains(method.toUpperCase());
     }
 
+    /**
+     * Что пишется в журнал действий: изменяющий вызов — как раньше (AO-01) и, по шагу 7 ADR-LORE-061
+     * (SPRINT_LORE_KNOW_REGISTRY/KREG-12), отказ GET-среза (код 400 и выше): до этого ошибки срезов не оставляли
+     * следа, и «сколько раз агенты спотыкаются о срезы» было не посчитать. Удачное чтение журнал не засоряет.
+     */
+    static boolean journalledCall(String method, String family, int status) {
+        if (isJournalled(method)) return true;
+        return "slice".equals(family) && status >= 400;
+    }
+
     @ConfigProperty(name = "lore.stats.enabled", defaultValue = "true")
     boolean statsEnabled;
 

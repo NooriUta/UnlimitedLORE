@@ -40,7 +40,9 @@ import { saveRelation } from './relationSave';
 // роль продукта, фича. Код предлагается из названия (suggestCode), занятость — до записи (checkCodeFree), запись —
 // строгим mode=create. Кнопку по-прежнему решает can_create сервера.
 export const CREATE_TYPES = ['sprint', 'adr', 'task', 'decision', 'spec', 'organization',
-  'pain', 'gain', 'job', 'actor', 'feature'] as const;
+  'pain', 'gain', 'job', 'actor', 'feature',
+  // Волна 2 (4а): веха — путь /lore/milestone, код milestone_id, название label; запись — mode=create.
+  'milestone'] as const;
 export type CreateType = (typeof CREATE_TYPES)[number];
 
 export const isCreateType = (t: string | undefined | null): t is CreateType =>
@@ -134,6 +136,12 @@ const SPECS: Record<CreateType, FieldSpec[]> = {
     { key: 'body_md', label: 'create.field.body', kind: 'md' },
     { key: 'context_md', label: 'create.field.context', kind: 'md' },
   ],
+  // Волна 2: веха — название, код, цель; срок, приоритет и связи — в паспорте после записи.
+  milestone: [
+    { key: 'title', label: 'create.field.title', kind: 'text', required: true },
+    { key: 'id', label: 'create.field.code', kind: 'text', required: true },
+    { key: 'goal_md', label: 'create.field.goal', kind: 'md' },
+  ],
 };
 
 /**
@@ -151,6 +159,8 @@ const PRODUCT_WRITE: Partial<Record<CreateType, { url: string; id: string; title
 /** Префикс кода типа (2б, прототип v2gap-create-types): проектную часть человек допишет сам, если нужна. */
 export const CODE_PREFIX: Partial<Record<CreateType, string>> = {
   pain: 'PAIN-', gain: 'GAIN-', job: 'JOB-', actor: 'ACT-', feature: 'FEAT-',
+  // вехи в LORE — M-<ПРОЕКТ>-<ИМЯ> (M-LORE-CLIENT-SAFE)
+  milestone: 'M-',
 };
 
 const TRANSLIT: Record<string, string> = {
@@ -341,6 +351,12 @@ export function createRequest(type: CreateType, values: CreateValues): { url: st
         }),
       };
     }
+    // Волна 2: веха — тот же UPSERT-путь, что правит паспорт; строгий mode=create (409 ID_TAKEN на занятый код).
+    case 'milestone':
+      return {
+        url: '/lore/milestone?mode=create',
+        body: strip({ milestone_id: text(values.id), label: text(values.title), goal_md: opt(values.goal_md) }),
+      };
   }
 }
 

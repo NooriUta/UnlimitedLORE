@@ -62,7 +62,7 @@ class LorePassportEditProductTest {
     @Test
     void secondWaveTypesStayReadOnlyForCreate() {
         // 4а: веха, релиз, вопрос, документ… — следующая волна; решение не включается этим заходом.
-        for (String t : List.of("milestone", "release", "question", "decision", "quality_gate", "tech"))
+        for (String t : List.of("release", "question", "decision", "quality_gate", "tech"))   // веха — волна 2 (LorePassportEditMilestoneTest)
             assertEquals(false, LoreRecordPerms.of(t, "admin", true, null, 0).get("can_create"), t);
     }
 

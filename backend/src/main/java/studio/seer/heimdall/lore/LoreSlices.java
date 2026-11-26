@@ -49,7 +49,8 @@ public final class LoreSlices {
     static final Map<String, Map<String, String>> TYPED_PARAMS = Map.of(
         "mcp_failures", Map.of("since", "epoch_ms", "code", "http_code"),
         "agent_action_points", Map.of("since", "epoch_ms"),
-        "mcp_failure_rows", Map.of("since", "epoch_ms", "code", "http_code"));
+        "mcp_failure_rows", Map.of("since", "epoch_ms", "code", "http_code"),
+        "query_errors", Map.of("since", "epoch_ms", "code", "http_code"));
 
     static Object typedValue(String name, String kind, String value) {
         String v = value.trim();
@@ -1352,6 +1353,24 @@ public final class LoreSlices {
             "FROM KnowJob",
             List.of(), new LinkedHashMap<>(Map.of("kind", " WHERE kind = :kind")), " ORDER BY job_id");
 
+        // SPRINT_LORE_PRODUCT_BACKLOG/FIT-04: сравнение сегментов СОСТАВОМ. Строка на каждую
+        // боль/выгоду/работу с её ролями (FELT_BY / DESIRED_BY / PERFORMED_BY) — одной осью
+        // value_type, чтобы «общая / только у A» считалось по всем трём столпам разом.
+        // Пересечение — в Java (VpSegmentCompare, эндпоинт /lore/product/segment-compare):
+        // сырые факты из БД, агрегация выше, как у feature_vp_analytics. LET без $parent —
+        // подзапросы не коррелированы, ORDER BY только внешний.
+        slice("segment_values",
+            "SELECT value_type, value_id, title, actor_ids, actor_names " +
+            "FROM (SELECT expand(unionall($p, $g, $j)) LET " +
+            "$p = (SELECT 'pain' AS value_type, pain_id AS value_id, title, " +
+            "      out('FELT_BY').actor_id AS actor_ids, out('FELT_BY').name AS actor_names FROM KnowPain), " +
+            "$g = (SELECT 'gain' AS value_type, gain_id AS value_id, title, " +
+            "      out('DESIRED_BY').actor_id AS actor_ids, out('DESIRED_BY').name AS actor_names FROM KnowGain), " +
+            "$j = (SELECT 'job' AS value_type, job_id AS value_id, title, " +
+            "      out('PERFORMED_BY').actor_id AS actor_ids, out('PERFORMED_BY').name AS actor_names FROM KnowJob)" +
+            ") ORDER BY value_type, value_id",
+            List.of(), Map.of(), "");
+
         // D12: реестр проектируемых ролей/акторов + карта «сценарии роли».
         slice("actors",
             "SELECT actor_id, name, kind, body_md, " +
@@ -1951,7 +1970,9 @@ public final class LoreSlices {
             "inE('TARGETS_MILESTONE')[valid_to IS NULL].outV().sprint_id AS direct_sprint_ids, " +
             // 11.11 (полнота модели рёбер): фичи, целящие в веху (feature_link rel:milestone).
             "inE('TARGETS_MILESTONE')[valid_to IS NULL].outV()[@this INSTANCEOF 'KnowUseCase'].uc_id AS feature_ids, " +
-            "out('TARGETS_PRODUCT').code       AS products " +
+            "out('TARGETS_PRODUCT').code       AS products, " +
+            // QG-10: какой компонент веха двигает — ребро TAGGED_WITH веха → компонент (milestone/link rel=component).
+            "out('TAGGED_WITH').component_id AS components " +
             "FROM KnowMilestone WHERE milestone_id = :id",
             List.of("id"), Map.of(), "");
 
@@ -3072,7 +3093,10 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
         // Решение владельца 3б: машины графа целиком — и без шлюза (появились сами по записи агента), чтобы админка
         // показала их группой «Без шлюза», а не теряла (machine_acl берёт только акторов minilore-link-*).
-        slice("machines_graph", machineCols, List.of(), Map.of(), " ORDER BY machine_id");
+        // Без ORDER BY — намеренно (26.11.2026, v1.19.1 на проде): с сортировкой серверная ArcadeDB теряет корреляцию
+        // $parent.$current в LET (тот же замер, что у question_hygiene), и шлюз с владельцем пустели у всех машин.
+        // Сортирует потребитель (machineGraph.ts, passportAdapters); сторож — LetCorrelationNoOrderByGuardTest.
+        slice("machines_graph", machineCols, List.of(), Map.of(), "");
 
         slice("pr_by_id",
             "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, head_ref, base_ref, " +
@@ -3302,6 +3326,18 @@ public final class LoreSlices {
         // Сбои агентских записей: ответ с кодом ≥ 400 (AO-01 пишет код в value).
         // S7B-26: since (ISO-дата/момент, UTC → epoch-мс числом: ts — LONG) и code (точный код) —
         // Главной админки нужно «403 за сутки», а не «≥ 400 за всё время» (TYPED_PARAMS).
+        // SPRINT_LORE_KNOW_REGISTRY/KREG-12, шаг 7 ADR-LORE-061: ошибки срезов — по срезу, коду и вызывающему.
+        // Пишет их LoreRequestStatsFilter (journalledCall: GET-срез с кодом ≥ 400 → точка slice:<имя>).
+        slice("query_errors",
+            "SELECT object_id AS slice, value AS code, source AS caller, segment AS axis, count(*) AS errors, max(ts) AS last_error " +
+            "FROM AgentActionLog WHERE object_type = 'slice' AND value >= 400",
+            List.of(), new LinkedHashMap<>(Map.of(
+                "caller", " AND source = :caller",
+                "since", " AND ts >= :since",
+                "slice", " AND object_id = :slice",
+                "code", " AND value = :code")),
+            " GROUP BY object_id, value, source, segment ORDER BY last_error DESC LIMIT 200");
+
         slice("mcp_failures",
             "SELECT source AS caller, count(*) AS failures, max(ts) AS last_failure " +
             "FROM AgentActionLog WHERE segment = 'agent' AND value >= 400",
@@ -3810,6 +3846,7 @@ public final class LoreSlices {
         Map.entry("jobs", "работа (JTBD) — глобальная вершина по построению (AL-113)"),
         Map.entry("pains", "боли сегмента — общий продуктовый профиль"),
         Map.entry("gains", "выгоды сегмента — общий продуктовый профиль"),
+        Map.entry("segment_values", "FIT-04: боли/выгоды/работы с ролями — общий продуктовый профиль, как pains/gains/jobs"),
         Map.entry("agent_owners", "реестр агентов и владельцев — служебный"),
         Map.entry("machine_acl", "допуски к машинам (S7B-ACL-1) — служебный: по нему miniLORE решает видимость диалогов машины"),
         Map.entry("agent_sessions", "журнал сессий агентов — служебный"),
@@ -3850,7 +3887,7 @@ public final class LoreSlices {
      * пометкой «админский/журнал/телеметрия» без места здесь не проходит.
      */
     public static final Set<String> ADMIN_ONLY = Set.of(
-        "mcp_failures", "mcp_failure_rows", "mcp_connections", "agent_actions", "admin_actions", "agent_action_points",
+        "mcp_failures", "mcp_failure_rows", "mcp_connections", "agent_actions", "admin_actions", "agent_action_points", "query_errors",
         "logins_recent", "logins_by_user", "sessions_recent", "requests_by_caller", "requests_total", "role_matrix",
         // AP-MACHINE-PASSPORT × AP-PEOPLE-PAGE (сборка зонтика 25.11): паспорт машины живёт только в админке
         // и отдаёт client_id агентов машины — поле уровня admin. Не-админу — 403, а не учётка в ответе.
@@ -3936,6 +3973,7 @@ public final class LoreSlices {
         Map.entry("role_matrix", "матрица ролей проект × люди (S7B-11) — админская, как project_users для всех; решение"),
         Map.entry("mcp_connections", "подключения MCP (S7B-07) — телеметрия агентов, админская; решение"),
         Map.entry("mcp_failures", "сбои записей агентов (S7B-07) — ряд AO-01, админский; решение"),
+        Map.entry("query_errors", "ошибки срезов (KREG-12, шаг 7 ADR-LORE-061) — ряд AO-01, админский, как mcp_failures"),
         Map.entry("mcp_failure_rows", "отказы записей агентов построчно (S7B-30) — ряд AO-01, админский; решение"),
         Map.entry("agent_action_points", "действия агентов точками для графиков (19.11) — ряд AO-01, админский; решение"),
         Map.entry("logins_recent", "журнал входов — админский, решение"),
