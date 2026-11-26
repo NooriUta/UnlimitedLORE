@@ -2744,5 +2744,10 @@
   "pp.field.lifecycle": "Жизненный цикл",
   "pp.field.links": "Связи",
   "pp.field.roles": "Роли",
-  "pp.field.fieldSchema": "Схема полей"
+  "pp.field.fieldSchema": "Схема полей",
+  "lists.model.noContract": "Раздел «{type}» описан в модели без списка (surfaces.list): {reason}",
+  "shell.sec.skill": "Скиллы",
+  "shell.sec.tag": "Супертеги",
+  "shell.sec.kind": "Реестр видов",
+  "shell.sec.agent_session": "Сессии агентов"
 }

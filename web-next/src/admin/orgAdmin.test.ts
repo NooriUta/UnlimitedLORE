@@ -12,7 +12,7 @@ describe('организации в админке', () => {
   it('раздел «Организации» в группе «Люди и агенты» рядом с проектами', () => {
     expect(ADMIN_SECTIONS as readonly string[]).toContain('adm-orgs');
     const people = adminMenu('ru').groups.find(g => g.id === 'adm-people');
-    expect(people?.items.map(i => i.id)).toEqual(['adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-orgs']);
+    expect(people?.items.map(i => i.id)).toEqual(['adm-agents', 'adm-machines', 'adm-who', 'adm-projects', 'adm-orgs', 'adm-sessions']);
     expect(people?.items.find(i => i.id === 'adm-orgs')?.title).toBe('Организации');
     expect(adminMenu('en').groups.flatMap(g => g.items).find(i => i.id === 'adm-orgs')?.title).toBe('Organizations');
   });

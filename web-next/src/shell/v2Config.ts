@@ -12,6 +12,7 @@
 //     v2 и kit не разошлись; подпись — из локалей web-next.
 import { appliedStatusConfirm } from '../settings/applied';
 import { ICON_CANON, SECTION_ICONS } from '@seidr/kit';
+import { listContractOf } from '../lists/listContract';
 import { navFromModel, statusMeta, type KitConfig, type KitLang } from '@seidr/kit';
 import { appT, type AppKey } from '../i18n';
 import { ADMIN_MODULE, adminMenu } from '../admin/adminModule';
@@ -119,7 +120,8 @@ function navGroups(lang: KitLang, model: unknown): KitConfig['menu']['groups'] {
   return navFromModel(model, {
     t: key => appT(lang, key as AppKey),
     sectionTitle: s => appT(lang, `shell.sec.${s}` as AppKey),
-    knows: s => known.has(s),
+    // KREG-13: раздел типа модели со списком в контракте (surfaces.list) — тоже «знаком»: его рисует ModelListScreen.
+    knows: s => known.has(s) || listContractOf(model, s) !== null,
   }).groups;
 }
 

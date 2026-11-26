@@ -26180,7 +26180,8 @@
         "historic" : false,
         "write" : {
           "endpoint" : "/lore/skill",
-          "field" : "title"
+          "field" : "title",
+          "idKey" : "skill_id"
         },
         "required_level" : null,
         "required_rules" : [ ]
@@ -26255,7 +26256,8 @@
         "historic" : false,
         "write" : {
           "endpoint" : "/lore/skill",
-          "field" : "version"
+          "field" : "version",
+          "idKey" : "skill_id"
         },
         "required_level" : null,
         "required_rules" : [ ]
@@ -26354,7 +26356,8 @@
         "historic" : false,
         "write" : {
           "endpoint" : "/lore/skill",
-          "field" : "body_md"
+          "field" : "body_md",
+          "idKey" : "skill_id"
         },
         "required_level" : null,
         "required_rules" : [ ]
@@ -26366,7 +26369,8 @@
           "editable" : true,
           "write" : {
             "endpoint" : "/lore/skill",
-            "field" : "body_md"
+            "field" : "body_md",
+            "idKey" : "skill_id"
           }
         } ],
         "props" : [ {
@@ -26413,7 +26417,8 @@
         "historic" : false,
         "write" : {
           "endpoint" : "/lore/skill",
-          "field" : "title"
+          "field" : "title",
+          "idKey" : "skill_id"
         },
         "required_level" : null,
         "required_rules" : [ ]
@@ -26488,7 +26493,8 @@
         "historic" : false,
         "write" : {
           "endpoint" : "/lore/skill",
-          "field" : "version"
+          "field" : "version",
+          "idKey" : "skill_id"
         },
         "required_level" : null,
         "required_rules" : [ ]
@@ -26587,7 +26593,8 @@
         "historic" : false,
         "write" : {
           "endpoint" : "/lore/skill",
-          "field" : "body_md"
+          "field" : "body_md",
+          "idKey" : "skill_id"
         },
         "required_level" : null,
         "required_rules" : [ ]
@@ -26599,7 +26606,8 @@
           "editable" : true,
           "write" : {
             "endpoint" : "/lore/skill",
-            "field" : "body_md"
+            "field" : "body_md",
+            "idKey" : "skill_id"
           }
         } ],
         "props" : [ {

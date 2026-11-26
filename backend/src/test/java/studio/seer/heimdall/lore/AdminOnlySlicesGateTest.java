@@ -24,7 +24,7 @@ class AdminOnlySlicesGateTest {
     /** Паспорт машины (AP-MACHINE-PASSPORT): только админка; отдаёт client_id агентов — поле уровня admin (AP-PEOPLE-PAGE). */
     private static final List<String> ADMIN_PASSPORTS = List.of("machine_by_id", "machines_graph",
         // KREG-13: паспорта служебных типов — только админка (сессия агента — слово владельца 26.11).
-        "agent_session_by_id", "kind_by_id");
+        "agent_session_by_id", "kind_by_id", "know_kinds");
 
     @Test
     void журналыЗакрытыДляНеАдминов() {

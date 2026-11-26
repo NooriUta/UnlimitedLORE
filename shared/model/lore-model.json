@@ -7015,7 +7015,8 @@
       "editable" : true,
       "write" : {
         "endpoint" : "/lore/skill",
-        "field" : "title"
+        "field" : "title",
+        "idKey" : "skill_id"
       },
       "required" : true,
       "definition" : "Название скилла: под ним он виден в списках и в describe-карточке.",
@@ -7051,7 +7052,8 @@
       "editable" : true,
       "write" : {
         "endpoint" : "/lore/skill",
-        "field" : "version"
+        "field" : "version",
+        "idKey" : "skill_id"
       },
       "definition" : "Версия текста скилла; меняет автор при правке.",
       "layer" : "stable",
@@ -7095,7 +7097,8 @@
       "editable" : true,
       "write" : {
         "endpoint" : "/lore/skill",
-        "field" : "body_md"
+        "field" : "body_md",
+        "idKey" : "skill_id"
       },
       "definition" : "Текст скилла в Markdown — то, что получает агент роли.",
       "layer" : "stable",
@@ -9483,6 +9486,9 @@
     }, {
       "section" : "tags",
       "icon" : "price-tag"
+    }, {
+      "section" : "skill",
+      "icon" : "scroll-unfurled"
     } ]
   }, {
     "id" : "org",
@@ -9918,6 +9924,16 @@
         "requires_role" : null,
         "since" : "<=1.17"
       },
+      "agent_session" : {
+        "slice" : "agent_sessions",
+        "id_key" : "session_id",
+        "title_key" : "dialogue_name",
+        "record_path" : "/lore/record/agent_session/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "machine_id" ],
+        "requires_role" : null,
+        "since" : "1.19.1"
+      },
       "component" : {
         "slice" : "components",
         "id_key" : "component_id",
@@ -9981,6 +9997,16 @@
         "group_keys" : [ "kind", "importance" ],
         "requires_role" : null,
         "since" : "<=1.17"
+      },
+      "kind" : {
+        "slice" : "know_kinds",
+        "id_key" : "kind",
+        "title_key" : "title",
+        "record_path" : "/lore/record/kind/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "source" ],
+        "requires_role" : "admin",
+        "since" : "1.19.1"
       },
       "milestone" : {
         "slice" : "milestones",
@@ -10099,6 +10125,18 @@
         "project_scoped" : true,
         "since" : "<=1.17"
       },
+      "skill" : {
+        "slice" : "skills",
+        "id_key" : "skill_id",
+        "title_key" : "title",
+        "status_key" : "status",
+        "record_path" : "/lore/record/skill/{id}",
+        "default_mode" : "rows",
+        "group_keys" : [ "status" ],
+        "requires_role" : null,
+        "project_scoped" : true,
+        "since" : "1.19.1"
+      },
       "spec" : {
         "slice" : "specs",
         "id_key" : "spec_id",
@@ -10122,6 +10160,15 @@
         "requires_role" : null,
         "project_scoped" : true,
         "since" : "<=1.17"
+      },
+      "tag" : {
+        "slice" : "tags_usage",
+        "id_key" : "tag_id",
+        "title_key" : "tag_id",
+        "record_path" : "/lore/record/tag/{id}",
+        "default_mode" : "rows",
+        "requires_role" : null,
+        "since" : "1.19.1"
       },
       "task" : {
         "slice" : "open_tasks",
