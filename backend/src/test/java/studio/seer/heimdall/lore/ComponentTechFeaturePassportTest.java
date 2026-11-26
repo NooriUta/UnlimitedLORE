@@ -19,7 +19,9 @@ class ComponentTechFeaturePassportTest {
     void elevenPassportTypesInKitOrder() {
         assertEquals(List.of("sprint", "task", "adr", "spec", "doc", "decision", "question", "milestone", "track", "release",
             "component", "tech", "feature", "product", "user", "agent", "machine",
-            "actor", "pain", "gain", "job", "runbook", "quality_gate", "repository", "organization", "pr", "project"), LoreRecordRegistry.TYPES);
+            "actor", "pain", "gain", "job", "runbook", "quality_gate", "repository", "organization", "pr",
+            // KREG-13: типы выпуска 1.19.1 — описаны только в модели.
+            "skill", "tag", "kind", "agent_session", "project"), LoreRecordRegistry.TYPES);
     }
 
     @Test

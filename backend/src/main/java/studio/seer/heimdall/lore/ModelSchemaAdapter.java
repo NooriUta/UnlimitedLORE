@@ -85,14 +85,12 @@ final class ModelSchemaAdapter {
         // KREG-01: реестр видов появился в схеме раньше, чем попадёт в модель 1.18 (следующий релиз модели);
         // history_hygiene читает KnowKindHist — на базе из модели 1.18 его нет, срез отвечает этой причиной
         Map.entry("KnowKindHist", "KREG-01 (бывш. V94): реестр видов KnowKind не входит в модель 1.18" + ADDITIVE),
-        // KREG-09 (зонтик KNOW_REGISTRY 25.11): сам KnowKind пишет KnowRegistrySync — импорт реестра за флагом
-        // lore.know-registry.import (по умолчанию выкл.); стык веток: страж появился в линии скиллов, импорт — в линии реестра
-        Map.entry("KnowKind", "KREG-01/KREG-09 (бывш. V94): реестр видов не входит в модель 1.18; пишет только импорт за флагом" + ADDITIVE),
+        // KREG-13 (26.11.2026): KnowKind описан в модели (тип kind, только чтение, админка) — пометка «вне модели» снята.
         // SKILL-01/02 (V96): вид skill:* появился в схеме раньше, чем попадёт в модель 1.18 (следующий релиз
         // модели); на базе из модели 1.18 этих типов нет — срезы skills/skills_full отвечают этой причиной
         // 25.11.2026: отметка доводки схемы кода (номер и хэш LoreSchemaAdditive) — заводит сама доводка
         Map.entry("LoreCodeSchema", "отметка доводки схемы кода (LoreSchemaAdditive), не тип модели 1.18" + ADDITIVE),
-        Map.entry("KnowSkill", SKILL_TYPES),
+        // KREG-13: KnowSkill описан в модели (тип skill) — пометка снята; рёбра скилла пока вне модели 1.18.
         Map.entry("APPLIES_TO_ROLE", SKILL_TYPES),
         Map.entry("SKILL_EXTENDS", SKILL_TYPES));
 

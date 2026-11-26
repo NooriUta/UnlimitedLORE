@@ -110,7 +110,6 @@ class ModelDescribesRecordPropsTest {
         Map.entry("pr_ship_lag: KnowPR.git_project", "1.18: проект PR — ребро; поле пишет мерж (LoreForgejoResource), установщик его не заводит"),
         Map.entry("files_of_task: KnowFile.project", "файл — служебный тип без описания в модели; проект строкой — до решения о модели файлов"),
         Map.entry("project_files: KnowFile.project", "файл — служебный тип без описания в модели; проект строкой — до решения о модели файлов"),
-        Map.entry("agent_sessions: KnowAgentSession.project", "сессия: проект строкой становится связью при переносе (session-model.mjs); поле — для старой схемы"),
         Map.entry("project_role_events: KnowProjectRoleEvent.project", "журнал событий роли — проект строкой, тип вне модели"),
         Map.entry("agent_owners: KnowActor.activity_window_h", "окно активности машины: свойство заводит сервер (MachineActivity:44), установщик — нет"),
         Map.entry("agent_owners: KnowActor.activity_window_harness", "окно активности по harness: свойство заводит сервер (MachineActivity), установщик — нет"),
