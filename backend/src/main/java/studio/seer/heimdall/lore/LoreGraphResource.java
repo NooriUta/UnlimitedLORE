@@ -449,6 +449,16 @@ public class LoreGraphResource extends LoreResourceBase {
             return rid;
         }
 
+        /**
+         * Узел, rid которого пришёл из чужого запроса (find, GC-05 neighbors): класс запоминается, чтобы
+         * {@link #edges}/{@link #nodes} могли по нему читать. Не rid или класс вне графа — не запоминается.
+         */
+        boolean know(String rid, String vertexClass) {
+            if (rid == null || !RID.matcher(rid).matches() || !BY_CLASS.containsKey(vertexClass)) return false;
+            classOf.put(rid, vertexClass);
+            return true;
+        }
+
         /** Семена среза. Проект/компонент должен существовать — иначе 404, а не пустой граф. */
         List<LoreGraphBuilder.Node> seeds(LoreGraphBuilder.Scope scope) {
             String kind = scope.kind();
