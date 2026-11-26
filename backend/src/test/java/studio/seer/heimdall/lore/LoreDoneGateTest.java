@@ -43,7 +43,9 @@ class LoreDoneGateTest {
         assertEquals("REASON_REQUIRED", LoreDoneGate.transition("active", "blocked", null, null).code());
         assertEquals(400, LoreDoneGate.transition("active", "blocked", " ", null).status());
         assertNull(LoreDoneGate.transition("active", "blocked", "ждём доступ к ci-server", null));
-        assertEquals("REASON_REQUIRED", LoreDoneGate.transition("uat", "active", null, null).code(), "возврат с приёмки");
+        assertEquals("REASON_REQUIRED", LoreDoneGate.transition("ready_for_deploy", "active", null, null).code(), "возврат с приёмки");
+        // UW-L0-SPEC 26.11: из uat агенту — никуда, кроме done по слову человека (LoreDoneGateUatExitTest)
+        assertEquals("UAT_EXIT_HUMAN_ONLY", LoreDoneGate.transition("uat", "active", null, null).code(), "выход из uat — человек");
         assertNull(LoreDoneGate.transition("planned", "active", null, null), "обычный старт — без слов");
         assertEquals("WAITING_FOR_REQUIRED", LoreDoneGate.transition("active", "waiting", null, null).code());
         assertNull(LoreDoneGate.transition("active", "waiting", null, "организатор CFP"));
