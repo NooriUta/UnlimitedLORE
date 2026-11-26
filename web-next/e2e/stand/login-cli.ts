@@ -1,6 +1,6 @@
 // Автологин всех тестовых учёток стенда одной командой (AP-02, E2E-STAND):
 //
-//   LORE_STAND_URL=https://preprod.new.lore.odal.seidrstudio.pro \
+//   LORE_STAND_URL=https://preprod.lore.odal.seidrstudio.pro \
 //   LORE_STAND_ACCOUNTS_JSON='{"test-sa":"…",…}' \
 //   npm run e2e:stand:login
 //

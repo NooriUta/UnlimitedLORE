@@ -23,7 +23,7 @@ export function writeCopyRefusal(url: string | undefined, whoami: WhoamiAuth | n
 }
 
 /** Единственный адрес, где тестовые учётки пишут TEST-данные. */
-export const PREPROD_HOST = 'preprod.new.lore.odal.seidrstudio.pro';
+export const PREPROD_HOST = 'preprod.lore.odal.seidrstudio.pro';
 /** Метка пишущего сценария: `test('…', { tag: WRITES_TAG }, …)`. */
 export const WRITES_TAG = '@writes';
 /** Код тестовой сущности: TEST-… или TEST_… (регистр TEST — любой). */

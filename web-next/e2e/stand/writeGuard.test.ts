@@ -19,7 +19,7 @@ describe('writeCopyRefusal: запись только в копию', () => {
   });
 
   it('любой адрес *.seidrstudio.pro (препрод, стенд) — отказ', () => {
-    expect(writeCopyRefusal('https://preprod.new.lore.odal.seidrstudio.pro', OFF)).toMatch(/seidrstudio/);
+    expect(writeCopyRefusal('https://preprod.lore.odal.seidrstudio.pro', OFF)).toMatch(/seidrstudio/);
   });
 
   it('вход включён или не узнали — отказ: копия с заглушкой входа обязательна', () => {
@@ -33,7 +33,7 @@ describe('writeCopyRefusal: запись только в копию', () => {
   });
 });
 
-const PRE = 'https://preprod.new.lore.odal.seidrstudio.pro';
+const PRE = 'https://preprod.lore.odal.seidrstudio.pro';
 const OK = { writer: true, ids: ['TEST-proj-a', 'TEST-proj-b', 'TEST-org-smoke'] };
 
 describe('preprodTestWriteRefusal: TEST-данные на препроде, больше нигде', () => {
@@ -51,8 +51,8 @@ describe('preprodTestWriteRefusal: TEST-данные на препроде, бо
   it('другой хост (стенд ci-server, копия, похожий домен) — отказ', () => {
     expect(preprodTestWriteRefusal('http://192.168.3.131:4412', OK)).toMatch(/только на preprod/);
     expect(preprodTestWriteRefusal('http://192.168.3.150:4601', OK)).toMatch(/только на preprod/);
-    expect(preprodTestWriteRefusal('https://preprod.new.lore.odal.seidrstudio.pro.evil.example', OK)).toMatch(/только на preprod/);
-    expect(preprodTestWriteRefusal('http://preprod.new.lore.odal.seidrstudio.pro', OK)).toMatch(/https/);
+    expect(preprodTestWriteRefusal('https://preprod.lore.odal.seidrstudio.pro.evil.example', OK)).toMatch(/только на preprod/);
+    expect(preprodTestWriteRefusal('http://preprod.lore.odal.seidrstudio.pro', OK)).toMatch(/https/);
   });
 
   it('не-TEST код — отказ, даже если остальные TEST', () => {

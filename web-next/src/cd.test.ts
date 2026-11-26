@@ -89,9 +89,10 @@ describe('lore-cd.yml: второй образ (lore-app-next)', () => {
     expect(stepIndex(/post-deploy-probe\.sh version\b.*lore-app-next\/lore\/version/)).toBeGreaterThan(-1);
   });
 
-  it('после деплоя — проба preprod.new.lore: отдаётся именно v2', () => {
-    const s = steps().find((x) => /post-deploy-probe\.sh v2-page\s+https:\/\/preprod\.new\.lore\.odal\.seidrstudio\.pro/.test(x.body));
-    expect(s, 'нет пробы preprod.new.lore').toBeDefined();
+  // Владелец 26.11.2026: «new уже не нужно, у нас одна версия осталась» — проба по основному имени препрода.
+  it('после деплоя — проба preprod.lore: отдаётся страница v2', () => {
+    const s = steps().find((x) => /post-deploy-probe\.sh v2-page\s+https:\/\/preprod\.lore\.odal\.seidrstudio\.pro/.test(x.body));
+    expect(s, 'нет пробы preprod.lore').toBeDefined();
     // строгость — переменной репозитория, а не правкой workflow
     expect(s!.body).toMatch(/LORE_V2_PUBLIC_PROBE: \$\{\{ vars\.LORE_V2_PUBLIC_PROBE/);
   });

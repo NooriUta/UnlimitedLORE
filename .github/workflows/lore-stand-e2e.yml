@@ -21,7 +21,7 @@ on:
       stand_url:
         description: 'Адрес стенда (только препрод)'
         required: false
-        default: 'https://preprod.new.lore.odal.seidrstudio.pro'
+        default: 'https://preprod.lore.odal.seidrstudio.pro'
 
 concurrency:
   group: lore-stand-e2e
@@ -32,7 +32,7 @@ jobs:
     runs-on: lore-only
     timeout-minutes: 75
     env:
-      LORE_STAND_URL: ${{ inputs.stand_url || 'https://preprod.new.lore.odal.seidrstudio.pro' }}
+      LORE_STAND_URL: ${{ inputs.stand_url || 'https://preprod.lore.odal.seidrstudio.pro' }}
       LORE_STAND_ACCOUNTS_JSON: ${{ secrets.LORE_STAND_ACCOUNTS_JSON }}
       # Проба брокеринга seer → omilore (BR-01/02): пароль test-* в seerPreprod.
       LORE_STAND_BROKER_ACCOUNTS_JSON: ${{ secrets.LORE_STAND_BROKER_ACCOUNTS_JSON }}
