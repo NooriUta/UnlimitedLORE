@@ -68,8 +68,11 @@ judge() {
 # curl с выводом «тело\nКОД» на stdout. Команда curl — из PROBE_CURL (в CD это
 # одноразовый контейнер в сети хоста).
 http() {
+  # Фолбэк имени на IP, как у прода (владелец 26.11): PREPROD_RESOLVE=имя:443:IP — TLS по имени, соединение по IP.
+  local res=()
+  [ -n "${PREPROD_RESOLVE:-}" ] && res=(--resolve "$PREPROD_RESOLVE")
   # shellcheck disable=SC2086 # PROBE_CURL — составная команда намеренно
-  ${PROBE_CURL:-curl} -s -m "${PROBE_TIMEOUT:-15}" -w '\n%{http_code}' "$@" || true
+  ${PROBE_CURL:-curl} "${res[@]}" -s -m "${PROBE_TIMEOUT:-15}" -w '\n%{http_code}' "$@" || true
   # При отказе соединения curl сам печатает «000» через -w; если curl не
   # запустился вовсе — код пуст, и judge() это тоже считает красным.
 }

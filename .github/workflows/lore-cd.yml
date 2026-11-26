@@ -203,6 +203,10 @@ jobs:
       # PL-04: адреса ПРЕПРОДА — имена preprod.* и опубликованные порты 4410/4412.
       CORS_ORIGINS: http://localhost:4410,http://127.0.0.1:4410,http://192.168.3.131:4410,http://localhost:4412,http://127.0.0.1:4412,http://192.168.3.131:4412,https://preprod.lore.odal.seidrstudio.pro,https://preprod.new.lore.odal.seidrstudio.pro
       LORE_PUBLIC_URL: https://preprod.lore.odal.seidrstudio.pro
+      # Владелец 26.11.2026: «как и для прода прописать fallback на IP» — препрод внутренний (CoreDNS 131),
+      # а из сети хоста и контейнеров джоб имя перестало разрешаться (прогоны 11164/11165, HTTP 000).
+      # Пробы (version/post-deploy/bundle) ходят по имени с --resolve на IP 131: TLS проверяется по имени.
+      PREPROD_RESOLVE: preprod.lore.odal.seidrstudio.pro:443:192.168.3.131
       # У v2 свой канонический адрес (оверлей подставляет его lore-app-next).
       LORE_PUBLIC_URL_V2: https://preprod.lore.odal.seidrstudio.pro
       LORE_OIDC_ORIGIN: https://odal.seidrstudio.pro
@@ -873,11 +877,12 @@ jobs:
       # переменной репозитория: warn по умолчанию (громко, деплой зелёный),
       # required после S3-04 (не v2 → деплой красный).
       # PL-04: публичное имя v2 ПРЕПРОДА.
-      - name: Probe preprod.new.lore (публичный адрес v2 препрода)
+      # Владелец 26.11.2026: «new уже не нужно, у нас одна версия осталась» — проба по основному имени.
+      - name: Probe preprod.lore (публичный адрес препрода)
         if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend_next == 'true'
         env:
           LORE_V2_PUBLIC_PROBE: ${{ vars.LORE_V2_PUBLIC_PROBE || 'warn' }}
-        run: bash .github/scripts/post-deploy-probe.sh v2-page https://preprod.new.lore.odal.seidrstudio.pro/
+        run: bash .github/scripts/post-deploy-probe.sh v2-page https://preprod.lore.odal.seidrstudio.pro/
 
       # PL-04: по ИМЕНИ препрода отдаётся бандл ровно того контейнера, что работает
       # в проекте lore-preprod (а не старого стенда и не чужого маршрута Traefik).
@@ -888,10 +893,8 @@ jobs:
       - name: Проба бандла v2 по основному имени препрода
         if: steps.mode.outputs.live == 'true'
         run: bash .github/scripts/bundle-probe.sh "v2 препрод (основное имя)" container:lore-app-next https://preprod.lore.odal.seidrstudio.pro/
-
-      - name: Проба бандла v2 по старому имени с new
-        if: steps.mode.outputs.live == 'true'
-        run: bash .github/scripts/bundle-probe.sh "v2 препрод (имя с new)" container:lore-app-next https://preprod.new.lore.odal.seidrstudio.pro/
+      # Проба по старому имени с new снята 26.11.2026 (владелец: «new уже не нужно, одна версия») —
+      # основное имя выше проверяет тот же контейнер.
 
 
       # PL-04 → PL-05: ПОСЛЕДНИМ, после всех проб — тег unlimitedlore-<сервис>:<sha8>

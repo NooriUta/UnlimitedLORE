@@ -48,9 +48,9 @@ class LoreModelWorkflowTest {
     void brokenWorkflowIsNamed() {
         LoreModelWorkflow.Workflow bad = new LoreModelWorkflow.Workflow(
             Map.of("active", List.of("done", "limbo")),
-            Map.of("a", new LoreModelWorkflow.Kind("A", List.of("dev"), List.of(), List.of(), List.of(), null),
+            Map.of("a", new LoreModelWorkflow.Kind("A", List.of("dev"), List.of(), List.of(), List.of(), null, null),
                    "b", new LoreModelWorkflow.Kind("B", List.of("dev"), List.of(), List.of(),
-                       List.of(new LoreModelWorkflow.Evidence("pr", "PR")), null)));
+                       List.of(new LoreModelWorkflow.Evidence("pr", "PR")), null, null)));
         String all = String.join("\n", LoreModelWorkflow.problems(bad));
         assertTrue(all.contains("done ставится только из review"), all);
         assertTrue(all.contains("limbo"), all);
