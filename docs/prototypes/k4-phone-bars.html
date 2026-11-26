@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K4-SHELL-PHONE-BARS — нижний бар и ☰ на телефоне</title>
+<style>
+  :root {
+    --bg0: #14110d; --bg1: #1b1712; --bg2: #241f18; --bd: #3a3227;
+    --t1: #efe6d8; --t2: #b9ab95; --t3: #8a7d69; --acc: #e0a64a;
+    --font: 'Manrope', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --tap: 44px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; background: #0d0b08; color: var(--t1); font-family: var(--font); font-size: 13px; }
+  h1 { font-family: 'Unbounded', var(--font); font-weight: 800; font-size: 18px; margin: 0 0 6px; }
+  .lead { color: var(--t2); margin: 0 0 18px; max-width: 900px; line-height: 1.5; }
+  .row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; }
+  .col { width: 320px; }
+  .col h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--acc); margin: 0 0 4px; }
+  .col p { color: var(--t2); margin: 0 0 10px; min-height: 54px; line-height: 1.45; }
+  .phone { position: relative; width: 320px; height: 640px; border: 2px solid var(--bd); border-radius: 28px; overflow: hidden; background: var(--bg0); }
+  .top { height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--bg1); border-bottom: 1px solid var(--bd); }
+  .burger { width: var(--tap); height: var(--tap); display: grid; place-items: center; border: 1px solid var(--bd); border-radius: 10px; color: var(--t1); font-size: 18px; }
+  .title { font-weight: 700; }
+  .mod { margin-left: auto; color: var(--acc); font-size: 11px; font-family: var(--mono); }
+  .content { padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .card { background: var(--bg2); border: 1px solid var(--bd); border-radius: 10px; padding: 10px; }
+  .card b { display: block; margin-bottom: 4px; }
+  .card span { color: var(--t3); font-family: var(--mono); font-size: 11px; }
+  .dock { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; display: flex; background: var(--bg1); border-top: 1px solid var(--bd); }
+  .dock div { flex: 1; display: grid; place-items: center; color: var(--t2); font-size: 11px; }
+  .dock div.on { color: var(--acc); box-shadow: inset 0 2px 0 var(--acc); }
+  .ver { position: absolute; right: 10px; bottom: 64px; font-family: var(--mono); font-size: 10px; color: var(--t3); background: var(--bg1); padding: 2px 6px; border-radius: 6px; border: 1px solid var(--bd); }
+  .ver.flow { position: static; text-align: right; background: none; border: 0; padding: 8px 2px 0; }
+  .sheet { position: absolute; left: 0; top: 0; bottom: 0; width: 82%; background: var(--bg1); border-right: 1px solid var(--bd); padding: 12px; box-shadow: 6px 0 24px rgba(0,0,0,.5); }
+  .sheet h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--t3); margin: 10px 0 6px; }
+  .item { min-height: var(--tap); display: flex; align-items: center; padding: 0 8px; border-radius: 8px; color: var(--t1); }
+  .item.on { background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc); }
+  .dup { outline: 2px dashed #d0614f; outline-offset: -2px; }
+  .note { color: #d0614f; font-size: 11px; margin-top: 6px; }
+  .shade { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+</style>
+</head>
+<body>
+<h1>Телефон: нижний бар модулей и меню ☰</h1>
+<p class="lead">Замечание владелицы 14.11.2026: «нижний бар не знает, что [есть] верхнее меню; десктоп вида переехало вниз». Сейчас модули (Forseti, BRAGI, MUNINN, TYR) на телефоне есть и в нижнем баре, и в меню ☰ — красная рамка. Ниже три варианта. Выберите номер; метка версии во всех вариантах уже не лежит поверх карточек (PR #1391).</p>
+<div class="row">
+
+  <div class="col">
+    <h2>Сейчас</h2>
+    <p>Модули дважды: в нижнем баре и в ☰. Бар занимает 56 px внизу; метка версии висела поверх карточек.</p>
+    <div class="phone">
+      <div class="top"><div class="burger">☰</div><div class="title">Спринты</div><div class="mod">Forseti</div></div>
+      <div class="content">
+        <div class="card"><b>SPRINT_UXR_S9_SCALE_OPT</b><span>в работе · задачи 7/12</span></div>
+        <div class="card"><b>SPRINT_LORE_ADMIN_POLISH</b><span>в работе · задачи 1/4</span></div>
+        <div class="card"><b>SPRINT_VIZ_EMBED</b><span>частично · задачи 6/12</span></div>
+      </div>
+      <div class="shade"></div>
+      <div class="sheet">
+        <h3>Модули</h3>
+        <div class="item on dup">Forseti</div><div class="item dup">BRAGI</div><div class="item dup">MUNINN</div><div class="item dup">TYR</div>
+        <h3>Разделы</h3>
+        <div class="item">Спринты</div><div class="item">Задачи</div><div class="item">Новости</div>
+        <div class="note">дублирует нижний бар</div>
+      </div>
+      <div class="dock dup"><div class="on">Forseti</div><div>BRAGI</div><div>MUNINN</div><div>TYR</div></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <h2>Вариант 1 — только ☰</h2>
+    <p>Нижнего бара нет: экран целиком под содержимое. Модули — первым блоком в ☰, текущий модуль виден в шапке.</p>
+    <div class="phone">
+      <div class="top"><div class="burger">☰</div><div class="title">Спринты</div><div class="mod">Forseti</div></div>
+      <div class="content">
+        <div class="card"><b>SPRINT_UXR_S9_SCALE_OPT</b><span>в работе · задачи 7/12</span></div>
+        <div class="card"><b>SPRINT_LORE_ADMIN_POLISH</b><span>в работе · задачи 1/4</span></div>
+        <div class="card"><b>SPRINT_VIZ_EMBED</b><span>частично · задачи 6/12</span></div>
+        <div class="card"><b>SPRINT_UXR_S13_KIT4</b><span>запланирован · задачи 0/6</span></div>
+        <div class="ver flow">LORE 0dccfe73</div>
+      </div>
+      <div class="shade"></div>
+      <div class="sheet">
+        <h3>Модули</h3>
+        <div class="item on">Forseti</div><div class="item">BRAGI</div><div class="item">MUNINN</div><div class="item">TYR</div>
+        <h3>Разделы</h3>
+        <div class="item">Спринты</div><div class="item">Задачи</div><div class="item">Новости</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <h2>Вариант 2 — бар, ☰ без модулей</h2>
+    <p>Модули — только в нижнем баре (переключение одним касанием). В ☰ — только разделы текущего модуля.</p>
+    <div class="phone">
+      <div class="top"><div class="burger">☰</div><div class="title">Спринты</div></div>
+      <div class="content">
+        <div class="card"><b>SPRINT_UXR_S9_SCALE_OPT</b><span>в работе · задачи 7/12</span></div>
+        <div class="card"><b>SPRINT_LORE_ADMIN_POLISH</b><span>в работе · задачи 1/4</span></div>
+        <div class="card"><b>SPRINT_VIZ_EMBED</b><span>частично · задачи 6/12</span></div>
+        <div class="ver flow">LORE 0dccfe73</div>
+      </div>
+      <div class="shade"></div>
+      <div class="sheet">
+        <h3>Forseti · разделы</h3>
+        <div class="item on">Спринты</div><div class="item">Задачи</div><div class="item">Новости</div><div class="item">Вехи</div>
+      </div>
+      <div class="dock"><div class="on">Forseti</div><div>BRAGI</div><div>MUNINN</div><div>TYR</div></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <h2>Вариант 3 — бар прячется</h2>
+    <p>Как сейчас, но нижний бар уезжает при прокрутке вниз и возвращается при прокрутке вверх; в ☰ модулей нет.</p>
+    <div class="phone">
+      <div class="top"><div class="burger">☰</div><div class="title">Спринты</div></div>
+      <div class="content">
+        <div class="card"><b>SPRINT_UXR_S9_SCALE_OPT</b><span>в работе · задачи 7/12</span></div>
+        <div class="card"><b>SPRINT_LORE_ADMIN_POLISH</b><span>в работе · задачи 1/4</span></div>
+        <div class="card"><b>SPRINT_VIZ_EMBED</b><span>частично · задачи 6/12</span></div>
+        <div class="card"><b>SPRINT_UXR_S13_KIT4</b><span>запланирован · задачи 0/6</span></div>
+        <div class="card"><b>SPRINT_LORE_MEASURE_TRUTH</b><span>в работе · задачи 3/9</span></div>
+        <div class="ver flow">LORE 0dccfe73 · бар спрятан при прокрутке ↓</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

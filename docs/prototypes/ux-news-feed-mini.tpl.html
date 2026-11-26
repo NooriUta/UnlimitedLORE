@@ -1,0 +1,145 @@
+<!doctype html><html lang="ru" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LORE · Новости — мини-прототип ленты и сводки</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+:root{--fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-base:13px;--fs-md:14px;--fs-lg:17px;--fs-xl:20px;--font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif}
+[data-theme=light]{--bg0:#f5f3ee;--bg1:#faf8f3;--bg2:#fff;--bg3:#eee9df;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#6f6249;--acc:#8a560a;--accbg:#f3e4c6;--suc:#2f6a2b;--inf:#2f6356;--wrn:#8a5208;--dng:#b02828;--vio:#6a4a98}
+[data-theme=dark]{--bg0:#0f0d09;--bg1:#17140e;--bg2:#1f1b13;--bg3:#29231a;--bd:#3a3224;--t1:#ece3d0;--t2:#c2b494;--t3:#a8987a;--acc:#e8a838;--accbg:#3a2c12;--suc:#8cc278;--inf:#7cc0b0;--wrn:#e0a448;--dng:#ee7666;--vio:#b49ae0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:var(--fs-base)/1.5 var(--font)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.wrap{max-width:980px;margin:0 auto;padding:12px 12px 60px}
+.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0 10px;border-bottom:1px solid var(--bd)}
+h1{font:800 var(--fs-xl)/1.2 var(--head);margin:0;display:flex;gap:8px;align-items:center}h1 iconify-icon{color:var(--acc)}
+.sp{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--bd);border-radius:999px;background:var(--bg2);color:var(--t2);font-size:var(--fs-sm);min-height:32px}
+.pill.on{background:var(--accbg);border-color:var(--acc);color:var(--t1);font-weight:700}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden;background:var(--bg2)}
+.seg button{padding:6px 12px;font-size:var(--fs-sm);color:var(--t2);min-height:32px}.seg button.on{background:var(--accbg);color:var(--t1);font-weight:700;box-shadow:inset 0 -2px 0 var(--acc)}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin:12px 0}
+.kpi{background:var(--bg1);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;text-align:left;cursor:pointer}
+.kpi:hover,.kpi.on{border-color:var(--acc)}
+.kpi .l{font:700 var(--fs-2xs)/1 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);display:flex;gap:6px;align-items:center}
+.kpi .v{font:800 var(--fs-xl)/1.2 var(--head);margin-top:6px}
+.kpi .dl{font:600 var(--fs-xs)/1 var(--mono)}.up{color:var(--suc)}.down{color:var(--dng)}.eq{color:var(--t3)}
+.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 8px}
+.desc{font-size:var(--fs-sm);color:var(--t2);margin:2px 0 10px}.desc b{color:var(--t1)}
+.day{margin-top:14px}
+.dh{position:sticky;top:0;z-index:2;background:var(--bg0);display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bd)}
+.dh .d{font:800 var(--fs-md)/1 var(--head)}
+.dh .m{font-size:var(--fs-xs);color:var(--t2);display:flex;gap:10px;flex-wrap:wrap}
+.dh .m span{display:inline-flex;gap:4px;align-items:center}
+.ev{display:flex;gap:10px;align-items:flex-start;padding:8px 4px;border-bottom:1px dashed var(--bd)}
+.ev .ic{width:26px;height:26px;border-radius:999px;display:grid;place-items:center;flex:none;font-size:14px}
+.ev .tx{flex:1;min-width:0}
+.ev .w{font-size:var(--fs-sm);color:var(--t2)}.ev .w b{color:var(--t1)}
+.ev .ti{font-size:var(--fs-base);overflow-wrap:anywhere}
+.id{font:600 var(--fs-xs)/1 var(--mono);color:var(--acc);cursor:pointer}
+.who{display:inline-flex;align-items:center;gap:3px;font:700 var(--fs-2xs)/1.4 var(--font);padding:1px 6px;border-radius:999px;background:var(--bg3);color:var(--t2)}
+.who.ag{background:color-mix(in srgb,var(--vio) 16%,transparent);color:var(--vio)}
+.fold{cursor:pointer}.fold .more{font-size:var(--fs-xs);color:var(--acc);font-weight:700}
+.sub{margin:4px 0 0 0;padding-left:12px;border-left:2px solid var(--bd);display:none}.sub.on{display:block}
+.sub div{font-size:var(--fs-sm);padding:2px 0;color:var(--t2)}
+.read{display:flex;align-items:center;gap:8px;margin:10px 0;color:var(--acc);font:700 var(--fs-2xs)/1 var(--font);text-transform:uppercase;letter-spacing:.06em}
+.read::before,.read::after{content:'';flex:1;height:1px;background:var(--acc);opacity:.5}
+.banner{margin:8px 0;padding:8px 10px;border-radius:8px;border:1px solid color-mix(in srgb,var(--wrn) 50%,transparent);background:color-mix(in srgb,var(--wrn) 8%,transparent);font-size:var(--fs-sm);display:flex;gap:8px}
+.empty{padding:20px;text-align:center;color:var(--t2)}
+.muted{color:var(--t3);font-size:var(--fs-xs)}
+.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--t1);color:var(--bg0);padding:8px 14px;border-radius:8px;font-size:var(--fs-sm);display:none;z-index:9}
+.note{background:var(--bg1);border:1px dashed var(--acc);border-radius:8px;padding:8px 10px;font-size:var(--fs-xs);color:var(--t2);margin:8px 0}
+.pop{position:absolute;z-index:8;background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,.18);max-height:60vh;overflow:auto;display:none;min-width:260px}
+.pop label{display:flex;gap:8px;align-items:center;padding:6px 8px;font-size:var(--fs-sm);min-height:36px;cursor:pointer}
+.pop label:hover{background:var(--accbg);border-radius:6px}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+@media (max-width:720px){.sum{grid-template-columns:1fr 1fr}.kpi .v{font-size:var(--fs-lg)}.hide-n{display:none}}
+</style></head><body>
+<div class="wrap">
+ <div class="top">
+  <h1><iconify-icon icon="game-icons:town-crier"></iconify-icon>Новости</h1>
+  <span class="muted hide-n">агрегатор изменений · без уведомлений</span>
+  <span class="sp"></span>
+  <button class="pill" id="scopeBtn"><iconify-icon icon="game-icons:stone-tower"></iconify-icon><span id="scopeTx"></span> ⌄</button>
+  <button class="pill" id="atom" title="Адрес ленты для читалки: вы сами забираете, когда хотите"><iconify-icon icon="game-icons:radar-sweep"></iconify-icon><span class="hide-n">Atom-лента</span></button>
+  <button class="pill" id="theme" title="Тема"><iconify-icon icon="game-icons:sun"></iconify-icon></button>
+ </div>
+ <div class="pop" id="scopePop"></div>
+ <div class="note">Мини-прототип по исследованию лент и сводок (lore-ux-news-feeds-digests-2026-11-08.html). События — реальные из выгрузки прода за 24.09–07.11.2026: создание и закрытие задач, закрытие спринтов, ADR. Уведомлений нет по решению владелицы: только лента, сводка и «прочитано до сюда». Позже сольём в общий прототип.</div>
+ <div class="ctl">
+  <span class="seg" id="per"><button data-p="1">День</button><button data-p="7">Неделя</button><button data-p="30">Месяц</button></span>
+  <span class="seg" id="mode"><button data-m="all">Всё</button><button data-m="imp" title="Релизы, закрытые спринты, решения">Важное</button></span>
+  <span class="seg" id="who"><button data-w="all">Все</button><button data-w="hum"><iconify-icon icon="game-icons:person"></iconify-icon> Люди</button><button data-w="ag"><iconify-icon icon="game-icons:robot-golem"></iconify-icon> Агенты</button></span>
+  <button class="pill" id="foldBtn" title="Свернуть похожие события в одну строку"><iconify-icon icon="game-icons:stack"></iconify-icon> Сворачивать</button>
+  <button class="pill" id="readBtn" title="Поставить черту «прочитано до сюда» на текущий момент"><iconify-icon icon="game-icons:bookmarklet"></iconify-icon> Прочитано всё</button>
+  <button class="pill" id="failBtn" title="Демо честного состояния: один источник недоступен"><iconify-icon icon="game-icons:hazard-sign"></iconify-icon> <span class="hide-n">Демо сбоя</span></button>
+ </div>
+ <div class="sum" id="sum"></div>
+ <div class="desc" id="desc"></div>
+ <div id="feed"></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>/*NEWS_DATA*/</script>
+<script>
+const N=window.NEWS,EV=N.ev;
+const K={task_new:{n:'Новая задача',ic:'game-icons:quill',c:'var(--inf)',v:'создал(а)'},task_done:{n:'Задача закрыта',ic:'game-icons:check-mark',c:'var(--suc)',v:'закрыл(а)'},sprint_done:{n:'Спринт закрыт',ic:'game-icons:sprint',c:'var(--acc)',v:'закрыт спринт',imp:1},adr_acc:{n:'ADR принят',ic:'game-icons:scroll-quill',c:'var(--vio)',v:'принят ADR',imp:1},adr_new:{n:'ADR предложен',ic:'game-icons:scroll-unfurled',c:'var(--wrn)',v:'предложен ADR',imp:1}};
+const S={per:7,mode:'all',who:'all',fold:true,kind:null,scope:new Set(),fail:false,read:localStorage.getItem('news.read')||'2026-11-05'};
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sh=s=>String(s).replace(/^NooriUta\/|^AIDA\//,'');
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',3500);}
+const TODAY='2026-11-07',dd=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()-n);return x.toISOString().slice(0,10);};
+function base(){return EV.filter(e=>(!S.scope.size||e.p.some(p=>S.scope.has(p)))&&(S.who==='all'||(S.who==='ag')===e.ag)&&(!S.fail||!e.k.startsWith('adr')));}
+function inWin(e,from,to){return e.d>from&&e.d<=to;}
+function renderSum(){
+ const b=base(),to=TODAY,from=dd(TODAY,S.per),pfrom=dd(TODAY,S.per*2);
+ const kinds=[['task_done','Закрыто задач'],['task_new','Новых задач'],['sprint_done','Спринтов закрыто'],['adr_acc','ADR принято']];
+ $('#sum').innerHTML=kinds.map(([k,l])=>{const cur=b.filter(e=>e.k===k&&inWin(e,from,to)).length,prev=b.filter(e=>e.k===k&&inWin(e,pfrom,from)).length,d=cur-prev;const noSrc=S.fail&&k.startsWith('adr'),noPrev=pfrom<N.from;if(noSrc)return '<div class="kpi" title="Источник недоступен"><div class="l"><iconify-icon icon="game-icons:hazard-sign" style="color:var(--wrn)"></iconify-icon>'+l+'</div><div class="v" style="color:var(--wrn)">—</div><div class="dl eq">не смогли посчитать: источник ADR недоступен</div></div>';
+  return `<button class="kpi ${S.kind===k?'on':''}" data-k="${k}" title="Показать эти события в ленте"><div class="l"><iconify-icon icon="${K[k].ic}" style="color:${K[k].c}"></iconify-icon>${l}</div><div class="v">${cur}</div>${noPrev?'<div class="dl eq">сравнить не с чем: данных до '+N.from+' нет в выгрузке</div>':`<div class="dl ${d>0?'up':d<0?'down':'eq'}">${d>0?'+':''}${d} к прошлому ${S.per===1?'дню':S.per===7?'периоду (7 дн.)':'периоду (30 дн.)'}</div>`}</button>`;}).join('');
+}
+function filtered(){const from=dd(TODAY,S.per);return base().filter(e=>e.d>from&&(S.mode==='all'||K[e.k].imp)&&(!S.kind||e.k===S.kind));}
+function renderDesc(n){const parts=[];parts.push(S.per===1?'за сегодня':S.per===7?'за 7 дней':'за 30 дней');if(S.mode==='imp')parts.push('только важное');if(S.kind)parts.push(K[S.kind].n.toLowerCase());if(S.who!=='all')parts.push(S.who==='ag'?'действия агентов':'действия людей');
+ $('#desc').innerHTML=`Показаны: <b>${parts.join(' · ')}</b> · в скоупе: <b>${S.scope.size?[...S.scope].map(sh).join(', '):'все проекты'}</b> — ${n} событий${S.fold?' (похожие свёрнуты)':''} ${S.kind||S.mode!=='all'||S.who!=='all'?'· <button class="pill" id="reset" style="min-height:24px;padding:2px 8px">✕ сбросить</button>':''}`;}
+function groupEvents(list){ // свёртка: в пределах дня — один автор + одно действие + один спринт
+ if(!S.fold)return list.map(e=>({one:e}));const m=new Map(),out=[];
+ list.forEach(e=>{if(K[e.k].imp){out.push({one:e});return;}const key=e.d+'|'+e.k+'|'+e.a+'|'+(e.s||'');if(!m.has(key)){const g={key,items:[],k:e.k,a:e.a,ag:e.ag,s:e.s,d:e.d};m.set(key,g);out.push(g);}m.get(key).items.push(e);});
+ return out.map(g=>g.items&&g.items.length===1?{one:g.items[0]}:g);
+}
+function whoChip(a,ag){return a==='—'?'':`<span class="who ${ag?'ag':''}"><iconify-icon icon="${ag?'game-icons:robot-golem':'game-icons:person'}"></iconify-icon>${esc(ag?a+' · агент':a)}</span>`;}
+function renderFeed(){
+ const list=filtered();renderDesc(list.length);
+ if(!list.length){$('#feed').innerHTML=`<div class="empty"><b>За выбранный период событий нет</b><br>Проверено: лента собрана из всех источников${S.fail?', кроме ADR (см. выше)':''}. Попробуйте период побольше.</div>`;return;}
+ const days=[...new Set(list.map(e=>e.d))];let h=S.fail?`<div class="banner"><iconify-icon icon="game-icons:hazard-sign" style="color:var(--wrn)"></iconify-icon><span><b>Лента собрана не полностью:</b> источник «ADR» недоступен (503, 14:21). Задачи и спринты показаны. Это не «по ADR ничего не было». <button class="pill" id="retry" style="min-height:24px;padding:2px 8px">↻ Повторить</button></span></div>`:'';
+ let readShown=false;
+ days.forEach(d=>{const de=list.filter(e=>e.d===d);
+  if(!readShown&&d<=S.read){h+=`<div class="read">прочитано до сюда · ${S.read}</div>`;readShown=true;}
+  const c=k=>de.filter(e=>e.k===k).length;
+  h+=`<section class="day"><div class="dh"><span class="d">${new Date(d).toLocaleDateString('ru',{day:'numeric',month:'long',weekday:'short'})}</span><span class="m">${c('task_done')?`<span><iconify-icon icon="game-icons:check-mark" style="color:var(--suc)"></iconify-icon>+${c('task_done')} закрыто</span>`:''}${c('task_new')?`<span><iconify-icon icon="game-icons:quill" style="color:var(--inf)"></iconify-icon>+${c('task_new')} новых</span>`:''}${c('sprint_done')?`<span><iconify-icon icon="game-icons:sprint" style="color:var(--acc)"></iconify-icon>${c('sprint_done')} спринт</span>`:''}${c('adr_acc')+c('adr_new')?`<span><iconify-icon icon="game-icons:scroll-quill" style="color:var(--vio)"></iconify-icon>${c('adr_acc')+c('adr_new')} ADR</span>`:''}</span></div>`;
+  groupEvents(de).forEach((g,i)=>{
+   if(g.one){const e=g.one,k=K[e.k];h+=`<div class="ev"><span class="ic" style="background:color-mix(in srgb,${k.c} 16%,transparent);color:${k.c}"><iconify-icon icon="${k.ic}"></iconify-icon></span><div class="tx"><div class="w">${whoChip(e.a,e.ag)} ${k.v} <span class="id" title="Открыть запись">${esc(e.id)}</span>${e.s&&!e.k.startsWith('sprint')?` <span class="muted">в ${esc(e.s.replace(/^SPRINT_/,''))}</span>`:''}${e.k==='sprint_done'&&e.rel?` <span class="muted">· релиз ${esc([].concat(e.rel).slice(-1)[0])}</span>`:''}</div><div class="ti">${esc(e.t)}</div></div></div>`;}
+   else{const k=K[g.k],gid='g'+d+i;h+=`<div class="ev fold" data-g="${gid}"><span class="ic" style="background:color-mix(in srgb,${k.c} 16%,transparent);color:${k.c}"><iconify-icon icon="game-icons:stack"></iconify-icon></span><div class="tx"><div class="w">${whoChip(g.a,g.ag)} ${k.v} <b>${g.items.length} ${g.k.startsWith('task')?'задач':'записей'}</b> ${g.s?`в <span class="id">${esc(g.s.replace(/^SPRINT_/,''))}</span>`:''} <span class="more">развернуть ▾</span></div><div class="sub" id="${gid}">${g.items.map(e=>`<div><span class="id">${esc(e.id.split('/').pop())}</span> ${esc(e.t)}</div>`).join('')}</div></div></div>`;}
+  });h+='</section>';});
+ $('#feed').innerHTML=h;
+}
+function renderScope(){const n=S.scope.size;$('#scopeTx').textContent=n?(n===1?sh([...S.scope][0]):sh([...S.scope][0])+' +'+(n-1)):'Все проекты · '+N.projects.length;}
+function renderSeg(){document.querySelectorAll('#per button').forEach(b=>b.classList.toggle('on',+b.dataset.p===S.per));document.querySelectorAll('#mode button').forEach(b=>b.classList.toggle('on',b.dataset.m===S.mode));document.querySelectorAll('#who button').forEach(b=>b.classList.toggle('on',b.dataset.w===S.who));$('#foldBtn').classList.toggle('on',S.fold);$('#failBtn').classList.toggle('on',S.fail);}
+function render(){renderScope();renderSeg();renderSum();renderFeed();}
+document.addEventListener('click',e=>{const t=e.target;
+ const k=t.closest('.kpi');if(k){S.kind=S.kind===k.dataset.k?null:k.dataset.k;return render();}
+ const p=t.closest('#per button');if(p){S.per=+p.dataset.p;return render();}
+ const m=t.closest('#mode button');if(m){S.mode=m.dataset.m;return render();}
+ const w=t.closest('#who button');if(w){S.who=w.dataset.w;return render();}
+ if(t.closest('#foldBtn')){S.fold=!S.fold;return render();}
+ if(t.closest('#failBtn')){S.fail=!S.fail;return render();}
+ if(t.closest('#retry')){S.fail=false;toast('Источник ADR снова доступен');return render();}
+ if(t.closest('#reset')){S.kind=null;S.mode='all';S.who='all';return render();}
+ if(t.closest('#readBtn')){S.read=TODAY;localStorage.setItem('news.read',TODAY);toast('Черта «прочитано до сюда» поставлена на сегодня (хранится на сервере, в прототипе — локально)');return render();}
+ const f=t.closest('.fold');if(f){$('#'+CSS.escape(f.dataset.g)).classList.toggle('on');return;}
+ if(t.closest('.id')){toast('Откроется запись в LORE (в мини-прототипе не подключено)');return;}
+ if(t.closest('#atom')){const url=`https://lore…/lore/feed.atom?scope=${[...S.scope].join(',')||'all'}&types=${S.kind||'all'}&mode=${S.mode}`;navigator.clipboard&&navigator.clipboard.writeText(url).catch(()=>{});toast('Адрес Atom-ленты скопирован: '+url+' — читалка забирает сама, без уведомлений');return;}
+ if(t.closest('#theme')){const d=document.documentElement;d.dataset.theme=d.dataset.theme==='light'?'dark':'light';return;}
+ if(t.closest('#scopeBtn')){const pop=$('#scopePop'),r=t.closest('#scopeBtn').getBoundingClientRect();const cnt=p=>EV.filter(e=>e.p.includes(p)).length;
+  pop.innerHTML=`<label><input type="checkbox" data-all ${S.scope.size?'':'checked'}> Все мои проекты</label>`+N.projects.map(p=>({...p,n:cnt(p.slug)})).filter(p=>p.n).sort((a,b)=>b.n-a.n).map(p=>`<label><input type="checkbox" data-s="${p.slug}" ${S.scope.has(p.slug)?'checked':''}> ${esc(p.name)} <span class="muted">${p.n}</span></label>`).join('');
+  pop.style.display='block';pop.style.left=Math.max(8,Math.min(r.left,innerWidth-280))+'px';pop.style.top=(r.bottom+window.scrollY+4)+'px';return;}
+ if(!t.closest('#scopePop'))$('#scopePop').style.display='none';
+});
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset.all!=null){S.scope.clear();}else if(t.dataset.s){t.checked?S.scope.add(t.dataset.s):S.scope.delete(t.dataset.s);}render();if(t.dataset.all!=null)$('#scopePop').style.display='none';});
+render();
+</script></body></html>

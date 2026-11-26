@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workflow L0</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Прототип SPEC-LORE-L0-STATUS-WORKFLOWS (SPRINT_LORE_UNIVERSAL_WORKFLOW/UW-L0-SPEC): все workflow уровня L0 схемами.
+   Сплошное — из кода (lore-model.json workflow, LoreDoneGate, QgGateLifecycle, LoreQuestionResource, UcReadinessCalculator).
+   Пунктир «предложено» — моё предложение на approve (переходы по виду 1а; переходы документов, которых в коде нет). */
+:root{--bg:#14120e;--bg2:#1c1913;--bg3:#25211a;--bd:#3a3326;--t1:#efe6d2;--t2:#b8ab90;--t3:#7f735c;--acc:#d9a441;--suc:#8fb85f;--wrn:#d9a441;--dng:#d0644f;--inf:#6fa3c4;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--mono:'IBM Plex Mono',monospace}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--t1:#2a241a;--t2:#5d523f;--t3:#8a7d64;--acc:#a8741a;--suc:#4f7a2a;--dng:#b0412d;--inf:#2f6f96}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t1);font:400 var(--fs-sm)/1.5 'Manrope',sans-serif}
+header{position:sticky;top:0;z-index:2;background:var(--bg2);border-bottom:1px solid var(--bd);padding:8px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+h1{font:800 var(--fs-lg)/1 'Unbounded',sans-serif;margin:0 10px 0 0}
+nav a{color:var(--t2);text-decoration:none;border:1px solid var(--bd);border-radius:999px;padding:2px 9px;font-size:var(--fs-xs);white-space:nowrap}
+nav{display:flex;gap:5px;flex-wrap:wrap}nav a:hover{border-color:var(--acc);color:var(--acc)}
+main{padding:12px 14px;max-width:1300px}
+section{border:1px solid var(--bd);border-radius:8px;background:var(--bg2);margin:0 0 14px;padding:10px 12px}
+h2{font:800 var(--fs-md)/1.2 'Unbounded',sans-serif;text-transform:uppercase;letter-spacing:.04em;margin:2px 0 6px}
+.meta{color:var(--t3);font-size:var(--fs-xs);margin:0 0 8px}
+.meta b{color:var(--t2)}
+.chip{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:1px 8px;font-size:var(--fs-2xs);color:var(--t2);margin-right:4px}
+.chip.code{border-color:var(--suc);color:var(--suc)}.chip.prop{border-color:var(--wrn);color:var(--wrn)}
+.dia{overflow-x:auto;min-width:0;max-width:100%;background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:8px}
+.zoom{display:flex;gap:4px;align-items:center;justify-content:flex-end;margin:4px 0 2px}.zoom button{background:var(--bg3);color:var(--t1);border:1px solid var(--bd);border-radius:999px;min-width:30px;height:26px;font:600 var(--fs-sm) var(--mono);cursor:pointer}.zoom button:hover{border-color:var(--acc);color:var(--acc)}.zoom span{color:var(--t3);font:var(--fs-2xs) var(--mono);min-width:38px;text-align:center}
+.legend{font-size:var(--fs-xs);color:var(--t2);margin:6px 0 0}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-xs);margin-top:6px}
+th,td{border-bottom:1px solid var(--bd);padding:4px 6px;text-align:left;vertical-align:top}
+th{color:var(--t3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;font-size:var(--fs-2xs)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr));gap:12px}.grid>*{min-width:0}
+@media (max-width:600px){.grid{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Workflow L0</h1>
+  <nav>
+    <a href="#core">Ядро</a><a href="#kinds">Виды работы</a><a href="#workclass">Класс работы</a><a href="#roles">Роли агентов</a><a href="#adr">ADR</a><a href="#spec">Спека</a><a href="#decision">Решение</a>
+    <a href="#question">Вопрос</a><a href="#feature">Фича / сценарий</a><a href="#qg">Гейт</a><a href="#cascade">Каскад</a>
+  </nav>
+  <span class="chip code">сплошное — из кода</span><span class="chip prop">пунктир — предложено</span><span class="chip" style="border-color:var(--dng);color:var(--dng)">👤 только человек</span><span class="chip" style="border-color:var(--inf);color:var(--inf)">🤖 агент · рекомендуемые инструменты</span>
+</header>
+<main>
+
+<section id="core">
+  <h2>Ядро: задача, спринт, фаза, чекпоинт</h2>
+  <p class="meta"><b>Источник:</b> lore-model.json → workflow.moves, LoreWorkflowCore, LoreDoneGate. Синонимы: todo, backlog, design, deferred → planned; partial → active; ready_for_deploy → review·stand_check; uat → review·uat.
+    <b>Только человек (👤):</b> done — так в коде (LoreDoneGate; агенту — только owner_word с цитатой); uat — слово владельца 26.11: «агент ставит uat, но из uat дальше человек» — переход В uat делает агент (с доказательством со стенда), любой переход ИЗ uat (в done или назад в active) — только человек; в коде этого запрета пока нет — доработка гейта.
+    <b>Инварианты:</b> агент не ставит done (кроме owner_word с цитатой и временем); done агента — только из review; человек закрывает из любого статуса; приёмщик ≠ исполнитель; blocked и возврат с приёмки — с причиной; waiting — с адресатом.</p>
+  <div class="dia"><pre class="mermaid">
+---
+config:
+  layout: elk
+  flowchart:
+    useMaxWidth: false
+---
+flowchart LR
+  P["planned<br/><small>todo · backlog · design · deferred</small>"] --> A["active<br/><small>partial</small>"]
+  P --> X(["cancelled<br/><small>👥 pm</small>"])
+  A --> W["waiting<br/><small>+ адресат · 👥 исполнитель</small>"]
+  A --> R["review<br/><small>stand_check (RFD) · uat — ставит исполнитель<br/>(человек или агент с ролью вида);<br/>выход из uat — только 👤 приёмщик</small>"]
+  A --> B["blocked<br/><small>+ причина · 👥 исполнитель, pm</small>"]
+  A --> F(["failed<br/><small>👥 исполнитель, pm</small>"])
+  A --> X
+  W --> A
+  W --> R
+  W --> F
+  R -->|"👤 приёмщик задачи;<br/>агент — только owner_word"| D(["done 👤"])
+  R -->|"возврат + причина · 👤 приёмщик"| A
+  B --> A
+  H(("человек с ролью")) -.->|"проходит любые шаги своей роли,<br/>включая 👤-гейты"| D
+  </pre></div>
+</section>
+
+<section id="kinds">
+  <h2>Виды работы: стадии внутри статуса, приёмка, доказательство</h2>
+  <p class="meta"><b>👤 на стадиях приёмки:</b> uat — ставит агент, выход из uat только человек (слово владельца 26.11); owner_read, decision_in, answer_in, protocol — предложено мной (ответ, протокол и чтение даёт человек). done — человек у всех видов (код).
+  <b>🤖 у агентских стадий</b> — рекомендуемые инструменты (предложено мной, слово владельца 26.11: «для агентских шагов придумать коллекцию рекомендуемого tooling»): это подсказка агенту, а не запрет — набор задаётся в каталоге узлов и может уточняться на L1–L3.</p>
+  <p class="meta"><b>Источник:</b> lore-model.json → workflow.kinds. Вид выбирается по типу задачи; тип вне таблицы → dev.
+  Стадии внутри active/waiting и внутри review — это встроенные подграфы L0. Пунктирные рёбра — предложение «1а»: у вида свои переходы как подмножество ядра (сейчас переходы у всех видов общие).</p>
+  <div class="grid" id="kindgrid"></div>
+</section>
+
+<section id="workclass">
+  <h2>Класс работы (work_class): какая запись нужна задаче</h2>
+  <p class="meta"><b>Слово владельца 26.11:</b> «класс работ добавляет необходимость заведённой ADR, uc — так что нужно добавить». Класс — вторая ось, независимая от вида работы (ADR-LORE-022). Статусы и переходы он не меняет, а добавляет условие: у задачи должна быть заведённая запись-основание.
+  <b>Где проверяется</b> (предложено мной): на входе в review — без основания задача на приёмку не идёт. Вид работы задаёт стадии, класс задаёт основание; одно с другим не смешивается. В UW-02 это guard узла review.</p>
+  <div class="dia"><pre class="mermaid">
+---
+config:
+  layout: elk
+  flowchart:
+    useMaxWidth: false
+---
+flowchart TB
+  T["задача · любой вид работы"] --> C{"work_class"}
+  C -->|"uc"| UC["нужен заведённый сценарий<br/>ребро REALIZES → KnowUseCase<br/>(не dropped)"]
+  C -->|"enb"| ADR["нужен заведённый ADR<br/>ребро JUSTIFIED_BY → ADR<br/>(proposed или accepted)"]
+  C -->|"jtd"| J["основание не требуется<br/>задача-хелпер"]
+  UC --> G{"вход в review<br/>🤖 guard"}
+  ADR --> G
+  J --> G
+  G -->|"основание есть"| R["review → uat → 👤 done"]
+  G -->|"нет основания"| B["отказ 409 · подсказка:<br/>завести сценарий / ADR<br/>или сменить класс"]
+  B -.->|"основание заведено"| G
+  </pre></div>
+  <p class="meta" id="wc-now"><b>Сейчас в коде:</b> значение вне uc/jtd/enb → 400; отсутствие REALIZES / JUSTIFIED_BY — только сигнал качества, переход не блокируется. Блок на review — новое правило, его вводит UW-02 (или LoreDoneGate раньше, если скажете).</p>
+</section>
+
+<section id="roles">
+  <h2>Роли агентов: допустимые шаги и делегирование</h2>
+  <p class="meta"><b>Слово владельца 26.11:</b> «нужна ещё матрица допустимых шагов и действий на роли агентов и в workflow возможность старшего агента делегировать зависимому агенту задачи, если у него достаточно прав».
+  <b>Роли</b> (порядок модели, MCP LORE): architect › pm › product-analyst › analyst › developer › marketer › tester. Порядок — это не вложенность прав: например, developer пишет ADR, а pm — нет. Поэтому делегирование проверяет <b>права</b>, а не только старшинство.</p>
+  <p class="meta"><b>Роли full нет</b> (слово владельца 26.11: «представь, у нас нет роли full») — каждый шаг закрыт конкретными ролями, «всё может» нет ни у кого. Сейчас в коде full есть у главной учётки сессии — в матрицах ниже её колонка убрана; что делать с full в коде — решение 5.</p>
+  <p class="meta"><b>Человек и агент — одни роли.</b> Участник = (человек или агент) + роль (+ проект). Человек с ролью проходит все шаги своей роли, в том числе 👤-гейты; агент с той же ролью — все, кроме 👤. Людей может быть несколько в разных ролях: 👤-гейт задачи проходит не «владелица», а <b>человек-приёмщик этой задачи</b> (ребро «приёмщик», ≠ исполнитель), если его роль входит в роли гейта вида. uat — один из гейтов владелицы, потому что она — приёмщик своих задач; у задачи другого приёмщика гейт его.</p>
+
+  <h3 class="meta" style="margin-top:10px"><b>0. Вид работы × класс × роли — кто что может по задаче</b> <span class="chip prop">предложено мной</span></h3>
+  <div class="dia" style="padding:0"><table id="kindroles"></table></div>
+  <p class="legend">Тип задачи → вид работы (§5.1) → роли исполнителя по стадиям (подписаны на схемах видов) и роли 👤-приёмщика. Класс добавляет основание (§5.2): кто его может завести — права на семейство uc или adr. Если у исполнителя этого права нет — основание заводит другой участник, исполнитель только связывает.</p>
+
+  <h3 class="meta" style="margin-top:10px"><b>А. Шаги workflow × роль</b> <span class="chip prop">предложено мной</span></h3>
+  <div class="dia" style="padding:0"><table id="steps"></table></div>
+  <p class="legend">✔ — может · ○ — может только с доказательством (evidence) · — — нет · 👤 — только человек, агенту не делегируется ни при каких правах.</p>
+
+  <h3 class="meta" style="margin-top:10px"><b>Б. Действия (запись по семействам) × роль</b> <span class="chip code">из кода: AgentScopeFilter</span></h3>
+  <div class="dia" style="padding:0"><table id="families"></table></div>
+
+  <h3 class="meta" style="margin-top:10px"><b>В. Делегирование задачи старшим агентом зависимому</b> <span class="chip prop">предложено мной</span></h3>
+  <div class="dia"><pre class="mermaid">
+---
+config:
+  layout: elk
+  flowchart:
+    useMaxWidth: false
+---
+flowchart TB
+  D["старший агент D<br/>(своя учётка, роль rD)"] --> Q{"делегировать<br/>задачу T агенту S"}
+  Q --> C1{"1 · rS не старше rD<br/>(порядок ролей)"}
+  C1 -->|"нет"| X1["отказ 403<br/>ROLE_ABOVE_DELEGATOR"]
+  C1 -->|"да"| C2{"2 · нужные T права<br/>есть у S<br/>(вид · класс · шаги)"}
+  C2 -->|"нет"| X2["отказ 403 · список<br/>недостающих прав"]
+  C2 -->|"да"| C3{"3 · те же права<br/>есть у D<br/>(нет отмывания прав)"}
+  C3 -->|"нет"| X3["отказ 403<br/>DELEGATOR_LACKS_RIGHT"]
+  C3 -->|"да"| C4{"4 · шаги 👤<br/>не входят в поручение"}
+  C4 --> E["ребро DELEGATED_TO<br/>D → S по задаче T<br/>область · срок · кто поручил"]
+  E --> W["S работает своей учёткой<br/>в журнале: on_behalf_of = D"]
+  W --> R["итог возвращается D<br/>D отвечает за задачу"]
+  R -.->|"срок вышел / D отозвал"| Z["поручение закрыто"]
+  </pre></div>
+  <p class="meta"><b>Права задачи</b> (п.2) выводятся из модели, а не перечисляются руками: вид работы → шаги и семейства записи (dev: task, status, release; doc: doc, spec…), класс → право читать основание (uc — сценарий, enb — ADR), плюс шаги, до которых поручение доходит (например, «до review»). Матрица А — данные модели (lore-model.json), правит L0 (разработка LORE); L1 может сузить, но не расширить.</p>
+</section>
+
+<section id="adr">
+  <h2>ADR</h2>
+  <p class="meta"><b>Статусы из кода:</b> draft, proposed, accepted, deferred, superseded (+ deprecated в словаре — расхождение 6.1). Категории: draft, deferred → not_started; proposed → in_progress; accepted → in_force; deprecated, superseded → withdrawn.
+  <b>Переходов в коде нет</b> — ниже предложение по смыслу категорий.</p>
+  <div class="dia"><pre class="mermaid">
+---
+config:
+  layout: elk
+  flowchart:
+    useMaxWidth: false
+---
+flowchart LR
+  Dr["draft"] -.-> Pr["proposed"]
+  Pr -.->|"6 разделов + владелец «да»"| Ac["accepted 👤"]
+  Pr -.-> De["deferred"]
+  De -.-> Pr
+  Ac -.->|"новый ADR заменяет"| Su(["superseded"])
+  Ac -.-> Dp(["deprecated"])
+  </pre></div>
+</section>
+
+<section id="spec">
+  <h2>Спека</h2>
+  <p class="meta"><b>Статусы из кода:</b> proposed, accepted, deprecated, superseded (словарь spec_status). Категории как у ADR. <b>Переходов в коде нет</b> — предложение.</p>
+  <div class="dia"><pre class="mermaid">
+---
+config:
+  layout: elk
+  flowchart:
+    useMaxWidth: false
+---
+flowchart LR
+  Pr["proposed<br/><small>v0.x</small>"] -.->|"approve владельца"| Ac["accepted 👤<br/><small>v1.0</small>"]
+  Ac -.->|"новая версия спеки"| Su(["superseded"])
+  Ac -.-> Dp(["deprecated"])
+  Pr -.-> Dp
+  </pre></div>
+</section>
+
+<section id="decision">
+  <h2>Решение</h2>
+  <p class="meta"><b>Статусы из кода:</b> proposed, accepted, deferred, superseded, fixed (легаси сида, к ревизии), done (только в каноне — расхождение 6.2). <b>Переходов в коде нет</b> — предложение.</p>
+  <div class="dia"><pre class="mermaid">
+---
+config:
+  layout: elk
+  flowchart:
+    useMaxWidth: false
+---
+flowchart LR
+  Pr["proposed"] -.-> Ac["accepted 👤<br/><small>действующее правило</small>"]
+  Pr -.-> De["deferred"]
+  De -.-> Pr
+  Ac -.->|"позднее решение"| Su(["superseded"])
+  Fx["fixed<br/><small>легаси</small>"] -.->|"ревизия"| Ac
+  Ac -.->|"? если решение — разовое действие"| Dn(["done"])
+  </pre></div>
+</section>
+
+<section id="question">
+  <h2>Вопрос</h2>
+  <p class="meta"><b>Из кода:</b> open, deferred, closed, dropped (LoreQuestionResource.STATUSES); <b>closed — только ответом</b> (entity_link rel=answers), прямой статус closed отвергается.</p>
+  <div class="dia"><pre class="mermaid">
+---
+config:
+  layout: elk
+  flowchart:
+    useMaxWidth: false
+---
+flowchart LR
+  O["open"] --> Df["deferred"]
+  Df --> O
+  O -->|"ответ: ребро answers (ADR / решение)"| C(["closed"])
+  O --> Dr(["dropped"])
+  Df --> Dr
+  </pre></div>
+</section>
+
+<section id="feature">
+  <h2>Фича и сценарий (KnowUseCase, любой уровень)</h2>
+  <p class="meta"><b>Из кода:</b> пишутся только намерения proposed и dropped; active, shipped, in_rework ставит калькулятор готовности (UcReadinessCalculator) по задачам, которые реализуют сценарий (REALIZES).</p>
+  <div class="dia"><pre class="mermaid">
+---
+config:
+  layout: elk
+  flowchart:
+    useMaxWidth: false
+---
+flowchart LR
+  Pr["proposed<br/><small>пишет человек/агент</small>"] -->|"калькулятор: есть задачи в работе"| Ac["active"]
+  Ac -->|"калькулятор: всё реализовано"| Sh(["shipped"])
+  Sh -->|"калькулятор: реализация открыта снова"| Rw["in_rework"]
+  Rw --> Sh
+  Pr --> Dr(["dropped<br/><small>пишет человек/агент</small>"])
+  </pre></div>
+</section>
+
+<section id="qg">
+  <h2>Гейт качества</h2>
+  <p class="meta"><b>Из кода:</b> draft, active, stale, retired (QgGateLifecycle, ADR-LORE-053-D7); active — только с проектом (или scope=global); retired — только с причиной. last_run_status — итог прогона, отдельная ось.</p>
+  <div class="dia"><pre class="mermaid">
+---
+config:
+  layout: elk
+  flowchart:
+    useMaxWidth: false
+---
+flowchart LR
+  Dr["draft"] -->|"+ проект или global"| Ac["active"]
+  Ac --> St["stale<br/><small>не гонялся / устарел</small>"]
+  St --> Ac
+  Ac -->|"+ причина"| Re(["retired"])
+  St -->|"+ причина"| Re
+  </pre></div>
+</section>
+
+<section id="cascade">
+  <h2>Где вид работы в каскаде (предложение «2»)</h2>
+  <p class="meta">Правило ищется от частного к общему; инварианты ядра — на всех уровнях.</p>
+  <div class="dia"><pre class="mermaid">
+---
+config:
+  layout: elk
+  flowchart:
+    useMaxWidth: false
+---
+flowchart TB
+  L3["L3 атрибут записи"] -.-> L2["L2 проект"]
+  L2 -.-> L1k["L1 установка · для вида работы"]
+  L1k -.-> L0k["L0 ядро · для вида работы<br/><small>свои переходы — подмножество ядра (1а)</small>"]
+  L0k -.-> L0["L0 ядро по умолчанию<br/><small>workflow.moves</small>"]
+  INV(["инварианты ядра: done — человек, done из review, приёмщик ≠ исполнитель"]) -.-> L3
+  INV -.-> L0
+  </pre></div>
+</section>
+</main>
+
+<script>
+// виды работы — данные из lore-model.json workflow.kinds; «drop» — предложение 1а (переходы ядра, которых у вида нет)
+// 👤 — стадия только человека; источник указан в легенде секции
+const HUMAN_STAGES = new Set(['uat', 'owner_read', 'decision_in', 'answer_in', 'protocol']);
+// 🤖 — рекомендуемые инструменты агентской стадии (предложено; имена — реальные инструменты MCP aida-lore и миниаппов)
+const TOOLS = {
+  'dev:design': 'entity_upsert adr/spec, query_slice',
+  'dev:implement': 'forgejo (ветка, файлы), forgejo_pr_new',
+  'dev:test': 'forgejo_ci_status, forgejo get_job_logs',
+  'dev:stand_check': 'forgejo qg_read, смоук стенда',
+  'doc:draft': 'entity_upsert spec/doc, search',
+  'doc:review_text': 'task_shape, quality_check',
+  'ops:diagnose': 'forgejo get_job_logs, metric_get',
+  'ops:fix': 'forgejo_pr_new, forgejo_ci_status',
+  'ops:measure': 'metric_log, qg_run_log',
+  'ops:stand_check': 'qg_read, смоук стенда',
+  'research:collect': 'search, find, query_slice, WebSearch',
+  'research:analyse': 'graph, graph_path, task_shape',
+  'research:write': 'entity_upsert doc/spec/decision',
+  'external:preparing': 'entity_upsert doc',
+  'funnel:lead': 'search, find (actor, job)',
+  'routine:reconciling': 'query_slice, metric_get',
+  'content:draft': 'bragi_pub_new, bragi_variant_new',
+  'content:ready': 'bragi_search, quality_check',
+};
+// 👥 кто может делать стадию — роль (одна и та же у человека и агента), роли full нет (слово владельца 26.11:
+// «представь, у нас нет роли full, и к workflow подпиши, кто может делать»). Предложено мной.
+// Для 👤-стадий — роли ЧЕЛОВЕКА-приёмщика задачи; агент их не проходит ни при какой роли.
+const WHO = {
+  'dev:design':'architect, developer', 'dev:implement':'developer', 'dev:test':'tester, developer',
+  'dev:stand_check':'tester, developer', 'dev:uat':'ставит: tester, developer · выход 👤 pm, tester, architect',
+  'doc:draft':'analyst, architect, developer, marketer', 'doc:review_text':'analyst, architect', 'doc:owner_read':'pm, architect, product-analyst',
+  'ops:diagnose':'developer', 'ops:fix':'developer', 'ops:measure':'developer, tester', 'ops:stand_check':'tester, developer',
+  'research:collect':'analyst, product-analyst, architect', 'research:analyse':'analyst, product-analyst, architect', 'research:write':'analyst, product-analyst, architect',
+  'research:owner_read':'pm, product-analyst',
+  'external:preparing':'pm, analyst', 'external:submitted':'pm', 'external:under_review':'pm', 'external:decision_in':'pm',
+  'funnel:lead':'marketer, product-analyst', 'funnel:contacted':'marketer, pm', 'funnel:meeting':'pm, marketer', 'funnel:pilot':'pm, product-analyst', 'funnel:answer_in':'pm, marketer',
+  'routine:period_open':'pm, analyst', 'routine:reconciling':'analyst', 'routine:report':'pm',
+  'content:draft':'marketer', 'content:ready':'marketer', 'content:scheduled':'marketer',
+  'hardware:prototype':'developer', 'hardware:testing':'tester, developer', 'hardware:waiting_supplier':'pm', 'hardware:protocol':'tester, pm',
+};
+const label = (kind, s) => {
+  const who = WHO[kind + ':' + s];
+  if (s === 'uat') return `uat<br/><small>👥 ${who}</small>`;
+  if (HUMAN_STAGES.has(s)) return `${s} 👤<br/><small>👥 ${who || '—'}</small>`;
+  const t = TOOLS[kind + ':' + s];
+  return `${s}${who ? `<br/><small>👥 ${who}</small>` : ''}${t ? `<br/><small>🤖 ${t}</small>` : ''}`;
+};
+const KINDS = [
+  {k:'dev', l:'разработка', types:'dev, test, design', st:['design','implement','test'], rv:['stand_check','uat'], ev:'PR (влит), релиз', fail:null, drop:[]},
+  {k:'doc', l:'документ', types:'docs', st:['draft','review_text'], rv:['owner_read'], ev:'запись LORE: спека, док, runbook, ADR', fail:null, drop:['failed']},
+  {k:'ops', l:'ops / инфраструктура', types:'ops', st:['diagnose','fix','measure'], rv:['stand_check'], ev:'замер после правки; PR, если менялся код', fail:null, drop:[]},
+  {k:'research', l:'исследование', types:'research, analytics', st:['collect','analyse','write'], rv:['owner_read'], ev:'запись LORE с выводом', fail:null, drop:['failed']},
+  {k:'external', l:'внешнее решение', types:'legal', st:['preparing','submitted','under_review'], rv:['decision_in'], ev:'документ, номер заявки или решения', fail:'отказ', drop:[], extra:'review→failed'},
+  {k:'funnel', l:'воронка', types:'sales, hiring, cfp', st:['lead','contacted','meeting','pilot'], rv:['answer_in'], ev:'LOI, договор, оффер, доклад принят', fail:'проиграли, отказ', drop:[], extra:'review→failed'},
+  {k:'routine', l:'регламент', types:'finance, support', st:['period_open','reconciling'], rv:['report'], ev:'закрытый период + отчёт', fail:'просрочен', drop:['blocked']},
+  {k:'content', l:'контент', types:'content', st:['draft','ready','scheduled'], rv:['scheduled'], ev:'URL публикации', fail:null, drop:['failed']},
+  {k:'hardware', l:'железо', types:'procurement', st:['prototype','testing','waiting_supplier'], rv:['protocol'], ev:'протокол испытаний, сертификат', fail:'не прошло испытания', drop:[]},
+];
+const grid = document.getElementById('kindgrid');
+for (const k of KINDS) {
+  const stages = k.st.map((s,i)=>`    a${i}["${label(k.k, s)}"]`).join('\n') + '\n' + k.st.slice(1).map((s,i)=>`    a${i} --> a${i+1}`).join('\n');
+  const rv = k.rv.map((s,i)=>`    r${i}["${label(k.k, s)}"]`).join('\n') + '\n' + k.rv.slice(1).map((s,i)=>`    r${i} --> r${i+1}`).join('\n');
+  const lines = [
+    '---','config:','  layout: elk','  flowchart:','    useMaxWidth: false','---','flowchart TB',
+    '  P["planned"] --> ACT',
+    '  subgraph ACT["active / waiting — стадии"]', stages, '  end',
+    '  ACT --> REV',
+    '  subgraph REV["review — приёмка"]', rv, '  end',
+    `  REV -->|"доказательство: ${k.ev}"| D(["done 👤<br/><small>человек-приёмщик задачи</small>"])`,
+    '  REV -->|"возврат + причина"| ACT',
+  ];
+  lines.push(k.drop.includes('blocked') ? '  ACT -.->|"предложено: blocked не нужен"| B["blocked"]' : '  ACT --> B["blocked"]');
+  lines.push(k.drop.includes('failed') ? '  ACT -.->|"предложено: failed не нужен"| F(["failed"])' : `  ACT --> F(["failed${k.fail?'<br/><small>'+k.fail+'</small>':''}"])`);
+  if (k.extra) lines.push('  REV -.->|"предложено: исход с приёмки"| F');
+  const sec = document.createElement('div');
+  sec.innerHTML = `<p class="meta" style="margin:0 0 4px"><b>${k.k}</b> — ${k.l} · типы задач: ${k.types}</p><div class="dia"><pre class="mermaid"></pre></div>`;
+  sec.querySelector('pre').textContent = lines.join('\n');
+  grid.appendChild(sec);
+}
+
+// Роли агентов — порядок модели MCP LORE.
+// Роли full нет (слово владельца 26.11) — в матрицах её колонки нет.
+const ROLES = ['architect','pm','product-analyst','analyst','developer','marketer','tester'];
+const short = {'full':'full','architect':'arch','pm':'pm','product-analyst':'p-an','analyst':'an','developer':'dev','marketer':'mkt','tester':'test'};
+// А. Шаги workflow × роль — предложено мной (26.11). '+' может, 'e' только с доказательством, '' нет, 'h' только человек.
+const STEPS = [
+  ['завести задачу (planned)',            {full:'+',architect:'+',pm:'+','product-analyst':'+',analyst:'+',developer:'+',marketer:'+',tester:'+'}],
+  ['взять в работу (active)',             {full:'+',architect:'+',pm:'+','product-analyst':'+',analyst:'+',developer:'+',marketer:'+',tester:'+'}],
+  ['ждём (waiting) · blocked — с причиной',{full:'+',architect:'+',pm:'+','product-analyst':'+',analyst:'+',developer:'+',marketer:'+',tester:'+'}],
+  ['в review (вид dev/ops: PR + CI)',     {full:'e',architect:'e',developer:'e',tester:'e'}],
+  ['в review (вид doc/research)',         {full:'e',architect:'e',analyst:'e','product-analyst':'e',marketer:'e',developer:'e'}],
+  ['stand_check — проверка на стенде',    {full:'e',developer:'e',tester:'e'}],
+  ['ready_for_deploy (по мержу)',         {full:'e',developer:'e',pm:'e'}],
+  ['uat — ставит агент со стенд-доказательством', {full:'e',developer:'e',tester:'e',pm:'e'}],
+  ['выход из uat · done',                 Object.fromEntries(ROLES.map(r=>[r,'h']))],
+  ['cancelled',                           {full:'+',pm:'+'}],
+  ['статусы спринта, фазы, вехи',         {full:'+',pm:'+'}],
+  ['гейт качества: завести, прогон',      {full:'+',tester:'+'}],
+  ['делегировать задачу зависимому агенту', {full:'+',architect:'+',pm:'+','product-analyst':'+',analyst:'+',developer:'+',marketer:'+'}],
+];
+const mark = {'+':'✔','e':'○','h':'👤','':'—'};
+document.getElementById('steps').innerHTML =
+  `<tr><th>шаг</th>${ROLES.map(r=>`<th title="${r}">${short[r]}</th>`).join('')}</tr>` +
+  STEPS.map(([s,m])=>`<tr><td>${s}</td>${ROLES.map(r=>`<td>${mark[m[r]||'']}</td>`).join('')}</tr>`).join('');
+// Б. Из кода: AgentScopeFilter (семейство записи → роли). skill — по SkillRules.WRITERS, здесь не раскрыто.
+const FAM = {
+  adr:['full','architect','developer'], decision:['full','architect'], tag:['full','architect','developer'],
+  spec:['full','architect','developer','marketer'], runbook:['full','architect','developer','marketer'], doc:['full','architect','developer','marketer'],
+  sprint:['full','pm'], milestone:['full','pm'], phase:['full','pm'], dep:['full','pm'],
+  task:ROLES, status:ROLES, release:['full','developer'], qg:['full','tester'],
+  question:['full','architect','analyst','pm','product-analyst'],
+  feature:['full','architect','pm','product-analyst'], uc:['full','architect','pm','product-analyst'],
+  pain:['full','architect','pm','product-analyst','marketer'], gain:['full','architect','pm','product-analyst','marketer'], job:['full','architect','pm','product-analyst','marketer'],
+  vp:['full','architect','pm','product-analyst'], canvas:['full','architect','pm','product-analyst','analyst'],
+  actor:['full','architect','pm'], 'project-actor':['full','architect','pm','product-analyst'], product:['full','architect','pm','product-analyst'],
+  component:['full','architect'], project:['full','architect','pm'], repository:['full','architect','pm'], bragi:['full','marketer'],
+};
+document.getElementById('families').innerHTML =
+  `<tr><th>семейство</th>${ROLES.map(r=>`<th title="${r}">${short[r]}</th>`).join('')}</tr>` +
+  Object.entries(FAM).map(([f,rs])=>`<tr><td style="font-family:var(--mono)">${f}</td>${ROLES.map(r=>`<td>${rs.includes(r)?'✔':'—'}</td>`).join('')}</tr>`).join('');
+
+// 0. Вид × роли: исполнитель — объединение ролей агентских стадий, приёмщик — роли 👤-стадии (из WHO).
+const uniq = (a) => [...new Set(a)];
+const rolesIn = (s) => (s || '').replace(/ставит:|выход 👤/g, ',').split(/[,·]/).map(x => x.trim()).filter(x => ROLES.includes(x));
+const kindRows = KINDS.map(k => {
+  const doers = uniq(k.st.concat(k.rv.filter(s => !HUMAN_STAGES.has(s) && s !== 'uat')).flatMap(s => rolesIn(WHO[k.k + ':' + s])));
+  const gate = k.rv.find(s => HUMAN_STAGES.has(s));
+  const acc = gate === 'uat' ? rolesIn((WHO[k.k + ':uat'] || '').split('выход 👤')[1]) : rolesIn(WHO[k.k + ':' + gate]);
+  return `<tr><td><b>${k.k}</b><br/><span style="color:var(--t3)">${k.types}</span></td><td>${doers.join(', ')}</td><td>👤 ${gate ? gate + ': ' + (acc.join(', ') || 'приёмщик') : 'отдельного гейта нет — done: приёмщик задачи'}</td></tr>`;
+});
+const famRoles = (f) => FAM[f].filter(r => r !== 'full').join(', ');
+document.getElementById('kindroles').innerHTML =
+  '<tr><th>вид · типы</th><th>исполнитель (человек или агент)</th><th>👤 гейт · роли приёмщика (только человек)</th></tr>' + kindRows.join('') +
+  '<tr><th>класс</th><th>основание · кто может завести</th><th>что проверяется на review</th></tr>' +
+  `<tr><td><b>uc</b></td><td>сценарий (KnowUseCase): ${famRoles('uc')}</td><td>ребро REALIZES, сценарий не dropped</td></tr>` +
+  `<tr><td><b>enb</b></td><td>ADR: ${famRoles('adr')}</td><td>ребро JUSTIFIED_BY, ADR proposed / accepted</td></tr>` +
+  `<tr><td><b>jtd</b></td><td>не нужно</td><td>—</td></tr>`;
+</script>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs';
+import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.1.7/dist/mermaid-layout-elk.esm.min.mjs';
+mermaid.registerLayoutLoaders(elkLayouts);
+const dark = !matchMedia('(prefers-color-scheme: light)').matches;
+mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'strict', flowchart: { useMaxWidth: false },
+  themeVariables: dark
+    ? { background:'#14120e', primaryColor:'#25211a', primaryTextColor:'#efe6d2', primaryBorderColor:'#d9a441', lineColor:'#b8ab90', secondaryColor:'#1c1913', tertiaryColor:'#1c1913', clusterBkg:'#1c1913', clusterBorder:'#3a3326', fontFamily:'Manrope' }
+    : { background:'#f7f2e7', primaryColor:'#efe7d6', primaryTextColor:'#2a241a', primaryBorderColor:'#a8741a', lineColor:'#5d523f', clusterBkg:'#efe7d6', clusterBorder:'#cfc2a6', fontFamily:'Manrope' } });
+await mermaid.run({ querySelector: 'pre.mermaid' });
+// Слово владельца 26.11: «диаграммы помещались, но была возможность zoom in».
+// По умолчанию — вписать в ширину; кнопки − / + / ⤢ и двойной тап меняют масштаб, крупнее — прокрутка.
+for (const pre of document.querySelectorAll('pre.mermaid')) {
+  const svg = pre.querySelector('svg'); if (!svg) continue;
+  const vb = svg.viewBox.baseVal; const natW = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
+  svg.removeAttribute('height'); svg.style.maxWidth = 'none'; svg.style.height = 'auto'; svg.style.display = 'block';
+  const box = pre.closest('.dia');
+  const bar = document.createElement('div'); bar.className = 'zoom';
+  bar.innerHTML = '<button data-z="-" aria-label="Уменьшить">−</button><span></span><button data-z="+" aria-label="Увеличить">+</button><button data-z="fit" aria-label="Вписать в ширину">⤢</button>';
+  box.before(bar);
+  const label = bar.querySelector('span');
+  let scale = null;
+  const fit = () => Math.min(1, (box.clientWidth - 16) / natW);
+  const apply = (s) => { scale = Math.max(0.2, Math.min(4, s)); svg.style.width = (natW * scale) + 'px'; label.textContent = Math.round(scale * 100) + '%'; };
+  apply(fit());
+  bar.addEventListener('click', (e) => { const z = e.target.dataset.z; if (!z) return;
+    apply(z === 'fit' ? fit() : scale * (z === '+' ? 1.4 : 1 / 1.4)); });
+  box.addEventListener('dblclick', () => apply(scale < 1.5 ? Math.max(1.5, scale * 2) : fit()));
+  addEventListener('resize', () => { if (Math.abs(scale - fit()) < 0.02 || scale < fit()) apply(fit()); });
+}
+document.body.dataset.rendered = String(document.querySelectorAll('pre.mermaid svg, .mermaid svg').length);
+</script>
+</body>
+</html>

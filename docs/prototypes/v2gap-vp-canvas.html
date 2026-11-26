@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VP-канва в v2</title>
+<!--
+  Прототип разрыва v1 → v2 (SPRINT_LORE_ADMIN_POLISH/AP-05) + сравнение сегментов (SPRINT_LORE_PRODUCT_BACKLOG/FIT-04).
+  Кода продукта нет — только дизайн. Данные — живой снимок LORE 25.11.2026 через MCP (срезы features,
+  use_cases_of_feature, pains, gains, jobs, actors), только чтение. Логика сегментов — та же, что в v1
+  (src/components/lore/product/LoreVpCanvas.tsx: sharedValues, crossSegmentScenarios, PR #1404).
+  Состояние в адресе: ?f=<фича>&seg=<роль>.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg0:#12100c; --bg1:#1a1712; --bg2:#221e17; --bg3:#2b261d; --bd:#3a3326; --bdh:#5a4d36;
+  --t1:#eee6d6; --t2:#b9ad97; --t3:#8f846f;
+  --acc:#e0a84a; --suc:#7fb27a; --wrn:#d9a441; --dng:#d9665a; --inf:#6fa3c8;
+  --pain:#d9665a; --gain:#7fb27a; --job:#6fa3c8;
+  --fs-2xs:10.5px; --fs-xs:11.5px; --fs-sm:12px; --fs-base:13px; --fs-md:14px; --fs-lg:16px; --fs-xl:19px; --fs-2xl:23px;
+  --r-md:6px; --r-lg:10px; --r-pill:999px;
+  --font:Manrope, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --head:Unbounded, Manrope, system-ui, sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, Consolas, monospace;
+}
+* { box-sizing:border-box; }
+html, body { margin:0; background:var(--bg0); color:var(--t1); font-family:var(--font); font-size:var(--fs-base); line-height:1.45; }
+button { font:inherit; color:inherit; }
+:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+.page { max-width:1240px; margin:0 auto; padding:12px 16px 64px; }
+.app { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:8px 12px; background:var(--bg1); border:1px solid var(--bd); border-radius:var(--r-lg); margin-bottom:12px; }
+.app .brand { font-family:var(--head); font-weight:800; font-size:var(--fs-sm); letter-spacing:.06em; color:var(--acc); }
+.app .crumbs { color:var(--t2); font-size:var(--fs-sm); }
+.app .crumbs b { color:var(--t1); }
+.tag { margin-left:auto; font-size:var(--fs-2xs); font-weight:700; color:var(--wrn); border:1px solid color-mix(in srgb,var(--wrn) 50%,transparent); border-radius:var(--r-pill); padding:1px 9px; }
+h1 { font-family:var(--head); font-weight:800; font-size:var(--fs-xl); margin:0 0 4px; letter-spacing:.01em; }
+h2 { font-family:var(--head); font-weight:800; font-size:var(--fs-sm); text-transform:uppercase; letter-spacing:.08em; margin:0 0 8px; color:var(--t1); }
+h3 { font-size:var(--fs-2xs); font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--t3); margin:0 0 6px; display:flex; gap:6px; align-items:baseline; }
+h3 .n { font-family:var(--mono); color:var(--t2); }
+p { margin:0 0 6px; }
+.card { background:var(--bg1); border:1px solid var(--bd); border-radius:var(--r-lg); padding:12px; margin-bottom:12px; min-width:0; }
+.why p { color:var(--t2); font-size:var(--fs-md); }
+.why p b { color:var(--t1); }
+.why .src { font-size:var(--fs-xs); color:var(--t3); }
+.mono { font-family:var(--mono); }
+.chip { display:inline-flex; align-items:center; gap:4px; border:1px solid var(--bd); border-radius:var(--r-pill); padding:0 8px; font-size:var(--fs-xs); color:var(--t2); background:var(--bg2); white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+.chip.acc { color:var(--acc); border-color:color-mix(in srgb,var(--acc) 50%,transparent); }
+.chip.suc { color:var(--suc); border-color:color-mix(in srgb,var(--suc) 50%,transparent); }
+.chip.wrn { color:var(--wrn); border-color:color-mix(in srgb,var(--wrn) 50%,transparent); }
+.chip.dng { color:var(--dng); border-color:color-mix(in srgb,var(--dng) 50%,transparent); }
+.chip.inf { color:var(--inf); border-color:color-mix(in srgb,var(--inf) 50%,transparent); }
+.row { display:flex; flex-wrap:wrap; gap:4px 6px; align-items:center; }
+.seg { display:flex; flex-wrap:wrap; gap:4px; }
+.seg button { border:1px solid var(--bd); background:var(--bg2); color:var(--t2); border-radius:var(--r-pill); padding:4px 10px; min-height:30px; cursor:pointer; font-size:var(--fs-sm); text-align:left; max-width:100%; }
+.seg button[aria-pressed="true"] { background:color-mix(in srgb,var(--acc) 22%,transparent); border-color:var(--acc); color:var(--t1); }
+.seg button .mono { font-size:var(--fs-2xs); color:var(--t3); margin-left:4px; }
+.lbl { font-size:var(--fs-2xs); text-transform:uppercase; letter-spacing:.08em; color:var(--t3); margin:8px 0 4px; }
+
+/* сводка */
+.kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin:10px 0 0; }
+.kpi { background:var(--bg2); border:1px solid var(--bd); border-radius:var(--r-md); padding:6px 8px; min-width:0; }
+.kpi b { font-family:var(--mono); font-size:var(--fs-lg); color:var(--t1); }
+.kpi span { display:block; font-size:var(--fs-2xs); color:var(--t3); }
+.kpi.warn b { color:var(--wrn); }
+@media (min-width:760px){ .kpis { grid-template-columns:repeat(5,minmax(0,1fr)); } }
+
+/* канва */
+.canvas { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; }
+@media (min-width:1000px){ .canvas { grid-template-columns:minmax(0,5fr) minmax(0,7fr); } }
+.fig { border:1px solid var(--bdh); background:var(--bg1); padding:10px; min-width:0; }
+.fig.vm { border-radius:var(--r-md); }
+.fig.cp { border-radius:28px; }
+.fig > header { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; margin-bottom:8px; }
+.fig > header h2 { margin:0; }
+.fig > header small { color:var(--t3); font-size:var(--fs-xs); }
+.cpgrid { display:grid; grid-template-columns:minmax(0,1fr); gap:10px; }
+@media (min-width:640px){ .cpgrid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } .cpgrid .gains { grid-column:1; grid-row:1; } .cpgrid .pains { grid-column:1; grid-row:2; } .cpgrid .jobs { grid-column:2; grid-row:1 / span 2; } }
+.sector { min-width:0; }
+.list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+.it { border:1px solid var(--bd); border-left:3px solid var(--bd); border-radius:var(--r-md); background:var(--bg2); padding:6px 8px; min-width:0; cursor:pointer; transition:opacity .12s; }
+.it.pain { border-left-color:var(--pain); }
+.it.gain { border-left-color:var(--gain); }
+.it.job { border-left-color:var(--job); }
+.it.uc { border-left-color:var(--acc); }
+.it .t { font-size:var(--fs-sm); font-weight:600; overflow-wrap:anywhere; }
+.it .id { font-family:var(--mono); font-size:var(--fs-2xs); color:var(--t3); overflow-wrap:anywhere; }
+.it .row { margin-top:4px; }
+.it.claimed { border-style:dashed; border-left-style:solid; }
+.canvas.focus .it { opacity:.35; }
+.canvas.focus .it.hl { opacity:1; box-shadow:0 0 0 1px var(--acc); }
+.empty { color:var(--t3); font-size:var(--fs-xs); border:1px dashed var(--bd); border-radius:var(--r-md); padding:6px 8px; }
+.legend { display:flex; flex-wrap:wrap; gap:4px 10px; font-size:var(--fs-2xs); color:var(--t3); margin-top:10px; }
+.legend i { display:inline-block; width:14px; height:8px; border:1px solid var(--t2); border-radius:2px; vertical-align:middle; margin-right:4px; }
+.legend i.d { border-style:dashed; }
+
+/* сравнение сегментов */
+.cmp { display:grid; grid-template-columns:minmax(0,1fr); gap:10px; }
+@media (min-width:900px){ .cmp { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+.mx { width:100%; border-collapse:collapse; font-size:var(--fs-xs); table-layout:fixed; }
+.mx th { text-align:center; color:var(--t3); font-size:var(--fs-2xs); text-transform:uppercase; letter-spacing:.05em; font-weight:700; padding:4px; border-bottom:1px solid var(--bd); overflow-wrap:anywhere; }
+.mx th:first-child { text-align:left; width:46%; }
+.mx td { padding:4px; border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent); text-align:center; vertical-align:top; }
+.mx td:first-child { text-align:left; overflow-wrap:anywhere; }
+.mx .dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--acc); }
+.mx tr.shared td:first-child { box-shadow:inset 3px 0 0 var(--inf); padding-left:7px; }
+.desk { display:none; }
+@media (min-width:760px){ .desk { display:block; } .phone { display:none; } }
+.verdict { border:1px solid var(--bd); border-radius:var(--r-md); padding:8px; background:var(--bg2); font-size:var(--fs-sm); }
+.verdict b { color:var(--acc); }
+
+/* развилки */
+.forks { display:flex; flex-direction:column; gap:10px; }
+.fork h3 { font-size:var(--fs-xs); color:var(--t1); text-transform:none; letter-spacing:0; }
+.fork .ctx { color:var(--t2); font-size:var(--fs-xs); margin-bottom:8px; }
+.ab { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.opt { border:2px solid var(--bd); border-radius:var(--r-lg); padding:8px; background:var(--bg2); cursor:pointer; text-align:left; min-width:0; display:flex; flex-direction:column; gap:6px; }
+.opt[aria-pressed="true"] { border-color:var(--acc); background:color-mix(in srgb,var(--acc) 12%,var(--bg2)); }
+.opt .ol { font-weight:800; font-size:var(--fs-sm); }
+.opt .cost { font-size:var(--fs-2xs); color:var(--t2); }
+.opt .rec { font-size:var(--fs-2xs); font-weight:800; color:var(--suc); }
+.mock { background:var(--bg0); border:1px solid var(--bd); border-radius:var(--r-md); padding:6px; font-size:var(--fs-2xs); color:var(--t2); min-height:64px; overflow:hidden; }
+.mock .bar { height:7px; border-radius:4px; background:var(--bg3); margin:3px 0; }
+.mock .bar.a { background:var(--acc); }
+.mock .mrow { display:flex; gap:4px; flex-wrap:wrap; align-items:center; }
+.mock .box { border:1px solid var(--bd); border-radius:4px; padding:1px 4px; background:var(--bg1); }
+.mock svg { width:100%; height:56px; display:block; }
+.choice { margin-top:10px; font-size:var(--fs-sm); background:var(--bg2); border:1px solid var(--bd); border-radius:var(--r-md); padding:8px 10px; overflow-wrap:anywhere; }
+.choice b { color:var(--acc); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="app">
+    <span class="brand">FORSETI</span>
+    <span class="crumbs">Продукт › <b>VP-канва</b></span>
+    <span class="tag">Прототип · кода нет</span>
+  </div>
+
+  <section class="card why" aria-labelledby="why-h">
+    <h1 id="why-h">VP-канва</h1>
+    <p><b>Что это.</b> Одна фича на одном экране: слева — что мы делаем (сценарии), справа — профиль клиента (работы, боли, выгоды). Видно, чем закрыта каждая ценность: только заявлена, закрыта сценарием или ещё и подтверждена метрикой.</p>
+    <p><b>Зачем.</b> В v1 канва была, в v2 её нет: там три отдельных списка, по которым на вопрос «что берём в спринт» не ответить. Блок «Сравнение сегментов» отвечает на вопрос, который был открыт в задаче FIT-04: какие ценности у ролей общие, а какие есть только у одной, и нет ли сценария, который пытается служить сразу двум разным ролям.</p>
+    <p class="src">Данные — живой снимок LORE 25.11.2026 (MCP, только чтение). Нажмите на сценарий или ценность — подсветятся её связи.</p>
+  </section>
+
+  <section class="card" aria-labelledby="pick-h">
+    <h2 id="pick-h">Фича</h2>
+    <div class="seg" id="feats" role="group" aria-label="Фича"></div>
+    <div class="lbl">Профиль клиента для роли</div>
+    <div class="seg" id="segs" role="group" aria-label="Роль"></div>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <div class="canvas" id="canvas">
+    <section class="fig vm" aria-labelledby="vm-h">
+      <header><h2 id="vm-h">Карта ценности</h2><small>что мы делаем · сценарии фичи</small></header>
+      <ul class="list" id="ucs"></ul>
+    </section>
+    <section class="fig cp" aria-labelledby="cp-h">
+      <header><h2 id="cp-h">Профиль клиента</h2><small id="cp-sub"></small></header>
+      <div class="cpgrid">
+        <div class="sector gains"><h3>Выгоды <span class="n" id="n-g"></span></h3><ul class="list" id="gains"></ul></div>
+        <div class="sector pains"><h3>Боли <span class="n" id="n-p"></span></h3><ul class="list" id="pains"></ul></div>
+        <div class="sector jobs"><h3>Работы <span class="n" id="n-j"></span></h3><ul class="list" id="jobs"></ul></div>
+      </div>
+    </section>
+  </div>
+  <div class="legend">
+    <span><i class="d"></i>только заявлено — сценария нет</span>
+    <span><i></i>закрыто сценарием</span>
+    <span class="chip suc">метрика</span><span>выгода ещё и измерена</span>
+    <span class="chip inf">общая</span><span>есть и у других ролей</span>
+    <span class="chip wrn">разные сегменты</span><span>сценарий служит ролям без общего</span>
+  </div>
+
+  <section class="card" style="margin-top:12px" aria-labelledby="cmp-h">
+    <h2 id="cmp-h">Сравнение сегментов</h2>
+    <p style="color:var(--t2);font-size:var(--fs-sm)">Состав, а не счётчик: какие ценности этой фичи общие для нескольких ролей, а какие — только у одной. Если ценности одной фичи почти не пересекаются, это повод разделить фичу.</p>
+    <div class="desk" id="matrix"></div>
+    <div class="phone cmp" id="groups"></div>
+    <div class="lbl">Сценарии: кому служат</div>
+    <div id="scen" class="list"></div>
+    <div class="lbl">По всем фичам снимка</div>
+    <div class="verdict" id="all"></div>
+  </section>
+
+  <section class="card" aria-labelledby="forks-h">
+    <h2 id="forks-h">Развилки для владельца</h2>
+    <div class="forks" id="forks"></div>
+    <div class="choice" id="choice"></div>
+  </section>
+</div>
+
+<script>
+const D = /*@@DATA@@*/{"snapshot":"2026-11-25","pains":[{"id":"PAIN-BRAGI-BLIND-PERFORMANCE","t":"Не видно, что из опубликованного сработало — отдача разрозненна по каналам","r":"normal","a":[],"bj":[],"cl":["FEAT-BRAGI-CONTENT-PIPELINE"],"by":["UC-BRAGI-ANALYTICS-INSIGHT"]},{"id":"PAIN-BRAGI-FORMAT-MISMATCH","t":"Один текст, разные лимиты площадок — подгонка вручную и заново на каждой","r":"normal","a":[],"bj":[],"cl":["FEAT-BRAGI-CONTENT-PIPELINE"],"by":["UC-BRAGI-EDIT-RENDER"]},{"id":"PAIN-LORE-BROKEN-LINKS","t":"Релизы уезжают с пустыми связями (prs_linked:0)","r":"normal","a":["ACT-LORE-AGENT-SESSION"],"bj":["JOB-KEEP-CORPUS-TRUE"],"cl":["FEAT-GITCYCLE"],"by":["UC-GIT-PR"]},{"id":"PAIN-LORE-FIT-BLIND","t":"По канве не видно, чем закрыта ценность и доказано ли это","r":"high","a":["ACT-LORE-PRODUCT-OWNER"],"bj":["JOB-DECIDE-SCOPE"],"cl":["FEAT-VP-FIT"],"by":["UC-VP-BALANCE","UC-VP-EVIDENCE"]},{"id":"PAIN-LORE-LOST-WHY","t":"Причина решения живёт в переписке и теряется вместе с ней","r":"high","a":["ACT-LORE-AGENT-SESSION"],"bj":["JOB-RECALL-WHY"],"cl":["FEAT-LORE-KNOW"],"by":["UC-KNOW-QUESTION","UC-KNOW-DECISION","UC-KNOW-ADR"]},{"id":"PAIN-LORE-MANUAL-HANDOFF","t":"PR и merge требуют ручного хендоффа — сессия не автономна","r":"high","a":["ACT-LORE-AGENT-SESSION"],"bj":["JOB-SHIP-CHANGE"],"cl":["FEAT-GITCYCLE"],"by":["UC-GIT-MERGE","UC-GIT-PR"]},{"id":"PAIN-LORE-PLAN-BLIND","t":"Состояние работ приходится собирать по кускам, и к моменту сборки оно устаревает","r":"normal","a":[],"bj":["JOB-DECIDE-SCOPE"],"cl":["FEAT-LORE-PLAN"],"by":["UC-MINILORE-WORK-ONE-POINT","UC-PLAN-BOARD"]},{"id":"PAIN-LORE-QUALITY-UNSEEN","t":"Требования к качеству записаны, но никто не знает, выполняются ли они сейчас","r":"normal","a":[],"bj":[],"cl":[],"by":[]},{"id":"PAIN-LORE-RAW-TOKEN","t":"Агенту нужен сырой git-токен, чтобы пройти границу","r":"high","a":["ACT-LORE-AGENT-SESSION"],"bj":["JOB-SHIP-CHANGE"],"cl":["FEAT-GITCYCLE"],"by":["UC-GIT-MERGE"]},{"id":"PAIN-LORE-SCOPE-MANUAL","t":"Периметр держится на внимательности: видно чужое или не видно своего","r":"normal","a":["ACT-LORE-ARCHITECT"],"bj":["JOB-SEE-OWN-SCOPE"],"cl":["FEAT-LORE-ACCESS"],"by":["UC-ACCESS-READ-SCOPE"]},{"id":"PAIN-LORE-SILENT-HALF","t":"Система отвечает неполно, не говоря об этом — «не найдено» неотличимо от «сломалось»","r":"high","a":["ACT-LORE-AGENT-SESSION"],"bj":["JOB-TRUST-OUTPUT"],"cl":["FEAT-LORE-HONEST"],"by":["UC-HONEST-SELFCHECK","UC-HONEST-DEPLOY-VERIFIED","UC-HONEST-READY","UC-HONEST-SCAN","UC-HONEST-INDEX-VERDICT"]},{"id":"PAIN-LORE-TOOLS-COST-CONTEXT","t":"Инструменты съедают контекст раньше, чем агент дойдёт до работы","r":"high","a":["ACT-LORE-ARCHITECT"],"bj":[],"cl":["FEAT-LORE-AGENT-TOOLS"],"by":["UC-TOOLS-LAZY-NAMES"]},{"id":"PAIN-MIDGARD-APP-BREAKS-WHOLE-HOUSE","t":"Обновилось приложение — и перестал управляться весь дом","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-SJON"],"by":["UC-MIDGARD-APP-GONE"]},{"id":"PAIN-MIDGARD-AUTOMATION-TOO-RIGID","t":"Сценарий не умеет «днём так, ночью иначе» — приходится плодить кнопки","r":"normal","a":[],"bj":[],"cl":["FEAT-MIDGARD-BUTLER"],"by":["UC-MIDGARD-COMPOSE-BY-TALK","UC-MIDGARD-STARTER-SET"]},{"id":"PAIN-MIDGARD-CLOUD-FAILS-AT-PEAK","t":"В жару все полезли в приложение — сервер лёг, и кондиционер не включить","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-NOCLOUD"],"by":["UC-MIDGARD-OFFLINE-PROOF"]},{"id":"PAIN-MIDGARD-CLOUD-SHUTDOWN","t":"Вендор выключил облако — купленное железо стало кирпичом","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-NOCLOUD"],"by":["UC-MIDGARD-VENDOR-EXIT"]},{"id":"PAIN-MIDGARD-CRITICAL-ON-BATTERIES","t":"Протечка и газ висят на батарейке, а датчики мрут за два года","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-HANDS"],"by":["UC-MIDGARD-REPLAN"]},{"id":"PAIN-MIDGARD-DEVICES-FALL-OFF","t":"Устройства через пару месяцев отваливаются от хаба, и никто не понимает почему","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-SELF-INSTALL"],"by":["UC-MIDGARD-SELF-INSTALL"]},{"id":"PAIN-MIDGARD-FAKE-LOCAL","t":"«Локальный режим» ненадёжен и всё равно уходит в облако — лучше бы честно сказали","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-NOCLOUD"],"by":["UC-MIDGARD-OFFLINE-PROOF"]},{"id":"PAIN-MIDGARD-HOME-CHANGES-WITH-LIFE","t":"Умный дом нельзя построить один раз — жизнь меняется, и половину приходится выкидывать","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-SELF-INSTALL","FEAT-MIDGARD-BUTLER"],"by":["UC-MIDGARD-REPLAN","UC-MIDGARD-COMPOSE-BY-TALK","UC-MIDGARD-MOVE-WITH-US"]},{"id":"PAIN-MIDGARD-HOUSEHOLD-REJECTION","t":"Систему поставил один, а живут в ней все — и остальные её невзлюбили","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-SJON","FEAT-MIDGARD-HANDS"],"by":["UC-MIDGARD-SWITCH-ALWAYS-WORKS","UC-MIDGARD-MEDIATE-COMFORT"]},{"id":"PAIN-MIDGARD-IMPOSED-BY-DEVELOPER","t":"Умный дом мне не продавали — он был в квартире, и теперь я плачу за него абонентскую плату","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-OWNERSHIP"],"by":["UC-MIDGARD-HANDOVER"]},{"id":"PAIN-MIDGARD-NO-PER-DEVICE-ENERGY","t":"Вижу общий расход, но не вижу, какой прибор его съедает и на сколько рублей","r":"normal","a":[],"bj":[],"cl":["FEAT-MIDGARD-VOG"],"by":["UC-MIDGARD-COST-BY-DEVICE"]},{"id":"PAIN-MIDGARD-NO-ROLES","t":"У всех в доме один доступ: ребёнок, гость и уборщица видят и могут всё","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-CIRCLE"],"by":["UC-MIDGARD-ROLES-ACCESS"]},{"id":"PAIN-MIDGARD-NOBODY-ELSE-CAN-MAINTAIN","t":"Кроме меня в этом доме никто не разберётся","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-OWNERSHIP"],"by":["UC-MIDGARD-HANDOVER"]},{"id":"PAIN-MIDGARD-OVERTHOUGHT-SCENARIOS","t":"Сценарий, который «всё учитывает», начинает мешать — и его удаляют","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-SCENARIOS"],"by":["UC-MIDGARD-LAST-SEEN"]},{"id":"PAIN-MIDGARD-PROACTIVE-WRONG","t":"Система, которая угадывает и ошибается, выключается навсегда","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-BUTLER"],"by":["UC-MIDGARD-LEARN-PREFERENCE"]},{"id":"PAIN-MIDGARD-RECOVERY-LEAKS-STRANGERS","t":"После сбоя система перепутала людей — и показала мне чужой дом","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-CIRCLE"],"by":["UC-MIDGARD-RECOVERY-IDENTITY"]},{"id":"PAIN-MIDGARD-REGION-LOCK","t":"Купленное устройство не работает с моим аккаунтом из-за региона сервера","r":"normal","a":[],"bj":[],"cl":["FEAT-MIDGARD-NOCLOUD"],"by":["UC-MIDGARD-VENDOR-EXIT"]},{"id":"PAIN-MIDGARD-SUBSCRIPTION-FATIGUE","t":"Плачу помесячно за то, что раньше входило в цену, а теперь ещё и за ИИ","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-SELF-INSTALL","FEAT-MIDGARD-NOCLOUD"],"by":["UC-MIDGARD-SELF-INSTALL"]},{"id":"PAIN-MIDGARD-SURVEILLANCE-FEAR","t":"Я смотрю, кто заходит в подъезд, а приложение смотрит за мной","r":"normal","a":[],"bj":[],"cl":["FEAT-MIDGARD-CIRCLE"],"by":["UC-MIDGARD-WHO-IS-HERE"]},{"id":"PAIN-MIDGARD-UPDATE-BRICKS-HUB","t":"Обновление уложило хаб, а восстановление из копии вернуло его туда же","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-OWNERSHIP"],"by":[]},{"id":"PAIN-MIDGARD-VALUE-DOUBT","t":"Половина сценариев — блажь: рубильник проще переключить рукой","r":"high","a":[],"bj":[],"cl":["FEAT-MIDGARD-HANDS","FEAT-MIDGARD-SCENARIOS"],"by":["UC-MIDGARD-SWITCH-ALWAYS-WORKS"]},{"id":"PAIN-MINILORE-CHAINED-TO-DESK","t":"Сессия ждёт, пока владелица не окажется за компьютером: работа встаёт на часы","r":"high","a":[],"bj":[],"cl":[],"by":["UC-MINILORE-MANAGE-ON-THE-GO"]},{"id":"PAIN-MINILORE-FAMILY-BLIND","t":"Передать родным файл или вопрос — только звонком вне контекста, с пересказом","r":"normal","a":[],"bj":[],"cl":[],"by":["UC-MINILORE-FAMILY-SPACE"]},{"id":"PAIN-MINILORE-HOT-SPOT","t":"Задачи кучкуются на одной сессии, остальные простаивают: выбор адресата — лотерея","r":"normal","a":[],"bj":[],"cl":[],"by":["UC-MINILORE-BALANCING"]},{"id":"PAIN-MINILORE-OWN-EYES-ONLY","t":"Сессия видит работу только своими глазами: автор ослеп к собственным ошибкам","r":"normal","a":[],"bj":[],"cl":[],"by":["UC-MINILORE-FRESH-EYES"]},{"id":"PAIN-MINILORE-PHONE-SILENCE","t":"Видишь вопрос сессии с телефона — а ответить можешь, только сев за компьютер","r":"high","a":[],"bj":[],"cl":[],"by":["UC-MINILORE-PHONE-TO-SESSION"]}],"gains":[{"id":"GAIN-BRAGI-INSIGHT-AT-A-GLANCE","t":"Что сработало — видно на одном экране, а не в головах","r":"expected","a":[],"sj":[],"cl":["FEAT-BRAGI-CONTENT-PIPELINE"],"by":["UC-BRAGI-ANALYTICS-INSIGHT"],"m":1},{"id":"GAIN-BRAGI-ONE-EDIT-MANY-CHANNELS","t":"Одна правка текста уходит во все площадки со своим рендером","r":"essential","a":[],"sj":[],"cl":["FEAT-BRAGI-CONTENT-PIPELINE"],"by":["UC-BRAGI-EDIT-RENDER"],"m":1},{"id":"GAIN-LORE-FIT-EVIDENCE","t":"Решение по фиче принимается по канве, без обхода реестров","r":"essential","a":["ACT-LORE-PRODUCT-OWNER"],"sj":["JOB-DECIDE-SCOPE"],"cl":["FEAT-VP-FIT"],"by":["UC-VP-EVIDENCE"],"m":1},{"id":"GAIN-LORE-HONEST-VERDICT","t":"Система сама называет, какой части своего ответа нельзя верить","r":"essential","a":["ACT-LORE-AGENT-SESSION"],"sj":["JOB-TRUST-OUTPUT"],"cl":["FEAT-LORE-HONEST"],"by":["UC-HONEST-DEPLOY-VERIFIED","UC-HONEST-SCAN","UC-HONEST-SELFCHECK","UC-HONEST-READY"],"m":1},{"id":"GAIN-LORE-LINKED-RELEASES","t":"Каждый релиз связан с PR и спринтом автоматически","r":"expected","a":["ACT-LORE-AGENT-SESSION"],"sj":["JOB-KEEP-CORPUS-TRUE"],"cl":["FEAT-GITCYCLE"],"by":["UC-GIT-MERGE"],"m":1},{"id":"GAIN-LORE-PLAN-ONE-SCREEN","t":"Состояние работ читается с одного экрана и не требует сборки по кускам","r":"expected","a":[],"sj":[],"cl":["FEAT-LORE-PLAN"],"by":["UC-PLAN-BOARD"],"m":1},{"id":"GAIN-LORE-SAFE-MERGE","t":"Merge мимо красного CI невозможен","r":"essential","a":["ACT-LORE-AGENT-SESSION"],"sj":["JOB-SHIP-CHANGE"],"cl":["FEAT-GITCYCLE"],"by":["UC-GIT-MERGE"],"m":1},{"id":"GAIN-LORE-SCOPE-AUTO","t":"Периметр применяется сам и одинаково к человеку и к его агенту","r":"expected","a":[],"sj":["JOB-SEE-OWN-SCOPE"],"cl":["FEAT-LORE-ACCESS"],"by":["UC-ACCESS-READ-SCOPE"],"m":1},{"id":"GAIN-LORE-TOOLS-LAZY","t":"Полный инструментарий доступен, а контекст тратится только на использованное","r":"essential","a":[],"sj":[],"cl":["FEAT-LORE-AGENT-TOOLS"],"by":["UC-TOOLS-LAZY-NAMES"],"m":1},{"id":"GAIN-LORE-WHY-TRACEABLE","t":"Причина решения находится за один запрос и не зависит от того, кто её помнит","r":"essential","a":["ACT-LORE-AGENT-SESSION"],"sj":["JOB-RECALL-WHY"],"cl":["FEAT-LORE-KNOW"],"by":["UC-KNOW-FIND","UC-KNOW-ADR"],"m":1},{"id":"GAIN-MIDGARD-ACCEPTED-BY-HOUSEHOLD","t":"Домом пользуются все, а не только тот, кто его настроил","r":"essential","a":[],"sj":[],"cl":["FEAT-MIDGARD-SJON"],"by":["UC-MIDGARD-ROLES-ACCESS","UC-MIDGARD-MEDIATE-COMFORT"],"m":1},{"id":"GAIN-MIDGARD-AI-WITHOUT-SUBSCRIPTION","t":"ИИ в доме без ежемесячной платы и без счётчика запросов","r":"desired","a":[],"sj":[],"cl":["FEAT-MIDGARD-NOCLOUD"],"by":["UC-MIDGARD-SELF-INSTALL"],"m":1},{"id":"GAIN-MIDGARD-COST-BY-DEVICE","t":"Вижу в рублях, что тратит каждый прибор, и что с этим делать","r":"expected","a":[],"sj":[],"cl":["FEAT-MIDGARD-VOG"],"by":["UC-MIDGARD-COST-BY-DEVICE"],"m":1},{"id":"GAIN-MIDGARD-EXPLAINS-ITSELF","t":"Дом объясняет себя словами любому в семье, а не только тому, кто его собрал","r":"desired","a":[],"sj":[],"cl":["FEAT-MIDGARD-OWNERSHIP","FEAT-MIDGARD-BUTLER"],"by":["UC-MIDGARD-COMPOSE-BY-TALK","UC-MIDGARD-HANDOVER"],"m":1},{"id":"GAIN-MIDGARD-INVISIBLE-EVERYDAY","t":"Сценарий, о котором забыл, но которым пользуешься каждый день","r":"essential","a":[],"sj":[],"cl":["FEAT-MIDGARD-SCENARIOS"],"by":["UC-MIDGARD-STARTER-SET"],"m":1},{"id":"GAIN-MIDGARD-ONE-NODE-PER-ROOM","t":"Один мультисенсор на комнату вместо россыпи датчиков","r":"desired","a":[],"sj":[],"cl":["FEAT-MIDGARD-SELF-INSTALL"],"by":["UC-MIDGARD-SELF-INSTALL"],"m":1},{"id":"GAIN-MIDGARD-PRIVACY-NOT-STORED","t":"Про приватные комнаты не хранится ничего — нечего утечь и нечего показать","r":"unexpected","a":[],"sj":[],"cl":["FEAT-MIDGARD-CIRCLE"],"by":["UC-MIDGARD-WHO-IS-HERE"],"m":1},{"id":"GAIN-MIDGARD-SUGGESTS-AUTOMATION","t":"Дом сам замечает повторяющееся и предлагает это автоматизировать","r":"desired","a":[],"sj":[],"cl":["FEAT-MIDGARD-BUTLER"],"by":["UC-MIDGARD-LEARN-PREFERENCE"],"m":1},{"id":"GAIN-MIDGARD-SURVIVES-VENDOR","t":"Дом продолжит работать, даже если производителя не станет","r":"essential","a":[],"sj":[],"cl":["FEAT-MIDGARD-NOCLOUD"],"by":["UC-MIDGARD-VENDOR-EXIT"],"m":1},{"id":"GAIN-MINILORE-ANSWER-ANYWHERE","t":"Диалог с любой сессией любого harness продолжается с телефона, как в мессенджере","r":"essential","a":[],"sj":[],"cl":[],"by":["UC-MINILORE-PHONE-TO-SESSION"],"m":1},{"id":"GAIN-MINILORE-EVEN-LOAD","t":"Нагрузка распределена наблюдаемо: ни одна сессия не тонет и не скучает","r":"expected","a":[],"sj":[],"cl":[],"by":["UC-MINILORE-BALANCING"],"m":1},{"id":"GAIN-MINILORE-FAMILY-IN-LOOP","t":"Семья в контексте без лишнего доступа: адресованное видно, остальное — нет","r":"desired","a":[],"sj":[],"cl":[],"by":["UC-MINILORE-FAMILY-SPACE"],"m":1},{"id":"GAIN-MINILORE-FRESH-IN-MINUTES","t":"Свежий взгляд за минуты: иная сессия ловит то, к чему автор ослеп","r":"desired","a":[],"sj":[],"cl":[],"by":["UC-MINILORE-FRESH-EYES"],"m":1},{"id":"GAIN-MINILORE-TIME-ECONOMY","t":"Экономия времени: состояние всех работ и координация в одной точке","r":"desired","a":[],"sj":[],"cl":[],"by":["UC-MINILORE-WORK-ONE-POINT"],"m":1},{"id":"GAIN-MINILORE-ZERO-TRIP","t":"Ноль поездок ради одного действия: сессии управляются из любой точки","r":"essential","a":[],"sj":[],"cl":[],"by":["UC-MINILORE-MANAGE-ON-THE-GO"],"m":1}],"jobs":[{"id":"JOB-AGENT-WORK-IN-GRAPH","t":"Вести работу в графе проекта, не выходя из сессии","r":"high","k":"functional","a":["ACT-LORE-DEV","ACT-LORE-AGENT-SESSION","ACT-LORE-ARCHITECT"],"cl":["FEAT-LORE-AGENT-TOOLS"],"by":["UC-TOOLS-LAZY-NAMES"]},{"id":"JOB-ANSWER-FROM-PHONE","t":"Отвечать сессиям в момент вопроса, не откладывая до рабочего места","r":"high","k":"functional","a":[],"cl":[],"by":["UC-MINILORE-PHONE-TO-SESSION"]},{"id":"JOB-BRAGI-LEARN-WHAT-WORKED","t":"Понять, какая публикация принесла эффект","r":"normal","k":"functional","a":[],"cl":["FEAT-BRAGI-CONTENT-PIPELINE"],"by":["UC-BRAGI-ANALYTICS-INSIGHT"]},{"id":"JOB-BRAGI-PUBLISH-CONTENT","t":"Довести материал от черновика до опубликованной страницы под площадку","r":"high","k":"functional","a":[],"cl":["FEAT-BRAGI-CONTENT-PIPELINE"],"by":["UC-BRAGI-ASSETS-TAXONOMY","UC-BRAGI-EDIT-RENDER"]},{"id":"JOB-DECIDE-SCOPE","t":"Решить, что берём в спринт, а что ждёт","r":"high","k":"functional","a":["ACT-LORE-PRODUCT-OWNER"],"cl":["FEAT-VP-FIT","FEAT-LORE-PLAN"],"by":["UC-MINILORE-WORK-ONE-POINT","UC-VP-BALANCE","UC-VP-EVIDENCE","UC-PLAN-BOARD"]},{"id":"JOB-GET-FRESH-EYES","t":"Получить независимую проверку до того, как ошибка уедет дальше","r":"normal","k":"functional","a":[],"cl":[],"by":["UC-MINILORE-FRESH-EYES"]},{"id":"JOB-KEEP-CORPUS-TRUE","t":"Держать корпус в согласии с тем, что реально сделано","r":"high","k":"functional","a":["ACT-LORE-PM","ACT-LORE-AGENT-SESSION"],"cl":["FEAT-GITCYCLE"],"by":["UC-GIT-PR"]},{"id":"JOB-KEEP-FAMILY-IN-LOOP","t":"Держать семью в курсе, не открывая всю кухню","r":"normal","k":"social","a":[],"cl":[],"by":["UC-MINILORE-FAMILY-SPACE"]},{"id":"JOB-RECALL-WHY","t":"Вспомнить, почему решение принято именно так","r":"high","k":"functional","a":["ACT-LORE-ARCHITECT","ACT-LORE-DEV","ACT-LORE-AGENT-SESSION"],"cl":["FEAT-LORE-KNOW"],"by":["UC-KNOW-FIND","UC-KNOW-ADR"]},{"id":"JOB-RUN-WORK-ANYWHERE","t":"Вести работу агентов, находясь вне рабочего места","r":"high","k":"functional","a":[],"cl":[],"by":["UC-MINILORE-MANAGE-ON-THE-GO"]},{"id":"JOB-SEE-OWN-SCOPE","t":"Работать со своим проектом, не задевая чужой","r":"normal","k":"supporting","a":["ACT-LORE-AGENT-SESSION","ACT-LORE-DEV"],"cl":["FEAT-LORE-ACCESS"],"by":["UC-ACCESS-READ-SCOPE"]},{"id":"JOB-SHIP-CHANGE","t":"Провести изменение от ветки до релиза, не покидая сессии","r":"high","k":"functional","a":["ACT-LORE-DEV","ACT-LORE-AGENT-SESSION"],"cl":["FEAT-GITCYCLE"],"by":["UC-GIT-MERGE"]},{"id":"JOB-SPREAD-WORK","t":"Раскладывать работу по сессиям без ручного диспетчирования","r":"normal","k":"functional","a":[],"cl":[],"by":["UC-MINILORE-BALANCING"]},{"id":"JOB-TRUST-OUTPUT","t":"Понять, можно ли верить тому, что показала система","r":"high","k":"functional","a":["ACT-LORE-ANALYST","ACT-LORE-AGENT-SESSION","ACT-LORE-PRODUCT-OWNER"],"cl":["FEAT-LORE-HONEST"],"by":["UC-HONEST-DEPLOY-VERIFIED","UC-HONEST-SELFCHECK","UC-HONEST-SCAN"]}],"actors":[{"id":"ACT-LORE-AGENT-SESSION","n":"Агент сессии","k":"automation"},{"id":"ACT-LORE-PRODUCT-OWNER","n":"Владелец продукта","k":"human-role"},{"id":"ACT-LORE-DEV","n":"Разработчик","k":"human-role"},{"id":"ACT-LORE-ARCHITECT","n":"Архитектор","k":"human-role"},{"id":"ACT-LORE-PM","n":"Менеджер продукта","k":"human-role"},{"id":"ACT-LORE-ANALYST","n":"Бизнес-аналитик","k":"human-role"},{"id":"ACT-LORE-ADMIN","n":"Администратор LORE","k":"human-role"},{"id":"ACT-LORE-LORE-ADMIN","n":"Администратор LORE","k":"human-role"},{"id":"ACT-LORE-DEVOPS","n":"DevOps","k":"human-role"},{"id":"ACT-LORE-MARKETER","n":"Маркетолог","k":"human-role"},{"id":"ACT-LORE-ORCHESTRATOR","n":"Оркестратор контейнеров","k":"system"},{"id":"ACT-MIGGEN-ARCHITECT","n":"Архитектор модели хранилища","k":"human-role"},{"id":"ACT-MINILORE-MACHINE-DAEMON","n":"Демон машины","k":"automation"},{"id":"ACT-MINILORE-OWNER","n":"Владелица парка машин","k":"human-role"},{"id":"ACT-MINILORE-PEER-PERSON","n":"Другой человек со своей машиной","k":"human-role"}],"features":[{"id":"FEAT-GITCYCLE","t":"Полный git-цикл сессии без токена у агента","st":"active","p":["PAIN-LORE-RAW-TOKEN","PAIN-LORE-MANUAL-HANDOFF","PAIN-LORE-BROKEN-LINKS"],"g":["GAIN-LORE-SAFE-MERGE","GAIN-LORE-LINKED-RELEASES"],"j":["JOB-SHIP-CHANGE","JOB-KEEP-CORPUS-TRUE"],"ucs":[{"id":"UC-GIT-MERGE","t":"Merge по зелёному CI одним вызовом","st":"proposed","p":["PAIN-LORE-MANUAL-HANDOFF","PAIN-LORE-RAW-TOKEN"],"g":["GAIN-LORE-LINKED-RELEASES","GAIN-LORE-SAFE-MERGE"],"j":["JOB-SHIP-CHANGE"]},{"id":"UC-GIT-PR","t":"Агент открывает PR с телом из релиза","st":"proposed","p":["PAIN-LORE-BROKEN-LINKS","PAIN-LORE-MANUAL-HANDOFF"],"g":[],"j":["JOB-KEEP-CORPUS-TRUE"]},{"id":"UC-GIT-WATCH","t":"Слежение за CI-статусом ветки в словаре §10","st":"proposed","p":[],"g":[],"j":[]}]},{"id":"FEAT-LORE-HONEST","t":"Отказ не маскируется под ответ: система называет, чему в ней нельзя верить","st":"in_rework","p":["PAIN-LORE-SILENT-HALF"],"g":["GAIN-LORE-HONEST-VERDICT"],"j":["JOB-TRUST-OUTPUT"],"ucs":[{"id":"UC-HONEST-DEPLOY-VERIFIED","t":"Пайплайн доказывает, что деплой и миграция схемы реально прошли, а не просто вернули код 0","st":"shipped","p":["PAIN-LORE-SILENT-HALF"],"g":["GAIN-LORE-HONEST-VERDICT"],"j":["JOB-TRUST-OUTPUT"]},{"id":"UC-HONEST-INDEX-VERDICT","t":"Оператор узнаёт, какие индексы непригодны, до того как это заметит пользователь","st":"proposed","p":["PAIN-LORE-SILENT-HALF"],"g":[],"j":[]},{"id":"UC-HONEST-READY","t":"Оркестратор снимает экземпляр из ротации, когда база не отвечает именно нам","st":"shipped","p":["PAIN-LORE-SILENT-HALF"],"g":["GAIN-LORE-HONEST-VERDICT"],"j":[]},{"id":"UC-HONEST-SCAN","t":"Поиск отвечает сканом и говорит об этом, когда индексу верить нельзя","st":"shipped","p":["PAIN-LORE-SILENT-HALF"],"g":["GAIN-LORE-HONEST-VERDICT"],"j":["JOB-TRUST-OUTPUT"]},{"id":"UC-HONEST-SELFCHECK","t":"Владелец нажимает «Самопроверка» и видит вердикт по всему корпусу одним экраном","st":"in_rework","p":["PAIN-LORE-SILENT-HALF"],"g":["GAIN-LORE-HONEST-VERDICT"],"j":["JOB-TRUST-OUTPUT"]}]},{"id":"FEAT-VP-FIT","t":"Владелец продукта видит по канве, чем закрыты ценности клиента","st":"shipped","p":["PAIN-LORE-FIT-BLIND"],"g":["GAIN-LORE-FIT-EVIDENCE"],"j":["JOB-DECIDE-SCOPE"],"ucs":[{"id":"UC-VP-BALANCE","t":"Владелец продукта замечает перекос «лечим, но не радуем» без пересчёта карточек","st":"shipped","p":["PAIN-LORE-FIT-BLIND"],"g":[],"j":["JOB-DECIDE-SCOPE"]},{"id":"UC-VP-EVIDENCE","t":"Владелец продукта отличает заявленное от подтверждённого замером","st":"shipped","p":["PAIN-LORE-FIT-BLIND"],"g":["GAIN-LORE-FIT-EVIDENCE"],"j":["JOB-DECIDE-SCOPE"]},{"id":"UC-VP-PROFILE","t":"Владелец продукта видит, какая работа клиента страдает от скольких болей","st":"shipped","p":[],"g":[],"j":[]},{"id":"UC-VP-RANK","t":"Владелец продукта видит, какие боли острые, и снято ли существенное","st":"shipped","p":[],"g":[],"j":[]},{"id":"UC-VP-SEGMENTS","t":"Владелец продукта видит, скольким сегментам служит фича и как расходятся их профили","st":"shipped","p":[],"g":[],"j":[]}]}]}/*@@END@@*/;
+const RANK = {
+  high:['острая',0], normal:['обычная',1], low:['слабая',3],
+  essential:['существенная',0], expected:['ожидаемая',1], desired:['желаемая',2], unexpected:['неожиданная',3],
+};
+const JRANK = { high:['важная',0], normal:['обычная',1] };
+const ST = { shipped:['сделан','suc'], proposed:['предложен',''], in_rework:['в доработке','wrn'], active:['в работе','acc'] };
+const VAL = new Map();
+D.pains.forEach(x => VAL.set(x.id, { ...x, kind:'pain' }));
+D.gains.forEach(x => VAL.set(x.id, { ...x, kind:'gain' }));
+D.jobs.forEach(x => VAL.set(x.id, { ...x, kind:'job' }));
+const ACT = new Map(D.actors.map(a => [a.id, a.n]));
+const nm = id => ACT.get(id) || id;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const actorOf = id => (VAL.get(id) || {}).a || [];
+
+/* та же логика, что в v1 (LoreVpCanvas.tsx, PR #1404) */
+function sharedValues(ids, actorId) {
+  const out = new Map();
+  if (!actorId) return out;
+  for (const id of ids) { const own = actorOf(id); if (!own.includes(actorId)) continue; const o = own.filter(a => a !== actorId); if (o.length) out.set(id, o); }
+  return out;
+}
+function crossSegmentScenarios(ucs, canvasIds) {
+  const on = new Set(canvasIds), out = new Map();
+  for (const uc of ucs) {
+    const sets = [...uc.p, ...uc.g, ...uc.j].filter(id => on.has(id)).map(actorOf).filter(s => s.length);
+    if (sets.length < 2) continue;
+    const common = sets.reduce((acc, s) => acc.filter(a => s.includes(a)));
+    if (common.length) continue;
+    const all = []; sets.forEach(s => s.forEach(a => { if (!all.includes(a)) all.push(a); }));
+    out.set(uc.id, all);
+  }
+  return out;
+}
+
+const q = new URLSearchParams(location.search);
+let fId = q.get('f') || D.features[0].id, seg = q.get('seg') || '', focus = '';
+function setUrl() { const u = new URL(location.href); u.searchParams.set('f', fId); seg ? u.searchParams.set('seg', seg) : u.searchParams.delete('seg'); history.replaceState(null, '', u); }
+
+function render() {
+  const F = D.features.find(f => f.id === fId) || D.features[0];
+  const all = [...F.p, ...F.g, ...F.j];
+  const segs = [...new Set(all.flatMap(actorOf))];
+  if (seg && !segs.includes(seg)) seg = '';
+  const by = ids => seg ? ids.filter(id => actorOf(id).includes(seg)) : ids;
+  const rk = id => { const v = VAL.get(id); return ((v.kind === 'job' ? JRANK : RANK)[v.r] || ['—', 9])[1]; };
+  const sort = ids => [...ids].sort((a, b) => rk(a) - rk(b));
+  const P = sort(by(F.p)), G = sort(by(F.g)), J = sort(by(F.j));
+  const doneBy = new Map();
+  F.ucs.forEach(u => [...u.p, ...u.g, ...u.j].forEach(id => { if (!doneBy.has(id)) doneBy.set(id, []); doneBy.get(id).push(u.id); }));
+  const level = id => !doneBy.has(id) ? 'claimed' : (VAL.get(id).kind === 'gain' && VAL.get(id).m ? 'proven' : 'done');
+  const shared = sharedValues([...P, ...G, ...J], seg);
+  const cross = crossSegmentScenarios(F.ucs, all);
+
+  document.getElementById('feats').innerHTML = D.features.map(f =>
+    `<button aria-pressed="${f.id === F.id}" data-f="${f.id}">${esc(f.t)}<span class="mono">${f.id}</span></button>`).join('');
+  document.getElementById('segs').innerHTML =
+    `<button aria-pressed="${!seg}" data-s="">Все роли вместе</button>` +
+    segs.map(a => `<button aria-pressed="${seg === a}" data-s="${a}">${esc(nm(a))}<span class="mono">${all.filter(id => actorOf(id).includes(a)).length}</span></button>`).join('') +
+    (all.some(id => !actorOf(id).length) ? `<button disabled style="opacity:.6;cursor:default">роль не задана<span class="mono">${all.filter(id => !actorOf(id).length).length}</span></button>` : '');
+
+  const vals = [...P, ...G, ...J];
+  const sharp = P.filter(id => rk(id) === 0);
+  const relievers = F.ucs.filter(u => u.p.some(id => P.includes(id))).length;
+  const creators = F.ucs.filter(u => u.g.some(id => G.includes(id))).length;
+  document.getElementById('kpis').innerHTML = [
+    [`${vals.filter(id => doneBy.has(id)).length}/${vals.length}`, 'закрыто сценарием', false],
+    [`${G.filter(id => level(id) === 'proven').length}/${G.length}`, 'выгод подтверждено метрикой', false],
+    [`${sharp.filter(id => doneBy.has(id)).length}/${sharp.length}`, 'острых болей снято', false],
+    [`${relievers} : ${creators}`, 'снимаем боль : создаём выгоду', creators === 0],
+    [`${segs.length}`, 'ролей у ценностей фичи', segs.length > 1],
+  ].map(([b, s, w]) => `<div class="kpi${w ? ' warn' : ''}"><b>${b}</b><span>${s}</span></div>`).join('');
+
+  document.getElementById('cp-sub').textContent = seg ? `для роли «${nm(seg)}»` : 'все роли вместе';
+  const card = id => {
+    const v = VAL.get(id), lv = level(id), r = (v.kind === 'job' ? JRANK : RANK)[v.r];
+    const sh = shared.get(id);
+    return `<li class="it ${v.kind} ${lv}${focus && (focus === id || (doneBy.get(id) || []).includes(focus)) ? ' hl' : ''}" data-id="${id}" tabindex="0">
+      <div class="t">${esc(v.t)}</div><div class="id">${id}</div>
+      <div class="row">
+        ${r ? `<span class="chip${r[1] === 0 ? ' acc' : ''}">${r[0]}</span>` : '<span class="chip">ранг не задан</span>'}
+        ${lv === 'claimed' ? '<span class="chip">только заявлено</span>' : `<span class="chip">закрывает: ${(doneBy.get(id)).join(', ')}</span>`}
+        ${lv === 'proven' ? '<span class="chip suc">метрика</span>' : ''}
+        ${sh ? `<span class="chip inf" title="Есть и у других ролей">общая · ${esc(sh.map(nm).join(', '))}</span>` : ''}
+        ${!seg ? (actorOf(id).length ? actorOf(id).map(a => `<span class="chip">${esc(nm(a))}</span>`).join('') : '<span class="chip wrn">роль не задана</span>') : ''}
+      </div></li>`;
+  };
+  const fill = (el, ids, word) => { document.getElementById(el).innerHTML = ids.length ? ids.map(card).join('') : `<li class="empty">${word}</li>`; };
+  fill('pains', P, seg ? 'У этой роли болей в фиче нет' : 'Болей не заведено');
+  fill('gains', G, seg ? 'У этой роли выгод в фиче нет' : 'Выгод не заведено');
+  fill('jobs', J, seg ? 'У этой роли работ в фиче нет' : 'Работ не заведено');
+  document.getElementById('n-p').textContent = P.length; document.getElementById('n-g').textContent = G.length; document.getElementById('n-j').textContent = J.length;
+
+  document.getElementById('ucs').innerHTML = F.ucs.map(u => {
+    const st = ST[u.st] || [u.st, ''];
+    const c = (ids, w) => ids.filter(id => vals.includes(id)).length ? `<span class="chip">${w} ${ids.filter(id => vals.includes(id)).length}</span>` : '';
+    const hit = focus && (focus === u.id || [...u.p, ...u.g, ...u.j].includes(focus));
+    const none = !u.p.length && !u.g.length && !u.j.length;
+    return `<li class="it uc${hit ? ' hl' : ''}" data-id="${u.id}" tabindex="0"><div class="t">${esc(u.t)}</div><div class="id">${u.id}</div>
+      <div class="row"><span class="chip ${st[1]}">${st[0]}</span>${c(u.p, 'снимает боль')}${c(u.g, 'создаёт выгоду')}${c(u.j, 'делает работу')}
+      ${none ? '<span class="chip wrn">ни с чем не связан</span>' : ''}
+      ${cross.has(u.id) ? `<span class="chip wrn">разные сегменты · ${esc(cross.get(u.id).map(nm).join(', '))}</span>` : ''}</div></li>`;
+  }).join('');
+  document.getElementById('canvas').classList.toggle('focus', !!focus);
+
+  /* сравнение сегментов — по всей фиче, без фильтра роли */
+  const groups = { shared: all.filter(id => actorOf(id).length > 1), one: all.filter(id => actorOf(id).length === 1), none: all.filter(id => !actorOf(id).length) };
+  const kindW = id => ({ pain:'боль', gain:'выгода', job:'работа' })[VAL.get(id).kind];
+  document.getElementById('matrix').innerHTML = segs.length ? `<table class="mx"><thead><tr><th>Ценность</th>${segs.map(a => `<th>${esc(nm(a))}</th>`).join('')}</tr></thead><tbody>` +
+    [...groups.shared, ...groups.one, ...groups.none].map(id => `<tr class="${actorOf(id).length > 1 ? 'shared' : ''}"><td><span class="chip">${kindW(id)}</span> ${esc(VAL.get(id).t)}</td>${segs.map(a => `<td>${actorOf(id).includes(a) ? '<span class="dot" aria-label="есть"></span>' : ''}</td>`).join('')}</tr>`).join('') + '</tbody></table>'
+    : '<div class="empty">У ценностей этой фичи роли не заданы — сравнивать нечего. Это не «пусто», а пробел в данных: роль проставляется в паспорте ценности.</div>';
+  const grp = (title, ids, note) => `<div><h3>${title} <span class="n">${ids.length}</span></h3>${ids.length ? `<ul class="list">${ids.map(id => `<li class="it ${VAL.get(id).kind}"><div class="t">${esc(VAL.get(id).t)}</div><div class="row">${actorOf(id).map(a => `<span class="chip">${esc(nm(a))}</span>`).join('') || '<span class="chip wrn">роль не задана</span>'}</div></li>`).join('')}</ul>` : `<div class="empty">${note}</div>`}</div>`;
+  document.getElementById('groups').innerHTML = grp('Общие для нескольких ролей', groups.shared, 'нет') + grp('Только у одной роли', groups.one, 'нет') + grp('Роль не задана', groups.none, 'нет — у всех ценностей роль есть');
+  document.getElementById('scen').innerHTML = F.ucs.map(u => {
+    const sets = [...u.p, ...u.g, ...u.j].map(actorOf).filter(s => s.length);
+    let txt, cls = '';
+    if (cross.has(u.id)) { txt = `<b>разные сегменты:</b> ${esc(cross.get(u.id).map(nm).join(', '))} — сценарий либо слишком общий, либо на самом деле два`; cls = 'wrn'; }
+    else if (!sets.length) { txt = 'не определить: сценарий не закрывает ни одной ценности с ролью'; }
+    else { const common = sets.reduce((acc, s) => acc.filter(a => s.includes(a))); txt = `служит одной роли целиком: ${esc(common.map(nm).join(', '))}`; cls = 'suc'; }
+    return `<div class="verdict"><span class="mono" style="color:var(--t3)">${u.id}</span> · <span class="${cls ? 'chip ' + cls : ''}">${cls === 'wrn' ? 'делить?' : cls === 'suc' ? 'ок' : 'нет данных'}</span> ${txt}</div>`;
+  }).join('');
+  const tot = D.features.map(f => ({ f, c: crossSegmentScenarios(f.ucs, [...f.p, ...f.g, ...f.j]).size, sh: [...f.p, ...f.g, ...f.j].filter(id => actorOf(id).length > 1).length }));
+  document.getElementById('all').innerHTML = `Сценариев «на разные сегменты» во всех ${tot.length} фичах снимка: <b>${tot.reduce((s, x) => s + x.c, 0)}</b>. Общих ценностей: ${tot.map(x => `${x.f.id} — ${x.sh}`).join(' · ')}. ` +
+    `Честно: на живых данных пересечение уже есть (работы JOB-SHIP-CHANGE, JOB-KEEP-CORPUS-TRUE, JOB-TRUST-OUTPUT разделены между ролями), а сценариев, которые стоит делить, пока нет — у каждого находится роль, которой он служит целиком.`;
+  setUrl();
+}
+
+document.addEventListener('click', e => {
+  const f = e.target.closest('[data-f]'); if (f) { fId = f.dataset.f; focus = ''; render(); return; }
+  const s = e.target.closest('[data-s]'); if (s) { seg = s.dataset.s; focus = ''; render(); return; }
+  const it = e.target.closest('#canvas [data-id]'); if (it) { focus = focus === it.dataset.id ? '' : it.dataset.id; render(); }
+});
+
+/* развилки */
+const FORKS = [
+  { id:1, q:'Где живёт канва в v2?', ctx:'В v1 канва была отдельным разделом с выбором фичи. В v2 у фичи уже есть паспорт с вкладками.',
+    a:{ l:'Вкладка «Канва» в паспорте фичи', c:'Ноль новых пунктов меню; канва всегда про одну фичу — как и есть по смыслу. Сравнить две фичи рядом нельзя.', m:'<div class="mrow"><span class="box">Обзор</span><span class="box" style="border-color:var(--acc);color:var(--acc)">Канва</span><span class="box">Боли</span></div><div class="bar a"></div><div class="bar"></div><div class="bar"></div>' },
+    b:{ l:'Раздел «VP-канва» в группе «Продукт»', c:'Как в v1: пункт меню + выбор фичи сверху. Ещё один пункт в меню, а паспорт фичи без канвы.', m:'<div class="mrow"><span class="box">Фичи</span><span class="box" style="border-color:var(--acc);color:var(--acc)">VP-канва</span><span class="box">Роли</span></div><div class="mrow" style="margin-top:4px"><span class="box">FEAT-…▾</span></div><div class="bar a"></div><div class="bar"></div>' },
+    rec:'a' },
+  { id:2, q:'Как рисовать канву?', ctx:'v1 рисовала геометрию Остервальдера: квадрат и круг, связи линиями (React Flow). На телефоне 360 такая фигура не читается.',
+    a:{ l:'Списочная канва везде (как в прототипе)', c:'Одна раскладка на всех ширинах, связи — подсветкой по нажатию. Нет «узнаваемой картинки» Остервальдера.', m:'<div class="mrow"><div style="flex:1"><div class="bar a"></div><div class="bar"></div></div><div style="flex:1.4"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div></div>' },
+    b:{ l:'Квадрат + круг на компьютере, списки на телефоне', c:'Узнаваемая фигура и линии связей на 1280. Две раскладки — две реализации и вдвое больше проверок; перенос React Flow из v1 — примерно +2 дня.', m:'<svg viewBox="0 0 120 56" aria-hidden="true"><rect x="6" y="8" width="40" height="40" fill="none" stroke="var(--acc)"/><circle cx="92" cy="28" r="20" fill="none" stroke="var(--acc)"/><line x1="46" y1="20" x2="72" y2="20" stroke="var(--bdh)"/><line x1="46" y1="36" x2="72" y2="34" stroke="var(--bdh)"/></svg>' },
+    rec:'a' },
+  { id:3, q:'Как показывать сравнение сегментов (FIT-04)?', ctx:'В v1 были только отметки на карточках: «общая» и «разные сегменты». Отметка показывает одну ценность, но не картину по всей фиче.',
+    a:{ l:'Только отметки на карточках', c:'Компактно, без лишних блоков. Ответа на «стоит ли делить фичу» одним взглядом нет.', m:'<div class="mrow"><span class="box">боль · <span style="color:var(--inf)">общая</span></span></div><div class="mrow" style="margin-top:4px"><span class="box">сценарий · <span style="color:var(--wrn)">разные</span></span></div>' },
+    b:{ l:'Отметки + блок «Сравнение сегментов»', c:'Матрица «ценность × роль» и вердикт по каждому сценарию (как в прототипе). Ещё один блок под канвой.', m:'<div class="mrow"><span class="box">·</span><span class="box">●</span><span class="box">●</span></div><div class="mrow"><span class="box">·</span><span class="box">●</span><span class="box">·</span></div><div class="bar a" style="margin-top:4px"></div>' },
+    rec:'b' },
+  { id:4, q:'Правка прямо с канвы — в первой версии?', ctx:'v1 умела тянуть связь «сценарий → боль» и заводить боль/выгоду/работу с канвы. В v2 у боли, выгоды и работы сейчас нет даже «+ Новая» (см. прототип «+ Новая»).',
+    a:{ l:'Сначала только чтение', c:'Канва быстро доезжает до пользователя. Связи и новые ценности — в паспортах, пока там не появится «+ Новая».', m:'<div class="bar a"></div><div class="bar"></div><div class="mrow"><span class="box">открыть паспорт →</span></div>' },
+    b:{ l:'Сразу с правкой (связи и «+ боль» на месте)', c:'Паритет с v1. Ждёт «+ Новая» для боли/выгоды/работы и снятия «только чтения» с их паспортов — примерно +3 дня.', m:'<div class="mrow"><span class="box">+ боль</span><span class="box">+ выгода</span></div><svg viewBox="0 0 120 30" aria-hidden="true"><line x1="10" y1="15" x2="110" y2="15" stroke="var(--acc)" stroke-dasharray="4 3"/></svg>' },
+    rec:'a' },
+];
+const pick = {};
+function renderForks() {
+  document.getElementById('forks').innerHTML = FORKS.map(f => `<div class="fork card" style="margin:0"><h3>${f.id}. ${f.q}</h3><div class="ctx">${f.ctx}</div><div class="ab">${['a', 'b'].map(k => `<button class="opt" aria-pressed="${pick[f.id] === k}" data-fork="${f.id}" data-k="${k}"><span class="ol">${k === 'a' ? 'а' : 'б'}) ${f[k].l}</span><div class="mock">${f[k].m}</div><span class="cost">${f[k].c}</span>${f.rec === k ? '<span class="rec">рекомендую</span>' : ''}</button>`).join('')}</div></div>`).join('');
+  const p = FORKS.map(f => pick[f.id] ? `${f.id}${pick[f.id] === 'a' ? 'а' : 'б'}` : null).filter(Boolean);
+  document.getElementById('choice').innerHTML = p.length ? `Ваш выбор: <b>${p.join(', ')}</b> — можно ответить так же коротко.` : `Выберите карточку в каждой развилке. Рекомендация: <b>${FORKS.map(f => f.id + (f.rec === 'a' ? 'а' : 'б')).join(', ')}</b>.`;
+}
+document.addEventListener('click', e => { const o = e.target.closest('[data-fork]'); if (o) { pick[o.dataset.fork] = o.dataset.k; renderForks(); } });
+render(); renderForks();
+</script>
+</body>
+</html>

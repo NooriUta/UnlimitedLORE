@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Сводка и очередь</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;600;700&family=Unbounded:wght@800&display=swap" rel="stylesheet">
+<style>
+/* Токены — :root kit/src/styles/seidr.css (тёмная amber Seiðr). Только токены, без своих цветов. */
+:root{--bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bg3:#302a20;--bd:#42382a;--t1:#ede5d0;--t2:#a6997f;--t3:#9c937b;--acc:#a8b860;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#cf6c5e;
+--mono:'IBM Plex Mono',monospace;--display:'Unbounded',sans-serif;--fs-2xs:9px;--fs-xs:10px;--fs-sm:11px;--fs-base:12px;--fs-md:13px;--fs-lg:14px;--fs-xl:20px;--fs-2xl:24px;--r-sm:4px;--r-md:6px;--r-lg:10px;--r-pill:999px}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg0);color:var(--t1);font:400 var(--fs-base)/1.5 Manrope,system-ui,sans-serif}
+.page{max-width:1280px;margin:0 auto;padding:14px 16px 60px}
+h1{margin:0 0 4px;font:800 var(--fs-xl)/1.2 var(--display)}
+h2{margin:22px 0 8px;font:800 var(--fs-lg)/1.25 var(--display)}
+.lead{margin:0 0 10px;color:var(--t2);font-size:var(--fs-sm);max-width:900px}
+.qwrap{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--r-md)}
+.qt{width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:760px}
+.qt th{background:var(--bg2);color:var(--t2);font:700 var(--fs-xs)/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd)}
+.qt td{padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:top}
+.qt td:first-child{font:700 var(--fs-md) var(--mono);color:var(--acc);width:34px}
+.qt .rec{color:var(--suc)}
+.qt ul{margin:0;padding-left:14px}
+.cap{font:600 var(--fs-2xs) var(--mono);color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin:16px 0 6px}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:var(--r-pill);overflow:hidden}
+.seg button{font:inherit;font-size:var(--fs-xs);color:var(--t2);background:none;border:0;padding:3px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--bg3);color:var(--acc)}
+.frame{border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--bg1);overflow:hidden;min-width:0;position:relative}
+.phone{max-width:412px}
+.addr{font:400 var(--fs-2xs) var(--mono);color:var(--t3);padding:4px 12px;background:var(--bg0);border-bottom:1px solid var(--bd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{display:flex;gap:2px;padding:6px 10px 0;border-bottom:1px solid var(--bd);overflow-x:auto}
+.tabs button{font:inherit;font-size:var(--fs-sm);color:var(--t2);background:none;border:0;border-bottom:2px solid transparent;padding:4px 10px 6px;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--t1);border-bottom-color:var(--acc)}
+.sec-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--bd)}
+.sec-head h3{margin:0;font:800 var(--fs-md) var(--display)}
+.sec-head .n{font:600 var(--fs-sm) var(--mono);color:var(--t3)}
+.sp{flex:1}
+.btn{font:inherit;font-size:var(--fs-sm);color:var(--t1);background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-md);padding:3px 10px;cursor:pointer;white-space:nowrap}
+.btn.pri{border-color:var(--suc);color:var(--suc)}
+.btn.ret{border-color:var(--wrn);color:var(--wrn)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.link{border:0;background:none;color:var(--acc);padding:0}
+.chip{border:1px solid var(--bd);border-radius:var(--r-pill);padding:1px 8px;font:inherit;font-size:var(--fs-xs);color:var(--t2);background:none;cursor:pointer;white-space:nowrap}
+.chip b{font:600 var(--fs-2xs) var(--mono);color:var(--t3);margin-left:3px}
+.chip[aria-pressed="true"]{border-color:var(--acc);color:var(--t1)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 12px 8px;border-bottom:1px solid var(--bd)}
+.lbl{font:700 var(--fs-2xs) var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--t3)}
+.note{font-size:var(--fs-xs);color:var(--t3)}
+/* полоса счётчиков */
+.counters{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:10px 12px;border-bottom:1px solid var(--bd)}
+.cnt{display:grid;gap:2px;text-align:left;font:inherit;color:var(--t1);background:var(--bg2);border:1px solid var(--bd);border-left:3px solid var(--tone,var(--bd));border-radius:var(--r-md);padding:6px 10px;cursor:pointer;min-width:0}
+.cnt:hover{background:var(--bg3)}
+.cnt .v{font:800 var(--fs-xl)/1.1 var(--display)}
+.cnt .t{font-size:var(--fs-xs);color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cnt .v.bad{font:600 var(--fs-sm)/1.6 var(--mono);color:var(--dng)}
+.cnt .v.lock{font:600 var(--fs-sm)/1.6 var(--mono);color:var(--t3)}
+.cnt .v.zero{color:var(--t3)}
+.groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0}
+.grp{border-bottom:1px solid var(--bd);min-width:0}
+.groups .grp:nth-child(odd){border-right:1px solid var(--bd)}
+.grp-h{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg2);border-bottom:1px solid var(--bd)}
+.grp-h b{font:700 var(--fs-2xs) Manrope;text-transform:uppercase;letter-spacing:.07em;color:var(--t2)}
+.grp-h .dot{width:8px;height:8px;border-radius:var(--r-pill);background:var(--tone)}
+.row{display:flex;align-items:center;gap:8px;padding:5px 12px;border-bottom:1px solid var(--bd);min-width:0;cursor:pointer}
+.row:hover{background:var(--bg2)}
+.row .ic{width:14px;height:14px;flex:none;color:var(--t3)}
+.row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .id{font:400 var(--fs-2xs) var(--mono);color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+.why{font:400 var(--fs-2xs) var(--mono);color:var(--wrn);white-space:nowrap}
+.more{display:flex;gap:10px;align-items:center;padding:6px 12px;font-size:var(--fs-xs);color:var(--t3)}
+.state{padding:14px 12px;font-size:var(--fs-sm);display:grid;gap:4px}
+.state .h{font-weight:700}
+.state.empty .h{color:var(--suc)}
+.state.err .h{color:var(--dng)}
+.state.lock .h{color:var(--t2)}
+.pill{display:inline-block;border:1px solid var(--bd);border-radius:var(--r-pill);padding:0 7px;font-size:var(--fs-2xs);color:var(--t2);white-space:nowrap}
+.pill.st-fix{border-color:var(--dng);color:var(--dng)}
+.pill.st-none{color:var(--t3)}
+.pill.st-ok{border-color:var(--suc);color:var(--suc)}
+.pill.st-rev{border-color:var(--wrn);color:var(--wrn)}
+.pill.kind-edit{border-color:var(--inf);color:var(--inf)}
+.pill.mine{border-color:var(--acc);color:var(--acc)}
+/* очередь */
+.q-item{border-bottom:1px solid var(--bd);padding:8px 12px;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 10px;align-items:start}
+.q-item.sel{background:var(--bg2)}
+.q-item input[type=checkbox]{margin-top:3px;accent-color:var(--acc)}
+.q-title{display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;min-width:0}
+.q-title .nm{font-weight:700;overflow-wrap:anywhere}
+.q-by{font-size:var(--fs-2xs);color:var(--t3);font-family:var(--mono)}
+.q-act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.diff{grid-column:2 / 4;display:grid;gap:3px;margin-top:2px}
+.dr{display:grid;grid-template-columns:110px minmax(0,1fr);gap:2px 8px;font-size:var(--fs-sm);background:var(--bg0);border:1px solid var(--bd);border-radius:var(--r-sm);padding:4px 8px}
+.dr .f{font:600 var(--fs-2xs) var(--mono);color:var(--t3);text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+.dr .ln{display:flex;gap:6px;min-width:0}
+.dr .w{font:700 var(--fs-2xs) var(--mono);width:40px;flex:none;padding-top:2px}
+.dr .was .w{color:var(--dng)} .dr .now .w{color:var(--suc)}
+.dr .tx{overflow-wrap:anywhere;min-width:0}
+.dr del{color:var(--dng);text-decoration:line-through;background:var(--bg2)}
+.dr ins{color:var(--suc);text-decoration:none;background:var(--bg2);border-bottom:1px solid var(--suc)}
+.deny{grid-column:2 / 4;font-size:var(--fs-xs);color:var(--t3)}
+.retbox{grid-column:2 / 4;display:grid;gap:4px;margin-top:4px}
+.retbox textarea{font:inherit;font-size:var(--fs-sm);color:var(--t1);background:var(--bg2);border:1px solid var(--wrn);border-radius:var(--r-md);padding:5px 8px;min-height:44px;resize:vertical;width:100%}
+.retbox .acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.bulk{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 12px;background:var(--bg3);border-bottom:1px solid var(--acc)}
+.bulk b{font:600 var(--fs-sm) var(--mono)}
+.undo{display:grid;gap:3px;padding:8px 12px;border-bottom:1px solid var(--bd);background:var(--bg2);font-size:var(--fs-sm)}
+.undo .top{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.undo .ok{color:var(--suc);font-weight:700}
+.undo .fail{color:var(--dng);font-size:var(--fs-xs)}
+.listv .row{cursor:default}
+.listbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 12px;border-bottom:1px solid var(--bd)}
+.frames{display:grid;gap:14px}
+.legend{font-size:var(--fs-xs);color:var(--t3);margin:6px 0 0;max-width:900px}
+.legend code{font-family:var(--mono);color:var(--t2)}
+@media (max-width:700px){.groups{grid-template-columns:minmax(0,1fr)}.groups .grp:nth-child(odd){border-right:0}}
+.phone .groups{grid-template-columns:minmax(0,1fr)}
+.phone .groups .grp:nth-child(odd){border-right:0}
+.phone .counters{grid-template-columns:repeat(2,minmax(0,1fr))}
+.phone .q-item{grid-template-columns:auto minmax(0,1fr)}
+.phone .q-act{grid-column:2;justify-content:flex-start}
+.phone .diff,.phone .deny,.phone .retbox{grid-column:1 / 3}
+.phone .dr{grid-template-columns:minmax(0,1fr)}
+.phone .row .id{display:none}
+</style></head><body><div class="page">
+
+<h1>kit · «Сводка» и «Очередь согласования»</h1>
+<p class="lead">Прототип для SPRINT_UXR_S13_KIT4/K4-SUMMARY-QUEUE. Два вида kit, собранные из готовых деталей: полоса счётчиков = <code>list.quick</code>, переход = ListView с фильтром, дифф = DiffPreview («было/стало» словами), выбор пачкой = S9-06, окно отмены = BatchUndo, запрет согласовать своё = StatusActions + <code>selfApprove:false</code> (K-11). Что «требует внимания» и кто «я» — называет приложение (граница K-14). Данные вымышленные — только форма.</p>
+
+<h2>Вопросы к владелице</h2>
+<div class="qwrap"><table class="qt"><thead><tr><th>№</th><th>Вопрос</th><th>Варианты (цена)</th><th>Рекомендация</th></tr></thead><tbody>
+<tr><td>1</td><td>Откуда сводка берёт группы «требует внимания»?</td><td><ul><li><b>а</b> — <code>summary.groups: ['bad','rv-fix',…]</code> — ссылки на уже заданные <code>list.quick</code>; один источник фильтра, щелчок по счётчику = тот же быстрый фильтр. Цена: группа без быстрого фильтра невозможна.</li><li><b>б</b> — отдельный <code>summary.worklists</code> со своими фильтрами (как в их пилоте). Цена: два места с одним фильтром, расходятся.</li><li><b>в</b> — оба (ссылка или свой фильтр). Цена: сложнее контракт и валидатор.</li></ul></td><td class="rec">а — группы сводки = подмножество quick; их <code>summary.worklists</code> приводим к нему.</td></tr>
+<tr><td>2</td><td>Кто считает число в счётчике?</td><td><ul><li><b>а</b> — приложение (хук <code>hooks.count(filter)</code>, сервер). Точно при любом объёме. Цена: хук у каждого приложения.</li><li><b>б</b> — kit по загруженным записям. Цена: при постраничной загрузке число врёт молча.</li><li><b>в</b> — хук, а без него kit считает сам с пометкой «≈ по загруженным 200». Цена: две ветки поведения.</li></ul></td><td class="rec">в — честное «≈», без хука не врём; хук не обязателен для малых баз (DW).</td></tr>
+<tr><td>3</td><td>Сколько первых записей показывать в группе?</td><td><ul><li><b>а</b> — фиксированно 5. Цена: на телефоне длинная лента.</li><li><b>б</b> — <code>summary.top</code> у приложения, по умолчанию 5 на широком и 3 на телефоне. Цена: ещё одно поле контракта.</li></ul></td><td class="rec">б.</td></tr>
+<tr><td>4</td><td>«Вернуть с правкой» пачкой — какая причина?</td><td><ul><li><b>а</b> — одна общая причина на всю пачку, обязательна. Быстро. Цена: автор получает общий текст.</li><li><b>б</b> — пачкой нельзя, причина у каждой. Цена: 10 записей = 10 окон.</li><li><b>в</b> — общая причина + можно дописать у отдельных. Цена: сложнее форма.</li></ul></td><td class="rec">а (в прототипе так); в — позже, если попросят.</td></tr>
+<tr><td>5</td><td>Записи «на согласовании» и предложенные правки — одна очередь или две?</td><td><ul><li><b>а</b> — одна лента, у строки пометка «статус» / «правка», чип-фильтр по типу. Цена: смешанные строки разной высоты.</li><li><b>б</b> — две вкладки. Цена: счётчик внимания делится, пачка не может взять оба типа.</li></ul></td><td class="rec">а.</td></tr>
+<tr><td>6</td><td>Своя правка в очереди при <code>selfApprove:false</code>?</td><td><ul><li><b>а</b> — видна, «Согласовать» выключено с причиной словами (как StatusActions K-11); в пачке пропускается и попадает в «не прошли». Цена: шум в списке.</li><li><b>б</b> — своих правок в очереди не показывать вовсе (только под «мои правки»). Цена: «мои правки» — единственное место, где видно, что ждёт.</li></ul></td><td class="rec">а — запрет виден, не прячется.</td></tr>
+<tr><td>7</td><td>Отмена согласования пачкой?</td><td><ul><li><b>а</b> — окно отмены BatchUndo (срок задаёт сервер), если <code>statuses.undo</code>. Цена: сервер держит операцию.</li><li><b>б</b> — без отмены, подтверждение словом до (DiffPreview <code>confirm</code>). Цена: лишний шаг на каждую пачку.</li></ul></td><td class="rec">а; confirm — только если приложение назовёт пачку опасной.</td></tr>
+<tr><td>8</td><td>LORE: какие группы «требует внимания» (гипотеза, проверить)?</td><td><ul><li><b>а</b> — провалы гейтов качества · просрочено по сроку спринта · ждут моего ревью (reviewer = я) · без исполнителя.</li><li><b>б</b> — только «ждут моего ревью» и «провалы качества». Цена: просрочка не видна на главной.</li></ul></td><td class="rec">а — показано в прототипе; состав решает LORE, kit не меняется.</td></tr>
+</tbody></table></div>
+
+<div class="toolbar">
+  <span class="lbl">Данные</span>
+  <span class="seg" id="ds"><button data-v="dw" aria-pressed="true">Дата-странники</button><button data-v="lore" aria-pressed="false">LORE · задачи</button></span>
+  <span class="lbl">Состояние</span>
+  <span class="seg" id="st"><button data-v="ok" aria-pressed="true">с данными</button><button data-v="mixed" aria-pressed="false">смешанное</button><button data-v="empty" aria-pressed="false">всё пусто</button><button data-v="error" aria-pressed="false">не загрузилось</button><button data-v="forbidden" aria-pressed="false">нет прав</button></span>
+</div>
+<p class="legend">«Смешанное» — одна группа пуста, одна не посчиталась (ошибка сервера), одна закрыта правами: три разных текста, а не общее «нет записей».</p>
+
+<div class="frames">
+  <div><div class="cap">Кадр 1280</div><div class="frame" id="f-wide"></div></div>
+  <div><div class="cap">Кадр 412</div><div class="frame phone" id="f-phone"></div></div>
+</div>
+
+<script>
+const SVG = {
+  item:'<svg class="ic" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2.5" width="10" height="11" rx="1.5"/><path d="M5.5 6h5M5.5 8.5h5M5.5 11h3"/></svg>'
+};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- данные: форма KitData + конфиг сводки (что такое «внимание» — приложение) ---------- */
+const DATA = {
+  dw: {
+    app:'Дата-странники · Методология', me:'olga', meName:'Ольга', base:'/method',
+    groups:[
+      {id:'bad', title:'провалы качества', tone:'var(--dng)', count:12, why:r=>r.v},
+      {id:'rv-fix', title:'нужна правка', tone:'var(--wrn)', count:5},
+      {id:'rv-none', title:'ещё не смотрели', tone:'var(--t3)', count:30},
+      {id:'rv-edit', title:'с предложенной правкой', tone:'var(--inf)', count:4},
+    ],
+    rows:{
+      'bad':[['Соединения таблиц','topic.joins','1/3 · нет квиза'],['Пересечение множеств','quiz.sets.1','2/4 · нет подсказок'],['Свиток о ключах','scroll.keys','0/2 · пустой текст'],['Тропа «Сон о мосте»','trail.bridge','1/2 · нет конца'],['Руна Ансуз','rune.ansuz','1/3 · нет квиза'],['Тема «NULL»','topic.null','2/3']],
+      'rv-fix':[['Пересечение множеств','quiz.sets.1'],['Свиток «Порядок JOIN»','scroll.joinorder'],['Квиз о LEFT JOIN','quiz.joins.2'],['Ступень «Ученик»','step.1'],['Порча «Пустая таблица»','porcha.empty']],
+      'rv-none':[['Множества: разность','quiz.sets.3'],['Свиток о транзакциях','scroll.tx'],['Тема «Индексы»','topic.idx'],['Квиз «Подзапросы»','quiz.sub.1'],['Шаблон «Сравни два»','tpl.cmp'],['Задание «Найди дубль»','item.dup']],
+      'rv-edit':[['Свиток «Порядок JOIN»','scroll.joinorder'],['Квиз о LEFT JOIN','quiz.joins.2'],['Тема «Множества»','topic.sets'],['Квиз «GROUP BY»','quiz.grp.1']],
+    },
+    kindTitle:{Quiz:'Квиз',Scroll:'Свиток',Topic:'Тема'},
+    queue:[
+      {id:'quiz.joins.2', kind:'Quiz', title:'Квиз о LEFT JOIN', type:'edit', by:'olga', byName:'Ольга', when:'сегодня 10:42',
+        diff:[{f:'Вопрос', was:'Что вернёт LEFT JOIN, если справа нет пары?', now:'Что вернёт LEFT JOIN для строки слева, у которой справа нет пары?'},{f:'Верный ответ', was:'B', now:'C'}]},
+      {id:'scroll.joinorder', kind:'Scroll', title:'Свиток «Порядок JOIN»', type:'edit', by:'ivar', byName:'Ивар', when:'вчера 18:05',
+        diff:[{f:'Текст', was:'Порядок таблиц в JOIN не важен.', now:'Для INNER JOIN порядок таблиц не важен; для LEFT JOIN — важен.'}]},
+      {id:'topic.sets', kind:'Topic', title:'Тема «Множества»', type:'status', by:'sigrun', byName:'Сигрун', when:'вчера 12:30', status:'на согласовании'},
+      {id:'quiz.grp.1', kind:'Quiz', title:'Квиз «GROUP BY»', type:'edit', by:'olga', byName:'Ольга', when:'9 нояб 16:10',
+        diff:[{f:'Подсказки', was:'Подумай о группах.', now:'Каждая строка результата — одна группа; поле без агрегата должно стоять в GROUP BY.'}]},
+      {id:'scroll.tx', kind:'Scroll', title:'Свиток о транзакциях', type:'status', by:'ivar', byName:'Ивар', when:'8 нояб 09:15', status:'на согласовании'},
+    ],
+  },
+  lore: {
+    app:'LORE', me:'arharaga', meName:'arharaga', base:'/lore',
+    groups:[
+      {id:'qg-fail', title:'провалы гейтов качества', tone:'var(--dng)', count:3},
+      {id:'overdue', title:'просрочено (срок спринта)', tone:'var(--wrn)', count:7},
+      {id:'my-review', title:'ждут моего ревью', tone:'var(--inf)', count:9},
+      {id:'no-exec', title:'без исполнителя', tone:'var(--t3)', count:2},
+    ],
+    rows:{
+      'qg-fail':[['Backend CI на develop','SPRINT_UXR_S3_V2_INFRA/S3-11','QG red'],['i18n паритет kit','SPRINT_UXR_S10_SEIDR_KIT/K-13','QG red'],['Сборка образа lore-app','SPRINT_UXR_S3_V2_INFRA/S3-07','QG skip']],
+      'overdue':[['Граф: Force-вид','SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-03','+2 д'],['Паритет админок','SPRINT_UXR_S7B_ADMIN/S7B-31','+1 д'],['Автосвязи по упоминаниям','SPRINT_UXR_S10_SEIDR_KIT_2/MD-AUTOLINK','+1 д'],['Ленты: два уровня','SPRINT_UXR_S10_SEIDR_KIT_2/K2-FEED-TWO-LEVEL','+3 д'],['Таймлайн','SPRINT_UXR_S4/S4-22','+4 д'],['Календарь','SPRINT_UXR_S10_SEIDR_KIT_2/K2-VIEW-CALENDAR','+1 д']],
+      'my-review':[['Сводка и очередь','SPRINT_UXR_S13_KIT4/K4-SUMMARY-QUEUE'],['Дифф «что изменится»','SPRINT_UXR_S10_SEIDR_KIT_2/K2-DIFF'],['Окно отмены пачки','SPRINT_UXR_S10_SEIDR_KIT_2/K2-BATCH-UNDO'],['Выбор пачкой','SPRINT_UXR_S9/S9-06'],['Роли и 4 глаза','SPRINT_UXR_S10_SEIDR_KIT/K-11'],['Минипаспорт DW','SPRINT_UXR_S10_SEIDR_KIT/K-08']],
+      'no-exec':[['Экспорт вида в CSV','SPRINT_UXR_S13_KIT4/K4-EXPORT'],['Горячие клавиши палитры','SPRINT_UXR_S13_KIT4/K4-PALETTE-KEYS']],
+    },
+    kindTitle:{Task:'Задача'},
+    queue:[
+      {id:'SPRINT_UXR_S10_SEIDR_KIT_2/K2-DIFF', kind:'Task', title:'Дифф «что изменится»', type:'status', by:'claude-kit', byName:'Claude (kit)', when:'сегодня 11:20', status:'ready_for_deploy → done'},
+      {id:'SPRINT_UXR_S13_KIT4/K4-SUMMARY-QUEUE', kind:'Task', title:'Сводка и очередь', type:'edit', by:'arharaga', byName:'arharaga', when:'сегодня 09:02',
+        diff:[{f:'effort_days', was:'2', now:'3'},{f:'title', was:'kit: виды сводки и очереди', now:'kit: виды «Сводка · требует внимания» и «Очередь согласования»'}]},
+      {id:'SPRINT_UXR_S9/S9-06', kind:'Task', title:'Выбор пачкой', type:'edit', by:'claude-web', byName:'Claude (web)', when:'вчера 21:40',
+        diff:[{f:'executor', was:'Claude Code (full) arharaga', now:'Claude (web)'}]},
+      {id:'SPRINT_UXR_S10_SEIDR_KIT/K-11', kind:'Task', title:'Роли и 4 глаза', type:'status', by:'claude-kit', byName:'Claude (kit)', when:'10 нояб 15:00', status:'ready_for_deploy → done'},
+    ],
+  },
+};
+
+/* пословный дифф (как kit/src/flow/wordDiff.ts — LCS по словам) */
+function wordDiff(a, b){
+  const A=a.split(/(\s+)/), B=b.split(/(\s+)/), n=A.length, m=B.length;
+  const L=Array.from({length:n+1},()=>new Array(m+1).fill(0));
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=A[i]===B[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  let i=0,j=0,was='',now='';
+  while(i<n&&j<m){ if(A[i]===B[j]){was+=esc(A[i]);now+=esc(B[j]);i++;j++;} else if(L[i+1][j]>=L[i][j+1]){was+='<del>'+esc(A[i])+'</del>';i++;} else {now+='<ins>'+esc(B[j])+'</ins>';j++;} }
+  while(i<n){was+='<del>'+esc(A[i])+'</del>';i++;} while(j<m){now+='<ins>'+esc(B[j])+'</ins>';j++;}
+  return {was,now};
+}
+
+const G = { ds:'dw', st:'ok' };
+const frames = [];
+
+function makeFrame(el, phone){
+  const f = { el, phone, view:'summary', quick:null, qf:'all', sel:new Set(), returning:null, bulkReturn:false, done:{}, undo:null };
+  el.addEventListener('click', e => onClick(f, e));
+  el.addEventListener('change', e => { if(e.target.matches('[data-sel]')){ const id=e.target.dataset.sel; e.target.checked?f.sel.add(id):f.sel.delete(id); render(f);} if(e.target.matches('[data-selall]')){ const ids=visibleQueue(f).filter(q=>canApprove(q)).map(q=>q.id); e.target.checked?ids.forEach(i=>f.sel.add(i)):f.sel.clear(); render(f);} });
+  frames.push(f); return f;
+}
+
+/* состояние группы с учётом переключателя: ok | empty | error | forbidden */
+function groupState(gi){
+  if(G.st==='mixed') return ['ok','empty','error','forbidden'][gi] || 'ok';
+  return G.st;
+}
+const D = () => DATA[G.ds];
+const canApprove = q => q.by !== D().me; // selfApprove:false — решает приложение конфигом
+function visibleQueue(f){
+  const d=D();
+  return d.queue.filter(q => !f.done[q.id] && (f.qf==='all' || (f.qf==='mine' && q.by===d.me) || (f.qf==='edit' && q.type==='edit') || (f.qf==='status' && q.type==='status')));
+}
+function addr(f){
+  const d=D();
+  if(f.view==='summary') return d.base+'?view=summary';
+  if(f.view==='list') return d.base+'?view=list&quick='+f.quick;
+  return d.base+'?view=queue'+(f.qf!=='all'?'&qf='+f.qf:'');
+}
+
+function render(f){
+  const d=D();
+  const tabs = `<div class="tabs" role="tablist">
+    <button role="tab" data-view="summary" aria-selected="${f.view==='summary'||f.view==='list'}">Сводка · требует внимания</button>
+    <button role="tab" data-view="queue" aria-selected="${f.view==='queue'}">Очередь согласования <span class="pill">${visibleQueueAll(f)}</span></button></div>`;
+  let body='';
+  if(f.view==='summary') body=renderSummary(f);
+  else if(f.view==='list') body=renderList(f);
+  else body=renderQueue(f);
+  f.el.innerHTML = `<div class="addr">${esc(d.app)} · ${esc(addr(f))}</div>${tabs}${body}`;
+}
+function visibleQueueAll(f){ return D().queue.filter(q=>!f.done[q.id]).length; }
+
+function renderSummary(f){
+  const d=D(), top=f.phone?3:5;
+  if(G.st==='forbidden'){
+    return head('Сводка · требует внимания','')+`<div class="state lock"><div class="h">Нет прав смотреть сводку</div><div>Роль «гость» не видит записи на согласовании. Причину назвал сервер приложения: <span class="q-by">403 role=guest</span>.</div></div>`;
+  }
+  const cnt = d.groups.map((g,i)=>{
+    const s=groupState(i);
+    const v = s==='ok' ? `<span class="v">${g.count}</span>` : s==='empty' ? `<span class="v zero">0</span>` : s==='error' ? `<span class="v bad">не посчитали</span>` : `<span class="v lock">нет прав</span>`;
+    return `<button class="cnt" style="--tone:${g.tone}" data-quick="${g.id}" ${s==='forbidden'?'disabled':''} title="Открыть список с фильтром «${esc(g.title)}»">${v}<span class="t">${esc(g.title)}</span></button>`;
+  }).join('');
+  const groups = d.groups.map((g,i)=>{
+    const s=groupState(i), rows=d.rows[g.id]||[];
+    let inner='';
+    if(s==='ok'){
+      inner = rows.slice(0,top).map(r=>`<div class="row" data-open="${esc(r[1])}">${SVG.item}<span class="nm">${esc(r[0])}</span>${r[2]?`<span class="why">${esc(r[2])}</span>`:''}<span class="id">${esc(r[1])}</span></div>`).join('');
+      const rest=g.count-Math.min(top,rows.length);
+      inner += `<div class="more">${rest>0?`<button class="btn link" data-quick="${g.id}">ещё ${rest} →</button>`:'<span>это все</span>'}<span class="sp"></span><span>${Math.min(top,rows.length)} из ${g.count}</span></div>`;
+    } else if(s==='empty'){
+      inner = `<div class="state empty"><div class="h">Пусто — проверено</div><div class="note">Сервер ответил: записей с фильтром «${esc(g.title)}» нет.</div></div>`;
+    } else if(s==='error'){
+      inner = `<div class="state err" role="alert"><div class="h">Не смогли загрузить</div><div class="note">Это не «пусто»: сервер не ответил (таймаут 10 с). Записей может быть сколько угодно.</div><div><button class="btn" data-retry>Повторить</button></div></div>`;
+    } else {
+      inner = `<div class="state lock"><div class="h">Нет прав смотреть эту группу</div><div class="note">Причина от приложения: группу видит роль «методист».</div></div>`;
+    }
+    return `<section class="grp" style="--tone:${g.tone}"><div class="grp-h"><span class="dot"></span><b>${esc(g.title)}</b><span class="sp"></span><span class="q-by">${s==='ok'?g.count:s==='empty'?'0':'—'}</span></div>${inner}</section>`;
+  }).join('');
+  return head('Сводка · требует внимания', `<span class="note">я: ${esc(d.meName)} · группы задаёт приложение</span>`)+`<div class="counters">${cnt}</div><div class="groups">${groups}</div>`;
+}
+
+function renderList(f){
+  const d=D(), g=d.groups.find(x=>x.id===f.quick), rows=d.rows[f.quick]||[];
+  const chips = d.groups.map(x=>`<button class="chip" data-quick="${x.id}" aria-pressed="${x.id===f.quick}">${esc(x.title)}<b>${x.count}</b></button>`).join('');
+  return head('Список', `<button class="btn link" data-view="summary">← к сводке</button>`)+
+   `<div class="listbar"><span class="lbl">быстрый фильтр</span>${chips}</div>
+    <div class="listv">${rows.map(r=>`<div class="row">${SVG.item}<span class="nm">${esc(r[0])}</span>${r[2]?`<span class="why">${esc(r[2])}</span>`:''}<span class="id">${esc(r[1])}</span></div>`).join('')}
+    <div class="more"><span>ListView kit с <code>list.quick = ${esc(f.quick)}</code> — ${rows.length} из ${g.count} подгружено, остальное листается</span></div></div>`;
+}
+
+function renderQueue(f){
+  const d=D();
+  if(G.st==='forbidden') return head('Очередь согласования','')+`<div class="state lock"><div class="h">Нет прав согласовывать</div><div class="note">Роль «гость»: смотреть очередь можно только роли с <code>canStatus</code>. Причина от приложения.</div></div>`;
+  if(G.st==='error') return head('Очередь согласования','')+`<div class="state err" role="alert"><div class="h">Очередь не загрузилась</div><div class="note">Это не «пусто»: hooks.load вернул ошибку 502. Повторите позже.</div><div><button class="btn" data-retry>Повторить</button></div></div>`;
+  const all = G.st==='empty' ? [] : visibleQueue(f);
+  const counts = {all:d.queue.filter(q=>!f.done[q.id]).length, mine:d.queue.filter(q=>!f.done[q.id]&&q.by===d.me).length, edit:d.queue.filter(q=>!f.done[q.id]&&q.type==='edit').length, status:d.queue.filter(q=>!f.done[q.id]&&q.type==='status').length};
+  if(G.st==='empty') Object.keys(counts).forEach(k=>counts[k]=0);
+  const chip=(id,t)=>`<button class="chip" data-qf="${id}" aria-pressed="${f.qf===id}">${t}<b>${counts[id]}</b></button>`;
+  const bar = `<div class="bar"><label class="note"><input type="checkbox" data-selall ${f.sel.size&&f.sel.size===all.filter(canApprove).length?'checked':''}> все</label>${chip('all','все')}${chip('mine','мои правки')}${chip('edit','правки')}${chip('status','статус')}</div>`;
+  let bulk='';
+  if(f.sel.size){
+    bulk = `<div class="bulk"><b>Выбрано ${f.sel.size}</b><button class="btn pri" data-bulk="ok">Согласовать ${f.sel.size}</button><button class="btn ret" data-bulk="ret">Вернуть с правкой</button><button class="btn link" data-bulk="clear">снять выбор</button></div>`;
+    if(f.bulkReturn) bulk += `<div class="retbox" style="padding:6px 12px;border-bottom:1px solid var(--bd)"><span class="note">Причина — одна на пачку из ${f.sel.size}, автор увидит её у каждой записи (вопрос 4).</span><textarea data-reason="bulk" placeholder="Что поправить"></textarea><div class="acts"><button class="btn ret" data-bulk="ret-go">Вернуть ${f.sel.size}</button><button class="btn link" data-bulk="ret-cancel">отмена</button></div></div>`;
+  }
+  const undo = f.undo ? `<div class="undo" role="status"><div class="top"><span class="ok">${esc(f.undo.text)}</span><span class="note">отменить можно ещё ${f.undo.left} с</span><span class="sp"></span><button class="btn" data-undo>Отменить</button></div>${f.undo.fail.map(x=>`<div class="fail">не прошла: ${esc(x.title)} — ${esc(x.reason)}</div>`).join('')}</div>` : '';
+  let list='';
+  if(!all.length){
+    list = G.st==='empty' ? `<div class="state empty"><div class="h">Очередь пуста — проверено</div><div class="note">Ничего не ждёт согласования.</div></div>`
+      : f.qf==='mine' ? `<div class="state empty"><div class="h">Ваших правок на согласовании нет</div><div class="note">«Вы» = ${esc(d.meName)} — так назвало приложение.</div></div>`
+      : `<div class="state empty"><div class="h">С этим фильтром ничего</div></div>`;
+  } else list = all.map(q=>queueItem(f,q)).join('');
+  return head('Очередь согласования', `<span class="note">я: ${esc(d.meName)} · согласовать своё нельзя (selfApprove: false)</span>`)+bar+bulk+undo+list;
+}
+
+function queueItem(f,q){
+  const d=D(), mine=q.by===d.me, ok=canApprove(q);
+  const diff = q.type==='edit' ? `<div class="diff">${q.diff.map(x=>{const w=wordDiff(x.was,x.now);return `<div class="dr"><span class="f">${esc(x.f)}</span><div><div class="ln was"><span class="w">было</span><span class="tx">${w.was}</span></div><div class="ln now"><span class="w">стало</span><span class="tx">${w.now}</span></div></div></div>`}).join('')}</div>` : '';
+  const ret = f.returning===q.id ? `<div class="retbox"><textarea data-reason="${esc(q.id)}" placeholder="Что поправить — увидит ${esc(q.byName)}"></textarea><div class="acts"><button class="btn ret" data-retgo="${esc(q.id)}">Вернуть</button><button class="btn link" data-retcancel>отмена</button></div></div>` : '';
+  return `<div class="q-item ${f.sel.has(q.id)?'sel':''}">
+    <input type="checkbox" aria-label="выбрать" data-sel="${esc(q.id)}" ${f.sel.has(q.id)?'checked':''} ${ok?'':'disabled'}>
+    <div><div class="q-title"><span class="nm">${esc(q.title)}</span><span class="pill ${q.type==='edit'?'kind-edit':'st-rev'}">${q.type==='edit'?'правка':esc(q.status)}</span>${mine?'<span class="pill mine">моя</span>':''}</div>
+      <div class="q-by">${esc(d.kindTitle[q.kind]||q.kind)} · ${esc(q.id)} · предложено: ${esc(q.byName)}, ${esc(q.when)}</div></div>
+    <div class="q-act"><button class="btn pri" data-ok="${esc(q.id)}" ${ok?'':'disabled'}>Согласовать</button><button class="btn ret" data-ret="${esc(q.id)}" ${ok?'':'disabled'}>Вернуть с правкой</button></div>
+    ${ok?'':'<div class="deny">Свою правку согласует другой человек — правило приложения «четыре глаза» (selfApprove: false). Отозвать правку можно в записи.</div>'}
+    ${diff}${ret}</div>`;
+}
+
+function head(t, extra){ return `<div class="sec-head"><h3>${esc(t)}</h3>${extra}</div>`; }
+
+let timer=null;
+function startUndo(f, ids, verb){
+  const d=D(); const fail=[];
+  ids.forEach((id,i)=>{ const q=d.queue.find(x=>x.id===id);
+    // показываем «часть не прошла»: вторая в пачке — изменилась после предложения
+    if(ids.length>2 && i===1){ fail.push({title:q.title, reason:'запись изменили после предложения — пересмотрите дифф'}); }
+    else f.done[id]=verb; });
+  f.undo={ text:`${verb==='ok'?'Согласовано':'Возвращено'} ${ids.length-fail.length} из ${ids.length}`, fail, left:10, ids:ids.filter(id=>f.done[id]) };
+  f.sel.clear(); f.bulkReturn=false; f.returning=null;
+  render(f);
+}
+setInterval(()=>{ frames.forEach(f=>{ if(f.undo){ f.undo.left--; if(f.undo.left<=0) f.undo=null; if(f.view==='queue') render(f);} }); }, 1000);
+
+function onClick(f,e){
+  const t=e.target.closest('button,[data-open]'); if(!t||t.disabled) return;
+  const ds=t.dataset;
+  if(ds.view){ f.view=ds.view; }
+  else if(ds.quick){ f.view='list'; f.quick=ds.quick; }
+  else if(ds.qf){ f.qf=ds.qf; f.sel.clear(); }
+  else if(ds.ok){ startUndo(f,[ds.ok],'ok'); return; }
+  else if(ds.ret){ f.returning=ds.ret; }
+  else if('retcancel' in ds){ f.returning=null; }
+  else if(ds.retgo){ const ta=f.el.querySelector(`[data-reason="${CSS.escape(ds.retgo)}"]`); if(!ta.value.trim()){ ta.placeholder='Причина обязательна — без неё автор не поймёт, что править'; ta.focus(); return;} startUndo(f,[ds.retgo],'ret'); return; }
+  else if(ds.bulk==='ok'){ startUndo(f,[...f.sel],'ok'); return; }
+  else if(ds.bulk==='ret'){ f.bulkReturn=true; }
+  else if(ds.bulk==='ret-cancel'){ f.bulkReturn=false; }
+  else if(ds.bulk==='ret-go'){ const ta=f.el.querySelector('[data-reason="bulk"]'); if(!ta.value.trim()){ ta.placeholder='Причина обязательна'; ta.focus(); return;} startUndo(f,[...f.sel],'ret'); return; }
+  else if(ds.bulk==='clear'){ f.sel.clear(); f.bulkReturn=false; }
+  else if('undo' in ds){ f.undo.ids.forEach(id=>delete f.done[id]); f.undo=null; }
+  else if('retry' in ds){ /* повтор — дёргает hooks.load приложения */ }
+  else return;
+  render(f);
+}
+
+function resetAll(){ frames.forEach(f=>{ f.sel.clear(); f.done={}; f.undo=null; f.returning=null; f.bulkReturn=false; f.qf='all'; if(f.view==='list') f.view='summary'; render(f); }); }
+function seg(id, key){ document.getElementById(id).addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; G[key]=b.dataset.v; [...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed', x===b)); resetAll(); }); }
+seg('ds','ds'); seg('st','st');
+
+const wide=makeFrame(document.getElementById('f-wide'), false);
+const phone=makeFrame(document.getElementById('f-phone'), true);
+const qp=new URLSearchParams(location.search);
+if(qp.get('ds')) G.ds=qp.get('ds'); if(qp.get('st')) G.st=qp.get('st');
+if(qp.get('view')) { wide.view=phone.view=qp.get('view'); }
+document.querySelectorAll('#ds button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.v===G.ds));
+document.querySelectorAll('#st button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.v===G.st));
+render(wide); render(phone);
+</script>
+</div></body></html>

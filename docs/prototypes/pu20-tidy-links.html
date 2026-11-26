@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Админка LORE · «Привести в порядок» — прототип PU-20</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+<style>
+/* Прототип раздела админки «Привести в порядок» — SPRINT_UXR_POLISH_UAT_1113/PU-20, 13.11.2026.
+   Обвязка и токены — как у s7b-admin-v6.html. Данные — НАСТОЯЩИЕ: прод-снимок 13.11 (только чтение),
+   правила автопочинки применены в памяти (PU-19), остаток посчитан аудитом PU-15. Ничего не записано. */
+:root{
+  --bg:#14120e;--bg2:#1c1913;--bg3:#25211a;--bd:#3a3326;
+  --t1:#efe6d2;--t2:#b8ab90;--t3:#7f735c;
+  --acc:#d9a441;--suc:#8fb85f;--wrn:#d9a441;--dng:#d0644f;--inf:#6fa3c4;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;--r:6px;
+}
+*{box-sizing:border-box}
+html,body{overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--t1);font:400 var(--fs-sm)/1.5 Manrope,system-ui,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+h1,h2,h3{font-family:Unbounded,sans-serif;font-weight:800;margin:0}
+h1{font-size:var(--fs-lg);letter-spacing:.02em}
+h2{font-size:var(--fs-xl);margin-bottom:4px}
+h3{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin:0}
+.mono{font-family:var(--mono)}.muted{color:var(--t3)}
+a{color:var(--acc)}
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--bd);background:var(--bg2);position:sticky;top:0;z-index:10}
+.top .sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;border:1px solid var(--bd);font-size:var(--fs-xs);white-space:nowrap;color:var(--t2)}
+.chip.ok{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 50%,var(--bd))}
+.chip.w{color:var(--wrn);border-color:color-mix(in srgb,var(--wrn) 50%,var(--bd))}
+.chip.d{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 50%,var(--bd))}
+.chip.i{color:var(--inf);border-color:color-mix(in srgb,var(--inf) 50%,var(--bd))}
+.chip.dash{border-style:dashed}
+button.chip{cursor:pointer}
+button.chip.on{background:var(--bg3);color:var(--t1);border-color:var(--acc)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;border:1px solid var(--bd);font-size:var(--fs-xs);font-weight:700;color:var(--t1);background:var(--bg3);white-space:nowrap}
+.btn.pri{background:color-mix(in srgb,var(--acc) 22%,transparent);border-color:var(--acc);color:var(--acc)}
+.btn.dng{border-color:var(--dng);color:var(--dng)}
+.btn.sm{padding:2px 8px;font-weight:600}
+.tabs{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden}
+.tabs button{padding:3px 12px;font-size:var(--fs-xs);font-weight:700;color:var(--t2)}
+.tabs button.on{background:var(--acc);color:var(--bg)}
+.wrap{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:calc(100vh - 45px)}
+nav.side{border-right:1px solid var(--bd);padding:10px 8px;background:var(--bg2);position:sticky;top:45px;align-self:start;max-height:calc(100vh - 45px);overflow:auto}
+.grp{margin-bottom:12px}
+.grp .gh{display:flex;gap:6px;align-items:center;padding:4px 8px;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:700}
+.grp .gh i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.grp .it{display:flex;width:100%;align-items:center;gap:8px;padding:5px 8px;border-radius:var(--r);color:var(--t2);font-size:var(--fs-sm)}
+.grp .it.on{background:var(--bg3);color:var(--t1);box-shadow:inset 2px 0 0 var(--acc)}
+.grp .it .n{margin-left:auto;font:600 var(--fs-2xs) var(--mono);color:var(--wrn)}
+.grp .it .new{margin-left:auto}
+main{padding:16px;min-width:0;max-width:1120px}
+.lead{color:var(--t2);margin:2px 0 12px;max-width:860px}
+.status{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.banner{border:1px solid var(--dng);border-left:4px solid var(--dng);border-radius:var(--r);padding:8px 12px;background:color-mix(in srgb,var(--dng) 8%,var(--bg));margin-bottom:12px}
+.banner.info{border-color:var(--inf);background:color-mix(in srgb,var(--inf) 8%,var(--bg))}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:14px}
+.kpi{border:1px solid var(--bd);border-radius:var(--r);background:var(--bg2);padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.kpi b{font:800 var(--fs-2xl) Unbounded,sans-serif}
+.kpi.a b{color:var(--acc)}.kpi.w b{color:var(--wrn)}.kpi.m b{color:var(--t2)}.kpi.ok b{color:var(--suc)}
+.kpi span{color:var(--t2);font-size:var(--fs-xs)}
+.kpi.stale{opacity:.55}
+.card{border:1px solid var(--bd);border-radius:10px;background:var(--bg2);padding:12px;margin-bottom:14px}
+.card>header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.card>header .sp{flex:1}
+.tblw{overflow-x:auto;border:1px solid var(--bd);border-radius:var(--r);background:var(--bg)}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
+th{text-align:left;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--bd);background:var(--bg3);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);vertical-align:top}
+td.num{text-align:right;font-family:var(--mono);white-space:nowrap}
+tr.off td{color:var(--t3)}
+.ex{font-family:var(--mono);font-size:var(--fs-xs);color:var(--t2);word-break:break-word}
+.ex .r{color:var(--dng);text-decoration:line-through}.ex .a{color:var(--suc)}
+.foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;color:var(--t2);font-size:var(--fs-xs)}
+.foot .sp{flex:1}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.rows .row{border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);padding:6px 8px;display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) 54px minmax(0,1.6fr) auto;gap:8px;align-items:center}
+.rows .row.head{font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);background:var(--bg3);font-weight:600}
+.rows .row .id{font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rows .row .acts{display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap}
+.rows .det{padding:4px 8px 10px 24px;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);display:grid;gap:4px}
+.rows .det .s{font-size:var(--fs-xs);color:var(--t2)}
+mark{background:color-mix(in srgb,var(--dng) 25%,transparent);color:var(--t1);border-radius:3px;padding:0 2px}
+.more{padding:8px;color:var(--t3);font-size:var(--fs-xs)}
+.empty{padding:22px;text-align:center;color:var(--t2)}
+.empty b{display:block;color:var(--suc);font:800 var(--fs-lg) Unbounded,sans-serif;margin-bottom:4px}
+/* модальное окно / боковая карточка */
+.veil{position:fixed;inset:0;background:color-mix(in srgb,#000 55%,transparent);display:none;z-index:40}
+.veil.on{display:block}
+.dlg{position:fixed;z-index:50;background:var(--bg2);border:1px solid var(--bd);border-radius:10px;display:none;flex-direction:column;max-height:88vh}
+.dlg.on{display:flex}
+.dlg.center{left:50%;top:50%;transform:translate(-50%,-50%);width:min(680px,94vw)}
+.dlg.right{right:0;top:0;bottom:0;max-height:none;border-radius:10px 0 0 10px;width:min(520px,100vw)}
+.dlg header{display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--bd)}
+.dlg header .sp{flex:1}
+.dlg .body{padding:12px;overflow:auto;display:grid;gap:10px}
+.dlg footer{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid var(--bd)}
+.dlg footer .sp{flex:1}
+.diff{font-family:var(--mono);font-size:var(--fs-xs);border:1px solid var(--bd);border-radius:var(--r);padding:8px;background:var(--bg);display:grid;gap:4px}
+.diff .r{color:var(--dng)}.diff .a{color:var(--suc)}
+.inp{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:5px 8px;color:var(--t1);font:400 var(--fs-md) var(--mono);min-width:220px}
+.bar{height:6px;border-radius:999px;background:var(--bg3);overflow:hidden}.bar i{display:block;height:100%;background:var(--acc);width:0;transition:width .2s}
+.prose{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:10px;font-size:var(--fs-sm);white-space:pre-wrap;word-break:break-word}
+.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60;border:1px solid var(--acc);border-radius:var(--r);padding:8px 12px;background:color-mix(in srgb,var(--acc) 12%,var(--bg2));display:none;gap:10px;align-items:center;max-width:94vw}
+.toast.on{display:flex}
+/* пояснения */
+.pin{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:var(--acc);color:var(--bg);font:700 var(--fs-2xs) var(--mono);vertical-align:middle;margin:0 2px}
+body:not(.doc) .pin,body:not(.doc) .notes{display:none}
+.notes{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+.notes li{display:grid;grid-template-columns:auto 1fr;gap:8px;border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:var(--r);padding:8px 10px;background:var(--bg2)}
+.notes q{color:var(--t1);font-style:italic}
+@media (max-width:860px){
+  .wrap{grid-template-columns:1fr;align-content:start}
+  nav.side{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--bd);display:flex;gap:10px;overflow-x:auto;padding:8px 12px}
+  .grp{flex:none;margin:0}.grp .it{white-space:nowrap}
+  main{padding:12px}
+  .rows .row.head{display:none}
+  .rows .row{grid-template-columns:1fr auto;grid-template-areas:"id n" "where where" "kinds kinds" "acts acts"}
+  .rows .row .id{grid-area:id;white-space:normal;word-break:break-all}
+  .rows .row .n{grid-area:n}.rows .row .where{grid-area:where}.rows .row .kinds{grid-area:kinds}.rows .row .acts{grid-area:acts;justify-content:flex-start}
+  .rules td:nth-child(4){display:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Админка LORE</h1>
+  <span class="chip w dash">прототип PU-20 · данные — прод-снимок 13.11, только чтение</span>
+  <span class="sp"></span>
+  <span class="chip ok"><iconify-icon icon="game-icons:padlock"></iconify-icon>вы вошли: omiloreadmin</span>
+  <div class="tabs" role="tablist" aria-label="Режим"><button data-mode="ui" class="on">Интерфейс</button><button data-mode="doc">Пояснения</button></div>
+</header>
+<div class="wrap">
+<nav class="side" id="nav"></nav>
+<main>
+  <h2>Привести в порядок <span class="pin">1</span></h2>
+  <p class="lead">Ссылки на записи LORE в текстах (заметки, контекст, тела решений, спек, доков). Что читается однозначно — чинится одной пачкой под вашим логином. Остальное — список ниже: одна строка на запись, счётчик уменьшается, когда запись исправлена или помечена «не ссылка».</p>
+
+  <div class="status" id="status"></div>
+  <div id="banner"></div>
+  <div class="kpis" id="kpis"></div>
+
+  <section class="card" id="auto"></section>
+  <section class="card" id="manual"></section>
+
+  <ol class="notes" id="notes">
+    <li><span class="pin">1</span><div><b>Где раздел.</b> Группа меню «Язык графа» рядом со «Справочниками» и «Правилами CLAUDE», тон риска: пачка меняет тексты по всему корпусу, как правка словаря меняет подписи на каждом экране. Адрес: <span class="mono">?mod=admin&amp;sec=adm-tidy&amp;tidy=ambiguous_code</span> — выбранная группа в URL, ссылкой можно поделиться.</div></li>
+    <li><span class="pin">2</span><div><b>Прод правит только бэкенд, подтверждает человек.</b> Владелица 13.11: <q>на проде все делается бэком с подтверждением через ui и логином человека</q>. Сервер считает план (dry_run), окно показывает дифф, кнопка открывается только после ввода своего логина — тот же паттерн, что у опасных правок ролей (DangerBatch). Автор новых версий — этот человек, не служебная учётка.</div></li>
+    <li><span class="pin">3</span><div><b>Правила автопочинки — галочками.</b> Межспринтовый одинокий код (код есть ровно у одной задачи в базе) по умолчанию выключен: он однозначен в базе, но в тексте может значить другое (ветку, номер правила). Пример у каждого правила — настоящий.</div></li>
+    <li><span class="pin">4</span><div><b>Пачку можно отменить.</b> Каждая правка — новая SCD2-версия, старая остаётся в истории. «Отменить пачку» пишет прежние тексты обратно одним вызовом (undo_of), пока открыто окно; запись в «Журнале действий» ведёт на эту пачку.</div></li>
+    <li><span class="pin">5</span><div><b>Что не записалось — не теряется.</b> Если текст изменился после проверки или у записи нет открытой версии, сервер отказывает (на препроде так вышло с 32 из 3 345). Такие записи сразу попадают в ручной список группой «Автопочинка не смогла записать».</div></li>
+    <li><span class="pin">6</span><div><b>Одна строка — одна запись.</b> Владелица: <q>Если в одном тексте несколько то ссылка одна</q>. В строке — число мест и их типы; раскрытие показывает фрагменты. «Открыть» ведёт в паспорт записи на правку.</div></li>
+    <li><span class="pin">7</span><div><b>Счётчик убывает, есть перепроверка.</b> Владелица: <q>счетчик проверок уменьшается и возможность сделать речек</q>. «Перепроверить» у строки — одна запись; «Перепроверить всё» — весь корпус. Исправленная запись уходит из списка, счётчики пересчитываются.</div></li>
+    <li><span class="pin">8</span><div><b>«Не ссылка» — без правки текста.</b> Для «похоже на ID, записи нет» и ID внутри фрагмента кода: часто это не ссылка (локальная нумерация UC-1, пример вызова). Отметка снимает строку из счётчика и запоминается; список отмеченного — фильтром «скрытые», отметку можно снять.</div></li>
+    <li><span class="pin">9</span><div><b>Внешние ссылки не показываются вовсе.</b> Владелица: <q>внешние ссылки MD должно не быть багом и не быть лишним шумом</q>. GitHub, Forgejo, любые сайты — не упоминания объектов LORE, их нет ни в счётчиках, ни в списке.</div></li>
+    <li><span class="pin">10</span><div><b>Честные состояния.</b> «Не смогли проверить» — красная плашка с причиной и последним успешным результатом с пометкой «устарел»; это не «всё чисто». «Всё чисто» — только после успешной проверки. Переключатель состояний сверху — только в прототипе.</div></li>
+  </ol>
+</main>
+</div>
+
+<div class="veil" id="veil"></div>
+<div class="dlg center" id="dlgApply" role="dialog" aria-modal="true"></div>
+<div class="dlg right" id="dlgPeek" role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast"></div>
+
+<script id="data" type="application/json">{"auto":{"edits":17732,"per_type":{"BragiInsight":17,"BragiVariant":2,"ClRoutineOutput":159,"ClRoutineRun":116,"KnowADR":118,"KnowActor":2,"KnowDecision":1628,"KnowDoc":2152,"KnowFile":1,"KnowFinding":2,"KnowGain":3,"KnowMilestone":66,"KnowPR":9,"KnowPain":1,"KnowProjectActor":9,"KnowQuestion":819,"KnowRelease":1286,"KnowSpec":1373,"KnowSprint":1179,"KnowTask":8452,"KnowUseCase":90,"KnowUserDraft":12,"PlanCheckpoint":2,"PlanVersion":28,"QGJobTask":187,"QGRecommendation":2,"QualityGate":17},"records":5208,"rules":{"escaped":1,"lone_own_sprint":3673,"lone_unique":3632,"lore_url":7,"shape":7904,"typed":2433,"wiki":11,"wrong_type":71},"samples":{"escaped":[{"field":"note_md","new":"[[task:SPRINT_GJALLARHORN_NET_AUDIO/NA-23]]","old":"\\[\\[SPRINT_GJALLARHORN_NET_AUDIO/NA-23\\]\\]","rec":"SPRINT_GJALLARHORN_NET_AUDIO/NA-25","type":"KnowTask"}],"lone_own_sprint":[{"field":"context_md","new":"[[task:SPRINT_AIDA_PREPROD_MIGRATION/AID-01]]","old":"AID-01","rec":"SPRINT_AIDA_PREPROD_MIGRATION","type":"KnowSprint"},{"field":"context_md","new":"[[task:SPRINT_AI_AUTODOCS_BASIC/AD-05]]","old":"AD-05","rec":"SPRINT_AI_AUTODOCS_BASIC","type":"KnowSprint"},{"field":"outcome_md","new":"[[task:SPRINT_ANVIL_IDE/AI-01]]","old":"AI-01","rec":"SPRINT_ANVIL_IDE","type":"KnowSprint"},{"field":"outcome_md","new":"[[task:SPRINT_ARCADEDB_2691_UPGRADE/UP-02]]","old":"UP-02","rec":"SPRINT_ARCADEDB_2691_UPGRADE","type":"KnowSprint"}],"lone_unique":[{"field":"statement_md","new":"[[task:SPRINT_SEO_SITE_WAVE3/SITE3-02]]","old":"SITE3-02","rec":"INS-04","type":"BragiInsight"},{"field":"statement_md","new":"[[task:SPRINT_BRAGI_ARCHIVE_V2/V2-01]]","old":"V2-01","rec":"INS-05","type":"BragiInsight"},{"field":"statement_md","new":"[[task:SPRINT_GJALLARHORN_NET_AUDIO/NA-01]]","old":"NA-01","rec":"INS-MIDGARD-2026-09-01-DISK-D","type":"BragiInsight"},{"field":"statement_md","new":"[[task:SPRINT_MIG_GEN_PYTHON/MG-103]]","old":"MG-103","rec":"INS-MIG-0408-NIGHT","type":"BragiInsight"}],"lore_url":[{"field":"context_md","new":"[[sprint:SPRINT_GEOID_STRUCTURAL_ID]]","old":"[SPRINT_GEOID_STRUCTURAL_ID](http://localhost:4400/lore?section=sprints&passport=SPRINT_GEOID_STRUCTURAL_ID)","rec":"SPRINT_HOUND_OBJECT_DEDUP","type":"KnowSprint"},{"field":"context_md","new":"[[sprint:SPRINT_PLPGSQL_GRAMMAR_ANTLR]]","old":"[SPRINT_PLPGSQL_GRAMMAR_ANTLR](http://192.168.3.131:4400/lore?section=sprints&passport=SPRINT_PLPGSQL_GRAMMAR_ANTLR)","rec":"SPRINT_PLPGSQL_BODY_PARSING","type":"KnowSprint"},{"field":"context_md","new":"[[sprint:SPRINT_PLPGSQL_BODY_PARSING]]","old":"[SPRINT_PLPGSQL_BODY_PARSING](http://192.168.3.131:4400/lore?section=sprints&passport=SPRINT_PLPGSQL_BODY_PARSING)","rec":"SPRINT_PLPGSQL_GRAMMAR_ANTLR","type":"KnowSprint"},{"field":"note_md","new":"[[sprint:SPRINT_GEOID_PHASE_C_FLIP]]","old":"[SPRINT_GEOID_PHASE_C_FLIP](http://localhost:4400/lore?section=sprints&passport=SPRINT_GEOID_PHASE_C_FLIP)","rec":"SPRINT_HOUND_OBJECT_DEDUP/OD-FORMATTER-PARSE-DRIFT","type":"KnowTask"}],"shape":[{"field":"statement_md","new":"[[adr:ADR-MIDGARD-003]]","old":"ADR-MIDGARD-003","rec":"INS-MIDGARD-02","type":"BragiInsight"},{"field":"statement_md","new":"[[pain:PAIN-LORE-PLAN-BLIND]]","old":"PAIN-LORE-PLAN-BLIND","rec":"INS-UXR-NEWS-AI-DIGEST","type":"BragiInsight"},{"field":"content_md","new":"[[sprint:SPRINT_SKADI_ADAPTERS]]","old":"SPRINT_SKADI_ADAPTERS","rec":"#206:0","type":"ClRoutineOutput"},{"field":"content_md","new":"[[sprint:SPRINT_HOUND_GREENPLUM_GRAMMAR]]","old":"SPRINT_HOUND_GREENPLUM_GRAMMAR","rec":"#206:1","type":"ClRoutineOutput"}],"typed":[{"field":"statement_md","new":"[[decision:D-2026-UXR-NEWS-AGGREGATOR]]","old":"decision:D-2026-UXR-NEWS-AGGREGATOR","rec":"INS-UXR-NEWS-AI-DIGEST","type":"BragiInsight"},{"field":"body_md","new":"[[question:Q-2026-ADH-ICEBERG-STAND-123GB-HOSTAGE]]","old":"question:Q-2026-ADH-ICEBERG-STAND-123GB-HOSTAGE","rec":"D-2026-ADH-ICEBERG-STAND-DELETED","type":"KnowDecision"},{"field":"body_md","new":"[[release:v1.7.9]]","old":"release:v1.7.9","rec":"D-2026-AIDA-CLOSED-BY-RELEASE-1-7-9","type":"KnowDecision"},{"field":"body_md","new":"[[spec:HOUND_DIALECT_DORIS]]","old":"spec:HOUND_DIALECT_DORIS","rec":"D-2026-AIDA-QUESTIONS-REVISION-1106","type":"KnowDecision"}],"wiki":[{"field":"body_md","new":"[[adr:ADR-MINILORE-031]]","old":"`[[ADR-MINILORE-031]]`","rec":"D-2026-MINILORE-SHAPE-BEATS-THE-ROW","type":"KnowDecision"},{"field":"content_md_ru","new":"[[adr:ADR-LORE-038]]","old":"`[[ADR-LORE-038]]`","rec":"claude_rules_global","type":"KnowDoc"},{"field":"content_md_ru","new":"[[adr:ADR-LORE-038]]","old":"`[[ADR-LORE-038]]`","rec":"claude_rules_global_lorcetus","type":"KnowDoc"},{"field":"content_md","new":"[[component:OMILORE]]","old":"`[[component:OMILORE]]`","rec":"SPEC-LORE-MD-INLINE-REF","type":"KnowSpec"}],"wrong_type":[{"field":"body_md","new":"[[decision:ADR-LORE-022-D1]]","old":"[[ADR-LORE-022-D1]]","rec":"141","type":"KnowDecision"},{"field":"body_md","new":"[[decision:ADR-LORE-025-D6]]","old":"[[ADR-LORE-025-D6]]","rec":"149","type":"KnowDecision"},{"field":"body_md","new":"[[decision:ADR-LORE-014-D3]]","old":"[[ADR-LORE-014-D3]]","rec":"ADR-LORE-014-D4","type":"KnowDecision"},{"field":"body_md","new":"[[decision:ADR-LORE-027-D6]]","old":"ADR-LORE-027-D6","rec":"ADR-LORE-022-D2","type":"KnowDecision"}]},"sig":{"escaped":1,"lone_own_sprint":882,"lone_own_sprint,lone_unique":118,"lone_own_sprint,lone_unique,lore_url":1,"lone_own_sprint,lone_unique,lore_url,shape":3,"lone_own_sprint,lone_unique,shape":156,"lone_own_sprint,lone_unique,shape,typed":36,"lone_own_sprint,lone_unique,shape,wrong_type":2,"lone_own_sprint,lone_unique,typed":11,"lone_own_sprint,lone_unique,typed,wiki":1,"lone_own_sprint,lone_unique,wrong_type":1,"lone_own_sprint,shape":344,"lone_own_sprint,shape,typed":32,"lone_own_sprint,shape,wrong_type":3,"lone_own_sprint,typed":54,"lone_own_sprint,wrong_type":6,"lone_unique":505,"lone_unique,lore_url":1,"lone_unique,shape":511,"lone_unique,shape,typed":74,"lone_unique,shape,typed,wiki":2,"lone_unique,shape,wiki":1,"lone_unique,shape,wrong_type":5,"lone_unique,typed":54,"lone_unique,wrong_type":4,"lore_url,shape":1,"shape":1616,"shape,typed":215,"shape,wiki":1,"shape,wrong_type":5,"typed":536,"wrong_type":26}},"manual":{"totalRecords":688,"totalMentions":1605,"groups":{"no_record":{"records":166,"mentions":554,"rows":[{"type":"KnowSpec","id":"SPEC-ADMIN-LORE-UC","n":71,"nInGroup":71,"kinds":["no_record"],"ex":[{"k":"no_record","id":"UC-1","field":"content_md","snip":"сквозных сценариев-мастеров админки v2 (UC-1…UC-8). Повод — оценка владелицей протот"},{"k":"no_record","id":"UC-8","field":"content_md","snip":"ных сценариев-мастеров админки v2 (UC-1…UC-8). Повод — оценка владелицей прототипа а"},{"k":"no_record","id":"UC-A","field":"content_md","snip":"м и кто в нём твои агенты». Каталог §3 (UC-A/B/C — что панель умеет) не отменяется;"}]},{"type":"KnowDoc","id":"product_uc_matrix_coverage","n":65,"nInGroup":65,"kinds":["no_record"],"ex":[{"k":"no_record","id":"UC-1","field":"content_md_en","snip":"------|---------|----------|--------| | UC-1 | Impact before DDL | DE | MVP | ⚠ Part"},{"k":"no_record","id":"UC-2","field":"content_md_en","snip":"VP | ⚠ Partial — API ✅, UI button ❌ | | UC-2 | Root cause broken data | DE | MVP | ⚠"},{"k":"no_record","id":"UC-3","field":"content_md_en","snip":"| MVP | ⚠ Partial — MIMIR ✅, REST ❌ | | UC-3 | Preview draft query | DE | MVP | ⚠ Pa"}]},{"type":"KnowDoc","id":"product_uc_audit_ref","n":36,"nInGroup":36,"kinds":["no_record"],"ex":[{"k":"no_record","id":"UC-1","field":"content_md_en","snip":"| |----|------|--------|----------| | **UC-1** | Harvest (JDBC + file upload) | ✅ PR"},{"k":"no_record","id":"UC-3","field":"content_md_en","snip":"called from Verdandi (0 matches) | | **UC-3** | Browse lineage | ✅ PROD | No annota"},{"k":"no_record","id":"UC-4","field":"content_md_en","snip":"nk, read-only viewer not enforced | | **UC-4** | Impact analysis | ✅ backend / ⚠ UI"}]},{"type":"KnowFinding","id":"THESIS_VALIDATION_R4_SUMMARY","n":22,"nInGroup":22,"kinds":["no_record"],"ex":[{"k":"no_record","id":"UC-1","field":"summary_md","snip":"-|---| | 1 | LLM × conceptual modeling (UC-1/UC-2) | ✅ **Подтверждён** (augmentation"},{"k":"no_record","id":"UC-3","field":"summary_md","snip":"| | 2 | LLM × schema/ontology matching (UC-3.2) | ✅ **Подтверждён** (кандидаты + обя"},{"k":"no_record","id":"UC-0","field":"summary_md","snip":"25 (PVLDB 18(12)) | | 4 | GORE для DWH (UC-0) | ⚪ **Не закрыт** (нет выживших claims"}]},{"type":"KnowFinding","id":"METHODOLOGY_BIBLIOGRAPHY_INDEX","n":19,"nInGroup":19,"kinds":["no_record"],"ex":[{"k":"no_record","id":"UC-0","field":"summary_md","snip":"ированные источники | |---|---|---| | **UC-0** Принять/классифицировать | процессный"},{"k":"no_record","id":"UC-1","field":"summary_md","snip":"х 3-4 → документационный пробел** | | **UC-1 / M1** Выявить факты | FCO-IM + LLM-чер"},{"k":"no_record","id":"UC-2","field":"summary_md","snip":"RD-генерация (Springer LNBIP 570) | | **UC-2 / M2** Canonical/ELM | ELM + LLM-чернов"}]},{"type":"KnowSpec","id":"SPEC-LORE-MD-INLINE-REF","n":16,"nInGroup":3,"kinds":["no_record","backtick","unknown"],"ex":[{"k":"no_record","id":"SPRINT_UXR_S10_SEIDR_KIT_2/PHASE_MDREF","field":"content_md","snip":"). Задачи: фаза SPRINT_UXR_S10_SEIDR_KIT_2/PHASE_MDREF. Нарочно минимальная: договор, поведен"},{"k":"no_record","id":"SPRINT_X/CODE","field":"content_md","snip":"SPRINT_X/CODE"},{"k":"no_record","id":"SPRINT_UXR_S10_SEIDR_KIT_2/PHASE_MDREF","field":"summary","snip":"о упоминаниям без дублей. Задачи — фаза SPRINT_UXR_S10_SEIDR_KIT_2/PHASE_MDREF."}]},{"type":"KnowSpec","id":"SPEC-LORE-RELEASE-NOTES","n":15,"nInGroup":10,"kinds":["no_record","backtick","lore_url"],"ex":[{"k":"no_record","id":"SPRINT_X/CODE","field":"content_md","snip":"`SPRINT_X/CODE`"},{"k":"no_record","id":"D-","field":"content_md","snip":"`decision:D-…`"},{"k":"no_record","id":"SPEC-","field":"content_md","snip":"`spec:SPEC-…`"}]},{"type":"KnowTask","id":"SPRINT_UXR_S7B_ADMIN/S7B-01","n":14,"nInGroup":14,"kinds":["no_record"],"ex":[{"k":"no_record","id":"UC-1","field":"note_md","snip":"2.0 §8: Главная «что требует внимания»; UC-1, UC-2, UC-7, UC-8, «Агенты»; Доступ (UC"},{"k":"no_record","id":"UC-2","field":"note_md","snip":": Главная «что требует внимания»; UC-1, UC-2, UC-7, UC-8, «Агенты»; Доступ (UC-3, UC"},{"k":"no_record","id":"UC-7","field":"note_md","snip":"ная «что требует внимания»; UC-1, UC-2, UC-7, UC-8, «Агенты»; Доступ (UC-3, UC-4, UC"}]},{"type":"KnowTask","id":"SPRINT_UXR_S7B_ADMIN/S7B-17","n":14,"nInGroup":14,"kinds":["no_record"],"ex":[{"k":"no_record","id":"UC-1","field":"note_md","snip":"develop + прототип s7b-admin-v6.html): UC-1 «подключить человека», UC-2 «дать агент"},{"k":"no_record","id":"UC-2","field":"note_md","snip":"n-v6.html): UC-1 «подключить человека», UC-2 «дать агента», UC-7 «новый ноутбук» обр"},{"k":"no_record","id":"UC-7","field":"note_md","snip":"дключить человека», UC-2 «дать агента», UC-7 «новый ноутбук» обрываются — мастеров н"}]},{"type":"KnowFinding","id":"THESIS_VALIDATION_SUMMARY","n":13,"nInGroup":13,"kinds":["no_record"],"ex":[{"k":"no_record","id":"UC-0","field":"summary_md","snip":"2026 шесть ключевых тезисов методологии UC-0..UC-8, и какие инсайты предлагает. ##"},{"k":"no_record","id":"UC-8","field":"summary_md","snip":"nce-механизм границы модель↔реальность (UC-8) | 🟡 **Частично** | high | Wasser et a"},{"k":"no_record","id":"UC-8","field":"summary_md","snip":"алировать как **CPG-кандидаты** (мост к UC-8). --- ## Тезис 2 — Ontology-driven Gr"}]},{"type":"KnowSpec","id":"LORE_DB_SPEC","n":12,"nInGroup":1,"kinds":["no_record","ambiguous_code"],"ex":[{"k":"no_record","id":"SPRINT_X/T05","field":"content_md","snip":"`SPRINT_X/T05`"}]},{"type":"KnowSprint","id":"SPRINT_UXR_S7B_ADMIN","n":12,"nInGroup":12,"kinds":["no_record"],"ex":[{"k":"no_record","id":"UC-8","field":"context_md","snip":"[task:SPRINT_UXR_S7B_ADMIN/S7B-01]]…16: UC-8 полное; UC-3 половинчатое; UC-1/2/4/7 —"},{"k":"no_record","id":"UC-3","field":"context_md","snip":"UXR_S7B_ADMIN/S7B-01]]…16: UC-8 полное; UC-3 половинчатое; UC-1/2/4/7 — частями; **U"},{"k":"no_record","id":"UC-1","field":"context_md","snip":"1]]…16: UC-8 полное; UC-3 половинчатое; UC-1/2/4/7 — частями; **UC-5 и UC-6 не покры"}]},{"type":"KnowDoc","id":"guide_uc_deployment","n":12,"nInGroup":12,"kinds":["no_record"],"ex":[{"k":"no_record","id":"UC-INIT","field":"content_md_en","snip":"/CD setup — see CICD_SETUP.md. --- ## UC-INIT — Fresh Deploy from Scratch **When:**"},{"k":"no_record","id":"UC-UPGRADE-FULL","field":"content_md_en","snip":"→ run manually --- ## UC-UPGRADE-FULL — Standard N-1 → N Upgrade **When:** s"},{"k":"no_record","id":"UC-UPGRADE-KC","field":"content_md_en","snip":"y (usually OK for minor bumps) --- ## UC-UPGRADE-KC — Keycloak-only Upgrade **When:** KC v"}]},{"type":"KnowSpec","id":"MIMIR_SPEC","n":11,"nInGroup":1,"kinds":["ambiguous_code","no_record"],"ex":[{"k":"no_record","id":"Q-MC1","field":"content_md","snip":". | 02.05.2026 | | Q-MC1 | tenantAlias → dbName через"}]}]},"ambiguous_code":{"records":323,"mentions":673,"rows":[{"type":"KnowSpec","id":"SPEC-MIDGARD-COMPETITOR-CARDS","n":22,"nInGroup":22,"kinds":["ambiguous_code"],"ex":[{"k":"ambiguous_code","id":"AN-04","field":"content_md","amb":2,"snip":".2026 — классы источников в дополнениях AN-04:* П — пользователь (форум, отзыв в мага"},{"k":"ambiguous_code","id":"AN-04","field":"content_md","amb":2,"snip":".3 как российский второй эшелон (разбор AN-04); отнесение к кругам не менялось — Digm"},{"k":"ambiguous_code","id":"AN-04","field":"content_md","amb":2,"snip":"; свой голос | *Дополнение 14.09.2026 (AN-04, AN-09) — Sprut.hub: ПО «2.0» → 3.0* |"}]},{"type":"KnowDoc","id":"deepwiki_3_2","n":22,"nInGroup":20,"kinds":["ambiguous_code","backtick"],"ex":[{"k":"ambiguous_code","id":"HA-6","field":"content_md_en","amb":2,"snip":"(HA-6) 2. If all replicas saturated → degrade"},{"k":"ambiguous_code","id":"HA-6","field":"content_md_en","amb":2,"snip":"--- ## Health-Aware Circuit Breaking (HA-6,"},{"k":"ambiguous_code","id":"MVP-4","field":"content_md_en","amb":2,"snip":"** (D4 MVP-4,"}]},{"type":"KnowTask","id":"SPRINT_UXR_S2_GRAPH_MEMORY/S2-11","n":16,"nInGroup":16,"kinds":["ambiguous_code"],"ex":[{"k":"ambiguous_code","id":"PRE-03","field":"note_md","amb":2,"snip":"показывает 0 задач без версий, карточка PRE-03 открывается в miniLORE. **09.11 — пров"},{"k":"ambiguous_code","id":"PRE-03","field":"note_md","amb":2,"snip":"критерий из этой же заметки («карточка PRE-03 открывается») на проде не выполнен: -"},{"k":"ambiguous_code","id":"PRE-03","field":"note_md","amb":2,"snip":"отдаёт PRE-03 со статусом «✅ DONE» через"}]},{"type":"KnowSpec","id":"BACKEND_ARCHITECTURE","n":15,"nInGroup":14,"kinds":["ambiguous_code","backtick"],"ex":[{"k":"ambiguous_code","id":"TS-02","field":"content_md","amb":2,"snip":") | TS-02 | | Raw event JSON | OlRawEvent DOCUMEN"},{"k":"ambiguous_code","id":"TS-03","field":"content_md","amb":2,"snip":"OlIngestionMetric TIMESERIES | FRIGG | TS-03 | | Dataset coord override | OlNamespac"},{"k":"ambiguous_code","id":"TS-01","field":"content_md","amb":2,"snip":"eimdallEventMetric TIMESERIES | FRIGG | TS-01 dual-write | **FRIGG schema** ("}]},{"type":"KnowSpec","id":"LORE_DB_SPEC","n":12,"nInGroup":11,"kinds":["no_record","ambiguous_code"],"ex":[{"k":"ambiguous_code","id":"PL-28","field":"content_md","amb":2,"snip":"товый слой — ОДИН тип с само-иерархией (PL-28, решение №141) **Вершина слоя одна —"},{"k":"ambiguous_code","id":"PL-15","field":"content_md","amb":2,"snip":"товность выводится, а не проставляется (PL-15, D17) Руками ставятся только **намерен"},{"k":"ambiguous_code","id":"PL-20","field":"content_md","amb":2,"snip":"лись, и в UI он окрашен предупреждающе (PL-20), иначе читался бы как «ещё не начинали"}]},{"type":"KnowSpec","id":"SPEC_MIG_GEN","n":12,"nInGroup":8,"kinds":["backtick","ambiguous_code"],"ex":[{"k":"ambiguous_code","id":"P-01","field":"content_md","amb":58,"snip":"гинал | что делаем мы | |---|---|---| | P-01 |"},{"k":"ambiguous_code","id":"P-03","field":"content_md","amb":57,"snip":"| | P-03 | не экранирует апострофы (1070 файлов)"},{"k":"ambiguous_code","id":"P-05","field":"content_md","amb":41,"snip":"апострофы (1070 файлов) | удваивает | | P-05 |"}]},{"type":"KnowSpec","id":"MIMIR_SPEC","n":11,"nInGroup":10,"kinds":["ambiguous_code","no_record"],"ex":[{"k":"ambiguous_code","id":"SC-02","field":"content_md","amb":2,"snip":"| ✅ Реализовано (SC-02) | | I19 | MIMIR → Anthropic | HTTPS |"},{"k":"ambiguous_code","id":"MT-07","field":"content_md","amb":3,"snip":"as в событии | ### Тиры и квоты (TIER2 MT-07, HP-03/04/06) | Tier | BYOK | Квота по"},{"k":"ambiguous_code","id":"MT-06","field":"content_md","amb":3,"snip":"икой ~4 символа/токен. ### BYOK (TIER2 MT-06, [[adr:ADR-MIMIR-002]]) Ключ тенанта хр"}]},{"type":"KnowSpec","id":"SPEC-MIDGARD-POSITIONING","n":11,"nInGroup":11,"kinds":["ambiguous_code"],"ex":[{"k":"ambiguous_code","id":"AN-11","field":"content_md","amb":2,"snip":"счётчик» была сильнее проверенного. По AN-11: **технически показать могут многие** —"},{"k":"ambiguous_code","id":"AN-11","field":"content_md","amb":2,"snip":".1 — методика проверки трёх обещаний по AN-11 (что делает покупатель, что видит, что"},{"k":"ambiguous_code","id":"AN-02","field":"content_md","amb":2,"snip":"е успехом». §8.4 — массовый покупатель (AN-02): локальность не называет, продаём чере"}]},{"type":"KnowTask","id":"SPRINT_MIG_GEN_PYTHON/MG-13","n":11,"nInGroup":11,"kinds":["ambiguous_code"],"ex":[{"k":"ambiguous_code","id":"P-01","field":"note_md","amb":58,"snip":"ерий проверяется машинно, а не глазами: P-01 — 27, P-09 — 15, P-03 — 10, P-01+P-05 —"},{"k":"ambiguous_code","id":"P-09","field":"note_md","amb":8,"snip":"яется машинно, а не глазами: P-01 — 27, P-09 — 15, P-03 — 10, P-01+P-05 — 9, P-05 —"},{"k":"ambiguous_code","id":"P-03","field":"note_md","amb":57,"snip":"но, а не глазами: P-01 — 27, P-09 — 15, P-03 — 10, P-01+P-05 — 9, P-05 — 6, P-01+P-0"}]},{"type":"KnowDoc","id":"udwe_khd20_model_quality","n":9,"nInGroup":9,"kinds":["ambiguous_code"],"ex":[{"k":"ambiguous_code","id":"P-03","field":"content_md_ru","amb":57,"snip":"где чинить | |---|---|---|---|---| | **P-03** | **апострофы в комментарии не экрани"},{"k":"ambiguous_code","id":"P-01","field":"content_md_ru","amb":58,"snip":"** | **1070** | **88%** | генератор | | P-01 |"},{"k":"ambiguous_code","id":"P-05","field":"content_md_ru","amb":41,"snip":"распределения | ~128 | 10% | модель | | P-05 |"}]},{"type":"KnowQuestion","id":"Q-VOLVA-SPRINTS-DONE-WITH-OPEN-TASKS","n":8,"nInGroup":8,"kinds":["ambiguous_code"],"ex":[{"k":"ambiguous_code","id":"VB-ICONS","field":"body_md","amb":2,"snip":"мпозиция админки по ролям | PLANNED | | VB-ICONS — бренд-иконки | IN PROGRESS | | VB-RAI"},{"k":"ambiguous_code","id":"VB-RAIL","field":"body_md","amb":2,"snip":"-ICONS — бренд-иконки | IN PROGRESS | | VB-RAIL — навигация по образцу LORE | PLANNED |"},{"k":"ambiguous_code","id":"B-STATICVIZ-PARITY","field":"body_md","amb":2,"snip":"навигация по образцу LORE | PLANNED | | B-STATICVIZ-PARITY — расхождение письмо↔браузер | PARTIAL"}]},{"type":"KnowSpec","id":"SHUTTLE_SERVICE","n":8,"nInGroup":8,"kinds":["ambiguous_code"],"ex":[{"k":"ambiguous_code","id":"SC-01","field":"content_md","amb":2,"snip":".2026 (создан 22.04.2026) **Статус:** ✅ SC-01+SC-02+[[task:SPRINT_SHUTTLE_C2X/SC-03]]"},{"k":"ambiguous_code","id":"SC-02","field":"content_md","amb":2,"snip":"(создан 22.04.2026) **Статус:** ✅ SC-01+SC-02+[[task:SPRINT_SHUTTLE_C2X/SC-03]]+[[tas"},{"k":"ambiguous_code","id":"SC-02","field":"content_md","amb":2,"snip":"*(SC-02)* AI-запрос к MIMIR о lineage графе. R"}]},{"type":"KnowDoc","id":"deepwiki_8","n":8,"nInGroup":8,"kinds":["ambiguous_code"],"ex":[{"k":"ambiguous_code","id":"AV-03","field":"content_md_en","amb":2,"snip":"| Heimdall webhook on harvest complete (AV-03) | |"},{"k":"ambiguous_code","id":"AV-03","field":"content_md_en","amb":2,"snip":"| Cache size probe (AV-03) | |"},{"k":"ambiguous_code","id":"AV-04","field":"content_md_en","amb":2,"snip":"onstructed columns without DDL backing (AV-04) | |"}]},{"type":"KnowDoc","id":"midgard_audit_open_tasks_2026_09_15","n":8,"nInGroup":8,"kinds":["ambiguous_code"],"ex":[{"k":"ambiguous_code","id":"AN-01","field":"content_md_ru","amb":2,"snip":"осемь сообщений от сессии маркетинга по AN-01, AN-02, AN-05, AN-09, AN-10, AN-11, AN-"},{"k":"ambiguous_code","id":"AN-02","field":"content_md_ru","amb":2,"snip":"ообщений от сессии маркетинга по AN-01, AN-02, AN-05, AN-09, AN-10, AN-11, AN-13, AN-"},{"k":"ambiguous_code","id":"AN-05","field":"content_md_ru","amb":2,"snip":"й от сессии маркетинга по AN-01, AN-02, AN-05, AN-09, AN-10, AN-11, AN-13, AN-14 — пр"}]}]},"backtick":{"records":109,"mentions":194,"rows":[{"type":"KnowDoc","id":"deepwiki_3_2","n":22,"nInGroup":2,"kinds":["ambiguous_code","backtick"],"ex":[{"k":"backtick","id":"ADR-HND-013","field":"content_md_en","snip":"`ADR-HND-013 §D2`"},{"k":"backtick","id":"ADR-HND-013","field":"content_md_ru","snip":"`ADR-HND-013 §D2`"}]},{"type":"KnowSpec","id":"SPEC-LORE-MD-INLINE-REF","n":16,"nInGroup":9,"kinds":["no_record","backtick","unknown"],"ex":[{"k":"backtick","id":"тип:ID","field":"content_md","snip":"`[[тип:ID]]`"},{"k":"backtick","id":"ID","field":"content_md","snip":"`[[ID]]`"},{"k":"backtick","id":"SPRINT_UXR_S10_SEIDR_KIT_2/MD-WINDOW","field":"content_md","snip":"`о «есть ли сужение». ## 3. Мини-окно — SPRINT_UXR_S10_SEIDR_KIT_2/MD-WINDOW Строится на`"}]},{"type":"KnowSpec","id":"BACKEND_ARCHITECTURE","n":15,"nInGroup":1,"kinds":["ambiguous_code","backtick"],"ex":[{"k":"backtick","id":"SPRINT_AIDA_TIMESERIES","field":"content_md","snip":"`SPRINT_AIDA_TIMESERIES.md`"}]},{"type":"KnowSpec","id":"SPEC-LORE-RELEASE-NOTES","n":15,"nInGroup":4,"kinds":["no_record","backtick","lore_url"],"ex":[{"k":"backtick","id":"ADR-…","field":"content_md","snip":"`[[ADR-…]]`"},{"k":"backtick","id":"Q-…","field":"content_md","snip":"`[[Q-…]]`"},{"k":"backtick","id":"RUNBOOK-…","field":"content_md","snip":"`[[RUNBOOK-…]]`"}]},{"type":"KnowSpec","id":"SPEC_MIG_GEN","n":12,"nInGroup":4,"kinds":["backtick","ambiguous_code"],"ex":[{"k":"backtick","id":"MG-23","field":"content_md","snip":"`MG-23`"},{"k":"backtick","id":"MG-21","field":"content_md","snip":"`MG-21`"},{"k":"backtick","id":"MG-22","field":"content_md","snip":"`MG-22`"}]},{"type":"KnowDoc","id":"minilore_contract_v1","n":11,"nInGroup":11,"kinds":["backtick"],"ex":[{"k":"backtick","id":"CT-1","field":"content_md_ru","snip":"`CT-1.1`"},{"k":"backtick","id":"CT-1","field":"content_md_ru","snip":"`CT-1.2`"},{"k":"backtick","id":"CT-1","field":"content_md_ru","snip":"`CT-1.3`"}]},{"type":"KnowTask","id":"SPRINT_MINILORE_POLISH/PL-16","n":6,"nInGroup":1,"kinds":["backtick","lore_url","no_record"],"ex":[{"k":"backtick","id":"<doc_id>","field":"note_md","snip":"`[[<doc_id>]]`"}]},{"type":"KnowTask","id":"SPRINT_UXR_S10_SEIDR_KIT_2/MD-AUTOLINK","n":6,"nInGroup":4,"kinds":["backtick","broken"],"ex":[{"k":"backtick","id":"тип:ID","field":"note_md","snip":"`[[тип:ID]]`"},{"k":"backtick","id":"ID","field":"note_md","snip":"`[[ID]]`"},{"k":"backtick","id":"тип:ID","field":"note_md","snip":"`[[тип:ID]]`"}]},{"type":"KnowSpec","id":"SPEC-LORE-VAULT-EXPORT","n":5,"nInGroup":3,"kinds":["no_record","backtick","unknown"],"ex":[{"k":"backtick","id":"идентификатор","field":"content_md","snip":"`[[идентификатор]]`"},{"k":"backtick","id":"ссылок","field":"content_md","snip":"`[[ссылок]]`"},{"k":"backtick","id":"идентификатор","field":"content_md","snip":"`[[идентификатор]]`"}]},{"type":"KnowTask","id":"SPRINT_LORE_PRODUCT_BACKLOG/AL-119","n":5,"nInGroup":5,"kinds":["backtick"],"ex":[{"k":"backtick","id":"T-01","field":"note_md","snip":"`T-01`"},{"k":"backtick","id":"P-01","field":"note_md","snip":"`P-01`"},{"k":"backtick","id":"P-02","field":"note_md","snip":"`P-02`"}]},{"type":"KnowTask","id":"SPRINT_LORE_PRODUCT_BACKLOG/SE-08","n":5,"nInGroup":5,"kinds":["backtick"],"ex":[{"k":"backtick","id":"AI-01","field":"note_md","snip":"`{\"task_id\": \"AI-01\", \"valid_from\": \"...\"}`"},{"k":"backtick","id":"HK-1","field":"note_md","snip":"`HK-1`"},{"k":"backtick","id":"T-06","field":"note_md","snip":"`T-06`"}]},{"type":"KnowDecision","id":"D-2026-MINILORE-FRAMES-V3","n":4,"nInGroup":4,"kinds":["backtick"],"ex":[{"k":"backtick","id":"FL-1","field":"body_md","snip":"`FL-1.5`"},{"k":"backtick","id":"FL-2","field":"body_md","snip":"`FL-2.3`"},{"k":"backtick","id":"RD-5","field":"body_md","snip":"`RD-5.1`"}]},{"type":"KnowQuestion","id":"Q-2026-SPRINT-DONE-DATE-SURVIVES-REOPEN","n":4,"nInGroup":2,"kinds":["backtick","ambiguous_code"],"ex":[{"k":"backtick","id":"AI-07","field":"body_md","snip":"`AI-07`"},{"k":"backtick","id":"AI-07","field":"body_md","snip":"`AI-07`"}]},{"type":"KnowSpec","id":"SPEC-MIGGEN-ARCH","n":4,"nInGroup":3,"kinds":["backtick","ambiguous_code"],"ex":[{"k":"backtick","id":"P-13","field":"content_md","snip":"`P-13`"},{"k":"backtick","id":"P-06","field":"content_md","snip":"`P-06`"},{"k":"backtick","id":"P-10","field":"content_md","snip":"`P-10`"}]}]},"broken":{"records":70,"mentions":90,"rows":[{"type":"KnowSpec","id":"HOUND_DIALECT_DORIS","n":6,"nInGroup":5,"kinds":["broken","unknown"],"ex":[{"k":"broken","id":"project_hound_dialect_session_propagation","field":"content_md","snip":"в существующих листенерах и [[project_hound_dialect_session_propagation]]. **Границы:**"},{"k":"broken","id":"project_pending_inject_until_h22","field":"content_md","snip":"NG_INJECT** (Q4) | ср. [[ADR-HND-008]], [[project_pending_inject_until_h22]] | --- ## 3. [[task:SPRINT_HOUND_MPP_D"},{"k":"broken","id":"project_hound_lineage_followups","field":"content_md","snip":"торять):** «CTE WITH отрезается (PG)» — [[project_hound_lineage_followups]]. Для Doris CTE обязан резолвиться как и"}]},{"type":"KnowSprint","id":"SPRINT_ARCADEDB_2671_UPGRADE","n":6,"nInGroup":5,"kinds":["broken","unknown"],"ex":[{"k":"broken","id":"project_arcadedb_2671_audit","field":"context_md","snip":"own testing errors, not real bugs — see [[project_arcadedb_2671_audit]] correction log. User explicitly chose f"},{"k":"broken","id":"project_arcadedb_id_bug","field":"context_md","snip":", per [[project_arcadedb_id_bug]]). **ODIN/MUNINN research side (see [[p"},{"k":"broken","id":"project_odin_muninn_bench_research","field":"context_md","snip":"g]]). **ODIN/MUNINN research side (see [[project_odin_muninn_bench_research]] + [[project_mimir_rag_vector_strategy]]"}]},{"type":"KnowTask","id":"SPRINT_UXR_S10_SEIDR_KIT_2/MD-AUTOLINK","n":6,"nInGroup":2,"kinds":["backtick","broken"],"ex":[{"k":"broken","id":"X","field":"note_md","snip":"ых). LoreMentionAutoLinkLiveDbTest (ADR [[component:X]] → ребро, повтор unchanged, битая → not_"},{"k":"broken","id":"…","field":"note_md","snip":"и #1238 (merge d9a01e16) — предки тега. [[component:…]] в телах ADR/решения/документа/спринта ("}]},{"type":"KnowTask","id":"SPRINT_UXR_S7A_NEWS/S7A-01","n":5,"nInGroup":5,"kinds":["broken"],"ex":[{"k":"broken","id":"released","field":"note_md","snip":"талось только у 60 событий из ~700: - release:released — 22 из 22; - decision:created — 21 и"},{"k":"broken","id":"created","field":"note_md","snip":"0: - release:released — 22 из 22; - decision:created — 21 из 21; - component:changed — 10"},{"k":"broken","id":"changed","field":"note_md","snip":"2; - decision:created — 21 из 21; - component:changed — 10 из 10; - adr:created — 3 из 3;"}]},{"type":"KnowSprint","id":"SPRINT_TECH_REGISTRY","n":3,"nInGroup":3,"kinds":["broken"],"ex":[{"k":"broken","id":"project_arcadedb_2671_audit","field":"context_md","snip":"([[project_arcadedb_2671_audit]]). - Infisical vs Vault — лицензии оказа"},{"k":"broken","id":"verification_rules","field":"context_md","snip":"ыла прямая проверка первоисточника (per [[verification_rules]] / [[feedback_release_numbers_from_githu"},{"k":"broken","id":"feedback_release_numbers_from_github","field":"context_md","snip":"источника (per [[verification_rules]] / [[feedback_release_numbers_from_github]] — тот же принцип, что для PR/релизов, н"}]},{"type":"KnowDecision","id":"D-2026-LORE-MACHINE-KNOWLEDGE-STAYS-UNLINKED","n":2,"nInGroup":1,"kinds":["broken","ambiguous_code"],"ex":[{"k":"broken","id":"feedback_empty_result_vs_failed_check","field":"body_md","snip":"этом работающим. Это тот же класс, что [[feedback_empty_result_vs_failed_check]]: невыполнившаяся проверка неотличима от"}]},{"type":"KnowUseCase","id":"FEAT-LORE-PLAN","n":2,"nInGroup":2,"kinds":["broken"],"ex":[{"k":"broken","id":"SPRINT_LORE_PLAN_BOARD","field":"context_md","snip":"ается в момент записи задачи. Связано: [[SPRINT_LORE_PLAN_BOARD]], [[lore_sprint_valid_from_scd2]]."},{"k":"broken","id":"lore_sprint_valid_from_scd2","field":"context_md","snip":". Связано: [[SPRINT_LORE_PLAN_BOARD]], [[lore_sprint_valid_from_scd2]]."}]},{"type":"KnowSpec","id":"HOUND_DIALECT_SCHEMA_HIERARCHY","n":2,"nInGroup":1,"kinds":["broken","ambiguous_code"],"ex":[{"k":"broken","id":"project_hound_geoid_split_rootcause","field":"content_md","snip":"тракт CLAUDE.md HOUND→SHUTTLE→Verdandi, [[project_hound_geoid_split_rootcause]], [[HOUND_DIALECT_DORIS]] **Гейт:** закр"}]},{"type":"KnowTask","id":"SPRINT_HOUND_MPP_DIALECTS/SR-04","n":2,"nInGroup":2,"kinds":["broken"],"ex":[{"k":"broken","id":"feedback_graph_materialization_open_questions","field":"note_md","snip":"тот же класс вопроса, что GPP-10/DO-04: [[feedback_graph_materialization_open_questions]]). **Сделано (MV-часть):**"},{"k":"broken","id":"feedback_graph_materialization_open_questions","field":"note_md","snip":"(модель идентичности каталога в графе, [[feedback_graph_materialization_open_questions]]). Статус → 🟡."}]},{"type":"KnowTask","id":"SPRINT_LORE_DB_UPGRADE_REGRESSION/DBU-18","n":2,"nInGroup":1,"kinds":["broken","ambiguous_code"],"ex":[{"k":"broken","id":"SPRINT_LORE_DB_UPGRADE_REGRESSION/DBR-12","field":"note_md","snip":"хуже на один индекс; обход DROP+CREATE ([[SPRINT_LORE_DB_UPGRADE_REGRESSION/DBR-12]]) остаётся обязательным | |"}]},{"type":"KnowTask","id":"SPRINT_LORE_DB_UPGRADE_REGRESSION/DBU-19","n":2,"nInGroup":1,"kinds":["ambiguous_code","broken"],"ex":[{"k":"broken","id":"SPRINT_LORE_DB_UPGRADE_REGRESSION/DBR-12","field":"note_md","snip":"вехе ничего нет** — обход DROP+CREATE ([[SPRINT_LORE_DB_UPGRADE_REGRESSION/DBR-12]]) понадобится и в ноябре. Из открытых ("}]},{"type":"KnowTask","id":"SPRINT_LORE_PRODUCT_LAYER/PL-34","n":2,"nInGroup":2,"kinds":["broken"],"ex":[{"k":"broken","id":"lore_git_project_registration","field":"note_md","snip":". Связано: [[lore_git_project_registration]], [[lore_write_via_mcp_only]]."},{"k":"broken","id":"lore_write_via_mcp_only","field":"note_md","snip":"ано: [[lore_git_project_registration]], [[lore_write_via_mcp_only]]."}]},{"type":"KnowTask","id":"SPRINT_MINILORE_CUTOVER/CO-40","n":2,"nInGroup":1,"kinds":["unknown","broken"],"ex":[{"k":"broken","id":"/runbook","field":"note_md","snip":"9c2a5d8): ссылки только на открываемое; doc:/runbook:/component: в прозе; PAIN/GAIN/Q/actor/"}]},{"type":"KnowTask","id":"SPRINT_MINILORE_LIVE/LV-3.2","n":2,"nInGroup":2,"kinds":["broken"],"ex":[{"k":"broken","id":"minilore-srv-v0.3.96","field":"note_md","snip":"0.10 **Серверная** — PR #101, выложена release:minilore-srv-v0.3.96: 1. **Правило адреса**: не-https, числ"},{"k":"broken","id":"minilore-srv-v0.3.97","field":"note_md","snip":"— [[task:SPRINT_MINILORE_LIVE/LV-3.3]], release:minilore-srv-v0.3.97, проверены **по проводу** настоящим HTT"}]}]},"unknown":{"records":41,"mentions":57,"rows":[{"type":"KnowSpec","id":"SPEC-LORE-MD-INLINE-REF","n":16,"nInGroup":4,"kinds":["no_record","backtick","unknown"],"ex":[{"k":"unknown","id":"тип:ID","field":"content_md","snip":"[[тип:ID]]"},{"k":"unknown","id":"тип:ID","field":"content_md","snip":"[[тип:ID]]"},{"k":"unknown","id":"…","field":"content_md","snip":"[[…]]"}]},{"type":"KnowSpec","id":"HOUND_DIALECT_DORIS","n":6,"nInGroup":1,"kinds":["broken","unknown"],"ex":[{"k":"unknown","id":"L2RuleSet","field":"content_md","snip":"([[L2RuleSet]],"}]},{"type":"KnowSprint","id":"SPRINT_ARCADEDB_2671_UPGRADE","n":6,"nInGroup":1,"kinds":["broken","unknown"],"ex":[{"k":"unknown","id":"project-knot-sql-source-hound-src-move","field":"context_md","snip":"is EMPTY in all tenants (see [[project-knot-sql-source-hound-src-move]]) — needs a re-harvest via"}]},{"type":"KnowSpec","id":"SPEC-LORE-VAULT-EXPORT","n":5,"nInGroup":1,"kinds":["no_record","backtick","unknown"],"ex":[{"k":"unknown","id":"ссылками","field":"summary","snip":"ровно один — папка с .md, frontmatter и [[ссылками]], плюс JSON канваса для схем. Плагин не"}]},{"type":"KnowDoc","id":"volva_metabase_glossary","n":4,"nInGroup":3,"kinds":["lore_url","unknown"],"ex":[{"k":"unknown","id":"volva-062-architecture","field":"content_md_ru","snip":"ов (T21/T24/T25). См. отдельную заметку [[volva-062-architecture]]. | Механизм | Реагирует на смену темы/"},{"k":"unknown","id":"volva-062-architecture","field":"content_md_ru","snip":"тракта, код не копируй. --- *Связано: [[volva-062-architecture]] (движок темы, статичный color()), [[vol"},{"k":"unknown","id":"volva-module","field":"content_md_ru","snip":"ure]] (движок темы, статичный color()), [[volva-module]] (общий обзор форка), [[adr:ADR-MT-001]]"}]},{"type":"KnowDecision","id":"D-2026-MIDGARD-NO-OWN-SOCKETS","n":3,"nInGroup":3,"kinds":["unknown"],"ex":[{"k":"unknown","id":"VORD","field":"body_md","snip":"]) чужими колонками не закрываются; - **[[VORD]]** — узлы с датчиками, в том числе [[RAN"},{"k":"unknown","id":"RAN","field":"body_md","snip":"ORD]]** — узлы с датчиками, в том числе [[RAN]] (протечка → кран), работающий без сети;"},{"k":"unknown","id":"SKIRNIR","field":"body_md","snip":"течка → кран), работающий без сети; - **[[SKIRNIR]]** — панель как интерфейс, а не как розе"}]},{"type":"KnowTask","id":"SPRINT_UXR_POLISH_UAT_1113/PU-15","n":3,"nInGroup":3,"kinds":["unknown"],"ex":[{"k":"unknown","id":"…","field":"note_md","snip":"в обратных кавычках, с типом, [[…]], адреса :4400/lore?…, GitHub-URL), и ча"},{"k":"unknown","id":"…","field":"note_md","snip":"оров из глобального CLAUDE.md (тип:КОД, [[…]], по виду; задача всегда СПРИНТ/КОД; ник"},{"k":"unknown","id":"…","field":"note_md","snip":"ассификация упоминаний объектов: канон ([[…]], тип:КОД, @/#tana) / по виду / в обратн"}]},{"type":"KnowSpec","id":"SPEC-BRAGI-ARCHIVE-001","n":2,"nInGroup":2,"kinds":["unknown"],"ex":[{"k":"unknown","id":"seidr-telegraph-account","field":"content_md","snip":"ействие владельца (per-action). Пример: [[seidr-telegraph-account]]. --- ## Связи (ER) - Публикация — 1:N"},{"k":"unknown","id":"seidr-measurement-stack","field":"content_md","snip":"тер · Telegram (через Integration). См. [[seidr-measurement-stack]]. ## Статус **v0.4.1** — добавлены **Ва"}]},{"type":"KnowSpec","id":"SPEC-MIDGARD-P4C5-WATCH","n":2,"nInGroup":2,"kinds":["unknown"],"ex":[{"k":"unknown","id":"SKIRNIR","field":"content_md","snip":"именно так сделано на WT99P4C5-S1. Для [[SKIRNIR]] в подрозетнике это влияет на форму корп"},{"k":"unknown","id":"VORD","field":"content_md","snip":"шение, а не выбор чипа | | Обычный узел [[VORD]] | нет — 400 МГц и MIPI под BME280 и эле"}]},{"type":"KnowTask","id":"SPRINT_BRAGI_PLATFORM_RENDER/CH-TELEGRAPH-01","n":2,"nInGroup":2,"kinds":["unknown"],"ex":[{"k":"unknown","id":"INT-TELEGRAPH","field":"note_md","snip":"). Коннектор [[INT-TELEGRAPH]] (аккаунт seidr, [[seidr-telegraph-accou"},{"k":"unknown","id":"seidr-telegraph-account","field":"note_md","snip":"ектор [[INT-TELEGRAPH]] (аккаунт seidr, [[seidr-telegraph-account]]) — ссылка на секрет в env/vault, НЕ зна"}]},{"type":"KnowTask","id":"SPRINT_GJALLARHORN_WAKEWORD/WW-26","n":2,"nInGroup":2,"kinds":["unknown"],"ex":[{"k":"unknown","id":"es8389-no-internal-aec-reference","field":"note_md","snip":"ренней опоры ЦАП→АЦП у чипа НЕТ ВООБЩЕ ([[es8389-no-internal-aec-reference]]). Опора сделана программной: кольцо в P"},{"k":"unknown","id":"korvo-without-aec-louder-hurts-not-helps","field":"note_md","snip":"точников громче музыку делать вредно** ([[korvo-without-aec-louder-hurts-not-helps]]). --- ## 18–19.09 — AEC возвращён на"}]},{"type":"KnowTask","id":"SPRINT_MIG_GEN_PYTHON/PARTKEY-COMPOSITE-ONE-LEVEL","n":2,"nInGroup":2,"kinds":["unknown"],"ex":[{"k":"unknown","id":"zero-must-prove-it-compared","field":"note_md","snip":"ие четырежды читалось как благополучие ([[zero-must-prove-it-compared]] в моих заметках, четыре случая 12.08):"},{"k":"unknown","id":"MODEL-TWO-LEVELS-ONE-KEY","field":"note_md","snip":"угое место правки; он ведётся отдельно ([[MODEL-TWO-LEVELS-ONE-KEY]]) и здесь только посчитан заодно, потому"}]},{"type":"KnowTask","id":"SPRINT_MINILORE_CUTOVER/CO-40","n":2,"nInGroup":1,"kinds":["unknown","broken"],"ex":[{"k":"unknown","id":"…","field":"note_md","snip":"0-ответа. - 1.11.60: карточка разбирает [[…]] своим текстом; SPEC- выучен в вики-угад"}]},{"type":"KnowTask","id":"SPRINT_UXR_S10_SEIDR_KIT_2/S9-10","n":2,"nInGroup":1,"kinds":["unknown","backtick"],"ex":[{"k":"unknown","id":"ADR-…","field":"note_md","snip":"точка для ссылок внутри текста и ленты ([[ADR-…]] → карточка: название, статус, вердикт,"}]}]},"lore_url":{"records":32,"mentions":37,"rows":[{"type":"KnowSpec","id":"SPEC-LORE-RELEASE-NOTES","n":15,"nInGroup":1,"kinds":["no_record","backtick","lore_url"],"ex":[{"k":"lore_url","id":"/lore?section=","field":"content_md","snip":"`…/lore?section=`"}]},{"type":"KnowTask","id":"SPRINT_MINILORE_POLISH/PL-16","n":6,"nInGroup":1,"kinds":["backtick","lore_url","no_record"],"ex":[{"k":"lore_url","id":"http://192.168.3.131:4400/lore?section=knowledge&passport=doc","field":"note_md","snip":"`http://192.168.3.131:4400/lore?section=knowledge&passport=doc:<doc_id>`"}]},{"type":"KnowDoc","id":"deepwiki_lore_1_2","n":6,"nInGroup":2,"kinds":["lore_url","ambiguous_code"],"ex":[{"k":"lore_url","id":"/lore?section=plan","field":"content_md_en","snip":"`/lore?section=plan`"},{"k":"lore_url","id":"/lore?section=plan","field":"content_md_ru","snip":"`/lore?section=plan`"}]},{"type":"KnowDoc","id":"volva_metabase_glossary","n":4,"nInGroup":1,"kinds":["lore_url","unknown"],"ex":[{"k":"lore_url","id":"http://localhost:4400/lore?section=knowledge&passport=doc%3Avolva_metabase_glossary","field":"content_md_ru","snip":"`http://localhost:4400/lore?section=knowledge&passport=doc%3Avolva_metabase_glossary`"}]},{"type":"KnowTask","id":"SPRINT_UXR_S7B_ADMIN/S7B-31","n":3,"nInGroup":2,"kinds":["lore_url","ambiguous_code"],"ex":[{"k":"lore_url","id":"/lore?section=admin","field":"note_md","snip":"`/lore?section=admin`"},{"k":"lore_url","id":"/lore?section=admin&tab=…","field":"note_md","snip":"осим» (записанным здесь); старые ссылки /lore?section=admin&tab=… ведут в новые экраны или честно объясня"}]},{"type":"KnowTask","id":"SPRINT_HOUND_DALI_HYGIENE/H25","n":2,"nInGroup":2,"kinds":["lore_url"],"ex":[{"k":"lore_url","id":"http://localhost:4400/lore?section=knowledge&spec=HOUND_PREDICATE_FLOW_SPEC","field":"note_md","snip":"). Спеки: predicate-flow http://localhost:4400/lore?section=knowledge&spec=HOUND_PREDICATE_FLOW_SPEC · навигация http://localhost:4400/lore?"},{"k":"lore_url","id":"http://localhost:4400/lore?section=knowledge&spec=LOOM_NAVIGATION","field":"note_md","snip":"c=HOUND_PREDICATE_FLOW_SPEC · навигация http://localhost:4400/lore?section=knowledge&spec=LOOM_NAVIGATION --- **2026-07-08.** Бэкенд (Explor"}]},{"type":"KnowTask","id":"SPRINT_LORE_MCP_EVOLUTION/T15","n":2,"nInGroup":1,"kinds":["ambiguous_code","lore_url"],"ex":[{"k":"lore_url","id":"/lore?section=mcp","field":"note_md","snip":"ла, как и у LoreComponent). Добавлен в /lore?section=mcp (новая категория Project, 59→60 инструм"}]},{"type":"KnowTask","id":"SPRINT_LORE_PRODUCT_ANALYTICS/AN-10","n":2,"nInGroup":1,"kinds":["ambiguous_code","lore_url"],"ex":[{"k":"lore_url","id":"/lore?section=analytics","field":"note_md","snip":"_PRODUCT_ANALYTICS/AN-13]]..18. Ссылка: /lore?section=analytics → вкладка «Продукт». Деплой подтверждён"}]},{"type":"KnowTask","id":"SPRINT_UXR_S7B_ADMIN/S7B-27","n":2,"nInGroup":2,"kinds":["lore_url"],"ex":[{"k":"lore_url","id":"/lore?section=…","field":"note_md","snip":"`/lore?section=…`"},{"k":"lore_url","id":"/lore?section=…","field":"note_md","snip":"`/lore?section=…`"}]},{"type":"KnowDoc","id":"deepwiki_lore_8","n":2,"nInGroup":2,"kinds":["lore_url"],"ex":[{"k":"lore_url","id":"/lore?section=mcp","field":"content_md_en","snip":"`/lore?section=mcp`"},{"k":"lore_url","id":"/lore?section=mcp","field":"content_md_ru","snip":"`/lore?section=mcp`"}]},{"type":"KnowDecision","id":"D-2026-UXR-NO-LINK-COMPAT","n":1,"nInGroup":1,"kinds":["lore_url"],"ex":[{"k":"lore_url","id":"/lore?section=…&passport=…","field":"body_md","snip":"`/lore?section=…&passport=…`"}]},{"type":"KnowQuestion","id":"Q-2026-LORE-SEARCH-OPENS-SECTION-NOT-RECORD","n":1,"nInGroup":1,"kinds":["lore_url"],"ex":[{"k":"lore_url","id":"/lore?section=…&passport=","field":"body_md","snip":"`/lore?section=…&passport=<id>`"}]},{"type":"KnowSpec","id":"SPEC-LORE-UXR-V2-PARALLEL","n":1,"nInGroup":1,"kinds":["lore_url"],"ex":[{"k":"lore_url","id":"/lore?section=…","field":"content_md","snip":"`/lore?section=…`"}]},{"type":"KnowTask","id":"SPRINT_BRAGI_ARCHIVE_IMPL/FE-01","n":1,"nInGroup":1,"kinds":["lore_url"],"ex":[{"k":"lore_url","id":"/lore?section=sprints","field":"note_md","snip":"`/lore?section=sprints`"}]}]}},"types":{"ClRoutineOutput":4,"ClRoutineRun":1,"KnowADR":10,"KnowDecision":74,"KnowDoc":54,"KnowFile":1,"KnowFinding":6,"KnowGain":1,"KnowMilestone":1,"KnowQuestion":31,"KnowRelease":43,"KnowSpec":75,"KnowSprint":38,"KnowTask":341,"KnowUseCase":4,"PlanVersion":3,"QGRecommendation":1}},"rejected":["SPRINT_DALI_DIALECTS_LORE_VIZ/DLG-08","SPRINT_KC_THEMES_VOLVA_LORE/KCT-03","SPRINT_LORE_ONE_TRUTH/SL-01","SPRINT_LORE_PRODUCT_LAYER/PL-16","SPRINT_LORE_PRODUCT_LAYER/PL-17","SPRINT_LORE_PRODUCT_LAYER/PL-18","SPRINT_LORE_PRODUCT_LAYER/PL-20","SPRINT_LORE_UX_FILTERS_LINKS/T24","SPRINT_LORE_UX_FILTERS_LINKS/T28","SPRINT_MIG_GEN_PYTHON/ALGO-CASE-DDL-VS-DML","SPRINT_MIG_GEN_PYTHON/HEALER-DISTKEY-FROM-PK","SPRINT_MIG_GEN_PYTHON/HUB-INSERT-NULL-SOURCE-SYSTEM","SPRINT_MIG_GEN_PYTHON/PARTKEY-COMPOSITE-ONE-LEVEL","SPRINT_MINILORE_ACCESS/AC-02","SPRINT_MINILORE_CUTOVER/CO-32","SPRINT_MINILORE_CUTOVER/CO-4.2","SPRINT_MINILORE_ENTITY_TYPES/ET-01","SPRINT_MINILORE_ENTITY_TYPES/ET-02","SPRINT_MINILORE_OPEN/OP-05","SPRINT_PLPGSQL_GRAMMAR_ANTLR/LEXPERF-01","SPRINT_ROLLOUT_PIPELINE/BASH-PORT-BACKLOG-4035","SPRINT_ROLLOUT_PIPELINE/HEAL-PROFILE-BY-CONTOUR","SPRINT_ROLLOUT_PIPELINE/HOW-TO-READ-OUR-NUMBERS","SPRINT_ROLLOUT_PIPELINE/PORT-EXTERNAL-ORA-CHECKS","SPRINT_ROLLOUT_PIPELINE/PORT-VERIFY-ALL-RUNALL","SPRINT_ROLLOUT_PIPELINE/PRINT-LOSES-427-EXTERNALS","SPRINT_ROLLOUT_PIPELINE/RELAY-TO-NEIGHBOUR-1208","SPRINT_ROLLOUT_PIPELINE/REPORT-INC068-RUN2","SPRINT_ROLLOUT_PIPELINE/THIRD-VALUE-LITERAL-VS-PARTITION","SPRINT_ROLLOUT_PIPELINE/UNPARTITIONED-TO-PARTITIONED","SPRINT_UDWE_AF3_ENGINE_FORK/ENG-01","SPRINT_UDWE_AF3_ENGINE_FORK/ENG-03"],"scanned":{"records":9542,"fields":10304}}</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+const ME = 'omiloreadmin';
+
+const RULES = [
+  { k: 'shape', t: 'ID узнаваемого вида, запись есть', on: true },
+  { k: 'lone_own_sprint', t: 'Код задачи своего спринта → спринт/код', on: true },
+  { k: 'typed', t: 'Форма тип:ID → [[тип:ID]]', on: true },
+  { k: 'wrong_type', t: 'Вид назвал не тот тип (решения ADR-…-Dn)', on: true },
+  { k: 'wiki', t: '[[…]] целиком в обратных кавычках', on: true },
+  { k: 'lore_url', t: 'Адрес экрана LORE с подписью-ID', on: true },
+  { k: 'escaped', t: 'Экранированная \\[\\[…\\]\\]', on: true },
+  { k: 'lone_unique', t: 'Код задачи из другого спринта — единственный в базе', on: false, risk: true },
+];
+const GROUPS = {
+  ambiguous_code: { t: 'Код задачи без спринта — таких задач несколько', fix: 'Допишите спринт: [[task:СПРИНТ/КОД]].' },
+  no_record: { t: 'Похоже на ID, но записи нет', fix: 'Исправьте ID или отметьте «не ссылка» (часто локальная нумерация вроде UC-1).', dismiss: true },
+  backtick: { t: 'ID внутри фрагмента кода', fix: 'Если это ссылка — вынесите из `кода` в [[тип:ID]]; если пример вызова — «не ссылка».', dismiss: true },
+  broken: { t: 'Ссылка на несуществующую запись', fix: 'Исправьте ID или заведите запись («Дозавести»).' },
+  unknown: { t: '[[…]] — тип или запись не узнаны', fix: 'Назовите тип: [[тип:ID]].' },
+  lore_url: { t: 'Адрес экрана LORE с другой подписью', fix: 'Замените адрес на [[тип:ID]], подпись — текстом рядом.' },
+  rejected: { t: 'Автопочинка не смогла записать', fix: 'Текст менялся после проверки или нет открытой версии — откройте и поправьте руками.' },
+};
+const TYPE_RU = { KnowTask:'задача', KnowSprint:'спринт', KnowADR:'ADR', KnowDecision:'решение', KnowSpec:'спека', KnowDoc:'док', KnowRelease:'релиз', KnowQuestion:'вопрос', KnowUseCase:'сценарий', ClRoutineOutput:'вывод рутины', ClRoutineRun:'прогон рутины', KnowFinding:'находка', KnowFile:'файл', KnowGain:'выгода', KnowMilestone:'веха', PlanVersion:'версия плана', QGRecommendation:'рекомендация QG' };
+
+const S = {
+  state: 'ok',                 // ok | running | failed | clean
+  rules: Object.fromEntries(RULES.map(r => [r.k, r.on])),
+  group: new URLSearchParams(location.search).get('tidy') || null,
+  open: new Set(), fixed: new Set(), dismissed: new Set(), showHidden: false,
+  applied: null,               // {records, rejected}
+  manual: structuredClone(D.manual),
+};
+
+function autoCount() {
+  let e = 0; for (const r of RULES) if (S.rules[r.k]) e += D.auto.rules[r.k] || 0;
+  // точно: запись попадает в пачку, если хотя бы одно её правило включено (наборы правил по записям — из снимка)
+  let recs = 0; for (const [sig, n] of Object.entries(D.auto.sig)) if (sig.split(',').some(k => S.rules[k])) recs += n;
+  return { edits: e, records: recs };
+}
+function manualTotals() {
+  // Точно по строкам: исправленная запись уходит из всех групп со всеми местами;
+  // «не ссылка» снимает места этой группы, а запись — только если других мест у неё не осталось.
+  const per = {}; const rowById = new Map();
+  for (const g of Object.values(S.manual.groups)) for (const r of g.rows) rowById.set(r.id, r);
+  let goneRecs = 0, gonePlaces = 0;
+  for (const id of S.fixed) { const r = rowById.get(id); if (r) { goneRecs++; gonePlaces += r.n; } }
+  for (const key of S.dismissed) {
+    const [k, id] = [key.slice(0, key.indexOf('|')), key.slice(key.indexOf('|') + 1)];
+    const r = rowById.get(id); if (!r || S.fixed.has(id)) continue;
+    const mine = (S.manual.groups[k].rows.find(x => x.id === id)?.nInGroup) ?? r.ex.filter(x => x.k === k).length;
+    gonePlaces += mine;
+    if (r.kinds.every(kk => kk === k || S.dismissed.has(kk + '|' + id))) goneRecs++;
+  }
+  for (const [k, g] of Object.entries(S.manual.groups)) {
+    per[k] = g.records - g.rows.filter(r => S.fixed.has(r.id) || S.dismissed.has(k + '|' + r.id)).length;
+  }
+  const rej = S.applied ? S.applied.rejected - [...S.fixed].filter(id => id.startsWith('REJ:')).length : 0;
+  if (S.applied) per.rejected = rej;
+  return { recs: S.manual.totalRecords - goneRecs + rej, places: S.manual.totalMentions - gonePlaces + rej, per };
+}
+
+function renderNav() {
+  const g = (title, tone, items) => `<div class="grp"><div class="gh"><i style="background:${tone}"></i>${title}</div>${items.join('')}</div>`;
+  const it = (icon, t, on, extra = '') => `<div class="it${on ? ' on' : ''}"><iconify-icon icon="game-icons:${icon}"></iconify-icon>${t}${extra}</div>`;
+  const m = manualTotals();
+  $('#nav').innerHTML =
+    g('Начало', 'var(--acc)', [it('house', 'Главная', false), it('compass', 'Мастера', false)]) +
+    g('Люди и агенты', 'var(--acc)', [it('robot-golem', 'Агенты', false), it('laptop', 'Машины', false), it('person', 'Люди и проекты', false), it('tree-branch', 'Проекты', false)]) +
+    g('Доступ', 'var(--wrn)', [it('key', 'Роли', false)]) +
+    g('Язык графа', 'var(--wrn)', [it('spell-book', 'Справочники', false), it('scroll-quill', 'Правила CLAUDE', false),
+      it('broom', 'Привести в порядок', true, S.state === 'failed' ? '<span class="n" style="color:var(--dng)">?</span>' : `<span class="n">${fmt(m.recs)}</span>`)]) +
+    g('Система', 'var(--inf)', [it('flying-flag', 'Флаги', false), it('plug', 'MCP', false), it('open-book', 'Журнал действий', false)]);
+}
+
+function renderStatus() {
+  const st = { ok: ['ok', 'проверено 13.11.2026 14:10'], running: ['i', 'идёт проверка…'], failed: ['d', 'проверка не выполнилась'], clean: ['ok', 'проверено только что'] }[S.state];
+  $('#status').innerHTML = `<span class="chip ${st[0]}">${st[1]}</span>
+    <span class="chip">${fmt(D.scanned.records)} записей · ${fmt(D.scanned.fields)} полей</span>
+    <span class="chip dash">внешние ссылки не считаются <span class="pin">9</span></span>
+    <span style="flex:1"></span>
+    <button class="btn" id="recheckAll"${S.state === 'running' ? ' disabled' : ''}><iconify-icon icon="game-icons:cycle"></iconify-icon>Перепроверить всё</button>
+    <span class="muted">состояние (прототип):</span>
+    ${['ok', 'running', 'failed', 'clean'].map(s => `<button class="chip${S.state === s ? ' on' : ''}" data-state="${s}">${{ ok: 'есть что чинить', running: 'проверка идёт', failed: 'не смогли проверить', clean: 'всё чисто' }[s]}</button>`).join('')}`;
+  $('#banner').innerHTML = S.state === 'failed'
+    ? `<div class="banner"><b>Не смогли проверить.</b> Срез <span class="mono">md_refs</span> ответил <span class="mono">503 Service Unavailable</span> в 14:32. Ниже — последний успешный результат (13.11 14:10), он <b>устарел</b>; числа могут быть уже другими. Это не «всё чисто». <span class="pin">10</span> <button class="btn sm" data-state="ok">Повторить</button></div>`
+    : S.state === 'running' ? `<div class="banner info">Проверка идёт: прочитано 6 120 из 10 304 полей. Список ниже — прошлый результат, обновится по окончании.</div>` : '';
+}
+
+function renderKpis() {
+  const a = autoCount(), m = manualTotals();
+  const stale = S.state === 'failed' || S.state === 'running' ? ' stale' : '';
+  if (S.state === 'clean') { $('#kpis').innerHTML = `<div class="kpi ok"><b>0</b><span>ссылок требуют внимания</span></div>`; return; }
+  $('#kpis').innerHTML = `
+    <div class="kpi a${stale}"><b>${S.applied ? '0' : fmt(a.edits)}</b><span>${S.applied ? 'автопочинка применена' : `правок можно сделать автоматически · ${fmt(a.records)} записей`}</span></div>
+    <div class="kpi w${stale}"><b>${fmt(m.recs)}</b><span>записей ждут вас · ${fmt(m.places)} мест</span></div>
+    <div class="kpi m${stale}"><b>${fmt(S.dismissed.size)}</b><span>отмечено «не ссылка»</span></div>`;
+}
+
+function renderAuto() {
+  const el = $('#auto');
+  if (S.state === 'clean') { el.innerHTML = `<div class="empty"><b>Всё чисто</b>Проверено только что: ссылок, которые нужно чинить, нет. Внешние ссылки не считаются.</div>`; return; }
+  if (S.applied) {
+    el.innerHTML = `<header><h3>Автопочинка</h3><span class="chip ok">применена · пачка B-2026-11-13-0147</span><span class="sp"></span><a href="#log">в журнале действий</a></header>
+      <div>Записано <b>${fmt(S.applied.records)}</b> записей новыми версиями от <span class="mono">${ME}</span>. Не записано <b>${S.applied.rejected}</b> — текст менялся после проверки или нет открытой версии; они добавлены в «Вручную» группой «Автопочинка не смогла записать». <span class="pin">5</span></div>`;
+    return;
+  }
+  const a = autoCount();
+  const rows = RULES.map(r => {
+    const s = (D.auto.samples[r.k] || [])[0];
+    const n = D.auto.rules[r.k] || 0;
+    return `<tr class="${S.rules[r.k] ? '' : 'off'}"><td><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-rule="${r.k}"${S.rules[r.k] ? ' checked' : ''}${S.state !== 'ok' ? ' disabled' : ''}>${esc(r.t)}${r.risk ? ' <span class="chip w">проверьте примеры <span class="pin">3</span></span>' : ''}</label></td>
+      <td class="num">${fmt(n)}</td><td class="mono" style="font-size:var(--fs-xs)">${s ? esc(s.rec) : ''}</td>
+      <td class="ex">${s ? `<span class="r">${esc(s.old)}</span> → <span class="a">${esc(s.new)}</span>` : ''}</td></tr>`;
+  }).join('');
+  el.innerHTML = `<header><h3>Автоматически — однозначное</h3><span class="chip a">${fmt(a.edits)} правок</span><span class="sp"></span></header>
+    <div class="tblw"><table class="rules"><thead><tr><th>правило</th><th>правок</th><th>пример: запись</th><th>было → станет</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="foot">Пишет сервер, новыми версиями от вашего имени; пачку можно отменить. <span class="pin">2</span><span class="pin">4</span><span class="sp"></span>
+      <button class="btn pri" id="openApply"${S.state !== 'ok' || !a.edits ? ' disabled' : ''}><iconify-icon icon="game-icons:broom"></iconify-icon>Показать дифф и применить…</button></div>`;
+}
+
+function rowsOf(k) {
+  if (k === 'rejected') {
+    return Array.from({ length: Math.min(8, S.applied?.rejected || 0) }, (_, i) => ({ type: 'KnowTask', id: 'REJ:' + D.rejected[i % D.rejected.length], n: 1, kinds: ['rejected'], ex: [{ k: 'rejected', id: '—', field: 'note_md', snip: 'сервер: CONFLICT — expected note_md не совпал (текст менялся после проверки)' }] }));
+  }
+  return S.manual.groups[k]?.rows || [];
+}
+
+function renderManual() {
+  const el = $('#manual');
+  if (S.state === 'clean') { el.innerHTML = ''; return; }
+  const m = manualTotals();
+  const keys = Object.keys(GROUPS).filter(k => (k === 'rejected' ? S.applied : S.manual.groups[k]));
+  if (!S.group || !keys.includes(S.group)) S.group = keys[0];
+  const chips = keys.map(k => `<button class="chip${S.group === k ? ' on' : ''}" data-group="${k}">${esc(GROUPS[k].t)} <b class="mono">${fmt(m.per[k] ?? 0)}</b></button>`).join('');
+  const G = GROUPS[S.group];
+  const rows = rowsOf(S.group).filter(r => !S.fixed.has(r.id) && (S.showHidden ? S.dismissed.has(S.group + '|' + r.id) : !S.dismissed.has(S.group + '|' + r.id)));
+  const body = rows.map(r => {
+    const open = S.open.has(r.id);
+    const kinds = r.kinds.map(k => `<span class="chip${k === S.group ? ' w' : ''}">${esc((GROUPS[k] || { t: k }).t.split(' — ')[0])}</span>`).join(' ');
+    const det = open ? `<div class="det">${r.ex.map(x => `<div class="s"><span class="mono muted">${esc(x.field)}</span> · ${hl(x.snip, x.id)}${x.amb > 1 ? ` <span class="chip">код у ${x.amb} задач</span>` : ''}</div>`).join('')}<div class="s muted">Как исправить: ${esc(G.fix)}</div></div>` : '';
+    return `<div class="row"><div class="id"><button class="btn sm" data-tog="${esc(r.id)}" aria-expanded="${open}">${open ? '▾' : '▸'}</button> ${esc(r.id.replace(/^REJ:/, ''))}</div>
+      <div class="where muted">${esc(TYPE_RU[r.type] || r.type)}</div><div class="n num mono">${r.n} ${r.n === 1 ? 'место' : r.n < 5 ? 'места' : 'мест'}</div>
+      <div class="kinds">${kinds}</div>
+      <div class="acts"><button class="btn sm pri" data-peek="${esc(r.id)}">Открыть</button><button class="btn sm" data-recheck="${esc(r.id)}">Перепроверить</button>${G.dismiss ? (S.showHidden ? `<button class="btn sm" data-undismiss="${esc(r.id)}">Вернуть</button>` : `<button class="btn sm" data-dismiss="${esc(r.id)}">Не ссылка</button>`) : ''}</div></div>${det}`;
+  }).join('');
+  const total = m.per[S.group] ?? 0;
+  el.innerHTML = `<header><h3>Вручную</h3><span class="chip w">${fmt(m.recs)} записей</span><span class="pin">6</span><span class="pin">7</span><span class="sp"></span>
+      ${G.dismiss ? `<label class="chip"><input type="checkbox" id="showHidden"${S.showHidden ? ' checked' : ''}> скрытые «не ссылка»</label><span class="pin">8</span>` : ''}</header>
+    <div class="chips">${chips}</div>
+    <div class="tblw rows"><div class="row head"><div>запись</div><div>тип</div><div>мест</div><div>что не так</div><div></div></div>
+    ${body || `<div class="empty">${S.showHidden ? 'Скрытых нет.' : 'В этой группе пусто — всё исправлено.'}</div>`}
+    ${total > rows.length && !S.showHidden ? `<div class="more">показаны первые ${rows.length} из ${fmt(total)} — по числу мест; дальше — прокруткой (в прототипе — первые 14)</div>` : ''}</div>`;
+}
+
+function hl(snip, id) {
+  const s = esc(snip); const i = esc(id);
+  return i && s.includes(i) ? s.replace(i, `<mark>${i}</mark>`) : s;
+}
+
+function render() { renderNav(); renderStatus(); renderKpis(); renderAuto(); renderManual(); syncUrl(); }
+function syncUrl() { const u = new URL(location); if (S.group) u.searchParams.set('tidy', S.group); history.replaceState(null, '', u); }
+function toast(html, ms = 4000) { const t = $('#toast'); t.innerHTML = html; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), ms); }
+function closeDlg() { for (const d of ['#dlgApply', '#dlgPeek', '#veil']) $(d).classList.remove('on'); }
+
+function openApply() {
+  const a = autoCount();
+  const on = RULES.filter(r => S.rules[r.k]);
+  $('#dlgApply').innerHTML = `<header><h3>Применить автопочинку</h3><span class="sp"></span><button class="btn sm" data-close>✕</button></header>
+    <div class="body">
+      <div>Сервер посчитал план (ничего не записано): <b>${fmt(a.edits)}</b> правок в <b>${fmt(a.records)}</b> записях. Каждая — новая версия текста от <span class="mono">${ME}</span>; прежняя остаётся в истории.</div>
+      <div class="diff">${on.map(r => { const s = (D.auto.samples[r.k] || [])[0]; return `<div><b>${esc(r.t)}</b> · ${fmt(D.auto.rules[r.k] || 0)}${s ? `<br><span class="muted">${esc(s.rec)}:</span> <span class="r">− ${esc(s.old)}</span><br><span class="a">+ ${esc(s.new)}</span>` : ''}</div>`; }).join('')}</div>
+      <label>Чтобы подтвердить, введите свой логин <span class="mono">${ME}</span>:<br><input class="inp" id="confirmLogin" autocomplete="off" spellcheck="false" placeholder="логин"></label>
+      <div class="bar" id="prog" hidden><i></i></div>
+    </div>
+    <footer><span class="muted">Отменить можно будет одной кнопкой.</span><span class="sp"></span><button class="btn" data-close>Не сейчас</button><button class="btn pri" id="doApply" disabled>Применить ${fmt(a.edits)} правок</button></footer>`;
+  $('#veil').classList.add('on'); $('#dlgApply').classList.add('on'); $('#confirmLogin').focus();
+}
+
+function doApply() {
+  const p = $('#prog'); p.hidden = false; const bar = p.querySelector('i'); let v = 0;
+  $('#doApply').disabled = true; $('#confirmLogin').disabled = true;
+  const h = setInterval(() => { v += 9; bar.style.width = Math.min(100, v) + '%'; if (v >= 100) { clearInterval(h); finishApply(); } }, 90);
+}
+function finishApply() {
+  const a = autoCount(); closeDlg();
+  S.applied = { records: a.records - 32, rejected: 32 };
+  render();
+  let left = 10;
+  const tick = () => toast(`Пачка применена: ${fmt(S.applied.records)} записей, не записано 32. <button class="btn sm" id="undo">Отменить пачку · 0:${String(left).padStart(2, '0')}</button>`, 1200);
+  tick(); const h = setInterval(() => { left--; if (left <= 0 || !S.applied) { clearInterval(h); return; } tick(); }, 1000);
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button,[data-close]'); if (!t) return;
+  if (t.dataset.mode) { document.body.classList.toggle('doc', t.dataset.mode === 'doc'); document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b === t)); }
+  if (t.dataset.state) { S.state = t.dataset.state; if (S.state === 'running') setTimeout(() => { if (S.state === 'running') { S.state = 'ok'; render(); toast('Проверка закончилась: числа обновлены.'); } }, 2500); render(); }
+  if (t.id === 'recheckAll') { S.state = 'running'; render(); setTimeout(() => { S.state = 'ok'; render(); toast('Перепроверено всё: числа обновлены.'); }, 2500); }
+  if (t.dataset.group) { S.group = t.dataset.group; S.showHidden = false; render(); }
+  if (t.dataset.tog) { S.open.has(t.dataset.tog) ? S.open.delete(t.dataset.tog) : S.open.add(t.dataset.tog); renderManual(); }
+  if (t.dataset.dismiss) { S.dismissed.add(S.group + '|' + t.dataset.dismiss); render(); toast(`«${esc(t.dataset.dismiss)}» отмечена «не ссылка» — счётчик ${fmt(manualTotals().recs + 1)} → ${fmt(manualTotals().recs)}. Вернуть — фильтр «скрытые».`); }
+  if (t.dataset.undismiss) { S.dismissed.delete(S.group + '|' + t.dataset.undismiss); render(); }
+  if (t.dataset.recheck) { toast(`Перепроверено: в «${esc(t.dataset.recheck.replace(/^REJ:/, ''))}» места остались — строка на месте.`); }
+  if (t.dataset.peek) openPeek(t.dataset.peek);
+  if (t.id === 'openApply') openApply();
+  if (t.id === 'doApply') doApply();
+  if (t.id === 'undo') { S.applied = null; $('#toast').classList.remove('on'); render(); toast('Пачка отменена: прежние тексты записаны обратно, в журнале — отмена.'); }
+  if (t.id === 'fixedRecheck') { const id = t.dataset.id; const before = manualTotals().recs; S.fixed.add(id); closeDlg(); render(); toast(`Запись чиста — ушла из списка. Счётчик ${fmt(before)} → ${fmt(manualTotals().recs)}.`); }
+  if (t.dataset.close !== undefined) closeDlg();
+});
+document.addEventListener('change', (e) => {
+  if (e.target.dataset.rule) { S.rules[e.target.dataset.rule] = e.target.checked; renderAuto(); renderKpis(); }
+  if (e.target.id === 'showHidden') { S.showHidden = e.target.checked; renderManual(); }
+});
+document.addEventListener('input', (e) => { if (e.target.id === 'confirmLogin') $('#doApply').disabled = e.target.value.trim() !== ME; });
+$('#veil').addEventListener('click', closeDlg);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDlg(); });
+
+function openPeek(id) {
+  const r = rowsOf(S.group).find(x => x.id === id) || { ex: [], type: '', id };
+  $('#dlgPeek').innerHTML = `<header><iconify-icon icon="game-icons:quill"></iconify-icon><h3 class="mono" style="text-transform:none">${esc(id.replace(/^REJ:/, ''))}</h3><span class="chip">${esc(TYPE_RU[r.type] || r.type)}</span><span class="sp"></span><button class="btn sm" data-close>✕</button></header>
+    <div class="body">
+      <div class="muted">Паспорт записи открывается на правку (как RecordPeek); места, которые нашла проверка, подсвечены.</div>
+      ${r.ex.map(x => `<div><div class="mono muted" style="font-size:var(--fs-xs)">${esc(x.field)}</div><div class="prose">…${hl(x.snip, x.id)}…</div></div>`).join('')}
+      <div class="muted">Как исправить: ${esc((GROUPS[S.group] || {}).fix || '')}</div>
+    </div>
+    <footer><button class="btn" data-close>Закрыть</button><span class="sp"></span><button class="btn pri" id="fixedRecheck" data-id="${esc(id)}">Исправила — перепроверить</button></footer>`;
+  $('#veil').classList.add('on'); $('#dlgPeek').classList.add('on');
+}
+render();
+</script>
+</body>
+</html>

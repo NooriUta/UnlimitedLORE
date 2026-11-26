@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Гейты качества v2</title>
+<!--
+  SPRINT_LORE_ADMIN_POLISH/AP-05, вторая пачка. Экран: «Гейты качества» в v2 — список гейтов в develop уже есть
+  (web-next/src/lists/screens.ts qualityGatesSpec, MD-04), паспорт — общий. Нет: прогонов рутин, метрик, рекомендаций —
+  того, что в v1 показывали LoreQualityGateList.tsx + LoreQGDetail.tsx (quality_gate_by_id, qg_run_history, qg_run_metrics, qg_recommendations).
+  Данные — живой снимок LORE 25.11.2026 через MCP (только чтение): quality_gates (23), qg_routine_runs (200 последних),
+  qg_run_metrics (qg-know-hygiene 25.11 10:22), qg_pending_recs (5). Вкладка — ?qtab=gates|runs|recs|passport.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14120e;--bg2:#1c1913;--bg3:#25211a;--bd:#3a3326;--bdh:#56492f;
+  --t1:#efe6d2;--t2:#b8ab90;--t3:#8f826a;
+  --acc:#d9a441;--suc:#8fb85f;--wrn:#e0913a;--dng:#d0644f;--inf:#6fa3c4;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;--head:'Unbounded',Manrope,sans-serif;--r:6px;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--bdh:#b3a17c;--t1:#2a241a;--t2:#5d523f;--t3:#7a6d55;
+  --acc:#a8741a;--suc:#4f7a2a;--wrn:#b0601a;--dng:#b0412d;--inf:#2f6d93;}}
+:root[data-theme="light"]{--bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--bdh:#b3a17c;--t1:#2a241a;--t2:#5d523f;--t3:#7a6d55;
+  --acc:#a8741a;--suc:#4f7a2a;--wrn:#b0601a;--dng:#b0412d;--inf:#2f6d93;}
+*{box-sizing:border-box}
+html,body{overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--t1);font:400 var(--fs-sm)/1.5 Manrope,system-ui,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+h1,h2{font-family:var(--head);font-weight:800;margin:0}
+h1{font-size:var(--fs-lg);letter-spacing:.02em}
+h2{font-size:var(--fs-md);margin:0 0 6px}
+h3{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin:0 0 6px;font-weight:800}
+p{margin:0 0 6px}
+a{color:var(--acc)}
+.mono{font-family:var(--mono)}
+.muted{color:var(--t3)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+/* шапка */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--bd);background:var(--bg2);position:sticky;top:0;z-index:10}
+.top .sp{flex:1}
+.proto{font-size:var(--fs-2xs);font-weight:800;color:var(--wrn);border:1px dashed var(--wrn);border-radius:999px;padding:1px 8px;text-transform:uppercase;letter-spacing:.06em}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;border:1px solid var(--bd);font-size:var(--fs-xs);white-space:nowrap;color:var(--t2);max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.chip.ok{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 50%,var(--bd))}
+.chip.w{color:var(--wrn);border-color:color-mix(in srgb,var(--wrn) 50%,var(--bd))}
+.chip.d{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 50%,var(--bd))}
+.chip.i{color:var(--inf);border-color:color-mix(in srgb,var(--inf) 50%,var(--bd))}
+.chip.a{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 50%,var(--bd))}
+.chip.new{color:var(--acc);border-style:dashed;border-color:var(--acc);font-weight:800}
+.chip.has{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 40%,var(--bd))}
+/* оболочка v2 */
+.wrap{display:grid;grid-template-columns:200px minmax(0,1fr)}
+nav.side{border-right:1px solid var(--bd);padding:10px 8px;background:var(--bg2);position:sticky;top:41px;align-self:start;max-height:calc(100vh - 41px);overflow:auto}
+.ng{margin-bottom:10px}
+.ng .gh{padding:2px 8px;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:800}
+.ng a{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:var(--r);color:var(--t2);text-decoration:none;font-size:var(--fs-sm)}
+.ng a.on{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);font-weight:700}
+.ng a .chip{margin-left:auto;padding:0 5px;font-size:var(--fs-2xs)}
+main{padding:12px 16px 60px;min-width:0}
+.crumbs{font-size:var(--fs-xs);color:var(--t3);margin-bottom:4px}
+.phone-nav{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:minmax(0,1fr)}
+  nav.side{display:none}
+  .phone-nav{display:flex;gap:6px;overflow-x:auto;padding:6px 16px;border-bottom:1px solid var(--bd);background:var(--bg2);scrollbar-width:none}
+  .phone-nav a{flex:none}
+}
+/* карточки */
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-bottom:12px;min-width:0}
+.why{border-left:3px solid var(--acc)}
+.why p{color:var(--t2);font-size:var(--fs-md)}
+.why p b{color:var(--t1)}
+.state{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:6px;margin-top:6px}
+.state div{background:var(--bg3);border-radius:var(--r);padding:6px 8px;font-size:var(--fs-xs);color:var(--t2)}
+.state b{display:block;color:var(--t1);font-size:var(--fs-sm)}
+.sec-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 8px}
+.sec-h .sp{flex:1}
+/* вкладки и сегменты */
+.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--bd);margin-bottom:10px}
+.tabs button{padding:5px 10px;font-size:var(--fs-sm);color:var(--t2);border-bottom:2px solid transparent;display:inline-flex;gap:4px;align-items:center}
+.tabs button[aria-selected="true"]{color:var(--acc);border-bottom-color:var(--acc);font-weight:700}
+.tabs button .dot{width:6px;height:6px;border-radius:50%;background:var(--acc)}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden;flex-wrap:wrap}
+.seg button{padding:2px 10px;font-size:var(--fs-xs);color:var(--t2)}
+.seg button[aria-pressed="true"]{background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc);font-weight:700}
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;min-width:0}
+.kpi b{display:block;font:800 var(--fs-xl)/1.15 var(--head)}
+.kpi span{font-size:var(--fs-xs);color:var(--t3)}
+.kpi small{display:block;font-size:var(--fs-2xs);color:var(--t2)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:900px){.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* таблица */
+.tbl{width:100%;border-collapse:collapse;font-size:var(--fs-xs)}
+.tbl th{text-align:left;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);font-weight:800;padding:4px 6px;border-bottom:1px solid var(--bd)}
+.tbl td{padding:4px 6px;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);vertical-align:top;overflow-wrap:anywhere}
+.tbl td.n{text-align:right;font-family:var(--mono);white-space:nowrap}
+@media (max-width:600px){.tbl .hide-s{display:none}}
+/* строки-список */
+.rows{display:flex;flex-direction:column;gap:4px}
+.row{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border:1px solid var(--bd);border-radius:var(--r);background:var(--bg2);min-width:0}
+.row .main{flex:1;min-width:0}
+.row .id{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--acc);overflow-wrap:anywhere}
+.row .t{font-size:var(--fs-sm);overflow-wrap:anywhere}
+.row .m{font-size:var(--fs-2xs);color:var(--t3)}
+/* полосы */
+.bar{height:8px;border-radius:999px;background:var(--bg3);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:var(--fs-2xs);color:var(--t2);margin-top:4px}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{fill:var(--t3);font:var(--fs-2xs) var(--mono)}
+/* развилки */
+.forks{display:flex;flex-direction:column;gap:10px}
+.fork{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px}
+.fork h2{font-size:var(--fs-sm)}
+.fork .ctx{color:var(--t2);font-size:var(--fs-xs);margin-bottom:8px}
+.ab{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:420px){.ab{grid-template-columns:minmax(0,1fr)}}
+.opt{border:2px solid var(--bd);border-radius:8px;padding:8px;background:var(--bg);text-align:left;min-width:0;display:flex;flex-direction:column;gap:4px}
+.opt[aria-pressed="true"]{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,var(--bg))}
+.opt .lbl{font-weight:800;font-size:var(--fs-sm)}
+.opt .cost{font-size:var(--fs-2xs);color:var(--t2)}
+.opt .rec{font-size:var(--fs-2xs);font-weight:800;color:var(--suc)}
+.choice{margin-top:10px;font-size:var(--fs-sm);background:var(--bg3);border-radius:var(--r);padding:8px 10px;overflow-wrap:anywhere}
+.choice b{color:var(--acc)}
+.note{font-size:var(--fs-xs);color:var(--t2);background:var(--bg3);border-radius:var(--r);padding:6px 8px;margin:6px 0}
+.note.w{border-left:3px solid var(--wrn)}
+.note.d{border-left:3px solid var(--dng)}
+.honest{font-size:var(--fs-xs);color:var(--wrn);border:1px dashed color-mix(in srgb,var(--wrn) 60%,var(--bd));border-radius:var(--r);padding:6px 8px;margin:6px 0}
+[hidden]{display:none!important}
+footer.src{font-size:var(--fs-2xs);color:var(--t3);margin-top:16px;overflow-wrap:anywhere}
+
+.strip{display:flex;gap:2px;flex-wrap:wrap;margin:4px 0}
+.strip i{width:8px;height:14px;border-radius:2px;display:block}
+.s-ok{background:var(--suc)}.s-warn{background:var(--wrn)}.s-fail{background:var(--dng)}.s-partial{background:var(--inf)}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:8px}
+.rc{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;min-width:0}
+.rc .nm{font-family:var(--mono);font-size:var(--fs-xs);color:var(--acc);overflow-wrap:anywhere}
+.rc .gate{font-size:var(--fs-2xs);color:var(--t3)}
+.pass{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:900px){.pass{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}}
+dl.kv{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:3px 10px;margin:0;font-size:var(--fs-xs)}
+dl.kv dt{color:var(--t3)}dl.kv dd{margin:0;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<header class="top"><h1>LORE</h1><span class="proto">Прототип · кода нет</span><span class="sp"></span><span class="chip">все проекты</span><span class="chip">снимок 25.11.2026</span></header>
+<div class="phone-nav"></div>
+<div class="wrap"><nav class="side"></nav>
+<main>
+  <div class="crumbs">Работа › Гейты качества</div>
+  <div class="sec-h"><h1>Гейты качества</h1><span class="chip has">список есть в develop</span><span class="chip new">прогоны · метрики · рекомендации — новое</span></div>
+
+  <section class="card why">
+    <h2>Что это и зачем</h2>
+    <p>В develop у v2 уже есть <b>список гейтов</b> (раздел в группе «Работа»), но в нём не видно главного — <b>как гейты отработали</b>. Рутины проверок гоняются каждый час, их итоги лежат в LORE, а смотреть их в v2 негде. Прототип добавляет вкладки <b>«Прогоны»</b> и <b>«Рекомендации»</b> и наполняет паспорт гейта.</p>
+    <div class="state">
+      <div><b>Гейтов 23</b>1 действует, 22 черновика (draft) — состояние в данных такое</div>
+      <div><b>Рутин 13</b>за 24–25.11: 7 «про LORE» + 6 CI-проверок; последние 200 прогонов</div>
+      <div><b>Рекомендаций ждут решения 5</b>все у QG-HOUND-BATCH-ORCHESTRATION (AIDA)</div>
+    </div>
+  </section>
+
+  <div class="tabs" data-tabs="qtab">
+    <button data-tab="runs"><span class="dot"></span>Прогоны</button>
+    <button data-tab="gates">Гейты</button>
+    <button data-tab="recs"><span class="dot"></span>Рекомендации · 5</button>
+    <button data-tab="passport"><span class="dot"></span>Паспорт гейта</button>
+  </div>
+
+  <section data-pane="qtab:runs">
+    <div class="kpis" id="runKpi"></div>
+    <h3>Рутины «про LORE» — раз в час / раз в сутки</h3>
+    <div class="rgrid" id="loreRoutines"></div>
+    <h3 style="margin-top:12px">CI-проверки — по каждому прогону Forgejo Actions, 25.11</h3>
+    <div class="rgrid" id="ciRoutines"></div>
+    <div class="legend" style="margin-top:6px"><span><i class="s-ok"></i>ok / pass</span><span><i class="s-warn"></i>warn</span><span><i class="s-partial"></i>partial</span><span><i class="s-fail"></i>fail</span><span>новые слева</span></div>
+    <p class="honest">Честно о данных: (1) срез qg_routine_runs отдаёт только последние 200 прогонов — это ~1,5 суток, глубже 23.11 не видно; (2) у рутин два словаря итога — <span class="mono">pass</span> и <span class="mono">ok</span>; на экране оба = «прошла», но в коде их надо свести.</p>
+    <h3 style="margin-top:12px">Метрики последнего прогона · qg-know-hygiene · 25.11 10:22</h3>
+    <div class="card" style="padding:4px 6px"><table class="tbl" id="metrics"></table></div>
+  </section>
+
+  <section data-pane="qtab:gates">
+    <p class="note">Список уже есть в develop (колонки: id, название, состояние, последний прогон, компонент, проект). Добавляется только колонка «Рутина» и честный «последний прогон».</p>
+    <div class="card" style="padding:4px 6px"><table class="tbl" id="gates"></table></div>
+    <p class="honest">В поле last_run_status у 15 гейтов лежит слово <span class="mono">active</span> — это не итог прогона. А у трёх гейтов LORE (QG-LORE-PROJECT-ROLES, -BLOCKED-REASON, -PROJECT-BINDING) поле пустое, хотя их рутины отрабатывают каждый день. Колонка «Последний прогон» в прототипе берётся из рутины гейта (развилка Q3).</p>
+  </section>
+
+  <section data-pane="qtab:recs">
+    <div class="rows" id="recs"></div>
+    <p class="note">Действия на строке (как в v1): «Принять → задача», «Отклонить» с причиной. Пишет человек, через тот же путь, что MCP rec_promote.</p>
+  </section>
+
+  <section data-pane="qtab:passport">
+    <div class="sec-h"><span class="mono" style="color:var(--acc)">QG-LORE-PROJECT-BINDING</span><span class="chip">черновик</span><span class="chip">OMILORE</span></div>
+    <h2 style="font-size:var(--fs-lg)">Привязка к проекту: сущности без BELONGS_TO_PROJECT</h2>
+    <div class="tabs" data-tabs="ptab"><button data-tab="sum">Сводка</button><button data-tab="runs"><span class="dot"></span>Прогоны</button><button data-tab="recs"><span class="dot"></span>Рекомендации</button><button data-tab="hist">История</button><button data-tab="links">Связи</button></div>
+    <div data-pane="ptab:sum" class="pass">
+      <div class="card"><h3>Что проверяет</h3><p>У каждой сущности корпуса есть ребро на проект; без него запись не видна при включённом проектном скоупе.</p>
+        <dl class="kv"><dt>Рутина</dt><dd class="mono">qg-lore-project-binding</dd><dt>Порог</dt><dd>0 сущностей без проекта</dd><dt>Как проверить</dt><dd>срез entities_without_project</dd><dt>Владелец</dt><dd>OMILORE</dd></dl></div>
+      <div class="card"><h3>Последний прогон</h3><p><span class="chip w">warn</span> 25.11</p><p class="muted" style="font-size:var(--fs-xs)">Сводка тянется из рутины. Если рутины у гейта нет — «Гейт не запускался», а не «ок».</p>
+        <div class="strip" id="pbStrip"></div></div>
+    </div>
+    <div data-pane="ptab:runs"><p class="note">Лента прогонов этой рутины (та же полоса, что во вкладке раздела) + таблица метрик каждого прогона по клику.</p></div>
+    <div data-pane="ptab:recs"><p class="note">Рекомендаций у гейта нет — так и пишем: «Рекомендаций нет». Не путать с «не смогли прочитать».</p></div>
+    <div data-pane="ptab:hist"><p class="note">Вкладка «История» уже есть у всех паспортов (SCD2-версии записи).</p></div>
+    <div data-pane="ptab:links"><p class="note">Связи уже есть у всех паспортов.</p></div>
+  </section>
+
+  <h2 style="margin-top:18px">Развилки для владельца</h2>
+  <div class="forks">
+    <div class="fork" data-fork="Q1"><h2>Q1 · Где показывать прогоны рутин</h2><p class="ctx">Рутины CI (qg-ci-*) и supervisor гоняются без своего гейта; у LORE-рутин гейт есть, но не связан с прогонами.</p>
+      <div class="ab"><button class="opt" data-opt="а"><span class="lbl">а) Вкладка «Прогоны» в разделе</span><span class="cost">Видно всё сразу, даже рутины без гейта. Цена: две точки входа — раздел и паспорт гейта.</span><span class="rec">рекомендую</span></button>
+      <button class="opt" data-opt="б"><span class="lbl">б) Только в паспорте гейта</span><span class="cost">Одна точка правды. Цена: сначала завести гейт на каждую из ~10 рутин без гейта (запись в LORE), иначе их прогоны невидимы.</span></button></div></div>
+    <div class="fork" data-fork="Q2"><h2>Q2 · Рекомендации</h2><p class="ctx">5 рекомендаций ждут решения; в v1 — вкладка паспорта гейта с «принять/отклонить».</p>
+      <div class="ab"><button class="opt" data-opt="а"><span class="lbl">а) Общая вкладка «Рекомендации» + в паспорте</span><span class="cost">Видно, что ждёт решения по всем гейтам. Цена: ещё одна вкладка.</span><span class="rec">рекомендую</span></button>
+      <button class="opt" data-opt="б"><span class="lbl">б) Только в паспорте гейта</span><span class="cost">Проще. Цена: чтобы найти ждущие решения — открывать гейты по одному.</span></button></div></div>
+    <div class="fork" data-fork="Q3"><h2>Q3 · «Последний прогон» гейта</h2><p class="ctx">В поле лежит «active» вместо итога, у LORE-гейтов поле пустое при живой рутине.</p>
+      <div class="ab"><button class="opt" data-opt="а"><span class="lbl">а) Показывать поле как есть</span><span class="cost">Ноль кода. Цена: экран врёт — «active» читается как «прошёл», пустое — как «не запускался».</span></button>
+      <button class="opt" data-opt="б"><span class="lbl">б) Брать итог из рутины гейта</span><span class="cost">Честно. Цена: связь гейт → рутина (по имени или ребром) и правка среза quality_gates.</span><span class="rec">рекомендую</span></button></div></div>
+    <div class="fork" data-fork="Q4"><h2>Q4 · Место в меню</h2><p class="ctx">В модели v2 гейты — в группе «Работа». В v1 была группа «Контроль»: Аналитика, QG, Лента, История.</p>
+      <div class="ab"><button class="opt" data-opt="а"><span class="lbl">а) Оставить в «Работе»</span><span class="cost">Ничего не двигаем. Цена: Аналитика в «Ленте», гейты в «Работе», история — в паспортах: «контроль» размазан.</span></button>
+      <button class="opt" data-opt="б"><span class="lbl">б) Группа «Контроль»: Аналитика, Гейты, История</span><span class="cost">Как в v1, по смыслу. Цена: правка nav в модели (lore-model.json) и одна новая группа меню.</span><span class="rec">рекомендую</span></button></div></div>
+  </div>
+  <div class="choice" id="choice"></div>
+  <footer class="src">Источник: прод LORE, MCP query_slice 25.11.2026 — quality_gates 23; qg_routine_runs 200 (лимит среза); qg_run_metrics run qg-know-hygiene_20261125T102202797613525Z; qg_pending_recs 5; qg_run_outcomes 1909 (история qg-aida-arch: fail с 30.07).</footer>
+</main></div>
+<script>
+// Общая обвязка прототипов AP-05 (вторая пачка): меню v2, вкладки в адресе, развилки «а | б».
+const NAV = [
+  ['Лента', [['news', 'Новости'], ['analytics', 'Аналитика']]],
+  ['Работа', [['sprint', 'Спринты'], ['task', 'Задачи'], ['milestone', 'Вехи'], ['release', 'Релизы'], ['pr', 'PR'], ['quality_gate', 'Гейты качества']]],
+  ['Знание', [['adr', 'ADR'], ['decision', 'Решения'], ['spec', 'Спеки'], ['doc', 'Документы'], ['question', 'Вопросы']]],
+  ['Продукт', [['product', 'Продукты'], ['feature', 'Фичи'], ['actor', 'Роли'], ['pain', 'Боли'], ['gain', 'Выгоды'], ['job', 'Работы']]],
+  ['Устройство', [['project', 'Проекты'], ['component', 'Компоненты'], ['tech', 'Технологии']]],
+];
+function renderNav(current, marks, extra) {
+  const nav = NAV.map(([g, items]) => [g, items.slice()]);
+  (extra || []).forEach(([grp, id, label]) => { const g = nav.find(x => x[0] === grp); if (g) g[1].push([id, label]); else nav.push([grp, [[id, label]]]); });
+  const side = document.querySelector('nav.side');
+  const phone = document.querySelector('.phone-nav');
+  const chip = id => marks[id] ? `<span class="chip ${marks[id][0]}">${marks[id][1]}</span>` : '';
+  if (side) side.innerHTML = nav.map(([g, items]) => `<div class="ng"><div class="gh">${g}</div>${items.map(([id, l]) =>
+    `<a href="#" class="${id === current ? 'on' : ''}" onclick="return false">${l}${chip(id)}</a>`).join('')}</div>`).join('');
+  if (phone) phone.innerHTML = nav.flatMap(([, items]) => items).filter(([id]) => id === current || marks[id]).map(([id, l]) =>
+    `<a href="#" class="chip ${id === current ? 'a' : ''}" onclick="return false">${l}${marks[id] ? ' · ' + marks[id][1] : ''}</a>`).join('');
+}
+function urlParam(k) { try { return new URL(location.href).searchParams.get(k); } catch { return null; } }
+function setUrlParam(k, v) { try { const u = new URL(location.href); u.searchParams.set(k, v); history.replaceState(null, '', u); } catch {} }
+// Вкладки: <div class="tabs" data-tabs="atab"><button data-tab="x">…</button></div> + <section data-pane="atab:x">
+function initTabs(onChange) {
+  document.querySelectorAll('.tabs[data-tabs]').forEach(bar => {
+    const key = bar.dataset.tabs;
+    const btns = [...bar.querySelectorAll('button[data-tab]')];
+    const show = id => {
+      btns.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === id)));
+      document.querySelectorAll(`[data-pane^="${key}:"]`).forEach(p => { p.hidden = p.dataset.pane !== `${key}:${id}`; });
+      onChange && onChange(key, id);
+    };
+    btns.forEach(b => { b.setAttribute('role', 'tab'); b.addEventListener('click', () => { setUrlParam(key, b.dataset.tab); show(b.dataset.tab); }); });
+    const start = urlParam(key);
+    show(btns.some(b => b.dataset.tab === start) ? start : btns[0].dataset.tab);
+  });
+}
+// Развилки: <div class="fork" data-fork="A1"><button class="opt" data-opt="а">…
+function initForks() {
+  const out = document.getElementById('choice');
+  const upd = () => {
+    if (!out) return;
+    const picked = [...document.querySelectorAll('.fork[data-fork]')].map(f => {
+      const on = f.querySelector('.opt[aria-pressed="true"]');
+      return on ? `${f.dataset.fork}${on.dataset.opt}` : null;
+    }).filter(Boolean);
+    out.innerHTML = picked.length ? `Ваш выбор одной строкой: <b>${picked.join(', ')}</b> — так и ответьте в канал.` : 'Выберите вариант в каждой карточке — здесь соберётся строка для ответа.';
+  };
+  document.querySelectorAll('.fork[data-fork]').forEach(f => {
+    const opts = [...f.querySelectorAll('.opt')];
+    opts.forEach(o => { o.setAttribute('aria-pressed', 'false'); o.addEventListener('click', () => { opts.forEach(x => x.setAttribute('aria-pressed', String(x === o))); upd(); }); });
+  });
+  upd();
+}
+// Горизонтальные столбцы: [{label, value, color?}] → SVG шириной 100%.
+function hbars(rows, opts = {}) {
+  const max = Math.max(1, ...rows.map(r => r.value));
+  const h = 18, lw = opts.labelW || 120, W = 400;
+  const body = rows.map((r, i) => {
+    const w = Math.max(2, (W - lw - 40) * r.value / max);
+    return `<text x="0" y="${i * h + 12}">${r.label}</text><rect x="${lw}" y="${i * h + 3}" width="${w}" height="11" rx="3" fill="${r.color || 'var(--acc)'}"/><text x="${lw + w + 4}" y="${i * h + 12}">${r.value}</text>`;
+  }).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${rows.length * h + 4}" role="img" aria-label="${opts.aria || ''}">${body}</svg>`;
+}
+// Вертикальные столбцы по неделям: [{label, value}].
+function vbars(rows, opts = {}) {
+  const max = Math.max(1, ...rows.map(r => r.value));
+  const W = 400, H = opts.h || 110, bw = W / rows.length;
+  const body = rows.map((r, i) => {
+    const hh = Math.max(1, (H - 22) * r.value / max);
+    return `<rect x="${i * bw + 3}" y="${H - 14 - hh}" width="${bw - 6}" height="${hh}" rx="2" fill="${r.color || 'var(--acc)'}"/><text x="${i * bw + bw / 2}" y="${H - 3}" text-anchor="middle">${r.label}</text>${r.value ? `<text x="${i * bw + bw / 2}" y="${H - 17 - hh}" text-anchor="middle">${r.value}</text>` : ''}`;
+  }).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${opts.aria || ''}">${body}</svg>`;
+}
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const short = id => String(id).replace(/^SPRINT_/, '');
+
+renderNav('quality_gate', { analytics: ['has', 'есть'], quality_gate: ['new', 'доделать'] });
+// Порядок — как отдал срез (новые первыми), 24–25.11.
+const LORE_R = [
+  ['qg-supervisor', 'надзор за рутинами, только 25.11', null, 'warn warn warn warn warn warn warn warn warn warn warn warn warn warn warn warn warn'],
+  ['qg-know-hygiene', 'гигиена корпуса', null, 'warn warn'],
+  ['qg-branch-task-status', 'ветка ↔ статус задачи', null, 'pass pass'],
+  ['qg-doc-links', 'ссылки в доках', null, 'warn warn'],
+  ['qg-lore-project-roles', 'роли в проектах', 'QG-LORE-PROJECT-ROLES', 'pass pass'],
+  ['qg-lore-blocked-reason', 'блокировки объяснены', 'QG-LORE-BLOCKED-REASON', 'warn warn'],
+  ['qg-lore-project-binding', 'привязка к проекту', 'QG-LORE-PROJECT-BINDING', 'warn warn'],
+];
+// CI 25.11, по порядку среза: v1=v1-freeze-guard, mig=lore-migrate-live-check, fe=frontend-ci, be=backend-ci, attr, empty
+const CI25 = `v1:ok mig:fail fe:ok v1:ok mig:ok fe:ok be:ok be:fail v1:ok mig:fail fe:ok be:fail fe:ok be:ok v1:ok mig:fail fe:ok be:ok attr:ok attr:ok v1:ok mig:ok fe:ok v1:ok mig:ok fe:partial be:partial be:fail v1:ok mig:fail v1:ok mig:fail fe:partial be:partial v1:ok mig:ok fe:ok be:ok v1:ok mig:fail fe:ok fe:fail be:partial v1:ok mig:fail fe:ok be:ok be:fail v1:ok mig:fail fe:ok be:fail v1:ok mig:fail v1:ok mig:fail fe:fail be:fail fe:ok be:ok empty:ok fe:ok v1:ok mig:fail fe:fail be:ok v1:ok mig:fail fe:ok be:fail be:partial v1:ok mig:fail fe:ok be:ok mig:fail fe:ok empty:ok fe:ok be:ok be:ok v1:ok mig:ok fe:ok be:ok mig:ok fe:ok fe:ok v1:ok mig:ok fe:ok v1:ok mig:fail fe:partial be:partial be:ok be:ok be:ok empty:ok v1:ok mig:ok fe:fail v1:ok mig:ok fe:ok mig:ok fe:ok be:ok fe:ok be:ok`;
+const CI_NAMES = { v1: ['qg-ci-v1-freeze-guard', 'v1 заморожен'], mig: ['qg-ci-lore-migrate-live-check', 'миграция на живой базе'], fe: ['qg-ci-frontend-ci', 'Frontend + MCP CI'], be: ['qg-ci-backend-ci', 'Backend CI'], attr: ['qg-ci-lore-attr-type-probe', 'типы атрибутов'], empty: ['qg-ci-lore-empty-db-template', 'шаблон пустой базы'] };
+const ci = {}; CI25.split(' ').forEach(p => { const [k, s] = p.split(':'); (ci[k] = ci[k] || []).push(s); });
+const norm = s => s === 'pass' ? 'ok' : s;
+const strip = arr => `<div class="strip">${arr.map(s => `<i class="s-${norm(s)}" title="${s}"></i>`).join('')}</div>`;
+const chipOf = s => ({ ok: '<span class="chip ok">прошла</span>', pass: '<span class="chip ok">прошла</span>', warn: '<span class="chip w">warn</span>', fail: '<span class="chip d">упала</span>', partial: '<span class="chip i">частично</span>' })[s];
+document.getElementById('loreRoutines').innerHTML = LORE_R.map(([n, d, g, seq]) => { const a = seq.split(' ');
+  return `<div class="rc"><div class="nm">${n}</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${chipOf(a[0])}<span class="muted" style="font-size:var(--fs-2xs)">${d}</span></div>${strip(a)}<div class="gate">${g ? 'гейт ' + g + ' — <span style="color:var(--wrn)">в гейте прогон не виден</span>' : 'гейта нет'}</div></div>`; }).join('');
+document.getElementById('ciRoutines').innerHTML = Object.entries(ci).map(([k, a]) => { const f = a.filter(s => s === 'fail').length;
+  return `<div class="rc"><div class="nm">${CI_NAMES[k][0]}</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">${chipOf(a[0])}<span class="muted" style="font-size:var(--fs-2xs)">${CI_NAMES[k][1]} · упала ${f} из ${a.length}</span></div>${strip(a)}<div class="gate">гейт QG-LORE-CI-ACTIONS (действует) — прогоны не связаны</div></div>`; }).join('');
+const all = [...LORE_R.flatMap(r => r[3].split(' ')), ...Object.values(ci).flat()];
+const migF = ci.mig.filter(s => s === 'fail').length;
+document.getElementById('runKpi').innerHTML = [[all.length, 'прогонов в окне', 'последние 200 у среза, тут 24–25.11'], [all.filter(s => s === 'fail').length, 'упали', 'больше всех — миграция на живой базе'], [`${migF}/${ci.mig.length}`, 'migrate-live-check', 'падает за 25.11'], [17, 'прогонов supervisor за 25.11', 'все — warn']].map(([b, s, sm]) => `<div class="kpi"><b>${b}</b><span>${s}</span><small>${sm}</small></div>`).join('');
+const M = [['know_closed_sprints_with_open_tasks', 'закрытые спринты с открытыми задачами', 1, 'warn'], ['know_entities_without_project', 'сущности без проекта', 358, 'warn'], ['know_history_hygiene', 'дыры в истории (SCD2)', 0, 'pass'], ['know_question_hygiene', 'вопросы без гигиены', 205, 'warn'], ['know_scope_orphans', 'сироты скоупа', 64, 'warn']];
+document.getElementById('metrics').innerHTML = '<tr><th>Метрика</th><th>Значение</th><th>Цель</th><th>Итог</th></tr>' + M.map(([k, l, v, s]) => `<tr><td>${l}<div class="mono muted" style="font-size:var(--fs-2xs)">${k}</div></td><td class="n">${v}</td><td class="n">0</td><td>${chipOf(s)}</td></tr>`).join('');
+const G = [
+  ['QG-LORE-CI-ACTIONS', 'CI: прогоны Forgejo Actions', 'active', null, 'qg-ci-* (6)', 'UnlimitedLORE'],
+  ['QG-LORE-PROJECT-BINDING', 'Привязка к проекту', 'draft', null, 'qg-lore-project-binding', '—'],
+  ['QG-LORE-BLOCKED-REASON', 'Гигиена блокировок', 'draft', null, 'qg-lore-blocked-reason', '—'],
+  ['QG-LORE-PROJECT-ROLES', 'Проекты без роли', 'draft', null, 'qg-lore-project-roles', '—'],
+  ['qg-lore-storage', 'LORE Storage — денорм↔ребро', 'draft', null, '—', '—'],
+  ['QG-AIDA-ARCH', 'AIDA: ежедневный арх-гейт', 'draft', null, 'qg-aida-arch', 'AIDA'],
+  ['QG-HOUND-BATCH-ORCHESTRATION', 'Hound/Dali batch-parse', 'draft', null, '—', 'AIDA'],
+  ['QG-CODE-REVIEW', 'Delivery-pipeline Quality Gate', 'draft', 'active', '—', 'AIDA'],
+  ['… ещё 15 гейтов AIDA', 'то же: draft, last_run_status = active', 'draft', 'active', '—', 'AIDA'],
+];
+const run = { 'qg-ci-* (6)': ['fail', 'migrate-live-check упала'], 'qg-lore-project-binding': ['warn', ''], 'qg-lore-blocked-reason': ['warn', ''], 'qg-lore-project-roles': ['pass', ''], 'qg-aida-arch': ['fail', 'последний — 03.11'] };
+document.getElementById('gates').innerHTML = '<tr><th>Гейт</th><th>Состояние</th><th class="hide-s">Рутина</th><th>Последний прогон</th></tr>' + G.map(([id, t, st, raw, r, p]) => `<tr><td><span class="mono" style="color:var(--acc)">${id}</span><div style="font-size:var(--fs-2xs)">${t} · ${p}</div></td><td>${st === 'active' ? '<span class="chip ok">действует</span>' : '<span class="chip">черновик</span>'}</td><td class="hide-s mono" style="font-size:var(--fs-2xs)">${r}</td><td>${run[r] ? chipOf(run[r][0]) + `<div class="muted" style="font-size:var(--fs-2xs)">${run[r][1]}</div>` : `<span class="chip">не запускался</span>${raw ? '<div class="muted" style="font-size:var(--fs-2xs)">в поле: «active»</div>' : ''}`}</td></tr>`).join('');
+const R = [['REC-QG-HOUND-BATCH-ORCH-INV5-2026-07-17', '~14 синхронных ArcadeDB round-trip на файл в ParseJob.runBatch (76.9% времени)', 'critical', 3, 'HND'], ['REC-QG-HOUND-BATCH-ORCH-INV1-2026-07-05', 'Привести SKADI-путь в соответствие с ADR-HND-012', 'high', 0.5, 'HND'], ['REC-QG-HOUND-BATCH-ORCH-INV2-2026-07-05', 'Batch-level circuit breaker в ParseJob.runBatch', 'high', 1, 'HND'], ['REC-QG-HOUND-BATCH-ORCH-INV3-2026-07-05', 'Роадмап диалектов: Db2 → TSql → StarRocks → Hive', 'low', 8, 'HND'], ['… ещё 1', 'qg_pending_recs total = 5', '', '', '']];
+document.getElementById('recs').innerHTML = R.map(([id, t, sev, e, c]) => `<div class="row"><div class="main"><div class="id">${id}</div><div class="t">${t}</div><div class="m">QG-HOUND-BATCH-ORCHESTRATION · ${c}${e !== '' ? ' · ' + e + ' ч/д' : ''} · ждёт с июля</div></div>${sev ? `<span class="chip ${sev === 'critical' ? 'd' : sev === 'high' ? 'w' : ''}">${sev}</span>` : ''}</div>`).join('');
+document.getElementById('pbStrip').innerHTML = strip(['warn', 'warn']).replace('<div class="strip">', '').replace(/<\/div>$/, '');
+initTabs();
+initForks();
+</script>
+</body>
+</html>

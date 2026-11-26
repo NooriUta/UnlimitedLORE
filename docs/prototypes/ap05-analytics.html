@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Аналитика v2: недостающее</title>
+<!--
+  SPRINT_LORE_ADMIN_POLISH/AP-05, вторая пачка прототипов (владелец 25.11: «гэп закрывать … делать дизайн того, что ещё недоделано»).
+  Экран: раздел «Аналитика» v2 — только то, чего нет в develop относительно v1 (LoreAnalytics.tsx, 7 вкладок).
+  В develop уже есть web-next/src/analytics/AnalyticsScreen.tsx: Прогресс, Поток, Динамика, Люди, Релизы, Архитектура, Качество, Моя сводка.
+  Данные — живой снимок LORE 25.11.2026 через MCP (только чтение): sprints{project}, open_tasks/closed_tasks (_page.total),
+  quality_gates, qg_routine_runs, tech_registry, shipped_dynamics. Вкладка — в адресе: ?atab=overview|sprints|tech|product.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14120e;--bg2:#1c1913;--bg3:#25211a;--bd:#3a3326;--bdh:#56492f;
+  --t1:#efe6d2;--t2:#b8ab90;--t3:#8f826a;
+  --acc:#d9a441;--suc:#8fb85f;--wrn:#e0913a;--dng:#d0644f;--inf:#6fa3c4;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;--head:'Unbounded',Manrope,sans-serif;--r:6px;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--bdh:#b3a17c;--t1:#2a241a;--t2:#5d523f;--t3:#7a6d55;
+  --acc:#a8741a;--suc:#4f7a2a;--wrn:#b0601a;--dng:#b0412d;--inf:#2f6d93;}}
+:root[data-theme="light"]{--bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--bdh:#b3a17c;--t1:#2a241a;--t2:#5d523f;--t3:#7a6d55;
+  --acc:#a8741a;--suc:#4f7a2a;--wrn:#b0601a;--dng:#b0412d;--inf:#2f6d93;}
+*{box-sizing:border-box}
+html,body{overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--t1);font:400 var(--fs-sm)/1.5 Manrope,system-ui,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+h1,h2{font-family:var(--head);font-weight:800;margin:0}
+h1{font-size:var(--fs-lg);letter-spacing:.02em}
+h2{font-size:var(--fs-md);margin:0 0 6px}
+h3{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin:0 0 6px;font-weight:800}
+p{margin:0 0 6px}
+a{color:var(--acc)}
+.mono{font-family:var(--mono)}
+.muted{color:var(--t3)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+/* шапка */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--bd);background:var(--bg2);position:sticky;top:0;z-index:10}
+.top .sp{flex:1}
+.proto{font-size:var(--fs-2xs);font-weight:800;color:var(--wrn);border:1px dashed var(--wrn);border-radius:999px;padding:1px 8px;text-transform:uppercase;letter-spacing:.06em}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;border:1px solid var(--bd);font-size:var(--fs-xs);white-space:nowrap;color:var(--t2);max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.chip.ok{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 50%,var(--bd))}
+.chip.w{color:var(--wrn);border-color:color-mix(in srgb,var(--wrn) 50%,var(--bd))}
+.chip.d{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 50%,var(--bd))}
+.chip.i{color:var(--inf);border-color:color-mix(in srgb,var(--inf) 50%,var(--bd))}
+.chip.a{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 50%,var(--bd))}
+.chip.new{color:var(--acc);border-style:dashed;border-color:var(--acc);font-weight:800}
+.chip.has{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 40%,var(--bd))}
+/* оболочка v2 */
+.wrap{display:grid;grid-template-columns:200px minmax(0,1fr)}
+nav.side{border-right:1px solid var(--bd);padding:10px 8px;background:var(--bg2);position:sticky;top:41px;align-self:start;max-height:calc(100vh - 41px);overflow:auto}
+.ng{margin-bottom:10px}
+.ng .gh{padding:2px 8px;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:800}
+.ng a{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:var(--r);color:var(--t2);text-decoration:none;font-size:var(--fs-sm)}
+.ng a.on{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);font-weight:700}
+.ng a .chip{margin-left:auto;padding:0 5px;font-size:var(--fs-2xs)}
+main{padding:12px 16px 60px;min-width:0}
+.crumbs{font-size:var(--fs-xs);color:var(--t3);margin-bottom:4px}
+.phone-nav{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:minmax(0,1fr)}
+  nav.side{display:none}
+  .phone-nav{display:flex;gap:6px;overflow-x:auto;padding:6px 16px;border-bottom:1px solid var(--bd);background:var(--bg2);scrollbar-width:none}
+  .phone-nav a{flex:none}
+}
+/* карточки */
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-bottom:12px;min-width:0}
+.why{border-left:3px solid var(--acc)}
+.why p{color:var(--t2);font-size:var(--fs-md)}
+.why p b{color:var(--t1)}
+.state{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:6px;margin-top:6px}
+.state div{background:var(--bg3);border-radius:var(--r);padding:6px 8px;font-size:var(--fs-xs);color:var(--t2)}
+.state b{display:block;color:var(--t1);font-size:var(--fs-sm)}
+.sec-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 8px}
+.sec-h .sp{flex:1}
+/* вкладки и сегменты */
+.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--bd);margin-bottom:10px}
+.tabs button{padding:5px 10px;font-size:var(--fs-sm);color:var(--t2);border-bottom:2px solid transparent;display:inline-flex;gap:4px;align-items:center}
+.tabs button[aria-selected="true"]{color:var(--acc);border-bottom-color:var(--acc);font-weight:700}
+.tabs button .dot{width:6px;height:6px;border-radius:50%;background:var(--acc)}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden;flex-wrap:wrap}
+.seg button{padding:2px 10px;font-size:var(--fs-xs);color:var(--t2)}
+.seg button[aria-pressed="true"]{background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc);font-weight:700}
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;min-width:0}
+.kpi b{display:block;font:800 var(--fs-xl)/1.15 var(--head)}
+.kpi span{font-size:var(--fs-xs);color:var(--t3)}
+.kpi small{display:block;font-size:var(--fs-2xs);color:var(--t2)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:900px){.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* таблица */
+.tbl{width:100%;border-collapse:collapse;font-size:var(--fs-xs)}
+.tbl th{text-align:left;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);font-weight:800;padding:4px 6px;border-bottom:1px solid var(--bd)}
+.tbl td{padding:4px 6px;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);vertical-align:top;overflow-wrap:anywhere}
+.tbl td.n{text-align:right;font-family:var(--mono);white-space:nowrap}
+@media (max-width:600px){.tbl .hide-s{display:none}}
+/* строки-список */
+.rows{display:flex;flex-direction:column;gap:4px}
+.row{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border:1px solid var(--bd);border-radius:var(--r);background:var(--bg2);min-width:0}
+.row .main{flex:1;min-width:0}
+.row .id{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--acc);overflow-wrap:anywhere}
+.row .t{font-size:var(--fs-sm);overflow-wrap:anywhere}
+.row .m{font-size:var(--fs-2xs);color:var(--t3)}
+/* полосы */
+.bar{height:8px;border-radius:999px;background:var(--bg3);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:var(--fs-2xs);color:var(--t2);margin-top:4px}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{fill:var(--t3);font:var(--fs-2xs) var(--mono)}
+/* развилки */
+.forks{display:flex;flex-direction:column;gap:10px}
+.fork{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px}
+.fork h2{font-size:var(--fs-sm)}
+.fork .ctx{color:var(--t2);font-size:var(--fs-xs);margin-bottom:8px}
+.ab{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:420px){.ab{grid-template-columns:minmax(0,1fr)}}
+.opt{border:2px solid var(--bd);border-radius:8px;padding:8px;background:var(--bg);text-align:left;min-width:0;display:flex;flex-direction:column;gap:4px}
+.opt[aria-pressed="true"]{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,var(--bg))}
+.opt .lbl{font-weight:800;font-size:var(--fs-sm)}
+.opt .cost{font-size:var(--fs-2xs);color:var(--t2)}
+.opt .rec{font-size:var(--fs-2xs);font-weight:800;color:var(--suc)}
+.choice{margin-top:10px;font-size:var(--fs-sm);background:var(--bg3);border-radius:var(--r);padding:8px 10px;overflow-wrap:anywhere}
+.choice b{color:var(--acc)}
+.note{font-size:var(--fs-xs);color:var(--t2);background:var(--bg3);border-radius:var(--r);padding:6px 8px;margin:6px 0}
+.note.w{border-left:3px solid var(--wrn)}
+.note.d{border-left:3px solid var(--dng)}
+.honest{font-size:var(--fs-xs);color:var(--wrn);border:1px dashed color-mix(in srgb,var(--wrn) 60%,var(--bd));border-radius:var(--r);padding:6px 8px;margin:6px 0}
+[hidden]{display:none!important}
+footer.src{font-size:var(--fs-2xs);color:var(--t3);margin-top:16px;overflow-wrap:anywhere}
+
+.tabs button.old{color:var(--t3)}
+.tabs button.old::after{content:'есть';font-size:var(--fs-2xs);color:var(--suc);margin-left:3px}
+.drift td .v{font-family:var(--mono);font-size:var(--fs-2xs);display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:0 6px;margin:0 3px 3px 0}
+.drift td .v.odd{color:var(--wrn);border-color:color-mix(in srgb,var(--wrn) 50%,var(--bd))}
+.mini{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;font-size:var(--fs-2xs);color:var(--t2)}
+.mini div{border:1px solid var(--bd);border-radius:var(--r);padding:6px;background:var(--bg)}
+.frame{background:var(--bg2);border:1px solid var(--bd);border-radius:8px 8px 0 0;padding:8px 10px;border-bottom:0}
+.frame .fh{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.frame .fh b{font-size:var(--fs-md)}
+.dashg{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:8px;background:var(--bg2);border:1px solid var(--bd);border-radius:0 0 8px 8px;padding:8px 10px;border-top:1px dashed var(--bd)}
+.dcell{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:8px;min-width:0}
+.dcell h4{margin:0 0 4px;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);display:flex;gap:6px}
+.dcell h4 .k{margin-left:auto;font-family:var(--mono);text-transform:none;letter-spacing:0;color:var(--inf)}
+.dcell .go{font-size:var(--fs-2xs);color:var(--acc);margin-top:4px;display:block}
+.verd{font-size:var(--fs-xs);border-radius:var(--r);padding:4px 8px;background:color-mix(in srgb,var(--dng) 14%,transparent);color:var(--dng)}
+.verd.ok{background:color-mix(in srgb,var(--suc) 14%,transparent);color:var(--suc)}
+.kitmap{margin-top:8px}
+</style>
+</head>
+<body>
+<header class="top"><h1>LORE</h1><span class="proto">Прототип · кода нет</span><span class="sp"></span><span class="chip">NooriUta/UnlimitedLORE</span><span class="chip">снимок 25.11.2026</span></header>
+<div class="phone-nav"></div>
+<div class="wrap"><nav class="side"></nav>
+<main>
+  <div class="crumbs">Лента › Аналитика</div>
+  <div class="sec-h"><h1>Аналитика</h1><span class="chip has">раздел есть в develop</span><span class="chip new">4 вкладки из v1 + аналитика в паспорте и списке — новое</span></div>
+
+  <section class="card why">
+    <h2>Что это и зачем</h2>
+    <p>Раздел <b>«Аналитика» в v2 уже собран в develop</b> (8 вкладок на графиках kit), на проде его ещё не видно. Из семи вкладок v1 не перевезены четыре: <b>Обзор, Спринты, Технологии, Продукт</b>. Здесь — как их доделать, на живых цифрах проекта.</p>
+    <p>Графики Völva остаются <b>видом «Völva» у списков</b> (спринты и др.): это «картинка раздела». Аналитика — сводная, на kit, и работает, даже когда Völva не настроена.</p>
+    <div class="state">
+      <div><b>Есть в develop</b>Прогресс · Поток · Динамика · Люди · Релизы · Архитектура · Качество · Моя сводка</div>
+      <div><b>Нет (из v1)</b>Обзор (KPI + разрезы) · Спринты (таблица) · Технологии (матрица) · Продукт (VP-аналитика)</div>
+      <div><b>Völva</b>вид «Völva» у спринтов (SPRINT_UXR_S6_VOLVA_IN_LORE, в работе); без volva.url — «не настроено», а не пусто</div>
+    </div>
+  </section>
+
+  <section class="card" style="border-left:3px solid var(--suc)">
+    <h2>Решение владельца 25.11 — три места, один набор плиток</h2>
+    <p style="color:var(--t2)">«Аналитику разнести по вкладке аналитика как в паспорте, так и в табличных видах, но сборную из аналитики разрез тоже хорошо бы собрать». Плитки одни и те же; меняется только <b>охват</b>: одна запись → текущая выборка списка (с его фильтром) → всё сразу. Плитка сборной ведёт во вкладку или вид своего раздела.</p>
+  </section>
+
+  <div class="sec-h"><h2 style="margin:0">Охват</h2><div class="seg" id="scopeSeg"><button data-s="rec">Паспорт · запись</button><button data-s="sel">Список · выборка</button><button data-s="all">Сборная · всё</button></div></div>
+  <div class="frame" id="frame"></div>
+  <div class="dashg" id="tiles"></div>
+  <p class="note" id="scopeNote"></p>
+  <div class="card kitmap"><h3>Из чего собрано (kit)</h3><table class="tbl">
+    <tr><th>Часть</th><th>Компонент kit</th></tr>
+    <tr><td>сетка плиток</td><td class="mono">DashGrid, DashCell — kit/src/dashboard/index.tsx</td></tr>
+    <tr><td>число с подписью</td><td class="mono">StatTile — kit/src/live/index.tsx</td></tr>
+    <tr><td>доля закрыто / в работе</td><td class="mono">TileBar — kit/src/tiles/index.tsx</td></tr>
+    <tr><td>столбцы (компоненты, окна плана)</td><td class="mono">BarChart — kit/src/charts/family.tsx</td></tr>
+    <tr><td>вердикт «план просрочен»</td><td class="mono">VerdictBanner — kit/src/dashboard/index.tsx</td></tr>
+    <tr><td>вкладка паспорта «Аналитика»</td><td class="mono">RecordView, режим analytics — kit/src/record/RecordView.tsx (сейчас там связи/граф/журнал, графиков нет — добавить блок)</td></tr>
+    <tr><td>вид списка «Аналитика»</td><td class="mono">ViewMenu — kit/src/list/ViewMenu.tsx; в web-next уже lav=analytics (ListScreen.tsx)</td></tr>
+    <tr><td>вкладки сборной</td><td class="mono">Tabs — kit/src/shell/Tabs.tsx</td></tr>
+  </table></div>
+
+  <h2 style="margin-top:14px">Сборная · вкладки-разрезы</h2>
+  <div class="tabs" data-tabs="atab">
+    <button data-tab="overview"><span class="dot"></span>Обзор</button>
+    <button data-tab="progress" class="old">Прогресс</button>
+    <button data-tab="flow" class="old">Поток</button>
+    <button data-tab="sprints"><span class="dot"></span>Спринты</button>
+    <button data-tab="quality" class="old">Качество</button>
+    <button data-tab="tech"><span class="dot"></span>Технологии</button>
+    <button data-tab="product"><span class="dot"></span>Продукт</button>
+    <button data-tab="mine" class="old">Моя сводка</button>
+  </div>
+
+  <section data-pane="atab:overview">
+    <div class="kpis" id="kpis"></div>
+    <div class="grid2">
+      <div class="card"><h3>Спринты по статусу</h3><div id="sprStatus"></div></div>
+      <div class="card"><h3>Задачи: закрыто / открыто</h3><div id="taskStatus"></div><p class="muted" style="font-size:var(--fs-2xs);margin-top:6px">closed_tasks / open_tasks по проекту, число из _page.total.</p></div>
+      <div class="card"><h3>Спринты по компонентам · топ-10</h3><div id="byComp"></div></div>
+      <div class="card"><h3>Гигиена плана</h3><div id="hyg"></div></div>
+    </div>
+  </section>
+
+  <section data-pane="atab:sprints">
+    <div class="sec-h"><div class="seg" id="sprSeg"><button data-f="open" aria-pressed="true">Открытые</button><button data-f="late">План просрочен</button><button data-f="noms">Без вехи</button><button data-f="nodate">Без дат</button></div><span class="sp"></span><span class="muted" id="sprCount"></span></div>
+    <div class="card" style="padding:4px 6px"><table class="tbl" id="sprTbl"></table></div>
+    <p class="note">«План просрочен» — плановый конец раньше 25.11, а спринт не закрыт. Прогресс по задачам на строке — из sprint_totals (в этом снимке не загружался, в коде — одна выборка на страницу).</p>
+  </section>
+
+  <section data-pane="atab:tech">
+    <div class="card why"><p><b>Дрейф версий</b>: одна технология — разные версии в разных компонентах, и версии «не закреплены». Это то, ради чего вкладка нужна; полная матрица «технология × компонент» в v2 уже есть разделом «Технологии».</p></div>
+    <div class="kpis" id="techKpi"></div>
+    <div class="card" style="padding:4px 6px"><table class="tbl drift" id="drift"></table></div>
+  </section>
+
+  <section data-pane="atab:product">
+    <div class="card why"><p>Вкладка v1 «Продукт» (LoreAnalyticsProduct.tsx) — плитки A–F: нагрузка ролей, стратегическое покрытие, инвестпрофиль, гигиена связок, качество оформления. Она пересекается с VP-канвой и профилем клиента — их проектирует <b>первая пачка</b>; здесь только место и состав.</p></div>
+    <div class="kpis">
+      <div class="kpi"><b>35</b><span>сценариев отгружено</span><small>shipped_dynamics, все shipped</small></div>
+      <div class="kpi"><b>52</b><span>фич и сценариев</span><small>use_cases: cloud 3 · kite 5 · sea-level 43 · без уровня 1</small></div>
+    </div>
+    <div class="mini">
+      <div><b>A · Нагрузка ролей</b><br>actor_load по проекту</div>
+      <div><b>B · Стратегическое покрытие</b><br>strategic_coverage: фича → веха</div>
+      <div><b>D · Инвестпрофиль</b><br>invest_profile: uc / jtd / enb</div>
+      <div><b>E · Гигиена связок</b><br>product_hygiene — «пока не ноль, цифры врут»</div>
+    </div>
+  </section>
+
+  <section data-pane="atab:progress"><p class="note">Вкладка уже есть в develop (velocity, burnup) — не перерисовываю.</p></section>
+  <section data-pane="atab:flow"><p class="note">Вкладка уже есть в develop (throughput, lead time, cycle, блокировки) — не перерисовываю.</p></section>
+  <section data-pane="atab:quality"><p class="note">В develop — один блок «гейты» (тепловая карта). Раздел гейтов и прогонов — отдельный прототип ap05-qg.html.</p></section>
+  <section data-pane="atab:mine"><p class="note">«Моя сводка» уже есть в develop — блоки разных вкладок на одном экране. Обзор можно сделать её набором по умолчанию (развилка A1).</p></section>
+
+  <h2 style="margin-top:18px">Развилки для владельца</h2>
+  <div class="forks">
+    <div class="fork"><h2>A1 · решено 25.11</h2><p class="ctx">«Обзор» — вкладка сборной «Аналитики»; его плитки те же, что во вкладке паспорта и в виде списка.</p></div>
+    <div class="fork" data-fork="A2"><h2>A2 · Таблица «Спринты»</h2><p class="ctx">В v1 — отдельная вкладка с фильтрами. В v2 у спринтов уже есть список, доска, таймлайн.</p>
+      <div class="ab"><button class="opt" data-opt="а"><span class="lbl">а) Вкладка в Аналитике</span><span class="cost">Всё «про здоровье плана» в одном месте. Цена: второй список спринтов рядом с разделом «Спринты».</span></button>
+      <button class="opt" data-opt="б"><span class="lbl">б) Быстрые фильтры в разделе «Спринты»</span><span class="cost">«План просрочен», «Без вехи», «Без дат» — чипами списка. Цена: из Аналитики только ссылка.</span><span class="rec">рекомендую</span></button></div></div>
+    <div class="fork"><h2>A3 · решено 25.11</h2><p class="ctx">И то и другое: вид/вкладка «Аналитика» в своём разделе (Технологии, Продукты, паспорт) + разрез в сборной, плитка ведёт в раздел.</p></div>
+    <div class="fork" data-fork="A4"><h2>A4 · Чем рисуем</h2><p class="ctx">Völva — внешний сервис (карточки Metabase); kit — графики внутри LORE.</p>
+      <div class="ab"><button class="opt" data-opt="а"><span class="lbl">а) Аналитика на kit, Völva — вид у списков</span><span class="cost">Работает без Völva; честное «не настроено» только у вида. Цена: две библиотеки графиков в продукте.</span><span class="rec">рекомендую</span></button>
+      <button class="opt" data-opt="б"><span class="lbl">б) Всё через Völva-карточки</span><span class="cost">Один движок графиков. Цена: без volva.url раздел пуст целиком; карточку надо заводить в Völva на каждый график.</span></button></div></div>
+  </div>
+  <div class="choice" id="choice"></div>
+  <footer class="src">Источник: прод LORE, MCP query_slice 25.11.2026 — sprints{project=NooriUta/UnlimitedLORE} 109 строк; open_tasks 109 / closed_tasks 1834 (total); tech_registry 146; quality_gates 23; shipped_dynamics 35; use_cases по goal_level.</footer>
+</main></div>
+<script>
+// Общая обвязка прототипов AP-05 (вторая пачка): меню v2, вкладки в адресе, развилки «а | б».
+const NAV = [
+  ['Лента', [['news', 'Новости'], ['analytics', 'Аналитика']]],
+  ['Работа', [['sprint', 'Спринты'], ['task', 'Задачи'], ['milestone', 'Вехи'], ['release', 'Релизы'], ['pr', 'PR'], ['quality_gate', 'Гейты качества']]],
+  ['Знание', [['adr', 'ADR'], ['decision', 'Решения'], ['spec', 'Спеки'], ['doc', 'Документы'], ['question', 'Вопросы']]],
+  ['Продукт', [['product', 'Продукты'], ['feature', 'Фичи'], ['actor', 'Роли'], ['pain', 'Боли'], ['gain', 'Выгоды'], ['job', 'Работы']]],
+  ['Устройство', [['project', 'Проекты'], ['component', 'Компоненты'], ['tech', 'Технологии']]],
+];
+function renderNav(current, marks, extra) {
+  const nav = NAV.map(([g, items]) => [g, items.slice()]);
+  (extra || []).forEach(([grp, id, label]) => { const g = nav.find(x => x[0] === grp); if (g) g[1].push([id, label]); else nav.push([grp, [[id, label]]]); });
+  const side = document.querySelector('nav.side');
+  const phone = document.querySelector('.phone-nav');
+  const chip = id => marks[id] ? `<span class="chip ${marks[id][0]}">${marks[id][1]}</span>` : '';
+  if (side) side.innerHTML = nav.map(([g, items]) => `<div class="ng"><div class="gh">${g}</div>${items.map(([id, l]) =>
+    `<a href="#" class="${id === current ? 'on' : ''}" onclick="return false">${l}${chip(id)}</a>`).join('')}</div>`).join('');
+  if (phone) phone.innerHTML = nav.flatMap(([, items]) => items).filter(([id]) => id === current || marks[id]).map(([id, l]) =>
+    `<a href="#" class="chip ${id === current ? 'a' : ''}" onclick="return false">${l}${marks[id] ? ' · ' + marks[id][1] : ''}</a>`).join('');
+}
+function urlParam(k) { try { return new URL(location.href).searchParams.get(k); } catch { return null; } }
+function setUrlParam(k, v) { try { const u = new URL(location.href); u.searchParams.set(k, v); history.replaceState(null, '', u); } catch {} }
+// Вкладки: <div class="tabs" data-tabs="atab"><button data-tab="x">…</button></div> + <section data-pane="atab:x">
+function initTabs(onChange) {
+  document.querySelectorAll('.tabs[data-tabs]').forEach(bar => {
+    const key = bar.dataset.tabs;
+    const btns = [...bar.querySelectorAll('button[data-tab]')];
+    const show = id => {
+      btns.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === id)));
+      document.querySelectorAll(`[data-pane^="${key}:"]`).forEach(p => { p.hidden = p.dataset.pane !== `${key}:${id}`; });
+      onChange && onChange(key, id);
+    };
+    btns.forEach(b => { b.setAttribute('role', 'tab'); b.addEventListener('click', () => { setUrlParam(key, b.dataset.tab); show(b.dataset.tab); }); });
+    const start = urlParam(key);
+    show(btns.some(b => b.dataset.tab === start) ? start : btns[0].dataset.tab);
+  });
+}
+// Развилки: <div class="fork" data-fork="A1"><button class="opt" data-opt="а">…
+function initForks() {
+  const out = document.getElementById('choice');
+  const upd = () => {
+    if (!out) return;
+    const picked = [...document.querySelectorAll('.fork[data-fork]')].map(f => {
+      const on = f.querySelector('.opt[aria-pressed="true"]');
+      return on ? `${f.dataset.fork}${on.dataset.opt}` : null;
+    }).filter(Boolean);
+    out.innerHTML = picked.length ? `Ваш выбор одной строкой: <b>${picked.join(', ')}</b> — так и ответьте в канал.` : 'Выберите вариант в каждой карточке — здесь соберётся строка для ответа.';
+  };
+  document.querySelectorAll('.fork[data-fork]').forEach(f => {
+    const opts = [...f.querySelectorAll('.opt')];
+    opts.forEach(o => { o.setAttribute('aria-pressed', 'false'); o.addEventListener('click', () => { opts.forEach(x => x.setAttribute('aria-pressed', String(x === o))); upd(); }); });
+  });
+  upd();
+}
+// Горизонтальные столбцы: [{label, value, color?}] → SVG шириной 100%.
+function hbars(rows, opts = {}) {
+  const max = Math.max(1, ...rows.map(r => r.value));
+  const h = 18, lw = opts.labelW || 120, W = 400;
+  const body = rows.map((r, i) => {
+    const w = Math.max(2, (W - lw - 40) * r.value / max);
+    return `<text x="0" y="${i * h + 12}">${r.label}</text><rect x="${lw}" y="${i * h + 3}" width="${w}" height="11" rx="3" fill="${r.color || 'var(--acc)'}"/><text x="${lw + w + 4}" y="${i * h + 12}">${r.value}</text>`;
+  }).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${rows.length * h + 4}" role="img" aria-label="${opts.aria || ''}">${body}</svg>`;
+}
+// Вертикальные столбцы по неделям: [{label, value}].
+function vbars(rows, opts = {}) {
+  const max = Math.max(1, ...rows.map(r => r.value));
+  const W = 400, H = opts.h || 110, bw = W / rows.length;
+  const body = rows.map((r, i) => {
+    const hh = Math.max(1, (H - 22) * r.value / max);
+    return `<rect x="${i * bw + 3}" y="${H - 14 - hh}" width="${bw - 6}" height="${hh}" rx="2" fill="${r.color || 'var(--acc)'}"/><text x="${i * bw + bw / 2}" y="${H - 3}" text-anchor="middle">${r.label}</text>${r.value ? `<text x="${i * bw + bw / 2}" y="${H - 17 - hh}" text-anchor="middle">${r.value}</text>` : ''}`;
+  }).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${opts.aria || ''}">${body}</svg>`;
+}
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const short = id => String(id).replace(/^SPRINT_/, '');
+
+// Снимок среза sprints {project: NooriUta/UnlimitedLORE}, прод LORE через MCP, 25.11.2026 — 109 строк.
+// [sprint_id без SPRINT_, категория F=finished I=in_progress N=not_started, planned_start, planned_end, вехи, компоненты]
+const SPRINTS_RAW = `ARCADEDB_2671_AUDIT|F|||M-LORE-HIST-1.0 M-AIDA-HIST-1.7 M3|FRIGG YGG
+ARCADEDB_26_11_ALL|F||||YGG
+BRAGI_ARCHIVE_FOLLOWUP|F|||M-LORE-HIST-1.0 M3|BRAGI
+BRAGI_ARCHIVE_IMPL|F|||M-LORE-HIST-1.0 M3|BRAGI OMILORE
+BRAGI_PLATFORM_RENDER|F|||M-LORE-HIST-1.0 M3|BRAGI OMILORE
+COMPONENT_IDENTITY|F|||M-LORE-HIST-1.0 M3|FORSETI YGG
+DALI_DIALECTS_LORE_VIZ|F|||M-AIDA-HIST-1.6 M3|DALI HND OMILORE
+FORGEJO_MINIAPP|N||||
+HEIMDALL_BENCH_RELEASE|F|2026-06-22|2026-06-29|M-AIDA-HIST-1.6 M3|FORSETI HEIMDALL
+LORE_ADMIN_HOUSEKEEPING|F|||M-LORE-HIST-1.11-1.15|OMILORE
+LORE_ADMIN_PANEL|F|2026-07-16|2026-08-01|M-LORE-HIST-1.1-1.10 M-LORE-HIST-1.0|FORSETI
+LORE_ADMIN_POLISH|I||||OMILORE
+LORE_ADR_MODULE_FIXES|F|2026-07-06|2026-07-06|M-LORE-HIST-1.0 M1|OMILORE
+LORE_AGENT_OBSERVABILITY|I|2026-08-01|2026-10-15|M-LORE-W2-FINISH M-LORE-CLIENT-SAFE|OMILORE
+LORE_BOARD_PASSPORTS|I|||M-LORE-W3-MODEL-DATA M-OMILORE-O3|OMILORE
+LORE_CI_MIRROR|F|2026-09-01|2026-09-30|M-LORE-HIST-1.11-1.15 M-LORE-HIST-1.1-1.10 M5|OMILORE
+LORE_CI_SERVER_MIGRATION|F|2026-07-18|2026-07-19|M-LORE-HIST-1.0 M-LORE-HIST-1.1-1.10 M4|KC FORGEJO FORSETI_MCP VAULT INFRA
+LORE_COMPONENTS_EXT|F|||M-LORE-HIST-1.0 M3|OMILORE
+LORE_COMPONENTS_PASSPORT|F|||M-LORE-HIST-1.0 M3|FORSETI OMILORE
+LORE_COMPONENTS_UX|F|||M-LORE-HIST-1.0 M3|OMILORE
+LORE_DB_RESILIENCE|F|2026-09-01|2026-09-30|M-LORE-HIST-1.11-1.15 M5|YGG
+LORE_DB_UPGRADE_REGRESSION|F|2026-08-04|2026-09-30|M-LORE-HIST-1.11-1.15 M-LORE-HIST-1.1-1.10|YGG
+LORE_DEPS_DOMPURIFY|F|2026-07-10|2026-07-10||OMILORE
+LORE_DEPS_HOUSEKEEPING|F|||M-LORE-HIST-1.11-1.15|OMILORE
+LORE_EXT_AUDIT_1190|I||||
+LORE_EXT_ISSUES_W2|I||||OMILORE
+LORE_FOREIGN_INSTALL|F|||M-LORE-HIST-1.1-1.10|YGG OMILORE
+LORE_FORGEJO_INTEGRATION|F|2026-07-16|2026-07-17|M-LORE-HIST-1.0|OMILORE
+LORE_HISTORY_REDESIGN|F|||M-LORE-HIST-1.0 M3|OMILORE
+LORE_HOUSEKEEPING|F|||M-LORE-HIST-1.0 M3|OMILORE
+LORE_HOUSEKEEPING_2026W29|F|2026-07-13|2026-07-19|M-LORE-HIST-1.0|OMILORE
+LORE_KNOWDOC_CLEANUP|F|2026-07-05|2026-07-05|M-LORE-HIST-1.0 M3|OMILORE
+LORE_KNOWDOC_TREE|F|2026-07-05|2026-07-05|M-LORE-HIST-1.0 M3|FORSETI
+LORE_KNOWDOC_UI|F|2026-07-05|2026-07-05|M-LORE-HIST-1.0 M3|OMILORE
+LORE_KNOW_REGISTRY|I||||
+LORE_MCP_DOCSYNC_GAPS|F|2026-10-24|2026-10-27|M-LORE-HIST-1.11-1.15|FORSETI
+LORE_MCP_EVOLUTION|F|2026-07-12|2026-07-16|M-LORE-HIST-1.0 M4|FORSETI FORSETI_MCP OMILORE
+LORE_MCP_GAPS|F|||M-LORE-HIST-1.0 M3|OMILORE
+LORE_MCP_GAPS_2|F|||M-LORE-HIST-1.0 M3|OMILORE
+LORE_MCP_GAPS_3|F|||M-LORE-HIST-1.0 M3|OMILORE
+LORE_MCP_V2|F|||M-LORE-W2-FINISH|
+LORE_MD_ARCHIVE|F|||M-LORE-W5-VOLVA M-OMILORE-O3|OMILORE
+LORE_MEASURE_TRUTH|I|||M-LORE-W3-MODEL-DATA M-OMILORE-O2|OMILORE
+LORE_MOBILE_UX|F|||M-LORE-HIST-1.1-1.10 M-LORE-HIST-1.0 M3|FORSETI OMILORE
+LORE_MODEL_AS_CONFIG|F|||M-LORE-W3-MODEL-DATA|FORSETI
+LORE_MODEL_DOCS_TIDY|F||||OMILORE
+LORE_NEW_QG_FOR_PLATFORM|F|||M-LORE-HIST-1.0 M3|QG
+LORE_ONE_TRUTH|F|2026-08-30|2026-09-12|M-LORE-HIST-1.1-1.10|FORSETI_MCP SCHEMA_MIGRATE
+LORE_OWN_HOST|I|||M-LORE-W1-STABILITY M-LORE-CLIENT-SAFE|OMILORE
+LORE_PIPELINE_HOST|F|||M-LORE-W1-STABILITY|OMILORE
+LORE_PLANBOARD_COMPONENTS|F|||M-LORE-HIST-1.0 M3|FORSETI
+LORE_PLANBOARD_UX|F|||M-LORE-HIST-1.0 M3|OMILORE
+LORE_PRODUCT_ANALYTICS|F|2026-07-17|2026-08-01|M-LORE-HIST-1.1-1.10|FORSETI_MCP OMILORE FORSETI
+LORE_PRODUCT_BACKLOG|I|||M-OMILORE-O3|OMILORE
+LORE_PRODUCT_FIT|F|2026-07-23|2026-08-01|M-LORE-HIST-1.11-1.15|OMILORE
+LORE_PRODUCT_LAYER|F|2026-07-15|2026-07-23|M-LORE-HIST-1.0 M4|OMILORE
+LORE_PROD_HARDENING|F|2026-07-07|2026-07-07|M-LORE-HIST-1.0 M4|FORSETI_MCP FORSETI OMILORE
+LORE_PROJECT_SCOPE|I|||M-LORE-W3-MODEL-DATA M-OMILORE-O2|OMILORE
+LORE_QG_INTEGRATION|F|||M-AIDA-HIST-1.6 M3|FORSETI_MCP FORSETI OMILORE
+LORE_QG_RUNBOOK_VIZ|F|||M-LORE-HIST-1.0 M3|FORSETI OMILORE
+LORE_RELEASE_FLOW|F|||M-LORE-HIST-1.0 M3|OMILORE
+LORE_ROADMAP_PER_PROJECT|I|2026-08-25|2026-09-12|M-LORE-W6-NEXT M-OMILORE-O3|FORSETI OMILORE
+LORE_ROUTINES_EXTENSION|F|||M-LORE-HIST-1.0 M3|OMILORE
+LORE_SCD2_HYGIENE|F|2026-08-08|2026-08-23||OMILORE
+LORE_SCHEMA_VERSIONING|F|2026-07-15|2026-07-17|M-LORE-HIST-1.0 M4|OMILORE
+LORE_SECRETS_VAULT|F|2026-07-17|2026-08-01|M-LORE-HIST-1.1-1.10|OMILORE
+LORE_SLICE_ERGONOMICS|F|2026-08-11|2026-09-30|M-LORE-HIST-1.11-1.15|OMILORE
+LORE_SPRINT_DEPS|F|||M-LORE-HIST-1.0 M3|FORSETI_MCP FORSETI OMILORE
+LORE_TASK_NOTE_MD_FIX|F|||M-AIDA-HIST-1.6 M3|OMILORE
+LORE_TASK_ROLE_EDGES|F|2026-08-30|2026-09-15|M-LORE-HIST-1.1-1.10|SCHEMA_MIGRATE
+LORE_TIMELINE_UX|F|2026-08-08|2026-08-17|M-LORE-HIST-1.1-1.10|FORSETI
+LORE_UNIVERSAL_WORKFLOW|N||||OMILORE
+LORE_UX_FILTERS_LINKS|F|2026-07-15|2026-07-19|M-LORE-HIST-1.0 M4|FORSETI OMILORE
+LORE_UX_OPTIMIZATION|F|2026-07-07|2026-07-07|M-LORE-HIST-1.11-1.15 M-LORE-HIST-1.0 M4|FORSETI_MCP FORSETI OMILORE
+LORE_VERSION_DRIFT|F|2026-09-01|2026-09-30|M-LORE-HIST-1.1-1.10 M5|OMILORE
+LORE_WORK_ANY_KIND|F|||M-LORE-W2-FINISH M-OMILORE-O3|FORSETI
+LORE_WRITE_TOOLS|F|||M-LORE-HIST-1.0 M3|FORSETI_MCP OMILORE
+MCP_SERVER|F|2026-08-03|2026-08-17|M-LORE-HIST-1.0 M3|MUNINN FORSETI_MCP OMILORE
+MINILORE_CUTOVER|F|2026-08-27|2026-08-29|M-MINILORE-HIST-0.5-1.11 M-LORE-HIST-1.11-1.15|MINILORE
+PLANITEM_RETIRE|F|2026-07-01|2026-07-10|M-LORE-HIST-1.11-1.15 M-LORE-HIST-1.0 M3|OMILORE
+QG_COVERAGE|F|||M-LORE-HIST-1.0 M3|FORSETI
+QG_REBUILD|I|2026-08-25|2026-09-05|M-LORE-W1-STABILITY M-OMILORE-O3|QG
+RAGVPARSE_UI|F|||M-LORE-HIST-1.0 M3|MUNINN HUGINN
+SEIDRKIT_GRAPH_CANVAS|I|||M-LORE-W2-FINISH|SEIDRKIT_GRAPH
+SYSTEM_AIDA_LORE|F|||M-AIDA-HIST-1.6 M3|OMILORE
+TECH_REGISTRY|F|||M-LORE-HIST-1.0 M3|OMILORE
+UXR_MOBILE_POLISH|I|||M-LORE-W2-FINISH|SEIDRKIT
+UXR_POLISH_UAT_1113|F|||M-LORE-W1-STABILITY|OMILORE
+UXR_POLISH_V11717|F||||
+UXR_S0_SAFETY|F|2026-11-09|2026-11-19||MINILORE_GW FORSETI_MCP FORSETI
+UXR_S10_SEIDR_KIT|F|2026-11-09|2026-11-27||SEIDRKIT FORSETI
+UXR_S10_SEIDR_KIT_2|F|||M-LORE-W2-FINISH|SEIDRKIT FORSETI
+UXR_S11_TEST_OPT|F|||M-LORE-W1-STABILITY|OMILORE
+UXR_S12_KIT3_VOLVA_GRAPH|F|||M-LORE-W2-FINISH|FORSETI
+UXR_S13_KIT4|F|||M-LORE-W6-NEXT|SEIDRKIT
+UXR_S14_KIT5|I||||SEIDRKIT
+UXR_S15_KIT6|I||||GLADSHEIM SEIDRKIT
+UXR_S1_HONEST_API|F|2026-11-11|2026-11-20||OMILORE
+UXR_S2_GRAPH_MEMORY|F|2026-11-11|2026-11-25||OMILORE
+UXR_S3_V2_INFRA|F|2026-11-11|2026-11-20||OMILORE KC INFRA
+UXR_S4_UI_SHELL_LISTS|F|2026-11-11|2026-12-02|M-LORE-W2-FINISH|FORSETI
+UXR_S5_RECORD_TASKS|F|2026-12-03|2026-12-17|M-LORE-W2-FINISH|FORSETI
+UXR_S6_VOLVA_IN_LORE|I|2026-12-18|2026-12-30|M-LORE-W5-VOLVA|FORSETI VOLVA_EMBED
+UXR_S7A_NEWS|F|2026-11-18|2026-12-02|M-LORE-W2-FINISH|FORSETI OMILORE
+UXR_S7B_ADMIN|F|2026-12-03|2026-12-17|M-LORE-W2-FINISH|FORSETI_MCP KC OMILORE
+UXR_S7C_WHY_CANVAS|I|2026-12-18|2026-12-30|M-LORE-W5-VOLVA|FORSETI OMILORE
+UXR_S8_SWITCH|F|2026-12-18|2026-12-30|M-LORE-W4-SWITCH-V2|FORSETI INFRA
+UXR_S9_SCALE_OPT|F|2027-01-11|2027-01-20|M-LORE-W2-FINISH|OMILORE FORSETI
+VIZ_EMBED|I|2026-11-07|2026-11-21|M-LORE-W5-VOLVA|OMILORE VOLVA_EMBED`;
+const SPRINTS = SPRINTS_RAW.split('\n').map(l => { const [id, c, s, e, ms, cs] = l.split('|');
+  return { id, cat: c, start: s || null, end: e || null, ms: ms ? ms.split(' ') : [], comps: cs ? cs.split(' ') : [] }; });
+const TODAY = '2026-11-25';
+
+renderNav('analytics', { analytics: ['has', 'есть'], quality_gate: ['has', 'есть'] });
+const cnt = c => SPRINTS.filter(s => s.cat === c).length;
+const F = cnt('F'), I = cnt('I'), N = cnt('N');
+const OPEN_TASKS = 109, CLOSED_TASKS = 1834;
+const isHist = m => /HIST|^M\d$/.test(m);
+const late = s => s.cat !== 'F' && s.end && s.end < TODAY;
+document.getElementById('kpis').innerHTML = [
+  [SPRINTS.length, 'спринтов', `${F} закрыто · ${I} в работе · ${N} не начато`],
+  [Math.round(CLOSED_TASKS * 100 / (CLOSED_TASKS + OPEN_TASKS)) + '%', 'задач закрыто', `${CLOSED_TASKS} из ${CLOSED_TASKS + OPEN_TASKS}`],
+  [SPRINTS.filter(late).length, 'план просрочен', 'открыт, плановый конец < 25.11'],
+  [23, 'гейтов качества', '1 действует · 22 черновика'],
+].map(([b, s, sm]) => `<div class="kpi"><b>${b}</b><span>${s}</span><small>${sm}</small></div>`).join('');
+const seg = (parts) => `<div class="bar" style="height:14px">${parts.map(p => `<i style="width:${p.v * 100 / parts.reduce((a, x) => a + x.v, 0)}%;background:${p.c}" title="${p.l}: ${p.v}"></i>`).join('')}</div><div class="legend">${parts.map(p => `<span><i style="background:${p.c}"></i>${p.l} ${p.v}</span>`).join('')}</div>`;
+document.getElementById('sprStatus').innerHTML = seg([{ l: 'закрыто', v: F, c: 'var(--suc)' }, { l: 'в работе', v: I, c: 'var(--acc)' }, { l: 'не начато', v: N, c: 'var(--t3)' }]);
+document.getElementById('taskStatus').innerHTML = seg([{ l: 'закрыто', v: CLOSED_TASKS, c: 'var(--suc)' }, { l: 'открыто', v: OPEN_TASKS, c: 'var(--acc)' }]);
+const byC = {}; SPRINTS.forEach(s => (s.comps.length ? s.comps : ['— без компонента']).forEach(c => byC[c] = (byC[c] || 0) + 1));
+document.getElementById('byComp').innerHTML = hbars(Object.entries(byC).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([label, value]) => ({ label, value, color: label.startsWith('—') ? 'var(--wrn)' : 'var(--acc)' })), { labelW: 130, aria: 'Спринты по компонентам' });
+const open = SPRINTS.filter(s => s.cat !== 'F');
+const hy = [
+  ['Открытых спринтов без вехи', open.filter(s => !s.ms.filter(m => !isHist(m)).length).length, open.length],
+  ['Открытых без плановых дат', open.filter(s => !s.start).length, open.length],
+  ['Открытых с просроченным планом', open.filter(late).length, open.length],
+  ['Закрытых, у которых план ещё в будущем', SPRINTS.filter(s => s.cat === 'F' && s.end && s.end > TODAY).length, F],
+];
+document.getElementById('hyg').innerHTML = hy.map(([l, n, of]) => `<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:var(--fs-xs)"><span>${l}</span><span class="mono">${n} из ${of}</span></div><div class="bar"><i style="width:${n * 100 / of}%;background:${n ? 'var(--wrn)' : 'var(--suc)'}"></i></div></div>`).join('') +
+  '<p class="muted" style="font-size:var(--fs-2xs)">Клик по строке — список спринтов в разделе «Спринты» с этим фильтром.</p>';
+// Спринты
+const fmt = d => d ? d.slice(5).split('-').reverse().join('.') : '—';
+const FILTERS = { open: s => s.cat !== 'F', late, noms: s => s.cat !== 'F' && !s.ms.filter(m => !isHist(m)).length, nodate: s => s.cat !== 'F' && !s.start };
+function drawSpr(f) {
+  const rows = SPRINTS.filter(FILTERS[f]).sort((a, b) => (a.end || '9') < (b.end || '9') ? -1 : 1);
+  document.getElementById('sprCount').textContent = rows.length + ' спринтов';
+  document.getElementById('sprTbl').innerHTML = '<tr><th>Спринт</th><th>Статус</th><th class="hide-s">Вехи</th><th>План</th></tr>' + rows.map(s => {
+    const ms = s.ms.filter(m => !isHist(m));
+    return `<tr><td><span class="mono" style="color:var(--acc)">${short(s.id)}</span><div class="muted" style="font-size:var(--fs-2xs)">${s.comps.join(' · ') || '— без компонента'}</div></td><td>${s.cat === 'I' ? '<span class="chip a">в работе</span>' : '<span class="chip">не начат</span>'}</td><td class="hide-s">${ms.map(m => `<span class="chip">${m.replace(/^M-(LORE|OMILORE)-/, '')}</span>`).join(' ') || '<span class="chip w">без вехи</span>'}</td><td class="n">${s.start ? fmt(s.start) + '–' + fmt(s.end) : '<span class="chip">нет дат</span>'}${late(s) ? '<br><span class="chip d">просрочен</span>' : ''}</td></tr>`;
+  }).join('');
+}
+document.querySelectorAll('#sprSeg button').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('#sprSeg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); drawSpr(b.dataset.f); }));
+drawSpr('open');
+// Технологии: дрейф версий (tech_registry, 146 строк; выписаны технологии с расхождением и незакреплённые)
+const DRIFT = [
+  ['TypeScript', [['6.0.3', 'FORSETI OMILORE HARPA MINILORE_LINK TYR VERDANDI'], ['7.0.2', 'FORSETI_MCP']]],
+  ['Quarkus', [['3.36.1', 'ANVIL DALI HEIMDALL_BE MIMIR MINILORE_SRV OMILORE QG SECURITY SHT'], ['3.39.2', 'GLADSHEIM']]],
+  ['Java / JRE', [['21', 'ANVIL DALI HND MIMIR OMILORE QG …'], ['Temurin 25 (JRE)', 'OMILORE'], ['в коде 25, живьём 21', 'VOLVA']]],
+  ['Node.js', [['26', 'FORSETI_MCP TYR'], ['24', 'HARPA INFRA MINILORE_LINK']]],
+  ['Vite', [['8.1.5', 'FORSETI OMILORE'], ['8.2.0', 'HARPA'], ['8.1.3', 'VERDANDI']]],
+  ['Vitest', [['4.1.10', 'FORSETI_MCP OMILORE'], ['4.1.9', 'TYR'], ['4.1.8', 'VERDANDI'], ['4.1', 'MINILORE_LINK']]],
+  ['React', [['19.2.7', 'FORSETI OMILORE VERDANDI'], ['19.2.8', 'HARPA']]],
+  ['react-router', [['6.28.0', 'OMILORE'], ['7.18.x', 'HARPA VERDANDI']]],
+  ['lucide-react', [['1.28.0', 'HARPA'], ['1.21.0', 'MUNINN']]],
+  ['Не закреплены', [['MinIO latest', 'BRAGI'], ['Chromium', 'HARPA'], ['ws', 'MINILORE_LINK'], ['Docker', 'INFRA']]],
+];
+document.getElementById('techKpi').innerHTML = [[146, 'записей реестра', 'tech_registry'], [DRIFT.length - 1, 'технологий с разными версиями', 'одна технология — несколько версий'], [4, 'версии не закреплены', 'latest / «плавает»']].map(([b, s, sm]) => `<div class="kpi"><b>${b}</b><span>${s}</span><small>${sm}</small></div>`).join('');
+document.getElementById('drift').innerHTML = '<tr><th>Технология</th><th>Версии → компоненты</th></tr>' + DRIFT.map(([t, vs]) => `<tr><td><b>${t}</b></td><td>${vs.map(([v, c], i) => `<div><span class="v ${i ? 'odd' : ''}">${v}</span><span class="muted" style="font-size:var(--fs-2xs)">${c}</span></div>`).join('')}</td></tr>`).join('');
+// Три места — один набор плиток (решение владельца 25.11). Охват — в адресе: ?scope=rec|sel|all
+const SCOPES = {
+  rec: { rows: SPRINTS.filter(s => s.ms.includes('M-LORE-W2-FINISH')),
+    frame: '<div class="crumbs">Работа › Вехи › M-LORE-W2-FINISH</div><div class="fh"><b>W2 · дожать почти готовые</b><span class="chip">прогноз Q4 2026</span></div><div class="tabs" style="margin:6px 0 0;border:0"><button>Контент</button><button>Свойства</button><button aria-selected="true">Аналитика</button></div>',
+    note: 'Паспорт вехи, вкладка «Аналитика»: плитки по спринтам ЭТОЙ записи (12). То же у спринта (по задачам), продукта, фичи, технологии — набор плиток свой у типа, охват — запись.' },
+  sel: { rows: SPRINTS.filter(s => s.cat === 'I'),
+    frame: '<div class="crumbs">Работа › Спринты</div><div class="fh"><b>Спринты</b><span class="chip a">Статус: в работе ×</span><span class="chip">проект UnlimitedLORE</span><span style="flex:1"></span><div class="seg"><button>Список</button><button>Доска</button><button>Таймлайн</button><button aria-pressed="true">Аналитика</button></div></div>',
+    note: 'Вид «Аналитика» списка: те же плитки по текущей выборке — фильтр «в работе» сохранён (19). Сменили фильтр — плитки пересчитались; адрес тот же, что у списка, плюс lav=analytics.' },
+  all: { rows: SPRINTS,
+    frame: '<div class="crumbs">Лента › Аналитика › Обзор</div><div class="fh"><b>Аналитика · сборная</b><span class="chip">все спринты проекта</span></div>',
+    note: 'Сборная: разрез поперёк разделов (109 спринтов). Каждая плитка ведёт в вид «Аналитика» своего раздела с тем же разрезом в фильтре.' },
+};
+function drawScope(k) {
+  const sc = SCOPES[k], rows = sc.rows;
+  const f = rows.filter(s => s.cat === 'F').length, i = rows.filter(s => s.cat === 'I').length, n = rows.length - f - i;
+  const lt = rows.filter(late);
+  const comps = {}; rows.forEach(s => (s.comps.length ? s.comps : ['— нет']).forEach(c => comps[c] = (comps[c] || 0) + 1));
+  const mon = ['2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12', '2027-01'];
+  const MN = { '07': 'июл', '08': 'авг', '09': 'сен', '10': 'окт', '11': 'ноя', '12': 'дек', '01': 'янв' };
+  const go = t => k === 'all' ? `<a class="go" href="#">→ ${t}</a>` : '';
+  const cell = (title, kit, body, link) => `<div class="dcell"><h4>${title}<span class="k">${kit}</span></h4>${body}${go(link)}</div>`;
+  document.getElementById('frame').innerHTML = sc.frame;
+  document.getElementById('tiles').innerHTML = [
+    cell('Спринтов', 'StatTile', `<div style="font:800 var(--fs-2xl)/1.1 var(--head)">${rows.length}</div><div class="muted" style="font-size:var(--fs-2xs)">${f} закрыто · ${i} в работе · ${n} не начато</div>`, 'Спринты, вид Аналитика'),
+    cell('Закрыто', 'TileBar', `<div class="bar" style="height:12px"><i style="width:${rows.length ? f * 100 / rows.length : 0}%;background:var(--suc)"></i><i style="width:${rows.length ? i * 100 / rows.length : 0}%;background:var(--acc)"></i></div><div class="legend"><span><i style="background:var(--suc)"></i>${f}</span><span><i style="background:var(--acc)"></i>${i}</span><span><i style="background:var(--t3)"></i>${n}</span></div>`, 'Спринты, фильтр по статусу'),
+    cell('План', 'VerdictBanner', lt.length ? `<div class="verd">план просрочен у ${lt.length}: ${lt.map(s => short(s.id)).join(', ')}</div>` : '<div class="verd ok">просроченного плана нет</div>', 'Спринты, «План просрочен»'),
+    cell('По компонентам', 'BarChart', hbars(Object.entries(comps).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([label, value]) => ({ label, value })), { labelW: 120, aria: 'по компонентам' }), 'Компоненты, вид Аналитика'),
+    cell('Конец плана по месяцам', 'BarChart', vbars(mon.map(m => ({ label: MN[m.slice(5)], value: rows.filter(s => s.end && s.end.startsWith(m)).length })), { h: 90, aria: 'конец плана по месяцам' }) + `<div class="muted" style="font-size:var(--fs-2xs)">без дат: ${rows.filter(s => !s.end).length}</div>`, 'Вехи, вид План'),
+  ].join('');
+  document.getElementById('scopeNote').textContent = sc.note;
+  document.querySelectorAll('#scopeSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === k)));
+}
+document.querySelectorAll('#scopeSeg button').forEach(b => b.addEventListener('click', () => { setUrlParam('scope', b.dataset.s); drawScope(b.dataset.s); }));
+drawScope(SCOPES[urlParam('scope')] ? urlParam('scope') : 'rec');
+initTabs();
+initForks();
+</script>
+</body>
+</html>
