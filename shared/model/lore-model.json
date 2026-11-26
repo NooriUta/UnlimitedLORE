@@ -9414,8 +9414,8 @@
       "content" : {
         "label" : "контент",
         "types" : [ "content" ],
-        "stages" : [ "draft", "ready", "scheduled" ],
-        "review_stages" : [ "scheduled" ],
+        "stages" : [ "draft", "ready" ],
+        "review_stages" : [ "approval", "scheduled" ],
         "evidence" : [ {
           "type" : "url",
           "label" : "URL публикации"
@@ -9425,6 +9425,9 @@
           "produces" : [ "draft" ]
         }, {
           "stage" : "ready",
+          "consumes" : [ "draft" ]
+        }, {
+          "stage" : "approval",
           "consumes" : [ "draft" ]
         }, {
           "stage" : "scheduled",
