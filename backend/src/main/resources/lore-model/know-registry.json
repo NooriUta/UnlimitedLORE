@@ -6,7 +6,7 @@
     "ddl" : 46,
     "entity" : 33,
     "skill" : 1,
-    "slice" : 234
+    "slice" : 235
   },
   "kinds" : [ {
     "kind" : "ddl:AgentActionLog",
@@ -13432,6 +13432,52 @@
     "replaces" : [ ],
     "source" : "slice-registry",
     "content_hash" : "sha256:6cd75384009bb4dea87fd69df61edcb18b80114be0147c5e42d01e8e3db37990"
+  }, {
+    "kind" : "slice:know_kinds",
+    "id_field" : null,
+    "title" : "know_kinds",
+    "params" : [ {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "kind",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "title",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "source",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "id_field",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:319d66d38ed50869a26a638baceef2c9a695be4ea780efdd746a6b077138732a"
   }, {
     "kind" : "slice:logins_by_user",
     "id_field" : null,

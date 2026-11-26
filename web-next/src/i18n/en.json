@@ -2744,5 +2744,10 @@
   "pp.field.lifecycle": "Lifecycle",
   "pp.field.links": "Links",
   "pp.field.roles": "Roles",
-  "pp.field.fieldSchema": "Field schema"
+  "pp.field.fieldSchema": "Field schema",
+  "lists.model.noContract": "Section «{type}» has no list in the model (surfaces.list): {reason}",
+  "shell.sec.skill": "Skills",
+  "shell.sec.tag": "Supertags",
+  "shell.sec.kind": "Kind registry",
+  "shell.sec.agent_session": "Agent sessions"
 }

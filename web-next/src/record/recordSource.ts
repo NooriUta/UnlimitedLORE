@@ -16,7 +16,7 @@
 // бы то, что фасад закрыл проектным скоупом.
 import type { KitLang } from '@seidr/kit';
 import { RecordForbidden, RecordNotFound, fetchLoreRecord } from '../api/liveRecord';
-import { loadPassport, type PassportType } from './passportAdapters';
+import { loadPassport, PASSPORT_TYPES, type AnyPassportType, type PassportType } from './passportAdapters';
 import { toLoreRecord, type LoreRecord1, type LoreSource } from './loreRecordContract';
 import type { SliceBody } from '../api/loreSlice';
 
@@ -41,7 +41,7 @@ function facadeRow(reason: string): LoreSource {
  * и строки состояния, которые про это честно говорят.
  */
 export async function loadRecordContract(
-  type: PassportType, id: string, lang: KitLang, slice: Slice, opts: RecordSourceOptions = {},
+  type: AnyPassportType, id: string, lang: KitLang, slice: Slice, opts: RecordSourceOptions = {},
 ): Promise<LoreRecord1> {
   const now = opts.now ?? (() => new Date().toISOString());
   let fallbackReason: string;
@@ -53,8 +53,10 @@ export async function loadRecordContract(
     if (e instanceof RecordNotFound || e instanceof RecordForbidden) throw e;
     fallbackReason = e instanceof Error ? e.message : String(e);
   }
+  // KREG-13: тип модели без сборщика на клиенте — честный отказ с причиной фасада, а не чужой сборщик (раньше — как задача).
+  if (!(PASSPORT_TYPES as readonly string[]).includes(type)) throw new Error(fallbackReason);
   // Срезы тоже легли — наружу идёт ошибка: полупустой паспорт хуже отказа.
-  const emulated = toLoreRecord(await loadPassport(type, id, lang, slice, now()), now(), lang);
+  const emulated = toLoreRecord(await loadPassport(type as PassportType, id, lang, slice, now()), now(), lang);
   return {
     ...emulated,
     meta: {

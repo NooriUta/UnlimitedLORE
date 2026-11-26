@@ -3059,6 +3059,10 @@ public final class LoreSlices {
         slice("tag_by_id",
             "SELECT tag_id, name, title, owner, source, synonyms FROM KnowTag WHERE tag_id = :id",
             List.of("id"), Map.of(), "");
+        // KREG-13 (75а): список реестра видов для админки — экран из контракта модели (surfaces.list.kind).
+        slice("know_kinds",
+            "SELECT kind, title, source, id_field FROM KnowKind",
+            List.of(), Map.of(), " ORDER BY kind");
         slice("kind_by_id",
             "SELECT kind, title, source, id_field, replaces FROM KnowKind WHERE kind = :id",
             List.of("id"), Map.of(), "");
@@ -3812,6 +3816,7 @@ public final class LoreSlices {
         Map.entry("agent_session_by_id", "паспорт сессии агента (KREG-13) — служебный, только админка"),
         Map.entry("tag_by_id", "паспорт супертега (KREG-13) — теги общие"),
         Map.entry("kind_by_id", "паспорт вида реестра (KREG-13) — реестр общий, только админка"),
+        Map.entry("know_kinds", "список реестра видов (KREG-13) — реестр общий, только админка"),
         Map.entry("actor_identity_orphans", "сторож учёток — служебный"),
         Map.entry("projects_without_role", "сторож ролей — служебный"),
         Map.entry("project_role_events", "журнал смены ролей — служебный"),
@@ -3853,7 +3858,7 @@ public final class LoreSlices {
         // Дверь сессии 26.11: покрытие сессиями по агентам и машинам — журнал админки.
         "session_coverage",
         // KREG-13: паспорта служебных типов — только админка (слово владельца 26.11: agent_session — только в админке).
-        "agent_session_by_id", "kind_by_id");
+        "agent_session_by_id", "kind_by_id", "know_kinds");
 
     /** Срез админский, а роль вызывающего — не admin/superadmin: отказ 403, а не пустая выдача. */
     public static boolean adminOnlyDenied(String id, String role) {

@@ -27,7 +27,7 @@ export interface LoreField {
    * на тип молча не записала бы остальные. `null` вместе с `editable: false`
    * — «только чтение», и тогда ✎ не предлагается вовсе.
    */
-  write?: { endpoint: string; field: string } | null;
+  write?: { endpoint: string; field: string; idKey?: string } | null;
   /** Справочник вариантов enum (срез `dictionary`, dict_type). S4-24. */
   dict?: string;
   /** Варианты enum из среза сервера (S4-24, #1241): автор / исполнитель / принимающий — task_identities. */

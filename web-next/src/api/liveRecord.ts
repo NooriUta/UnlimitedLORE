@@ -270,9 +270,11 @@ export function recordFromServer(body: unknown, loadedAt: string): LoreRecord1 {
     ...(l.values && typeof l.values === 'object' && !Array.isArray(l.values) ? { values: l.values as Record<string, unknown> } : {}),
   }));
 
-  const writeOf = (w: unknown): { endpoint: string; field: string } | null => {
+  const writeOf = (w: unknown): { endpoint: string; field: string; idKey?: string } | null => {
     const o = w && typeof w === 'object' ? (w as Record<string, unknown>) : null;
-    return o && str(o.endpoint) && str(o.field) ? { endpoint: str(o.endpoint), field: str(o.field) } : null;
+    if (!(o && str(o.endpoint) && str(o.field))) return null;
+    // KREG-13: поле тела с ключом записи — из модели (write.idKey).
+    return { endpoint: str(o.endpoint), field: str(o.field), ...(str(o.idKey) ? { idKey: str(o.idKey) } : {}) };
   };
   const fields: LoreField[] = arr(schema.fields).map(f => {
     const section = str(f.section);

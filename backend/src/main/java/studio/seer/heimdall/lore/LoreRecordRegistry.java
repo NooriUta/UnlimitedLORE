@@ -45,7 +45,13 @@ final class LoreRecordRegistry {
     static final java.util.Set<String> READ_ONLY = LoreModelViews.set(() -> LoreModelFile.content().readOnly());
 
     /** Куда пишется поле: эндпоинт существующего пути записи и имя поля в его теле. */
-    record Write(String endpoint, String field) {}
+    /**
+     * Путь записи поля. {@code idKey} (KREG-13) — поле тела, которое несёт ключ записи (например skill_id у /lore/skill);
+     * не задан — клиент берёт ключ по своему правилу типа. Описание в модели вместо таблицы «тип → ключ» на клиенте.
+     */
+    record Write(String endpoint, String field, String idKey) {
+        Write(String endpoint, String field) { this(endpoint, field, null); }
+    }
 
     /**
      * Поле записи. {@code group}: head | body | props. {@code relation} — вид связи,
@@ -323,6 +329,7 @@ final class LoreRecordRegistry {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("endpoint", w.endpoint());
         m.put("field", w.field());
+        if (w.idKey() != null) m.put("idKey", w.idKey());
         return m;
     }
 
