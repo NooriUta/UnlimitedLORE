@@ -53,7 +53,11 @@ jobs:
             echo "::error::тег $TAG не содержится в main — в зеркало не отправляю (зеркало отражает релизы)."
             exit 1
           fi
-          git -c http.extraheader="Authorization: token ${DST_TOKEN}" push "${HOST%/}/${DST_REPO}.git" \
+          # Прогон 11322: actions/checkout кладёт авторизацию прогона ключом http.<url>.extraheader — он сильнее
+          # общего http.extraheader, и пуш уходил от forgejo-actions (защита main в зеркале его не пускает).
+          # Пустое значение сбрасывает список заголовков этого ключа, следующее — токен зеркала.
+          git -c "http.${HOST%/}/.extraheader=" -c "http.${HOST%/}/.extraheader=Authorization: token ${DST_TOKEN}" \
+            push "${HOST%/}/${DST_REPO}.git" \
             "refs/remotes/origin/main:refs/heads/main" "refs/tags/$TAG"
           echo "зеркало обновлено: main + $TAG -> ${DST_REPO}"
 
