@@ -269,16 +269,21 @@ class HistValidTimeDatetimeLiveDbTest {
     @Test
     @Order(6)
     void nonSliceEndpointEmitsIsoZ() throws Exception {
+        // KREG-10 (#1832): момент создания сценария — свойство created_at; эндпоинт читает
+        // «created_at AS date_created» (ключ ответа прежний). Прежнее свойство date_created
+        // сервер больше не читает — засеянное в него значение до ответа не дошло бы (NPE в findFirst).
         sql("INSERT INTO KnowUseCase SET uc_id = 'UC-V56-PROBE', title = 'проба V56', "
-            + "date_created = '2026-04-13 08:15:00.123'");
+            + "created_at = '2026-04-13 08:15:00.123'");
         assertEquals("2026-04-13 08:15:00.123",
-            String.valueOf(sql("SELECT date_created AS v FROM KnowUseCase WHERE uc_id = 'UC-V56-PROBE'").get(0).get("v")),
+            String.valueOf(sql("SELECT created_at AS v FROM KnowUseCase WHERE uc_id = 'UC-V56-PROBE'").get(0).get("v")),
             "положительный контроль: база отдаёт форму без зоны");
 
         List<Map<String, Object>> rows = given().when().get("/lore/uc/quality/all")
             .then().statusCode(200).extract().jsonPath().getList("rows");
-        Object dc = rows.stream().filter(r -> "UC-V56-PROBE".equals(r.get("uc_id")))
-            .map(r -> r.get("date_created")).findFirst().orElseThrow();
+        // Строка целиком, а не map(get): null в map → NPE в findFirst без слова о причине.
+        Map<String, Object> row = rows.stream().filter(r -> "UC-V56-PROBE".equals(r.get("uc_id")))
+            .findFirst().orElseThrow(() -> new AssertionError("сценария UC-V56-PROBE нет в ответе"));
+        Object dc = row.get("date_created");
         assertEquals("2026-04-13T08:15:00.123Z", dc, "фильтр ответа не привёл время вне слайсов");
     }
 

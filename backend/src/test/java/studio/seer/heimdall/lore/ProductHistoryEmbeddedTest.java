@@ -167,4 +167,36 @@ class ProductHistoryEmbeddedTest {
         // записи нет — писать версию нечему
         assertEquals(ProductHistory.Step.NONE, ProductHistory.version(write, "job", "JOB-NOPE", human));
     }
+
+    /**
+     * Один момент на одну запись (CI #1827, FreshnessChangedAtLiveDbTest: changed_at сценария ушёл на 4 мс позже
+     * updated_at). Путь записи ставит на вершине updated_at и сразу открывает версию истории; срез отдаёт в
+     * changed_at максимум из valid_from открытой версии и updated_at. Если версия берёт СВОИ часы, она всегда
+     * чуть позже отметки — и changed_at перестаёт совпадать с моментом записи. Версия обязана нести момент,
+     * переданный путём записи, — тот же, что лёг в updated_at.
+     */
+    @Test
+    void версияНесётМоментЗаписи_аНеСвоиЧасы() {
+        modelDatabase();
+        LoreSchemaAdditive.apply(exec);
+        ChangeAuthor human = new ChangeAuthor("sub-owner", ChangeAuthor.KIND_HUMAN);
+        // Момент записи позже посева (иначе версия встала бы раньше начальной) и заведомо не «сейчас» этой JVM.
+        java.time.Instant writeMoment = java.time.Instant.now().plusSeconds(60).truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
+
+        sql("UPDATE KnowUseCase SET body_md = 'v2', updated_at = :u WHERE uc_id = 'FEAT-HIST'", Map.of("u", writeMoment.toString()));
+        assertEquals(ProductHistory.Step.NEXT, ProductHistory.version(write, "feature", "FEAT-HIST", human, writeMoment));
+        List<Map<String, Object>> h = history("feature", "FEAT-HIST");
+        Map<String, Object> open = h.get(h.size() - 1);
+        assertNull(open.get("valid_to"), "последняя версия открыта: " + h);
+        assertEquals(writeMoment, DataHygieneMigrationsLiveDbTest.at(open.get("valid_from")),
+            "valid_from новой версии = момент записи (updated_at), а не свои часы");
+        assertEquals(writeMoment, DataHygieneMigrationsLiveDbTest.at(h.get(h.size() - 2).get("valid_to")),
+            "прежняя версия закрыта тем же моментом — без щели и наложения");
+
+        // первая версия записи, заведённой после доводки, — тоже момент записи
+        java.time.Instant created = writeMoment.plusSeconds(60).plusMillis(1);
+        sql("INSERT INTO KnowJob SET job_id = 'JOB-AT', title = 'Работа', updated_at = :u", Map.of("u", created.toString()));
+        assertEquals(ProductHistory.Step.FIRST, ProductHistory.version(write, "job", "JOB-AT", human, created));
+        assertEquals(created, DataHygieneMigrationsLiveDbTest.at(history("job", "JOB-AT").get(0).get("valid_from")));
+    }
 }

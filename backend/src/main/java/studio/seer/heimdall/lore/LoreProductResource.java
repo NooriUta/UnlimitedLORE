@@ -174,12 +174,14 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             // S4-MODEL-TYPES (свежесть): момент заведения/правки на вершине (версия SCD2 — versionHistory, AP-PASSPORT-EDIT).
+            // Один момент на запись: тот же — в updated_at и в valid_from версии (иначе changed_at среза уходит на мс позже).
+            java.time.Instant writeMoment = java.time.Instant.now();
             sql.append(", updated_at=:upd");
-            p.put("upd", java.time.Instant.now().toString());
+            p.put("upd", writeMoment.toString());
             sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
-            Response featureConflict = versionHistory("feature", req.feature_id());   // AP-PASSPORT-EDIT: версия SCD2
+            Response featureConflict = versionHistory("feature", req.feature_id(), writeMoment);   // AP-PASSPORT-EDIT: версия SCD2
             if (featureConflict != null) return featureConflict;
             // NM-03 (ADR-LORE-041): фича писала component_id полем, а слайсы
             // продуктового слоя читают out('BELONGS_TO') — связь, записанная
@@ -202,12 +204,18 @@ public class LoreProductResource extends LoreResourceBase {
      * версии нет — первая. Автор — из проверенного токена. Соседняя запись закрыла открытую версию — 409 (ничего не
      * записано в историю, повтор безопасен), иначе null.
      */
-    @SuppressWarnings("unchecked")
     private Response versionHistory(String type, String id) {
+        return versionHistory(type, id, java.time.Instant.now());
+    }
+
+    /** То же с моментом записи: путь, поставивший updated_at, передаёт его же — версия открывается тем же моментом. */
+    @SuppressWarnings("unchecked")
+    private Response versionHistory(String type, String id, java.time.Instant writeMoment) {
         ChangeAuthor author = changeAuthor();
         try {
             ProductHistory.version((lang, command, params) -> (List<Map<String, Object>>) writeClient.command(db, basicAuth(),
-                new LoreCommandClient.LoreCommand(lang, command, params)).await().indefinitely().result(), type, id, author);
+                new LoreCommandClient.LoreCommand(lang, command, params)).await().indefinitely().result(), type, id, author,
+                writeMoment);
             return null;
         } catch (Scd2Guard.ConflictException c) {
             return c.response();
@@ -303,13 +311,15 @@ public class LoreProductResource extends LoreResourceBase {
             sql.append(", created_at = ifnull(created_at, :d)");
             p.put("d", LocalDate.now(java.time.ZoneOffset.UTC).toString());
             // S4-MODEL-TYPES (свежесть): момент заведения/правки на вершине (версия SCD2 — versionHistory, AP-PASSPORT-EDIT).
+            // Один момент на запись: тот же — в updated_at и в valid_from версии (иначе changed_at среза уходит на мс позже).
+            java.time.Instant writeMoment = java.time.Instant.now();
             sql.append(", updated_at=:upd");
-            p.put("upd", java.time.Instant.now().toString());
+            p.put("upd", writeMoment.toString());
             sql.append(" UPSERT WHERE uc_id=:id");
             writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", sql.toString(), p))
                 .await().indefinitely();
             // AP-PASSPORT-EDIT: сценарий — та же вершина KnowUseCase, что фича, и та же цепочка истории
-            Response ucConflict = versionHistory("feature", req.uc_id());
+            Response ucConflict = versionHistory("feature", req.uc_id(), writeMoment);
             if (ucConflict != null) return ucConflict;
 
             // parent_uc_id — поле-родитель; ребро DECOMPOSES_INTO держим в синхроне
