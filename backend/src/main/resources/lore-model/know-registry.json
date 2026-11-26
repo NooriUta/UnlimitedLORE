@@ -3,10 +3,10 @@
   "about" : "KnowRegistry — записи KnowKind, сгенерированные из модели, DDL и реестра срезов (SPRINT_LORE_KNOW_REGISTRY/KREG-02, ADR-LORE-057, SPEC-MODEL-EXPORT-064 §5). Не править руками: KNOW_REGISTRY_REGEN=1 и KnowRegistryGeneratorTest перепишут файл.",
   "model_version" : 1,
   "counts" : {
-    "ddl" : 50,
-    "entity" : 29,
+    "ddl" : 46,
+    "entity" : 33,
     "skill" : 1,
-    "slice" : 230
+    "slice" : 235
   },
   "kinds" : [ {
     "kind" : "ddl:AgentActionLog",
@@ -942,63 +942,6 @@
     "vertex" : "ClRoutineSprintFlag",
     "content_hash" : "sha256:723838ffce6eeabc3b0e993cc0da0f0e1bc31fa65bba8b028704c15cf91f62d8"
   }, {
-    "kind" : "ddl:KnowAgentSession",
-    "id_field" : null,
-    "title" : "KnowAgentSession",
-    "fields" : [ {
-      "name" : "dialogue_name",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "dialogue_name"
-    }, {
-      "name" : "entrypoint",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "entrypoint"
-    }, {
-      "name" : "last_activity_at",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "last_activity_at"
-    }, {
-      "name" : "machine_id",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "machine_id"
-    }, {
-      "name" : "project",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "project"
-    }, {
-      "name" : "session_id",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "session_id"
-    }, {
-      "name" : "started_at",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "started_at"
-    } ],
-    "links" : [ ],
-    "guards" : [ {
-      "name" : "outside-passport",
-      "params" : [ ]
-    } ],
-    "roles" : [ ],
-    "replaces" : [ ],
-    "source" : "ddl",
-    "vertex" : "KnowAgentSession",
-    "content_hash" : "sha256:200a45d1f1303f1f37f8e6e5923b72822ca95214aa85fbaf99ae253f8f9519d5"
-  }, {
     "kind" : "ddl:KnowAsset",
     "id_field" : null,
     "title" : "KnowAsset",
@@ -1416,81 +1359,6 @@
     "vertex" : "KnowFinding",
     "content_hash" : "sha256:6a4afde031b9ab497b5a8ce171dbaa6df06e205f3d3ab55a8af4d4fd6d711afa"
   }, {
-    "kind" : "ddl:KnowKind",
-    "id_field" : null,
-    "title" : "KnowKind",
-    "fields" : [ {
-      "name" : "fields",
-      "type" : "list",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "fields"
-    }, {
-      "name" : "guards",
-      "type" : "list",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "guards"
-    }, {
-      "name" : "id_field",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "id_field"
-    }, {
-      "name" : "kind",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "kind"
-    }, {
-      "name" : "lifecycle",
-      "type" : "map",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "lifecycle"
-    }, {
-      "name" : "links",
-      "type" : "list",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "links"
-    }, {
-      "name" : "replaces",
-      "type" : "list",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "replaces"
-    }, {
-      "name" : "roles",
-      "type" : "list",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "roles"
-    }, {
-      "name" : "source",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "source"
-    }, {
-      "name" : "title",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "title"
-    } ],
-    "links" : [ ],
-    "guards" : [ {
-      "name" : "outside-passport",
-      "params" : [ ]
-    } ],
-    "roles" : [ ],
-    "replaces" : [ ],
-    "source" : "ddl",
-    "vertex" : "KnowKind",
-    "content_hash" : "sha256:5c7fe0c7fc4a7e4980fd18cc99627b6d54a781b077c5f7f5ac97a7d2e5125b3c"
-  }, {
     "kind" : "ddl:KnowModelConfig",
     "id_field" : null,
     "title" : "KnowModelConfig",
@@ -1724,132 +1592,6 @@
     "source" : "ddl",
     "vertex" : "KnowSavedView",
     "content_hash" : "sha256:333caf116bf084cfb3ed386894c6f7220c3f0755052addfce06874cf0195195b"
-  }, {
-    "kind" : "ddl:KnowSkill",
-    "id_field" : null,
-    "title" : "KnowSkill",
-    "fields" : [ {
-      "name" : "body_md",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "body_md"
-    }, {
-      "name" : "created_at",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "created_at"
-    }, {
-      "name" : "name",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "name"
-    }, {
-      "name" : "skill_id",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "skill_id"
-    }, {
-      "name" : "source",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "source"
-    }, {
-      "name" : "status",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "status"
-    }, {
-      "name" : "title",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "title"
-    }, {
-      "name" : "updated_at",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "updated_at"
-    }, {
-      "name" : "version",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "version"
-    } ],
-    "links" : [ ],
-    "guards" : [ {
-      "name" : "outside-passport",
-      "params" : [ ]
-    } ],
-    "roles" : [ ],
-    "replaces" : [ ],
-    "source" : "ddl",
-    "vertex" : "KnowSkill",
-    "content_hash" : "sha256:b6ff3202d9847679808b17355cdf905e863b5df06e366cf6c08f86ec81eeda40"
-  }, {
-    "kind" : "ddl:KnowTag",
-    "id_field" : null,
-    "title" : "KnowTag",
-    "fields" : [ {
-      "name" : "field_schema",
-      "type" : "map",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "field_schema"
-    }, {
-      "name" : "name",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "name"
-    }, {
-      "name" : "owner",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "owner"
-    }, {
-      "name" : "source",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "source"
-    }, {
-      "name" : "synonyms",
-      "type" : "list",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "synonyms"
-    }, {
-      "name" : "tag_id",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "tag_id"
-    }, {
-      "name" : "title",
-      "type" : "string",
-      "required" : false,
-      "layer" : "ddl",
-      "property" : "title"
-    } ],
-    "links" : [ ],
-    "guards" : [ {
-      "name" : "outside-passport",
-      "params" : [ ]
-    } ],
-    "roles" : [ ],
-    "replaces" : [ ],
-    "source" : "ddl",
-    "vertex" : "KnowTag",
-    "content_hash" : "sha256:46434a50cec1599228c5b6e87a3ce7dcafb0e6eca8afb5ea4f19d80a426275ac"
   }, {
     "kind" : "ddl:KnowUserDraft",
     "id_field" : null,
@@ -3109,6 +2851,73 @@
     "source" : "model+ddl",
     "vertex" : "KnowActor",
     "content_hash" : "sha256:fdd4d17a9bdebcd0f6498b07b56885e089b005a448ff5f5d6a415eac95fa99b2"
+  }, {
+    "kind" : "entity:agent_session",
+    "id_field" : "session_id",
+    "title" : "Сессия агента",
+    "fields" : [ {
+      "name" : "title",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Название диалога сессии; пусто — показывается код сессии.",
+      "layer" : "ddl",
+      "property" : "dialogue_name"
+    }, {
+      "name" : "code",
+      "type" : "string",
+      "required" : true,
+      "desc" : "Код сессии (CLAUDE_CODE_SESSION_ID) — ключ вершины KnowAgentSession.",
+      "layer" : "ddl",
+      "property" : "session_id"
+    }, {
+      "name" : "machine",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Машина, с которой сессия писала в LORE (X-Lore-Machine).",
+      "layer" : "ddl",
+      "property" : "machine_id"
+    }, {
+      "name" : "project",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Проект или папка, в которой работала сессия.",
+      "layer" : "ddl",
+      "property" : "project"
+    }, {
+      "name" : "entrypoint",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Откуда запущена сессия: cli или claude-desktop.",
+      "layer" : "ddl",
+      "property" : "entrypoint"
+    }, {
+      "name" : "started_at",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Первая запись сессии: ставится только при заведении строки.",
+      "layer" : "ddl",
+      "property" : "started_at"
+    }, {
+      "name" : "last_activity_at",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Последний вызов сессии: сервер двигает не чаще раза в 5 минут.",
+      "layer" : "ddl",
+      "property" : "last_activity_at"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-fields",
+      "params" : [ "code" ]
+    }, {
+      "name" : "read-only-surface",
+      "params" : [ ]
+    } ],
+    "roles" : [ ],
+    "replaces" : [ ],
+    "source" : "model+ddl",
+    "vertex" : "KnowAgentSession",
+    "content_hash" : "sha256:cdc5a132fa90e95077f353682803c367e8a2ea0d4cb1329490b55eab2e1ff155"
   }, {
     "kind" : "entity:component",
     "id_field" : "component_id",
@@ -4427,6 +4236,99 @@
     "vertex" : "KnowJob",
     "hist" : "KnowJobHist",
     "content_hash" : "sha256:6e42b9c04c8aa76a80922561b615b5c5f4b5d0decfd54af6c483e3ffe612d71c"
+  }, {
+    "kind" : "entity:kind",
+    "id_field" : "kind",
+    "title" : "Вид реестра",
+    "fields" : [ {
+      "name" : "title",
+      "type" : "string",
+      "required" : true,
+      "desc" : "Название вида в реестре видов KnowRegistry.",
+      "layer" : "ddl",
+      "property" : "title"
+    }, {
+      "name" : "code",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Код вида: entity:*, ddl:*, slice:*, skill:*, tag:*, forgejo:* — ключ вершины KnowKind.",
+      "layer" : "ddl",
+      "property" : "kind"
+    }, {
+      "name" : "source",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Откуда вид пришёл в реестр: модель, DDL, срез, импорт.",
+      "layer" : "ddl",
+      "property" : "source"
+    }, {
+      "name" : "id_field",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Имя поля, которое служит ключом записей этого вида.",
+      "layer" : "ddl",
+      "property" : "id_field"
+    }, {
+      "name" : "replaces",
+      "type" : "list",
+      "required" : false,
+      "desc" : "Код вида, который этот вид заменил (переименование).",
+      "layer" : "ddl",
+      "property" : "replaces",
+      "multi" : true
+    }, {
+      "name" : "fields",
+      "type" : "list",
+      "required" : false,
+      "desc" : "Описание полей вида (JSON): имя, тип, обязательность — как их видит агент в describe.",
+      "layer" : "ddl",
+      "property" : "fields",
+      "multi" : true
+    }, {
+      "name" : "guards",
+      "type" : "list",
+      "required" : false,
+      "desc" : "Правила записи вида (JSON): какие проверки сервер делает до записи.",
+      "layer" : "ddl",
+      "property" : "guards",
+      "multi" : true
+    }, {
+      "name" : "lifecycle",
+      "type" : "map",
+      "required" : false,
+      "desc" : "Статусы и переходы вида (JSON).",
+      "layer" : "ddl",
+      "property" : "lifecycle"
+    }, {
+      "name" : "links",
+      "type" : "list",
+      "required" : false,
+      "desc" : "Связи вида с другими видами (JSON): ребро, направление, тип конца.",
+      "layer" : "ddl",
+      "property" : "links",
+      "multi" : true
+    }, {
+      "name" : "roles",
+      "type" : "list",
+      "required" : false,
+      "desc" : "Какие роли агентов могут читать и писать вид (JSON).",
+      "layer" : "ddl",
+      "property" : "roles",
+      "multi" : true
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-fields",
+      "params" : [ "title" ]
+    }, {
+      "name" : "read-only-surface",
+      "params" : [ ]
+    } ],
+    "roles" : [ ],
+    "replaces" : [ ],
+    "source" : "model+ddl",
+    "vertex" : "KnowKind",
+    "content_hash" : "sha256:52c6a08842244d878300da11e4a8b7e20dc6f5109f7ba9c55d8a8ea7bb9e7eef"
   }, {
     "kind" : "entity:machine",
     "id_field" : "machine_id",
@@ -6621,6 +6523,85 @@
     "hist" : "KnowRunbookHist",
     "content_hash" : "sha256:3e7dd0958c1f709f4b594fe4f0fb2a93eefb665d003f4fd9f18589c6663f7c56"
   }, {
+    "kind" : "entity:skill",
+    "id_field" : "skill_id",
+    "title" : "Скилл",
+    "fields" : [ {
+      "name" : "title",
+      "type" : "string",
+      "required" : true,
+      "desc" : "Название скилла: под ним он виден в списках и в describe-карточке.",
+      "layer" : "ddl",
+      "property" : "title"
+    }, {
+      "name" : "code",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Код скилла skill:<slug> — ключ вершины KnowSkill, по нему на скилл ссылаются агенты и роли.",
+      "layer" : "ddl",
+      "property" : "skill_id"
+    }, {
+      "name" : "status",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Статус скилла: draft — черновик, active — опубликован и выдаётся агентам ролей.",
+      "layer" : "ddl",
+      "property" : "status"
+    }, {
+      "name" : "version",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Версия текста скилла; меняет автор при правке.",
+      "layer" : "ddl",
+      "property" : "version"
+    }, {
+      "name" : "name",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Короткое имя скилла (slug без префикса skill:).",
+      "layer" : "ddl",
+      "property" : "name"
+    }, {
+      "name" : "source",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Кто завёл скилл: human — человек, agent — агент, seed — посев установки.",
+      "layer" : "ddl",
+      "property" : "source"
+    }, {
+      "name" : "updated_at",
+      "type" : "date",
+      "required" : false,
+      "desc" : "Когда скилл последний раз правили.",
+      "layer" : "ddl",
+      "property" : "updated_at"
+    }, {
+      "name" : "body_md",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Текст скилла в Markdown — то, что получает агент роли.",
+      "layer" : "ddl",
+      "property" : "body_md"
+    }, {
+      "name" : "created_at",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Время создания вершины; ставит сервер. Дата для людей — поля модели (например, «Создан»). Служебное хранения.",
+      "layer" : "ddl",
+      "property" : "created_at",
+      "service" : true
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-fields",
+      "params" : [ "title" ]
+    } ],
+    "roles" : [ "architect", "full" ],
+    "replaces" : [ ],
+    "source" : "model+ddl",
+    "vertex" : "KnowSkill",
+    "content_hash" : "sha256:29975802a39ccd8502ea314dd216b5a924c870ed1cf218088968743d661a2bb1"
+  }, {
     "kind" : "entity:spec",
     "id_field" : "spec_id",
     "title" : "Спека",
@@ -7356,6 +7337,74 @@
     "vertex" : "KnowSprint",
     "hist" : "KnowSprintHist",
     "content_hash" : "sha256:01adf0384c5c5591b338e492d6c8033adf41b90e2ecfe07d8a5e367d7b3e1c7b"
+  }, {
+    "kind" : "entity:tag",
+    "id_field" : "tag_id",
+    "title" : "Супертег",
+    "fields" : [ {
+      "name" : "title",
+      "type" : "string",
+      "required" : true,
+      "desc" : "Название супертега, как его видят в списках.",
+      "layer" : "ddl",
+      "property" : "title"
+    }, {
+      "name" : "code",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Код супертега — ключ вершины KnowTag (tag_id).",
+      "layer" : "ddl",
+      "property" : "tag_id"
+    }, {
+      "name" : "name",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Имя тега, которым его ставят на записи (#имя).",
+      "layer" : "ddl",
+      "property" : "name"
+    }, {
+      "name" : "owner",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Кто отвечает за схему полей супертега.",
+      "layer" : "ddl",
+      "property" : "owner"
+    }, {
+      "name" : "synonyms",
+      "type" : "list",
+      "required" : false,
+      "desc" : "Другие написания тега, которые сводятся к нему.",
+      "layer" : "ddl",
+      "property" : "synonyms",
+      "multi" : true
+    }, {
+      "name" : "source",
+      "type" : "string",
+      "required" : false,
+      "desc" : "Откуда тег: заведён человеком, агентом или импортом реестра.",
+      "layer" : "ddl",
+      "property" : "source"
+    }, {
+      "name" : "field_schema",
+      "type" : "map",
+      "required" : false,
+      "desc" : "Схема свободных полей супертега (JSON) — что можно указать на ребре TAGGED_WITH.",
+      "layer" : "ddl",
+      "property" : "field_schema"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-fields",
+      "params" : [ "title" ]
+    }, {
+      "name" : "read-only-surface",
+      "params" : [ ]
+    } ],
+    "roles" : [ "architect", "developer", "full" ],
+    "replaces" : [ ],
+    "source" : "model+ddl",
+    "vertex" : "KnowTag",
+    "content_hash" : "sha256:eab1bce590286b93cb86286a484f0ddb6fc1e106d22b5661f096df2fb81baf84"
   }, {
     "kind" : "entity:task",
     "id_field" : "task_uid",
@@ -9426,6 +9475,76 @@
     "replaces" : [ ],
     "source" : "slice-registry",
     "content_hash" : "sha256:cc9cff38051a149339770b904bafd0b9e5f65860ff2338301fe8524fc18a01c7"
+  }, {
+    "kind" : "slice:agent_session_by_id",
+    "id_field" : null,
+    "title" : "agent_session_by_id",
+    "params" : [ {
+      "name" : "id",
+      "type" : "string",
+      "required" : true,
+      "role" : "required"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "session_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "dialogue_name",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "machine_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "project",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "entrypoint",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "started_at",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "last_activity_at",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "actor_ids",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-params",
+      "params" : [ "id" ]
+    }, {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:d0f30079ccac521a794866ce92465b0ff2f597fece28b5fd243b6c15468a01aa"
   }, {
     "kind" : "slice:agent_sessions",
     "id_field" : null,
@@ -13255,6 +13374,110 @@
     "replaces" : [ ],
     "source" : "slice-registry",
     "content_hash" : "sha256:3355735898dc53e0c273f11c83716c95e10e6038d0505a654aaab78ae1cfe998"
+  }, {
+    "kind" : "slice:kind_by_id",
+    "id_field" : null,
+    "title" : "kind_by_id",
+    "params" : [ {
+      "name" : "id",
+      "type" : "string",
+      "required" : true,
+      "role" : "required"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "kind",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "title",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "source",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "id_field",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "replaces",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-params",
+      "params" : [ "id" ]
+    }, {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:6cd75384009bb4dea87fd69df61edcb18b80114be0147c5e42d01e8e3db37990"
+  }, {
+    "kind" : "slice:know_kinds",
+    "id_field" : null,
+    "title" : "know_kinds",
+    "params" : [ {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "kind",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "title",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "source",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "id_field",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:319d66d38ed50869a26a638baceef2c9a695be4ea780efdd746a6b077138732a"
   }, {
     "kind" : "slice:logins_by_user",
     "id_field" : null,
@@ -20140,6 +20363,92 @@
     "source" : "slice-registry",
     "content_hash" : "sha256:f9b561d6ee9d31e8b96aee8269e247f029e744310a1fad67b0612bae9f12a3e5"
   }, {
+    "kind" : "slice:skill_by_id",
+    "id_field" : null,
+    "title" : "skill_by_id",
+    "params" : [ {
+      "name" : "id",
+      "type" : "string",
+      "required" : true,
+      "role" : "required"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "skill_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "name",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "title",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "status",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "version",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "source",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "body_md",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "roles",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "projects",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "extends_ids",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "owner",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "updated_at",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-params",
+      "params" : [ "id" ]
+    }, {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:8a3d914bb2ecd577df015308e62c76d95ebf16e54dd8c58bb7c0675b5443cbfc"
+  }, {
     "kind" : "slice:skills",
     "id_field" : null,
     "title" : "skills",
@@ -21105,6 +21414,68 @@
     "replaces" : [ ],
     "source" : "slice-registry",
     "content_hash" : "sha256:4ac220ae22d8f91e0c70688108e53b278227cd2a207dfe9e81169140260a74bb"
+  }, {
+    "kind" : "slice:tag_by_id",
+    "id_field" : null,
+    "title" : "tag_by_id",
+    "params" : [ {
+      "name" : "id",
+      "type" : "string",
+      "required" : true,
+      "role" : "required"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "tag_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "name",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "title",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "owner",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "source",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "synonyms",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-params",
+      "params" : [ "id" ]
+    }, {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:469798bb29c79b60d6650eae8b8bccb640f7071a291822991f52280aa04faf9b"
   }, {
     "kind" : "slice:tag_entities",
     "id_field" : null,

@@ -119,6 +119,8 @@ class LoreRecordRowLinksTest {
             Map.entry("pr", Map.of("task_uids", x, "release_uids", x)),
             // S4-29 (53а): у проекта все вкладки читаются отдельными срезами — из строки ничего.
             Map.entry("project", Map.of()),
+            // KREG-13: типы выпуска 1.19.1 — вкладок из строки нет.
+            Map.entry("skill", Map.of()), Map.entry("tag", Map.of()), Map.entry("kind", Map.of()), Map.entry("agent_session", Map.of()),
             // S4-PRODUCTS-NODE: компоненты и подпродукты — из строки; сценарии и профиль клиента — срезами.
             Map.entry("product", Map.of("components", x, "sub_products", x, "serves", x, "served_by", x, "milestone_ids", x)));
         assertEquals(Set.copyOf(LoreRecordRegistry.TYPES), full.keySet(), "проверены все типы паспорта");

@@ -22,6 +22,8 @@ import { ADMIN_ENTRY, V2_SECTIONS, canSeeAdmin, v2Config, type V2Section } from 
 import { useWhoami } from '../admin/WhoamiBar';
 import { SHELL_STORAGE_KEY, openRecent } from './recentNav';
 import { useModelStatuses } from './useModelStatuses';
+import { ModelListScreen } from '../pages/ModelListScreen';
+import { listContractOf } from '../lists/listContract';
 import { VersionCorner } from './VersionCorner';
 import { lazyChunk } from './staleChunk';
 import { StatusBar } from './StatusBar';
@@ -214,7 +216,7 @@ export function V2Shell({ storage: storageProp, win, narrow, brandTag, topStart,
       narrow={narrow}
     >
       <ShellApiBridge sink={apiRef} />
-      <SectionScreen key={openSeq} />
+      <SectionScreen key={openSeq} model={statuses.model} />
       {/* Версия сборки в правом нижнем углу (S4-30, просьба владелицы 09.11):
           одна метка, если сервер и фронт собраны из одного коммита, иначе
           обе — подписанными. Внутри оболочки, а не в App: метка про установку
@@ -240,7 +242,7 @@ function isSection(id: string | null): id is V2Section {
   return id !== null && (V2_SECTIONS as readonly string[]).includes(id);
 }
 
-function SectionScreen() {
+function SectionScreen({ model }: { model?: unknown }) {
   const lang = useKitLang();
   const { nav } = useKitShell();
   if (isAdminSection(nav.item)) {
@@ -251,7 +253,19 @@ function SectionScreen() {
       </section>
     );
   }
-  if (!isSection(nav.item)) return null;
+  // KREG-13 (владелец 26.11.2026: «сделай, чтобы мы всё же модель использовали»): раздел типа модели без своего
+  // экрана приложения — экран из контракта модели (surfaces.list) и общий паспорт. Раньше такой раздел отбрасывался.
+  if (!isSection(nav.item)) {
+    const type = nav.item;
+    if (!type || !listContractOf(model, type)) return null;
+    const title = appT(lang, `shell.sec.${type}` as AppKey);
+    return (
+      <section className="v2-screen" data-section={type} aria-labelledby={SECTION_TITLE_ID}>
+        <ModelListScreen type={type} titleId={SECTION_TITLE_ID} />
+        <span hidden id={SECTION_TITLE_ID}>{title}</span>
+      </section>
+    );
+  }
   const section = nav.item;
   const title = appT(lang, `shell.sec.${section}` as AppKey);
   const Screen = SCREENS[section];
