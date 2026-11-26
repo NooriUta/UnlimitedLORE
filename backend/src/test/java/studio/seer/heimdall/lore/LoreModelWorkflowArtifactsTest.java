@@ -92,6 +92,42 @@ class LoreModelWorkflowArtifactsTest {
         assertEquals(List.of("decision_in"), w.kinds().get("external").review_stages(), "external: исход приходит извне");
     }
 
+    /** Решение владельца 27 (26.11): «релиз обычно идёт — то, что в uat или done, по слову человека». Релиз — не стадия dev. */
+    @Test
+    void releaseIsNotADevStageOutputNorDevDoneEvidence() {
+        LoreModelWorkflow.Kind dev = real().kinds().get("dev");
+        assertTrue(dev.evidence().stream().noneMatch(e -> e.type().equals("release")), "done у dev не ждёт релиза — релиз идёт после uat/done");
+        assertTrue(dev.flow().stream().noneMatch(x -> x.produces().contains("release")), "ни одна стадия dev не выпускает релиз");
+        assertTrue(dev.evidence().stream().anyMatch(e -> e.type().equals("pr")), "доказательство dev — влитый PR");
+    }
+
+    /**
+     * Владелец 26.11: «релиз — это стадия веток в git, dev — не релиз»; «про зонтики не забудь»; «у нас dev, preprod, prod»;
+     * «prod и тег — это релиз, PR не всегда релиз, и классификация у него есть»; «нужно указать, откуда режется тег релиза».
+     */
+    @Test
+    void deliveryIsBranchStagesWithUmbrellaAndReleaseTagFromMain() {
+        List<LoreModelWorkflow.Delivery> d = real().delivery();
+        assertEquals(List.of("feature", "umbrella", "promote", "release"), d.stream().map(LoreModelWorkflow.Delivery::stage).toList());
+        assertEquals(List.of("dev", "preprod", "prod"), d.stream().map(LoreModelWorkflow.Delivery::env).filter(java.util.Objects::nonNull).toList());
+        LoreModelWorkflow.Delivery umbrella = d.get(1), release = d.get(3);
+        assertEquals("develop", umbrella.to()); assertEquals("human", umbrella.gate(), "зонтик в develop — по слову владельца");
+        assertEquals("main", release.to()); assertEquals("main", release.tag_from(), "тег релиза режется с main");
+        assertEquals("human", release.gate());
+        assertEquals("uat", d.get(2).task_status(), "после промо и смоука — внутренняя приёмка агентом → uat");
+    }
+
+    @Test
+    void deliveryRulesCatchBrokenRelease() {
+        var bad = new LoreModelWorkflow.Workflow(real().moves(), Map.of(), Map.of(), List.of(
+            new LoreModelWorkflow.Delivery("release", "preprod", "main", "release", "prod", "agent", null, "preprod", "x"),
+            new LoreModelWorkflow.Delivery("feature", "feature/*", "develop", "feature", null, "auto", null, "develop", "x")));
+        List<String> p = LoreModelWorkflow.problems(bad);
+        assertTrue(p.stream().anyMatch(s -> s.contains("только словом человека")), String.valueOf(p));
+        assertTrue(p.stream().anyMatch(s -> s.contains("тег релиза режется с целевой ветки")), String.valueOf(p));
+        assertTrue(p.stream().anyMatch(s -> s.contains("тег режется только у релиза")), String.valueOf(p));
+    }
+
     @Test
     void consumedRecordWithoutProducerIsFine_stageArtifactMustBeProducedEarlier() {
         var ok = with(CAT, dev(List.of(

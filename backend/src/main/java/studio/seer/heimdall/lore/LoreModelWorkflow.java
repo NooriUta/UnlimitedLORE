@@ -47,8 +47,24 @@ final class LoreModelWorkflow {
     /** Что стадия вида производит и потребляет — узел графа UW-02 читает/пишет канал artifacts. */
     record StageIo(String stage, List<String> produces, List<String> consumes) {}
 
-    record Workflow(Map<String, List<String>> moves, Map<String, Kind> kinds, Map<String, Artifact> artifacts) {
-        Workflow(Map<String, List<String>> moves, Map<String, Kind> kinds) { this(moves, kinds, Map.of()); }
+    /**
+     * Стадия поставки кода (владелец 26.11.2026: «релиз — это стадия веток в git, dev — не релиз, дополни workflow»;
+     * «и про зонтики не забудь»; «у нас dev, preprod, prod»). Поставка — отдельный workflow над группами задач,
+     * а не стадия вида dev. {@code gate}: auto (CI), agent (агент с правом), human (слово человека);
+     * {@code task_status} — статус задач группы после шага (null — не меняется); {@code env} — dev/preprod/prod или null.
+     * {@code pr} — класс PR шага (владелец: «prod и тег — это релиз, PR не всегда релиз, и классификация у него есть»):
+     * feature (задача → зонтик), umbrella (зонтик → develop), promote (снимок develop → preprod), release (preprod → main + тег).
+     */
+    /*
+     * {@code from} → {@code to} — ветки шага; {@code tag_from} — откуда режется тег (владелец: «нужно указать, откуда режется
+     * именно тег релиза»): только у release, и только с целевой ветки (main) — тег обязан содержаться в main.
+     */
+    record Delivery(String stage, String from, String to, String pr, String env, String gate, String task_status,
+                    String tag_from, String label) {}
+
+    record Workflow(Map<String, List<String>> moves, Map<String, Kind> kinds, Map<String, Artifact> artifacts, List<Delivery> delivery) {
+        Workflow(Map<String, List<String>> moves, Map<String, Kind> kinds) { this(moves, kinds, Map.of(), List.of()); }
+        Workflow(Map<String, List<String>> moves, Map<String, Kind> kinds, Map<String, Artifact> artifacts) { this(moves, kinds, artifacts, List.of()); }
 
         /** Вид работы по типу задачи; null — тип не отнесён ни к одному виду. */
         String kindOf(String taskType) {
@@ -85,8 +101,15 @@ final class LoreModelWorkflow {
             if (!(ar instanceof Map<?, ?> am)) throw new IllegalStateException("файл модели: workflow.artifacts — ждали объект");
             am.forEach((k, v) -> artifacts.put(String.valueOf(k), LoreModelCodec.decode(Artifact.class, v, "workflow.artifacts." + k)));
         }
+        List<Delivery> delivery = new ArrayList<>();
+        Object dl = m.get("delivery");
+        if (dl != null) {
+            if (!(dl instanceof List<?> dlist)) throw new IllegalStateException("файл модели: workflow.delivery — ждали список");
+            int i = 0;
+            for (Object o : dlist) delivery.add(LoreModelCodec.decode(Delivery.class, o, "workflow.delivery[" + i++ + "]"));
+        }
         return new Workflow(java.util.Collections.unmodifiableMap(moves), java.util.Collections.unmodifiableMap(kinds),
-            java.util.Collections.unmodifiableMap(artifacts));
+            java.util.Collections.unmodifiableMap(artifacts), List.copyOf(delivery));
     }
 
     /** Согласованность: переходы только между статусами ядра, done — только из review, тип задачи — в одном виде. */
@@ -100,6 +123,7 @@ final class LoreModelWorkflow {
                 if ("done".equals(t) && !"review".equals(from)) out.add("workflow.moves." + from + ": done ставится только из review");
             }
         });
+        out.addAll(deliveryProblems(w));
         w.artifacts().forEach((id, a) -> {
             if (!SOURCES.contains(a.source())) out.add("workflow.artifacts." + id + ": source «" + a.source() + "» — ждали stage или record");
         });
@@ -127,6 +151,30 @@ final class LoreModelWorkflow {
     }
 
     static final java.util.Set<String> SOURCES = java.util.Set.of("stage", "record");
+    static final java.util.Set<String> GATES = java.util.Set.of("auto", "agent", "human");
+    static final java.util.Set<String> ENVS = java.util.Set.of("dev", "preprod", "prod");
+    static final java.util.Set<String> PR_CLASSES = java.util.Set.of("feature", "umbrella", "promote", "release", "hotfix");
+
+    /** Поставка: стадии уникальны, gate и env из словаря, выход в prod — только словом человека, статус задач — известный. */
+    static List<String> deliveryProblems(Workflow w) {
+        List<String> out = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (Delivery d : w.delivery()) {
+            String where = "workflow.delivery." + d.stage();
+            if (!seen.add(d.stage())) out.add(where + ": стадия поставки повторяется");
+            if (!GATES.contains(d.gate())) out.add(where + ": gate «" + d.gate() + "» — ждали auto, agent или human");
+            if (d.env() != null && !ENVS.contains(d.env())) out.add(where + ": env «" + d.env() + "» — ждали dev, preprod или prod");
+            if ("prod".equals(d.env()) && !"human".equals(d.gate())) out.add(where + ": выход в prod — только словом человека (gate human)");
+            if (!PR_CLASSES.contains(d.pr())) out.add(where + ": класс PR «" + d.pr() + "» — ждали " + new java.util.TreeSet<>(PR_CLASSES));
+            if ("release".equals(d.pr()) != "prod".equals(d.env())) out.add(where + ": релиз — это выход в prod с тегом, и только он (pr=release ⇔ env=prod)");
+            if ("release".equals(d.pr()) && (d.tag_from() == null || !d.tag_from().equals(d.to())))
+                out.add(where + ": тег релиза режется с целевой ветки релиза (tag_from = to), сейчас «" + d.tag_from() + "»");
+            if (!"release".equals(d.pr()) && d.tag_from() != null) out.add(where + ": тег режется только у релиза");
+            if (d.task_status() != null && !LoreWorkflowCore.CORE.contains(d.task_status()) && !LoreWorkflowCore.SYNONYMS.containsKey(d.task_status()))
+                out.add(where + ": task_status «" + d.task_status() + "» — не статус ядра и не синоним");
+        }
+        return out;
+    }
 
     /**
      * Канал артефактов вида: стадия — своя; артефакт — из каталога; потребляемый артефакт стадии
@@ -178,6 +226,11 @@ final class LoreModelWorkflow {
             Map<String, Object> arts = new LinkedHashMap<>();
             w.artifacts().forEach((k, v) -> arts.put(k, LoreModelCodec.encode(v)));
             d.put("artifacts", arts);
+        }
+        if (!w.delivery().isEmpty()) {
+            List<Object> dl = new ArrayList<>();
+            for (Delivery x : w.delivery()) dl.add(LoreModelCodec.encode(x));
+            d.put("delivery", dl);
         }
         return d;
     }
