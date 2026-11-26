@@ -44,7 +44,11 @@ class LoreModelDateKindsMatchSchemaTest {
         "pr.merged_at", "KnowPR нет в снимке схемы (тип pr в graph с MD-05); у установщика merged_at — DATETIME",
         // AP-MACHINE-PASSPORT: тип machine заведён в graph после снятия снимка; KnowMachine (V79) — свойства STRING ISO-время.
         "machine.last_seen_at", "KnowMachine нет в снимке схемы (тип machine с AP-MACHINE-PASSPORT); V79 — STRING ISO-время",
-        "machine.first_seen_at", "KnowMachine нет в снимке схемы (тип machine с AP-MACHINE-PASSPORT); V79 — STRING ISO-время");
+        "machine.first_seen_at", "KnowMachine нет в снимке схемы (тип machine с AP-MACHINE-PASSPORT); V79 — STRING ISO-время",
+        // KREG-13: типы выпуска 1.19.1 заведены в graph после снятия снимка; свойства — STRING ISO-время.
+        "agent_session.started_at", "KnowAgentSession в graph с KREG-13 (после снимка); started_at — STRING ISO-время (ADR-LORE-037)",
+        "agent_session.last_activity_at", "KnowAgentSession в graph с KREG-13 (после снимка); last_activity_at — STRING ISO-время",
+        "skill.updated_at", "KnowSkill в graph с KREG-13 (после снимка); updated_at — STRING ISO-время (доводка know_skill)");
 
     /**
      * Поля, у которых вид в модели и тип в схеме переноса расходятся сознательно, — с причиной.

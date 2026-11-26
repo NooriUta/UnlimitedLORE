@@ -16,7 +16,9 @@ class LoreRecordFromTest {
     @Test
     void everyTypeHasValueDescriptions() {
         for (String type : LoreRecordRegistry.TYPES)
-            assertNotNull(LoreRecordFrom.VALUES.get(type), "у типа " + type + " нет описаний from");
+            // KREG-13: описание — ручная запись VALUES или сама модель (fromModel).
+            assertNotNull(LoreRecordFrom.VALUES.containsKey(type) ? LoreRecordFrom.VALUES.get(type) : LoreRecordFrom.fromModel(type),
+                "у типа " + type + " нет описаний from");
     }
 
     @Test

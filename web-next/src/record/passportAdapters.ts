@@ -57,6 +57,11 @@ export const PASSPORT_TYPES = ['sprint', 'task', 'adr', 'spec',
   // S4-29 (53а): паспорт проекта, только чтение; ключ — slug «владелец/репозиторий». Последним.
   'project'] as const;
 export type PassportType = (typeof PASSPORT_TYPES)[number];
+/**
+ * KREG-13 (владелец 26.11.2026: «сделай, чтобы мы всё же модель использовали»): паспорт ЛЮБОГО типа модели —
+ * общий паспорт фасада (/lore/record/{тип}/{id}) работает по типу из модели, без строки в PASSPORT_TYPES.
+ */
+export type AnyPassportType = PassportType | (string & {});
 
 type Slice = <T>(slice: string, params?: Record<string, string>) => Promise<SliceBody<T>>;
 type Row = Record<string, unknown>;
