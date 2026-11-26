@@ -38,6 +38,9 @@ class AgentSessionDoorEmbeddedTest {
         db.transaction(() -> {
             for (String t : List.of("KnowActor", "KnowAgentSession", "KnowTask", "KnowTaskHist")) db.command("sql", "CREATE VERTEX TYPE " + t);
             for (String e : List.of("LOGGED_BY", "HAS_STATE")) db.command("sql", "CREATE EDGE TYPE " + e);
+            // Как на проде (LoreSchemaMigrations, шаг 25 agent_session_log): session_id уникален — на нём держится UPSERT.
+            db.command("sql", "CREATE PROPERTY KnowAgentSession.session_id STRING");
+            db.command("sql", "CREATE INDEX ON KnowAgentSession (session_id) UNIQUE");
             db.command("sql", "INSERT INTO KnowActor SET actor_id = 'AGENT-FULL_ARHARAGA', client_id = 'lore-mcp-full_arharaga', kind = 'agent'");
         });
     }

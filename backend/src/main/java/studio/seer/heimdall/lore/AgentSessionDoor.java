@@ -54,7 +54,8 @@ final class AgentSessionDoor {
             .append("IF ($c[0].n = 0) {\n")
             .append("  INSERT INTO KnowAgentSession SET session_id = :sid, started_at = :now;\n")
             .append("}\n")
-            .append("UPDATE KnowAgentSession SET last_activity_at = :now WHERE session_id = :sid;\n");
+            // UPSERT, а не голый UPDATE: строка заведена строкой выше, промаха быть не может (сторож UpdateAffectedRowsGuardTest).
+            .append("UPDATE KnowAgentSession SET session_id = :sid, last_activity_at = :now UPSERT WHERE session_id = :sid;\n");
         if (machine != null && !machine.isBlank()) {
             p.put("m", machine);
             sql.append("UPDATE KnowAgentSession SET machine_id = :m WHERE session_id = :sid AND machine_id IS NULL;\n");
