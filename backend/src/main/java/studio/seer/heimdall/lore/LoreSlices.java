@@ -3915,7 +3915,8 @@ public final class LoreSlices {
         Map.entry("agent_action_points", "действия агентов точками для графиков (19.11) — ряд AO-01, админский; решение"),
         Map.entry("logins_recent", "журнал входов — админский, решение"),
         Map.entry("logins_by_user", "журнал входов — решение"),
-        Map.entry("sessions_recent", "журнал сессий — решение")
+        Map.entry("sessions_recent", "журнал сессий — решение"),
+        Map.entry("session_coverage", "покрытие сессиями записей агентов (дверь сессии 26.11) — админский журнал; решение")
     );
 
     /**
