@@ -53,3 +53,20 @@ describe('фолбэк имени препрода на IP 131', () => {
     expect(r.out).toMatch(/разрешается/);
   });
 });
+
+// Forgejo 17 (прогон 11182): выгрузка скринов рвалась «socket hang up» и красила зелёные тесты.
+describe('смоук стенда: выгрузка скринов не роняет итог тестов', () => {
+  const wf = readFileSync(join(root, '.github/workflows/lore-stand-e2e.yml'), 'utf8');
+  const stepOf = (name: string) => wf.slice(wf.indexOf(`- name: ${name}`)).split(/\n\s*- name: /)[0];
+  it('шаг артефакта — continue-on-error, перед ним диагностика адреса', () => {
+    expect(stepOf('Скрины и отчёт — артефакт')).toMatch(/continue-on-error: true/);
+    const diag = wf.indexOf('artifact-endpoint-diag.sh');
+    expect(diag).toBeGreaterThan(-1);
+    expect(diag).toBeLessThan(wf.indexOf('- name: Скрины и отчёт — артефакт'));
+  });
+  it.skipIf(!bashBin)('диагностика без ACTIONS_RUNTIME_URL не падает', () => {
+    const env = { ...process.env }; delete env.ACTIONS_RUNTIME_URL;
+    const out = execFileSync(bashBin!, [join(root, '.github/scripts/artifact-endpoint-diag.sh')], { env, encoding: 'utf8' });
+    expect(out).toMatch(/ACTIONS_RUNTIME_URL/);
+  });
+});
