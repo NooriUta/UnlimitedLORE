@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seiðr-kit 2 — лента вместо списка</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#0d1017; --bg1:#12151d; --bg2:#171b25; --bg3:#1d222e;
+  --bd:#262c3a; --bdh:#39414f;
+  --t1:#e6e8ee; --t2:#a7aebd; --t3:#6d7585;
+  --acc:#e0a030; --suc:#5fa86a; --wrn:#d8a13a; --dng:#cf5f52; --inf:#5a8fc7;
+  --st-done:#5fa86a; --st-active:#5a8fc7; --st-partial:#d8a13a; --st-planned:#8a8fa0;
+  --st-cancelled:#7a6f6a; --st-blocked:#cf5f52; --st-ready_for_deploy:#7fb5a8;
+  --fs-2xs:10px; --fs-xs:11px; --fs-sm:12px; --fs-base:12.5px;
+  --fs-md:13.5px; --fs-prose:15px; --fs-lg:16px; --fs-xl:20px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --r-sm:4px; --r-md:6px; --r-lg:10px;
+  --read:68ch;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--t1);font:var(--fs-base)/1.55 Manrope,system-ui,sans-serif}
+h1,h2,h3{font-family:Unbounded,Manrope,sans-serif;font-weight:800;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding:16px}
+.top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+h1{font-size:var(--fs-xl)}
+.sub{color:var(--t3);font-size:var(--fs-xs)}
+
+/* ── полоса управления: та же, что в табличном виде ─────────────────── */
+.bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:6px 10px 8px;border-bottom:1px solid var(--bd);background:var(--bg1);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;border:1px solid var(--bd);border-bottom-color:var(--bd)}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden}
+.seg button{background:var(--bg2);color:var(--t2);border:0;padding:0 10px;min-height:28px;
+  font:600 var(--fs-sm)/1 Manrope,sans-serif;cursor:pointer}
+.seg button+button{border-left:1px solid var(--bd)}
+.seg button[aria-pressed=true]{background:var(--acc);color:#1a1205}
+.chip{display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 10px;
+  border:1px solid var(--bd);border-radius:999px;background:var(--bg2);color:var(--t2);
+  font-size:var(--fs-sm);cursor:pointer}
+.chip[aria-pressed=true]{border-color:var(--acc);color:var(--t1)}
+.chip .n{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3)}
+.sp{flex:1}
+.pick{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;
+  border:1px solid var(--bd);border-radius:var(--r-md);background:var(--bg2);
+  color:var(--t2);font-size:var(--fs-sm)}
+.pick b{color:var(--t1);font-weight:600}
+.cond{padding:5px 10px;border:1px solid var(--bd);border-top:0;background:var(--bg1);
+  color:var(--t3);font-size:var(--fs-2xs)}
+
+/* ── лента ──────────────────────────────────────────────────────────── */
+.feed{border:1px solid var(--bd);border-top:0;border-radius:0 0 var(--r-lg) var(--r-lg);
+  background:var(--bg1);padding:0 0 8px}
+.day{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;
+  padding:7px 12px;background:var(--bg3);border-bottom:1px solid var(--bd);
+  color:var(--t2);font-size:var(--fs-2xs);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.day .n{font-family:var(--mono);color:var(--t3);letter-spacing:0}
+.item{display:grid;grid-template-columns:76px 1fr;gap:12px;padding:12px 12px 14px;
+  border-bottom:1px solid var(--bd)}
+.item:last-child{border-bottom:0}
+.when{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3);padding-top:2px;text-align:right}
+.when i{display:block;font-style:normal;color:var(--bdh)}
+.head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:3px}
+.kind{display:inline-flex;align-items:center;gap:4px;padding:0 7px;min-height:18px;
+  border-radius:999px;background:var(--bg3);color:var(--t3);
+  font-size:var(--fs-2xs);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.id{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3)}
+.title{font-size:var(--fs-md);font-weight:700;color:var(--t1)}
+.story{max-width:var(--read);font-size:var(--fs-base);color:var(--t2);margin:4px 0 0}
+.story b{color:var(--t1);font-weight:600}
+.story .num{font-family:var(--mono);color:var(--acc)}
+.meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
+.st{display:inline-flex;align-items:center;gap:5px;padding:0 8px;min-height:20px;
+  border:1px solid var(--bd);border-radius:999px;font-size:var(--fs-2xs);color:var(--t2)}
+.st::before{content:'';width:7px;height:7px;border-radius:2px;background:var(--dot,var(--t3))}
+.ref{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--inf);
+  border-bottom:1px dashed var(--bdh);cursor:pointer}
+.warnrow{background:color-mix(in srgb,var(--dng) 9%,transparent)}
+.warnrow .story{color:var(--t1)}
+.why{margin-top:6px;padding:6px 9px;border-left:2px solid var(--bdh);background:var(--bg2);
+  color:var(--t3);font-size:var(--fs-xs);max-width:var(--read)}
+
+/* ── двухуровневая лента: спринт → задачи ───────────────────────────── */
+.lvl2{margin-top:8px;border-left:2px solid var(--bd);padding-left:10px}
+.kid{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+  padding:5px 8px;border-radius:var(--r-sm)}
+.kid:hover{background:var(--bg2)}
+.kid .t{font-size:var(--fs-sm);color:var(--t2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kid .t em{font-family:var(--mono);font-style:normal;color:var(--t3);margin-right:6px;font-size:var(--fs-2xs)}
+.fold{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:0 9px;min-height:24px;
+  border:1px solid var(--bd);border-radius:999px;background:var(--bg2);color:var(--t3);
+  font-size:var(--fs-2xs);cursor:pointer}
+.note{margin:18px 0 0;padding:10px 12px;border:1px solid var(--bd);border-radius:var(--r-md);
+  background:var(--bg1);color:var(--t2);font-size:var(--fs-sm);max-width:var(--read)}
+.note h3{font-size:var(--fs-sm);margin-bottom:6px;color:var(--t1)}
+.note ul{margin:4px 0 0;padding-left:18px}
+.note li{margin:3px 0}
+h2.sect{font-size:var(--fs-lg);margin:26px 0 8px}
+.hint{color:var(--t3);font-size:var(--fs-xs);margin:0 0 10px;max-width:var(--read)}
+@media (max-width:720px){
+  .wrap{padding:12px}
+  .item{grid-template-columns:1fr;gap:4px}
+  .when{text-align:left}
+  .when i{display:inline;margin-left:6px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <h1>Лента вместо списка</h1>
+    <span class="sub">прототип · Seiðr-kit 2 · собран из того, что в kit уже есть</span>
+  </div>
+  <p class="hint">Данные настоящие — события 9 ноября из LORE. Управление сверху то же, что в табличном виде: быстрые фильтры со счётчиками, группировка, порядок. Меняется только способ чтения: запись — абзац с поводом и следствием, а не строка с полями.</p>
+
+  <h2 class="sect">1 · Сторителлинг-лента</h2>
+
+  <div class="bar">
+    <span class="seg">
+      <button type="button">Таблица</button>
+      <button type="button" aria-pressed="true">Лента</button>
+      <button type="button">Доска</button>
+      <button type="button">Дерево</button>
+    </span>
+    <button class="chip" aria-pressed="true" type="button">Решения <span class="n">4</span></button>
+    <button class="chip" type="button">Находки <span class="n">5</span></button>
+    <button class="chip" type="button">Задачи <span class="n">9</span></button>
+    <button class="chip" type="button">Не прочиталось <span class="n">1</span></button>
+    <span class="sp"></span>
+    <span class="pick">Группировка: <b>по дню</b> ▾</span>
+    <span class="pick">Порядок: <b>свежие сверху</b> ▾</span>
+  </div>
+  <div class="cond">показано 9 из 9 · фильтр: вид записи = решение, находка · проверено 13:04</div>
+
+  <div class="feed">
+    <div class="day">9 ноября <span class="n">· 9 записей</span></div>
+
+    <article class="item">
+      <div class="when">13:02<i>kit</i></div>
+      <div>
+        <div class="head">
+          <span class="kind">решение</span>
+          <span class="id">D-2026-UXR-BOTTOM-DOCK-NEEDS-HEIGHT</span>
+        </div>
+        <div class="title">Нижнее размещение карточки решает высота, не ширина</div>
+        <p class="story">Пороги конвертации были заданы по чистой ширине, и для деления «список | карточка рядом» этого хватало. Но у карточки внизу делится <b>высота</b>: при малой высоте она раздавит список, сколько бы ни было ширины. Нашла сессия miniLORE, и цена замера названа — прогон <span class="num">ci-flutter 28710</span>, красный, <span class="num">11 минут</span>.</p>
+        <div class="why">Почему это не нашлось раньше: у эталона v4 условия на высоту нет вовсе — среди его <span class="num">25</span> медиа-запросов ни одного с высотой, ориентацией или пропорцией.</div>
+        <div class="meta">
+          <span class="st" style="--dot:var(--st-active)">предложено</span>
+          <span class="ref">ADR-LORE-049</span>
+          <span class="ref">S4-MOBILE-COMPARE</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="item">
+      <div class="when">12:40<i>владелица</i></div>
+      <div>
+        <div class="head">
+          <span class="kind">решение</span>
+          <span class="id">ADR-LORE-049 · §4</span>
+        </div>
+        <div class="title">Мобильный ярус берёт числа приложения</div>
+        <p class="story">«Мобильная шкала = десктопная × множитель» на фактах не строится: множитель сдвинул бы все восемь ступеней, а <b>шесть из восьми совпадают ровно</b>. Отличаются те две, что в десктопном ярусе дробные — и ровно на округление вверх: <span class="num">12,5 → 13</span> и <span class="num">13,5 → 14</span>. Это правило, а не подобранное число, и подбор по скринам больше не нужен.</p>
+        <div class="meta">
+          <span class="st" style="--dot:var(--st-done)">принято</span>
+          <span class="ref">443 вызова theme.text()</span>
+          <span class="ref">S4-MOBILE-COMPARE п.2 закрыт</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="item warnrow">
+      <div class="when">11:58<i>kit</i></div>
+      <div>
+        <div class="head">
+          <span class="kind">находка</span>
+          <span class="id">K-MODEL-LOADER</span>
+        </div>
+        <div class="title">Загрузчик модели молча терял два раздела</div>
+        <p class="story">Разбор собирал документ <b>поимённо</b>, и разделов <span class="ref">types</span> и <span class="ref">surfaces</span> в списке не было — они появились позже. Загрузчик при этом не падал: возвращал «успешно разобранную» модель без них. Клиент видел пустоту и честно печатал «сервер порядка не задаёт», хотя сервер его задал.</p>
+        <div class="why">Честное состояние показывалось <b>про неправду</b> — это хуже обычной ошибки. То же было в чтении кеша, а кеш работает именно тогда, когда сеть отказала.</div>
+        <div class="meta">
+          <span class="st" style="--dot:var(--st-done)">починено</span>
+          <span class="ref">PR #1017</span>
+          <span class="ref">6 проверок</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="item">
+      <div class="when">11:30<i>kit</i></div>
+      <div>
+        <div class="head">
+          <span class="kind">находка</span>
+          <span class="id">S4-STATUS-AXIS-CONFIG</span>
+        </div>
+        <div class="title">Статус записи нельзя было сменить ни у одного типа</div>
+        <p class="story">Замечание было про ADR, а причина общая и в двух половинах. Кнопки <b>не существовало</b>: статус рисовался неинтерактивной плашкой. И путь сохранения был написан, покрыт тестами и <b>не подключён</b> — вызывался только из своего теста.</p>
+        <div class="why">Сервер тут не при чём: <span class="ref">/lore/status</span> принимает <span class="ref">entity_type: adr</span> давно. Передать это серверу значило бы послать искать несуществующее.</div>
+        <div class="meta">
+          <span class="st" style="--dot:var(--st-done)">починено</span>
+          <span class="ref">PR #1003</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="item">
+      <div class="when">10:14<i>kit</i></div>
+      <div>
+        <div class="head">
+          <span class="kind">замер</span>
+          <span class="id">S4-09</span>
+        </div>
+        <div class="title">Факт не заполнен ни у одной задачи</div>
+        <p class="story">По двадцати крупнейшим спринтам — <span class="num">1372</span> задачи. Оценка заполнена у <span class="num">961</span> (70%), факт — <b>у нуля</b>. Поэтому «факт Σ дн» не стал числовой колонкой: ноль прочитался бы как «сделали за 0 дней» вместо «факт не заполняли».</p>
+        <div class="meta">
+          <span class="st" style="--dot:var(--st-ready_for_deploy)">к выкатке</span>
+          <span class="ref">PR #994</span>
+          <span class="ref">sprint_totals</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="item warnrow">
+      <div class="when">09:46<i>kit</i></div>
+      <div>
+        <div class="head">
+          <span class="kind">находка</span>
+          <span class="id">S4-V2-SECTIONS</span>
+        </div>
+        <div class="title">Срез вопросов обманывает именем</div>
+        <p class="story"><span class="ref">open_questions</span> отдаёт <b>все</b> <span class="num">262</span> вопроса, из них <span class="num">182</span> закрытых. Я поверил имени, а не выдаче, и записал в задачу неверное утверждение. Исправил явной поправкой — не переписыванием, чтобы ошибка осталась видна.</p>
+        <div class="meta">
+          <span class="st" style="--dot:var(--st-partial)">частично</span>
+          <span class="ref">D-2026-LORE-QUESTIONS-SLICE-RENAME</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="item">
+      <div class="when">—<i>не прочиталось</i></div>
+      <div>
+        <div class="head">
+          <span class="kind">источник</span>
+          <span class="id">bragi_publications</span>
+        </div>
+        <div class="title">Не смогли проверить</div>
+        <p class="story">Срез публикаций ответил <span class="num">403</span>. Это <b>не «пусто»</b> и не «ноль»: записи могут быть, но их не показали. В ленте такая строка остаётся на своём месте по времени, а не исчезает.</p>
+        <div class="meta"><span class="st" style="--dot:var(--dng)">нет прав</span></div>
+      </div>
+    </article>
+  </div>
+
+  <h2 class="sect">2 · Двухуровневая лента: спринты и задачи</h2>
+  <p class="hint">Ваша вторая идея из того же сообщения. Карточка спринта — запись ленты, задачи — вложенный уровень. Это то же дерево, но читается лентой: сверху повод и числа, внутри — строки одной линией.</p>
+
+  <div class="bar">
+    <span class="seg">
+      <button type="button">Таблица</button>
+      <button type="button" aria-pressed="true">Лента 2 уровня</button>
+      <button type="button">Дерево</button>
+    </span>
+    <button class="chip" aria-pressed="true" type="button">В работе <span class="n">2</span></button>
+    <button class="chip" type="button">Закрытые <span class="n">1</span></button>
+    <span class="sp"></span>
+    <span class="pick">Группировка: <b>по спринту</b> ▾</span>
+  </div>
+  <div class="cond">показано 2 из 2 спринтов · задачи догружены по раскрытию</div>
+
+  <div class="feed">
+    <div class="day">в работе <span class="n">· 2 спринта</span></div>
+
+    <article class="item">
+      <div class="when">09.11<i>обновлён</i></div>
+      <div>
+        <div class="head">
+          <span class="kind">спринт</span>
+          <span class="id">SPRINT_UXR_S10_SEIDR_KIT</span>
+        </div>
+        <div class="title">Seiðr-kit как конструктор</div>
+        <p class="story">Закрыто <span class="num">10</span> задач из <span class="num">15</span>; открыто пять на <span class="num">8</span> дней. Из них прямо сейчас можно брать одну — остальные ждут вашего решения, MVP или пилота «Дата-странников».</p>
+        <div class="meta">
+          <span class="st" style="--dot:var(--st-active)">в работе</span>
+          <span class="ref">задачи 10/15</span>
+          <span class="ref">оценка 8 дн · у 15 из 15</span>
+        </div>
+        <div class="lvl2">
+          <div class="kid"><span class="t"><em>K-MODEL-LOADER</em>Загрузчик модели: конфиг из любого источника, кеш с видимым устареванием</span><span class="st" style="--dot:var(--st-planned)">план</span></div>
+          <div class="kid"><span class="t"><em>K-14</em>kit не держит прикладные словари: статусы и палитра приходят данными</span><span class="st" style="--dot:var(--st-partial)">частично</span></div>
+          <div class="kid"><span class="t"><em>K-13</em>Markdown в kit без сборки; правка — по вашему решению</span><span class="st" style="--dot:var(--st-planned)">план</span></div>
+          <div class="kid"><span class="t"><em>K-08</em>Выдача kit приложениям — после MVP</span><span class="st" style="--dot:var(--st-planned)">план</span></div>
+          <div class="kid"><span class="t"><em>K-12</em>Экран «Выпуск контента»: дифф версии, активация, откат</span><span class="st" style="--dot:var(--st-planned)">план</span></div>
+          <button class="fold" type="button">Показать закрытые <span class="n">10</span></button>
+        </div>
+      </div>
+    </article>
+
+    <article class="item">
+      <div class="when">09.11<i>создан</i></div>
+      <div>
+        <div class="head">
+          <span class="kind">спринт</span>
+          <span class="id">SPRINT_UXR_S10_SEIDR_KIT_2</span>
+        </div>
+        <div class="title">Seiðr-kit 2: лента, локальный граф, глобальный граф</div>
+        <p class="story">Заведён по вашему заказу <b>без задач</b> — только заголовок и три вида. Задачи появятся после вашего «да» по этому прототипу: порядок «прототип → да → код».</p>
+        <div class="meta">
+          <span class="st" style="--dot:var(--st-planned)">план</span>
+          <span class="ref">задач нет — так и задумано</span>
+        </div>
+        <div class="lvl2">
+          <div class="kid"><span class="t"><em>вид 1</em>Сторителлинг-лента вместо списка</span><span class="st" style="--dot:var(--st-planned)">этот прототип</span></div>
+          <div class="kid"><span class="t"><em>вид 2</em>Локальный граф: окрестность записи</span><span class="st" style="--dot:var(--st-planned)">не начат</span></div>
+          <div class="kid"><span class="t"><em>вид 3</em>Глобальный граф: корпус или его срез</span><span class="st" style="--dot:var(--st-planned)">не начат</span></div>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <h2 class="sect">3 · ADR в ленте — и здесь появляется «Ещё»</h2>
+  <p class="hint">Ваше «для решений хорошо, а ты ADR так сэмулируй — у тебя должен появиться more». У ADR разделов много: шесть частей текста плюс решения, вопросы, зависимости, замены, ранбуки, ссылки, спринты, релизы. Если показать всё в ряд, получится то самое «перегружено». Поэтому: текст и решения — в теле, остальное — под «Ещё» с числом.</p>
+
+  <div class="bar">
+    <span class="seg">
+      <button type="button">Таблица</button>
+      <button type="button" aria-pressed="true">Лента</button>
+      <button type="button">Доска</button>
+    </span>
+    <button class="chip" aria-pressed="true" type="button">Принятые <span class="n">1</span></button>
+    <button class="chip" type="button">Предложенные <span class="n">0</span></button>
+    <span class="sp"></span>
+    <span class="pick">Группировка: <b>по компоненту</b> ▾</span>
+  </div>
+  <div class="cond">показан 1 из 1 · фильтр: статус = принято</div>
+
+  <div class="feed">
+    <div class="day">принято сегодня <span class="n">· 1 запись</span></div>
+
+    <article class="item">
+      <div class="when">13:40<i>владелица</i></div>
+      <div>
+        <div class="head">
+          <span class="kind">ADR</span>
+          <span class="id">ADR-LORE-049</span>
+        </div>
+        <div class="title">Правила конвертации вида десктоп → телефон</div>
+
+        <p class="story"><b>Причина.</b> Два ваших замечания выглядели противоположными: по десктопу — строку КРУПНЕЕ (44 px и 11 px вернуть к 51–52 и 12,5), по телефону — «шрифты и размерность гораздо мельче». Противоречия нет, это разные экраны, но правила, которое их различает, в kit не было — и одна правка «починила» бы другую наоборот.</p>
+
+        <p class="story"><b>Выбор.</b> Взять систему эталона v4 целиком: пять порогов ширины, приоритет у колонки, цели касания от устройства, одна лестница кеглей с округлением дробных ступеней вверх на телефоне, предел шага <span class="num">10 px</span> до личного масштаба, и отдельно — высота для нижнего размещения карточки.</p>
+
+        <p class="story"><b>Что теряем.</b> Разовую крупную правку CSS; три набора плотности сводятся к одному; часть тестов переписывается; предел перестаёт отвечать на вопрос «что человек реально видит» — и притворяться обратным хуже.</p>
+
+        <div class="lvl2">
+          <div class="head" style="margin-bottom:5px">
+            <span class="kind">решения</span><span class="id">4</span>
+          </div>
+          <div class="kid"><span class="t"><em>D-2026-UXR-BOTTOM-DOCK-NEEDS-HEIGHT</em>Нижнее размещение решает высота, не ширина</span><span class="st" style="--dot:var(--st-active)">предложено</span></div>
+          <div class="kid"><span class="t"><em>D-2026-MINILORE-MOBILE-TIER-IS-CEILING</em>Мобильный ярус — потолок дробных ступеней</span><span class="st" style="--dot:var(--st-done)">принято</span></div>
+          <div class="kid"><span class="t"><em>D-2026-MINILORE-FLOOR-BEFORE-SCALE</em>Предел шага — до личного масштаба</span><span class="st" style="--dot:var(--st-done)">принято</span></div>
+          <div class="kid"><span class="t"><em>D-2026-MINILORE-APP-VS-KIT-CONVERSION</em>Водораздел приложение ↔ kit в конвертации</span><span class="st" style="--dot:var(--st-done)">принято</span></div>
+        </div>
+
+        <button class="fold" type="button" aria-expanded="false">Ещё <span class="n">7</span> · вопросы, зависимости, замены, ранбуки, ссылки, спринты, релизы</button>
+
+        <div class="meta">
+          <span class="st" style="--dot:var(--st-done)">принято</span>
+          <span class="ref">OMILORE</span>
+          <span class="ref">зависит от ADR-LORE-048</span>
+          <span class="ref">правился 5 раз за день</span>
+        </div>
+        <div class="why">Почему «Ещё» именно здесь: решения — то, ради чего ADR читают (это подтвердил ваш CJM), поэтому они списком в конце текста, как было в v1. Остальные семь разделов в первый ряд не просятся — но и не исчезают: число у свёртки видно всегда.</div>
+      </div>
+    </article>
+  </div>
+
+  <div class="note">
+    <h3>Что здесь взято из готового, а что придумано</h3>
+    <ul>
+      <li><b>Взято:</b> вид «лента» в kit уже есть (<span class="ref">list.views: feed</span>, K-03 и S4-22); быстрые фильтры со счётчиками, группировка и строка условий — S4-04, S4-26, S4-27; двухуровневость — вид «дерево» K-09; чипы, статусы и токены — общий слой Seiðr.</li>
+      <li><b>Придумано для ленты:</b> запись как абзац «повод → следствие» вместо строки с полями; отдельная вставка «почему это не нашлось раньше»; время слева колонкой; «не смогли проверить» остаётся записью ленты на своём месте по времени, а не исчезает.</li>
+      <li><b>Чего здесь нет намеренно:</b> графов. Вы назвали их видами спринта, а не этого прототипа; рисовать их наполовину — хуже, чем не рисовать.</li>
+    </ul>
+    <h3 style="margin-top:12px">Два вопроса к вам</h3>
+    <ul>
+      <li>Лента — это <b>отдельный вид</b> у каждого раздела (как таблица и доска) или отдельный раздел «События»? От ответа зависит, где живут фильтры.</li>
+      <li>В двухуровневой: задачи догружать <b>по раскрытию</b> (как сейчас в таблице) или сразу вместе со спринтами? Второе красивее, но это те самые тела, из-за которых срез вёз 3,6 МБ на двадцать спринтов.</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

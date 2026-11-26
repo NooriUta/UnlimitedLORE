@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>S4-35 · выбор колонок и ширина — прототип</title>
+<style>
+/* Токены — :root kit/src/styles/seidr.css (тёмная amber Seiðr). Только токены, без своих цветов. */
+:root{--bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bg3:#302a20;--bd:#42382a;--t1:#ede5d0;--t2:#a6997f;--t3:#9c937b;--acc:#a8b860;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#cf6c5e;
+--mono:'IBM Plex Mono',monospace;--display:'Unbounded',sans-serif;--fs-2xs:9px;--fs-xs:10px;--fs-sm:11px;--fs-base:12px;--fs-md:13px;--fs-lg:14px;--fs-xl:20px;--r-sm:4px;--r-md:6px;--r-lg:10px;--r-pill:999px;--row-h:26px;--gap:8px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:400 var(--fs-base)/1.45 Manrope,system-ui,sans-serif}
+main{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;padding:14px 18px}
+h1{margin:0 0 4px;font:800 var(--fs-xl)/1.2 var(--display)}.lead{margin:0 0 10px;color:var(--t2);font-size:var(--fs-sm)}
+.bar{display:flex;gap:8px;align-items:center;margin:0 0 8px;position:relative}
+.btn{min-height:26px;padding:0 10px;border:1px solid var(--bd);border-radius:var(--r-md);background:var(--bg2);color:var(--t1);font:inherit;font-size:var(--fs-sm);cursor:pointer}.btn:hover{border-color:var(--acc)}
+.note{color:var(--t3);font-size:var(--fs-sm)}
+.pop{position:absolute;top:30px;left:0;z-index:5;width:300px;padding:10px;border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--bg1);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.pop h3{margin:0 0 6px;color:var(--t2);font:700 var(--fs-xs)/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.col{display:flex;align-items:center;gap:6px;min-height:28px;padding:0 4px;border-radius:var(--r-sm);cursor:grab}.col:hover{background:var(--bg2)}.col.drag{opacity:.4}.col.over{outline:1px dashed var(--acc)}
+.col .h{color:var(--t3);font-family:var(--mono)}.col .lock{margin-left:auto;color:var(--t3);font-size:var(--fs-xs)}.col .w{margin-left:auto;color:var(--t3);font:var(--fs-xs) var(--mono)}
+.sec{margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)}
+.wrap{overflow:auto;border:1px solid var(--bd);border-radius:var(--r-lg)}
+table{border-collapse:separate;border-spacing:0;table-layout:fixed;min-width:100%}
+th{position:relative;height:28px;padding:0 10px;background:var(--bg2);border-bottom:1px solid var(--bd);color:var(--t2);font:700 var(--fs-xs)/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+td{height:44px;padding:4px 10px;border-bottom:1px solid var(--bd);font-size:var(--fs-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td.t{white-space:normal}td.t b{display:block;font-weight:600;color:var(--t1);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}td.t span{color:var(--acc);font:var(--fs-xs) var(--mono)}
+td.m{font-family:var(--mono);color:var(--t2)}
+.grip{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;z-index:2}.grip:hover,.grip.on{background:var(--acc);opacity:.6}
+.st{display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border:1px solid currentColor;border-radius:var(--r-sm);font-size:var(--fs-xs)}
+aside{border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--bg1);padding:12px;font-size:var(--fs-sm);align-self:start;position:sticky;top:10px}
+aside h2{margin:0 0 6px;font:800 var(--fs-md)/1.2 var(--display)}aside ol,aside ul{margin:4px 0 10px;padding-left:18px}aside li{margin:3px 0}aside b{color:var(--t1)}
+.q{color:var(--wrn)}
+.cards{display:none;gap:8px;grid-template-columns:1fr}.card{padding:8px 10px;border:1px solid var(--bd);border-radius:var(--r-md);background:var(--bg1)}
+@media (max-width:760px){main{grid-template-columns:1fr}.wrap{display:none}.cards{display:grid}}
+</style></head><body>
+<main>
+<section>
+<h1>Спринты · колонки</h1>
+<p class="lead">Прототип S4-35 (SPRINT_UXR_S4_UI_SHELL_LISTS/S4-35). Попробуйте: «Вид ▾ → Колонки», перетащите край заголовка, двойной щелчок по краю.</p>
+<div class="bar">
+  <button class="btn" id="vb" aria-haspopup="dialog" aria-expanded="false">Вид ▾</button>
+  <button class="btn" id="reset">Сбросить к виду раздела</button>
+  <span class="note" id="saved">Вид раздела · не изменён</span>
+  <div class="pop" id="pop" role="dialog" aria-label="Колонки" hidden>
+    <h3>Колонки</h3>
+    <div id="cols"></div>
+    <p class="note">Перетащите строку — порядок. «Запись» не выключается. Ширина — в таблице: край заголовка.</p>
+    <div class="sec"><h3>Где хранится</h3><p class="note">В сохранённом виде (☆ Сохранить вид) и в личной настройке раздела. Набор колонок — ещё и в адресе (<code>?cols=</code>), ширины — нет.</p></div>
+  </div>
+</div>
+<div class="wrap"><table id="tb"><colgroup id="cg"></colgroup><thead><tr id="hr"></tr></thead><tbody id="bd"></tbody></table></div>
+<div class="cards" id="cards"></div>
+</section>
+<aside>
+<h2>Что решить</h2>
+<ol>
+<li><b>Выбор колонок</b> — в «Вид ▾», раздел «Колонки»: чекбоксы по всем полям типа (сейчас — из конфига, потом из реестра полей ADR-LORE-047, <code>optional_columns</code>).</li>
+<li><b>Порядок</b> — перетаскиванием строки в поповере.</li>
+<li><b>Ширина</b> — тянуть край заголовка; двойной щелчок — «по содержимому»; минимум 60 px; «Запись» — от 220 px.</li>
+<li><b>Хранение</b> — в сохранённом виде и личной настройке; набор колонок — в адресе, ширины — нет (длинно).</li>
+<li><b>Телефон</b> (&lt; 760 px) — ширины не применяются, вид — карточки.</li>
+</ol>
+<p class="q">Вопросы владелице:</p>
+<ul>
+<li>Ширины хранить в сохранённом виде (видят все, у кого этот вид) или только лично?</li>
+<li>Дерево (раскрытие спринта ▸ задачи) — свои колонки у задач выбирать там же или отдельно у ноды?</li>
+</ul>
+</aside>
+</main>
+<script>
+const ALL=[{k:'title',t:'Запись',lock:1,w:340},{k:'tasks',t:'Задачи',w:90},{k:'status',t:'Статус',w:130},{k:'project',t:'Проект',w:170},{k:'priority',t:'Приоритет',w:90},{k:'release',t:'Релиз',w:90},{k:'milestone',t:'Веха',w:90},{k:'components',t:'Компоненты',w:150},{k:'planned_end',t:'Конец по плану',w:110},{k:'updated',t:'Изменено',w:100}];
+const DEF=['title','tasks','status','project','priority','release','updated'];
+const ROWS=[['Труба CI/CD после переезда на lore-host — ПЕРВЫЙ приоритет','SPRINT_LORE_PIPELINE_HOST','6/12','В работе','var(--inf)','NooriUta/UnlimitedLORE','P0','v1.17.0','—','LORE','2026-11-12','2026-11-07'],
+['Редизайн UI · S4 UI v2: каркас и списки (параллельно с S1–S3, на заглушках по контрактам)','SPRINT_UXR_S4_UI_SHELL_LISTS','22/43','В работе','var(--inf)','NooriUta/UnlimitedLORE','P1','v1.17.1','M3','FORSETI · LORE','2026-12-02','2026-11-08'],
+['Переезд AIDA (aida-root) на preprod-server','SPRINT_AIDA_PREPROD_MIGRATION','44/55','В работе','var(--inf)','NooriUta/AIDA','—','—','—','INFRA','—','2026-08-31'],
+['Резервное копирование: серверы становятся единственным хранилищем истины','SPRINT_BACKUP_STRATEGY','0/5','Запланирован','var(--wrn)','NooriUta/AIDA','—','—','—','INFRA · HARPA','—','2026-07-18'],
+['Hound Phase D, step D4-2: service-path activation + byte-parity','PLAN_HOUND_D4_PARITY','9/9','Готово','var(--suc)','NooriUta/AIDA','P0','v1.5.0','M3','HND','2026-06-15','2026-06-15']];
+const val=(r,k)=>({tasks:r[2],status:r[3],project:r[5],priority:r[6],release:r[7],milestone:r[8],components:r[9],planned_end:r[10],updated:r[11]})[k];
+let st=JSON.parse(localStorage.getItem('s435')||'null')||{cols:[...DEF],w:{}};
+const save=()=>{localStorage.setItem('s435',JSON.stringify(st));const ch=JSON.stringify(st.cols)!==JSON.stringify(DEF)||Object.keys(st.w).length;document.getElementById('saved').textContent=ch?'● изменено · сохранится в виде («☆ Сохранить вид»)':'Вид раздела · не изменён';const u=new URL(location);u.searchParams.set('cols',st.cols.join(','));history.replaceState(null,'',u)};
+const def=k=>ALL.find(c=>c.k===k);
+function draw(){
+ const cg=document.getElementById('cg'),hr=document.getElementById('hr'),bd=document.getElementById('bd');
+ cg.innerHTML=st.cols.map(k=>`<col style="width:${st.w[k]||def(k).w}px">`).join('');
+ hr.innerHTML=st.cols.map(k=>`<th data-k="${k}" title="${def(k).t}">${def(k).t}<span class="grip" data-k="${k}" title="Тянуть — ширина, двойной щелчок — по содержимому"></span></th>`).join('');
+ bd.innerHTML=ROWS.map(r=>'<tr>'+st.cols.map(k=>k==='title'?`<td class="t"><b>${r[0]}</b><span>${r[1]}</span></td>`:k==='status'?`<td><span class="st" style="color:${r[4]}">${r[3]}</span></td>`:`<td class="${/tasks|updated|planned_end|priority|release/.test(k)?'m':''}">${val(r,k)}</td>`).join('')+'</tr>').join('');
+ document.getElementById('cards').innerHTML=ROWS.map(r=>`<div class="card"><b>${r[0]}</b><div class="note">${r[1]} · ${r[3]} · ${r[5]}</div></div>`).join('');
+ const box=document.getElementById('cols');
+ box.innerHTML=[...st.cols,...ALL.map(c=>c.k).filter(k=>!st.cols.includes(k))].map(k=>{const c=def(k),on=st.cols.includes(k);return `<label class="col" draggable="${on}" data-k="${k}"><span class="h" aria-hidden="true">${on?'⋮⋮':'  '}</span><input type="checkbox" ${on?'checked':''} ${c.lock?'disabled':''}> ${c.t}${c.lock?'<span class="lock">всегда</span>':on?`<span class="w">${st.w[k]||c.w}px</span>`:''}</label>`}).join('');
+}
+document.getElementById('cols').addEventListener('change',e=>{const k=e.target.closest('.col').dataset.k;st.cols=e.target.checked?[...st.cols,k]:st.cols.filter(x=>x!==k);save();draw()});
+let dragK=null;const cols=document.getElementById('cols');
+cols.addEventListener('dragstart',e=>{dragK=e.target.dataset.k;e.target.classList.add('drag')});
+cols.addEventListener('dragover',e=>{e.preventDefault();cols.querySelectorAll('.over').forEach(x=>x.classList.remove('over'));e.target.closest('.col')?.classList.add('over')});
+cols.addEventListener('drop',e=>{e.preventDefault();const to=e.target.closest('.col')?.dataset.k;if(!dragK||!to||!st.cols.includes(to))return;const a=st.cols.filter(x=>x!==dragK);a.splice(a.indexOf(to),0,dragK);st.cols=a;save();draw()});
+cols.addEventListener('dragend',()=>{dragK=null;draw()});
+const vb=document.getElementById('vb'),pop=document.getElementById('pop');
+vb.onclick=()=>{pop.hidden=!pop.hidden;vb.setAttribute('aria-expanded',String(!pop.hidden))};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){pop.hidden=true;vb.setAttribute('aria-expanded','false')}});
+document.getElementById('reset').onclick=()=>{st={cols:[...DEF],w:{}};save();draw()};
+let rz=null;
+document.getElementById('hr').addEventListener('mousedown',e=>{const g=e.target.closest('.grip');if(!g)return;e.preventDefault();const k=g.dataset.k;rz={k,x:e.clientX,w:st.w[k]||def(k).w};g.classList.add('on')});
+document.addEventListener('mousemove',e=>{if(!rz)return;const min=rz.k==='title'?220:60;st.w[rz.k]=Math.max(min,Math.round(rz.w+e.clientX-rz.x));document.querySelectorAll('#cg col')[st.cols.indexOf(rz.k)].style.width=st.w[rz.k]+'px'});
+document.addEventListener('mouseup',()=>{if(rz){rz=null;save();draw()}});
+document.getElementById('hr').addEventListener('dblclick',e=>{const g=e.target.closest('.grip');if(!g)return;const k=g.dataset.k,i=st.cols.indexOf(k);let m=0;const cv=document.createElement('canvas').getContext('2d');cv.font='11px Manrope';document.querySelectorAll(`#bd tr`).forEach(tr=>{m=Math.max(m,cv.measureText(tr.children[i].innerText.split('\n')[0]).width)});st.w[k]=Math.max(k==='title'?220:60,Math.ceil(m+28));save();draw()});
+draw();save();
+</script>
+</body></html>
