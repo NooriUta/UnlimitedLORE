@@ -4270,46 +4270,51 @@
       "property" : "id_field"
     }, {
       "name" : "replaces",
-      "type" : "string",
+      "type" : "list",
       "required" : false,
       "desc" : "Код вида, который этот вид заменил (переименование).",
       "layer" : "ddl",
-      "property" : "replaces"
+      "property" : "replaces",
+      "multi" : true
     }, {
       "name" : "fields",
-      "type" : "string",
+      "type" : "list",
       "required" : false,
       "desc" : "Описание полей вида (JSON): имя, тип, обязательность — как их видит агент в describe.",
       "layer" : "ddl",
-      "property" : "fields"
+      "property" : "fields",
+      "multi" : true
     }, {
       "name" : "guards",
-      "type" : "string",
+      "type" : "list",
       "required" : false,
       "desc" : "Правила записи вида (JSON): какие проверки сервер делает до записи.",
       "layer" : "ddl",
-      "property" : "guards"
+      "property" : "guards",
+      "multi" : true
     }, {
       "name" : "lifecycle",
-      "type" : "string",
+      "type" : "map",
       "required" : false,
       "desc" : "Статусы и переходы вида (JSON).",
       "layer" : "ddl",
       "property" : "lifecycle"
     }, {
       "name" : "links",
-      "type" : "string",
+      "type" : "list",
       "required" : false,
       "desc" : "Связи вида с другими видами (JSON): ребро, направление, тип конца.",
       "layer" : "ddl",
-      "property" : "links"
+      "property" : "links",
+      "multi" : true
     }, {
       "name" : "roles",
-      "type" : "string",
+      "type" : "list",
       "required" : false,
       "desc" : "Какие роли агентов могут читать и писать вид (JSON).",
       "layer" : "ddl",
-      "property" : "roles"
+      "property" : "roles",
+      "multi" : true
     } ],
     "links" : [ ],
     "guards" : [ {
@@ -4323,7 +4328,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowKind",
-    "content_hash" : "sha256:b78db5283368ca2b4aa1c93a0e2c6112eb246f79d9e47921cf6ec88a4fb3fe06"
+    "content_hash" : "sha256:52c6a08842244d878300da11e4a8b7e20dc6f5109f7ba9c55d8a8ea7bb9e7eef"
   }, {
     "kind" : "entity:machine",
     "id_field" : "machine_id",
@@ -7366,11 +7371,12 @@
       "property" : "owner"
     }, {
       "name" : "synonyms",
-      "type" : "string",
+      "type" : "list",
       "required" : false,
       "desc" : "Другие написания тега, которые сводятся к нему.",
       "layer" : "ddl",
-      "property" : "synonyms"
+      "property" : "synonyms",
+      "multi" : true
     }, {
       "name" : "source",
       "type" : "string",
@@ -7380,7 +7386,7 @@
       "property" : "source"
     }, {
       "name" : "field_schema",
-      "type" : "string",
+      "type" : "map",
       "required" : false,
       "desc" : "Схема свободных полей супертега (JSON) — что можно указать на ребре TAGGED_WITH.",
       "layer" : "ddl",
@@ -7398,7 +7404,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowTag",
-    "content_hash" : "sha256:e9b5face06ee049d325a32c373d55bec3b0a74166e6b1d5b5c0f475bccf1dd4d"
+    "content_hash" : "sha256:eab1bce590286b93cb86286a484f0ddb6fc1e106d22b5661f096df2fb81baf84"
   }, {
     "kind" : "entity:task",
     "id_field" : "task_uid",
