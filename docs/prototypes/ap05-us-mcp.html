@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Сценарии и MCP v2</title>
+<!--
+  SPRINT_LORE_ADMIN_POLISH/AP-05, вторая пачка, два коротких экрана.
+  (1) US: в v2 раздел «Фичи» читает срез use_cases (все уровни), фичи и сценарии вперемешку; поле «Уровень» уже есть
+  в фильтрах и группировке (web-next/src/lists/screens.ts featuresSpec). (2) MCP API: в v1 — LoreMcpApiScreen.tsx, ручной
+  справочник 120 инструментов (26 чтение / 94 запись) + живой каталог срезов; в админке v2 «MCP» — подключения, сбои,
+  быстрые команды (SPRINT_UXR_S7B_ADMIN/S7B-31, сделано), справочника инструментов нет.
+  Данные — MCP 25.11.2026: use_cases по goal_level (cloud 3, kite 5, sea-level 43, всего 52), use_cases_of_feature, list_slices.
+  Экран — ?utab=us|mcp.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14120e;--bg2:#1c1913;--bg3:#25211a;--bd:#3a3326;--bdh:#56492f;
+  --t1:#efe6d2;--t2:#b8ab90;--t3:#8f826a;
+  --acc:#d9a441;--suc:#8fb85f;--wrn:#e0913a;--dng:#d0644f;--inf:#6fa3c4;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;--head:'Unbounded',Manrope,sans-serif;--r:6px;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--bdh:#b3a17c;--t1:#2a241a;--t2:#5d523f;--t3:#7a6d55;
+  --acc:#a8741a;--suc:#4f7a2a;--wrn:#b0601a;--dng:#b0412d;--inf:#2f6d93;}}
+:root[data-theme="light"]{--bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--bdh:#b3a17c;--t1:#2a241a;--t2:#5d523f;--t3:#7a6d55;
+  --acc:#a8741a;--suc:#4f7a2a;--wrn:#b0601a;--dng:#b0412d;--inf:#2f6d93;}
+*{box-sizing:border-box}
+html,body{overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--t1);font:400 var(--fs-sm)/1.5 Manrope,system-ui,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+h1,h2{font-family:var(--head);font-weight:800;margin:0}
+h1{font-size:var(--fs-lg);letter-spacing:.02em}
+h2{font-size:var(--fs-md);margin:0 0 6px}
+h3{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin:0 0 6px;font-weight:800}
+p{margin:0 0 6px}
+a{color:var(--acc)}
+.mono{font-family:var(--mono)}
+.muted{color:var(--t3)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+/* шапка */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--bd);background:var(--bg2);position:sticky;top:0;z-index:10}
+.top .sp{flex:1}
+.proto{font-size:var(--fs-2xs);font-weight:800;color:var(--wrn);border:1px dashed var(--wrn);border-radius:999px;padding:1px 8px;text-transform:uppercase;letter-spacing:.06em}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;border:1px solid var(--bd);font-size:var(--fs-xs);white-space:nowrap;color:var(--t2);max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.chip.ok{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 50%,var(--bd))}
+.chip.w{color:var(--wrn);border-color:color-mix(in srgb,var(--wrn) 50%,var(--bd))}
+.chip.d{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 50%,var(--bd))}
+.chip.i{color:var(--inf);border-color:color-mix(in srgb,var(--inf) 50%,var(--bd))}
+.chip.a{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 50%,var(--bd))}
+.chip.new{color:var(--acc);border-style:dashed;border-color:var(--acc);font-weight:800}
+.chip.has{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 40%,var(--bd))}
+/* оболочка v2 */
+.wrap{display:grid;grid-template-columns:200px minmax(0,1fr)}
+nav.side{border-right:1px solid var(--bd);padding:10px 8px;background:var(--bg2);position:sticky;top:41px;align-self:start;max-height:calc(100vh - 41px);overflow:auto}
+.ng{margin-bottom:10px}
+.ng .gh{padding:2px 8px;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:800}
+.ng a{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:var(--r);color:var(--t2);text-decoration:none;font-size:var(--fs-sm)}
+.ng a.on{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);font-weight:700}
+.ng a .chip{margin-left:auto;padding:0 5px;font-size:var(--fs-2xs)}
+main{padding:12px 16px 60px;min-width:0}
+.crumbs{font-size:var(--fs-xs);color:var(--t3);margin-bottom:4px}
+.phone-nav{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:minmax(0,1fr)}
+  nav.side{display:none}
+  .phone-nav{display:flex;gap:6px;overflow-x:auto;padding:6px 16px;border-bottom:1px solid var(--bd);background:var(--bg2);scrollbar-width:none}
+  .phone-nav a{flex:none}
+}
+/* карточки */
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-bottom:12px;min-width:0}
+.why{border-left:3px solid var(--acc)}
+.why p{color:var(--t2);font-size:var(--fs-md)}
+.why p b{color:var(--t1)}
+.state{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:6px;margin-top:6px}
+.state div{background:var(--bg3);border-radius:var(--r);padding:6px 8px;font-size:var(--fs-xs);color:var(--t2)}
+.state b{display:block;color:var(--t1);font-size:var(--fs-sm)}
+.sec-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 8px}
+.sec-h .sp{flex:1}
+/* вкладки и сегменты */
+.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--bd);margin-bottom:10px}
+.tabs button{padding:5px 10px;font-size:var(--fs-sm);color:var(--t2);border-bottom:2px solid transparent;display:inline-flex;gap:4px;align-items:center}
+.tabs button[aria-selected="true"]{color:var(--acc);border-bottom-color:var(--acc);font-weight:700}
+.tabs button .dot{width:6px;height:6px;border-radius:50%;background:var(--acc)}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden;flex-wrap:wrap}
+.seg button{padding:2px 10px;font-size:var(--fs-xs);color:var(--t2)}
+.seg button[aria-pressed="true"]{background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc);font-weight:700}
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;min-width:0}
+.kpi b{display:block;font:800 var(--fs-xl)/1.15 var(--head)}
+.kpi span{font-size:var(--fs-xs);color:var(--t3)}
+.kpi small{display:block;font-size:var(--fs-2xs);color:var(--t2)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:900px){.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* таблица */
+.tbl{width:100%;border-collapse:collapse;font-size:var(--fs-xs)}
+.tbl th{text-align:left;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);font-weight:800;padding:4px 6px;border-bottom:1px solid var(--bd)}
+.tbl td{padding:4px 6px;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);vertical-align:top;overflow-wrap:anywhere}
+.tbl td.n{text-align:right;font-family:var(--mono);white-space:nowrap}
+@media (max-width:600px){.tbl .hide-s{display:none}}
+/* строки-список */
+.rows{display:flex;flex-direction:column;gap:4px}
+.row{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border:1px solid var(--bd);border-radius:var(--r);background:var(--bg2);min-width:0}
+.row .main{flex:1;min-width:0}
+.row .id{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--acc);overflow-wrap:anywhere}
+.row .t{font-size:var(--fs-sm);overflow-wrap:anywhere}
+.row .m{font-size:var(--fs-2xs);color:var(--t3)}
+/* полосы */
+.bar{height:8px;border-radius:999px;background:var(--bg3);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:var(--fs-2xs);color:var(--t2);margin-top:4px}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{fill:var(--t3);font:var(--fs-2xs) var(--mono)}
+/* развилки */
+.forks{display:flex;flex-direction:column;gap:10px}
+.fork{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px}
+.fork h2{font-size:var(--fs-sm)}
+.fork .ctx{color:var(--t2);font-size:var(--fs-xs);margin-bottom:8px}
+.ab{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:420px){.ab{grid-template-columns:minmax(0,1fr)}}
+.opt{border:2px solid var(--bd);border-radius:8px;padding:8px;background:var(--bg);text-align:left;min-width:0;display:flex;flex-direction:column;gap:4px}
+.opt[aria-pressed="true"]{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,var(--bg))}
+.opt .lbl{font-weight:800;font-size:var(--fs-sm)}
+.opt .cost{font-size:var(--fs-2xs);color:var(--t2)}
+.opt .rec{font-size:var(--fs-2xs);font-weight:800;color:var(--suc)}
+.choice{margin-top:10px;font-size:var(--fs-sm);background:var(--bg3);border-radius:var(--r);padding:8px 10px;overflow-wrap:anywhere}
+.choice b{color:var(--acc)}
+.note{font-size:var(--fs-xs);color:var(--t2);background:var(--bg3);border-radius:var(--r);padding:6px 8px;margin:6px 0}
+.note.w{border-left:3px solid var(--wrn)}
+.note.d{border-left:3px solid var(--dng)}
+.honest{font-size:var(--fs-xs);color:var(--wrn);border:1px dashed color-mix(in srgb,var(--wrn) 60%,var(--bd));border-radius:var(--r);padding:6px 8px;margin:6px 0}
+[hidden]{display:none!important}
+footer.src{font-size:var(--fs-2xs);color:var(--t3);margin-top:16px;overflow-wrap:anywhere}
+
+.tree .row{margin-left:0}
+.tree .kid{margin-left:18px}
+.lvl{font-family:var(--mono);font-size:var(--fs-2xs);border-radius:999px;padding:0 6px;border:1px solid var(--bd);color:var(--t3);white-space:nowrap}
+.lvl.kite,.lvl.cloud{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 50%,var(--bd))}
+.tool{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;padding:6px 8px;border:1px solid var(--bd);border-radius:var(--r);background:var(--bg2)}
+.tool .nm{font-family:var(--mono);font-size:var(--fs-xs);color:var(--acc)}
+.tool .d{grid-column:1/-1;font-size:var(--fs-2xs);color:var(--t2)}
+.tool .p{grid-column:1/-1;display:flex;gap:3px;flex-wrap:wrap}
+.tool .p span{font-family:var(--mono);font-size:var(--fs-2xs);border:1px solid var(--bd);border-radius:999px;padding:0 5px;color:var(--t2)}
+.tool .p span.opt{border-style:dashed;color:var(--t3)}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:6px}
+</style>
+</head>
+<body>
+<header class="top"><h1>LORE</h1><span class="proto">Прототип · кода нет</span><span class="sp"></span><span class="chip">снимок 25.11.2026</span></header>
+<div class="phone-nav"></div>
+<div class="wrap"><nav class="side"></nav>
+<main>
+  <div class="tabs" data-tabs="utab"><button data-tab="us">US · сценарии</button><button data-tab="mcp">MCP · справочник</button></div>
+
+  <section data-pane="utab:us">
+    <div class="crumbs">Продукт › Фичи</div>
+    <section class="card why"><h2>Что это и зачем</h2>
+      <p>В v1 «US» был отдельным пунктом. В v2 раздел «Фичи» уже показывает <b>и фичи, и сценарии</b> (срез use_cases, 52 записи), а поле «Уровень» есть в фильтре — но <b>его не видно сразу</b>: человек видит смесь FEAT-* и UC-* и не понимает, где что. Предлагаю не новый раздел, а <b>быстрые чипы по уровню и дерево «фича → сценарии»</b>.</p>
+    </section>
+    <div class="sec-h"><h1>Фичи и сценарии</h1><span class="sp"></span><div class="seg" id="lv"><button data-l="all">Все 52</button><button data-l="feat" aria-pressed="true">Фичи 8</button><button data-l="us">Сценарии 43</button><button data-l="none">Без уровня 1</button></div></div>
+    <div class="rows tree" id="tree"></div>
+    <p class="note">Уровни шкалы целей: cloud и kite — фичи (8), sea-level — пользовательские сценарии (43), fish — подфункции (0). Пример дерева — FEAT-VP-FIT и его сценарии (shipped_dynamics).</p>
+    <div class="forks" style="margin-top:12px">
+      <div class="fork" data-fork="U1"><h2>U1 · US: раздел или фильтр</h2><p class="ctx">Код уже умеет фильтр «Уровень»; спорно только, как это показать.</p>
+        <div class="ab"><button class="opt" data-opt="а"><span class="lbl">а) Отдельный пункт меню «Сценарии»</span><span class="cost">Как в v1, на виду. Цена: два пункта поверх одного среза; связь «фича → сценарии» разорвана по двум экранам.</span></button>
+        <button class="opt" data-opt="б"><span class="lbl">б) Один раздел «Фичи и сценарии» + чипы уровня + дерево</span><span class="cost">Одна точка, видно вложенность. Цена: переименовать пункт меню (слово — за владелицей).</span><span class="rec">рекомендую</span></button></div></div>
+    </div>
+  </section>
+
+  <section data-pane="utab:mcp">
+    <div class="crumbs">Админка › MCP</div>
+    <section class="card why"><h2>Что это и зачем</h2>
+      <p>Агенту и человеку, который подключает агента, нужно знать: <b>какие инструменты есть, что каждый пишет и какие у него параметры</b>. В v1 это был ручной список на 120 строк — он отстаёт от сервера при каждом новом инструменте. В админке v2 «MCP» сейчас — подключения, сбои и быстрые команды (S7B-31 сделан), а справочника нет.</p>
+      <div class="state"><div><b>v1</b>120 инструментов вручную (26 чтение / 94 запись) + живой каталог срезов</div><div><b>v2 сейчас</b>подключения по профилям, отказы ≥400, быстрые команды</div><div><b>Сервер</b>в этой сессии (роль full) видно 59 инструментов; почему не все 120 — не проверял</div></div>
+    </section>
+    <div class="tabs"><button aria-selected="false">Подключения</button><button aria-selected="false">Отказы</button><button aria-selected="false">Быстрые команды</button><button aria-selected="true"><span class="dot"></span>Инструменты</button><button aria-selected="false"><span class="dot"></span>Срезы</button></div>
+    <div class="sec-h"><div class="seg"><button aria-pressed="true">Все</button><button>Чтение</button><button>Запись</button></div><span class="chip">роль: full</span><span class="sp"></span><span class="muted">источник — tools/list сервера</span></div>
+    <div class="tgrid" id="tools"></div>
+    <div class="forks" style="margin-top:12px">
+      <div class="fork" data-fork="M1"><h2>M1 · Откуда справочник</h2><p class="ctx">Список v1 написан руками и расходится с сервером.</p>
+        <div class="ab"><button class="opt" data-opt="а"><span class="lbl">а) Из tools/list сервера, вкладка «Инструменты» в админке MCP</span><span class="cost">Всегда совпадает с сервером, видно, что доступно роли. Цена: бэкенду — прокси tools/list для человека; описания — те, что в коде инструмента.</span><span class="rec">рекомендую</span></button>
+        <button class="opt" data-opt="б"><span class="lbl">б) Не переносить</span><span class="cost">Ноль работы: агент и так видит tools/list. Цена: человек, подключающий агента, не видит, что тот сможет, и с какой ролью.</span></button></div></div>
+      <div class="fork" data-fork="M2"><h2>M2 · Каталог срезов</h2><p class="ctx">v1 показывал живой list_slices (параметры каждого среза).</p>
+        <div class="ab"><button class="opt" data-opt="а"><span class="lbl">а) Вкладка «Срезы» рядом</span><span class="cost">Полная картина «что можно прочитать». Цена: ещё одна вкладка админки.</span><span class="rec">рекомендую</span></button>
+        <button class="opt" data-opt="б"><span class="lbl">б) Срезы — строкой у query_slice</span><span class="cost">Компактно. Цена: ~200 срезов внутри одной карточки — длинный список.</span></button></div></div>
+    </div>
+  </section>
+  <div class="choice" id="choice"></div>
+  <footer class="src">Источник: прод LORE, MCP 25.11.2026 — use_cases{goal_level}: cloud 3 / kite 5 / sea-level 43 / fish 0 / всего 52; shipped_dynamics (FEAT-VP-FIT и 4 сценария); схема инструментов aida-lore этой сессии; src/components/lore/LoreMcpApiScreen.tsx.</footer>
+</main></div>
+<script>
+// Общая обвязка прототипов AP-05 (вторая пачка): меню v2, вкладки в адресе, развилки «а | б».
+const NAV = [
+  ['Лента', [['news', 'Новости'], ['analytics', 'Аналитика']]],
+  ['Работа', [['sprint', 'Спринты'], ['task', 'Задачи'], ['milestone', 'Вехи'], ['release', 'Релизы'], ['pr', 'PR'], ['quality_gate', 'Гейты качества']]],
+  ['Знание', [['adr', 'ADR'], ['decision', 'Решения'], ['spec', 'Спеки'], ['doc', 'Документы'], ['question', 'Вопросы']]],
+  ['Продукт', [['product', 'Продукты'], ['feature', 'Фичи'], ['actor', 'Роли'], ['pain', 'Боли'], ['gain', 'Выгоды'], ['job', 'Работы']]],
+  ['Устройство', [['project', 'Проекты'], ['component', 'Компоненты'], ['tech', 'Технологии']]],
+];
+function renderNav(current, marks, extra) {
+  const nav = NAV.map(([g, items]) => [g, items.slice()]);
+  (extra || []).forEach(([grp, id, label]) => { const g = nav.find(x => x[0] === grp); if (g) g[1].push([id, label]); else nav.push([grp, [[id, label]]]); });
+  const side = document.querySelector('nav.side');
+  const phone = document.querySelector('.phone-nav');
+  const chip = id => marks[id] ? `<span class="chip ${marks[id][0]}">${marks[id][1]}</span>` : '';
+  if (side) side.innerHTML = nav.map(([g, items]) => `<div class="ng"><div class="gh">${g}</div>${items.map(([id, l]) =>
+    `<a href="#" class="${id === current ? 'on' : ''}" onclick="return false">${l}${chip(id)}</a>`).join('')}</div>`).join('');
+  if (phone) phone.innerHTML = nav.flatMap(([, items]) => items).filter(([id]) => id === current || marks[id]).map(([id, l]) =>
+    `<a href="#" class="chip ${id === current ? 'a' : ''}" onclick="return false">${l}${marks[id] ? ' · ' + marks[id][1] : ''}</a>`).join('');
+}
+function urlParam(k) { try { return new URL(location.href).searchParams.get(k); } catch { return null; } }
+function setUrlParam(k, v) { try { const u = new URL(location.href); u.searchParams.set(k, v); history.replaceState(null, '', u); } catch {} }
+// Вкладки: <div class="tabs" data-tabs="atab"><button data-tab="x">…</button></div> + <section data-pane="atab:x">
+function initTabs(onChange) {
+  document.querySelectorAll('.tabs[data-tabs]').forEach(bar => {
+    const key = bar.dataset.tabs;
+    const btns = [...bar.querySelectorAll('button[data-tab]')];
+    const show = id => {
+      btns.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === id)));
+      document.querySelectorAll(`[data-pane^="${key}:"]`).forEach(p => { p.hidden = p.dataset.pane !== `${key}:${id}`; });
+      onChange && onChange(key, id);
+    };
+    btns.forEach(b => { b.setAttribute('role', 'tab'); b.addEventListener('click', () => { setUrlParam(key, b.dataset.tab); show(b.dataset.tab); }); });
+    const start = urlParam(key);
+    show(btns.some(b => b.dataset.tab === start) ? start : btns[0].dataset.tab);
+  });
+}
+// Развилки: <div class="fork" data-fork="A1"><button class="opt" data-opt="а">…
+function initForks() {
+  const out = document.getElementById('choice');
+  const upd = () => {
+    if (!out) return;
+    const picked = [...document.querySelectorAll('.fork[data-fork]')].map(f => {
+      const on = f.querySelector('.opt[aria-pressed="true"]');
+      return on ? `${f.dataset.fork}${on.dataset.opt}` : null;
+    }).filter(Boolean);
+    out.innerHTML = picked.length ? `Ваш выбор одной строкой: <b>${picked.join(', ')}</b> — так и ответьте в канал.` : 'Выберите вариант в каждой карточке — здесь соберётся строка для ответа.';
+  };
+  document.querySelectorAll('.fork[data-fork]').forEach(f => {
+    const opts = [...f.querySelectorAll('.opt')];
+    opts.forEach(o => { o.setAttribute('aria-pressed', 'false'); o.addEventListener('click', () => { opts.forEach(x => x.setAttribute('aria-pressed', String(x === o))); upd(); }); });
+  });
+  upd();
+}
+// Горизонтальные столбцы: [{label, value, color?}] → SVG шириной 100%.
+function hbars(rows, opts = {}) {
+  const max = Math.max(1, ...rows.map(r => r.value));
+  const h = 18, lw = opts.labelW || 120, W = 400;
+  const body = rows.map((r, i) => {
+    const w = Math.max(2, (W - lw - 40) * r.value / max);
+    return `<text x="0" y="${i * h + 12}">${r.label}</text><rect x="${lw}" y="${i * h + 3}" width="${w}" height="11" rx="3" fill="${r.color || 'var(--acc)'}"/><text x="${lw + w + 4}" y="${i * h + 12}">${r.value}</text>`;
+  }).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${rows.length * h + 4}" role="img" aria-label="${opts.aria || ''}">${body}</svg>`;
+}
+// Вертикальные столбцы по неделям: [{label, value}].
+function vbars(rows, opts = {}) {
+  const max = Math.max(1, ...rows.map(r => r.value));
+  const W = 400, H = opts.h || 110, bw = W / rows.length;
+  const body = rows.map((r, i) => {
+    const hh = Math.max(1, (H - 22) * r.value / max);
+    return `<rect x="${i * bw + 3}" y="${H - 14 - hh}" width="${bw - 6}" height="${hh}" rx="2" fill="${r.color || 'var(--acc)'}"/><text x="${i * bw + bw / 2}" y="${H - 3}" text-anchor="middle">${r.label}</text>${r.value ? `<text x="${i * bw + bw / 2}" y="${H - 17 - hh}" text-anchor="middle">${r.value}</text>` : ''}`;
+  }).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${opts.aria || ''}">${body}</svg>`;
+}
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const short = id => String(id).replace(/^SPRINT_/, '');
+
+renderNav('feature', { feature: ['new', 'чипы уровня'] });
+const TREE = [
+  ['FEAT-VP-FIT', 'Владелец продукта видит по канве, чем закрыты ценности клиента', 'kite', [
+    ['UC-VP-BALANCE', 'замечает перекос «лечим, но не радуем» без пересчёта карточек'],
+    ['UC-VP-SEGMENTS', 'видит, скольким сегментам служит фича и как расходятся профили'],
+    ['UC-VP-RANK', 'видит, какие боли острые, и снято ли существенное'],
+    ['UC-VP-EVIDENCE', 'отличает заявленное от подтверждённого замером']]],
+  ['FEAT-GITCYCLE', 'Полный git-цикл сессии без токена у агента', 'cloud', []],
+  ['FEAT-ADMIN-ONE-INTERFACE', 'Люди, агенты и машины заводятся из одной админки LORE', 'kite', []],
+];
+function drawTree(l) {
+  const out = [];
+  TREE.forEach(([id, t, lv, kids]) => {
+    if (l !== 'us') out.push(`<div class="row"><div class="main"><div class="id">${id}</div><div class="t">${t}</div></div><span class="lvl ${lv}">${lv}</span>${kids.length ? `<span class="chip">${kids.length} сц.</span>` : ''}</div>`);
+    if (l !== 'feat' || kids.length) kids.forEach(([k, kt]) => out.push(`<div class="row ${l === 'us' ? '' : 'kid'}"><div class="main"><div class="id">${k}</div><div class="t">${kt}</div>${l === 'us' ? `<div class="m">фича ${id}</div>` : ''}</div><span class="lvl">sea-level</span></div>`));
+  });
+  if (l === 'none') out.splice(0, out.length, '<p class="note">1 запись без уровня — в прототипе не выписана; на экране она видна в «Все» с пометкой «уровень не задан».</p>');
+  document.getElementById('tree').innerHTML = out.join('') + (l !== 'none' ? '<p class="muted" style="font-size:var(--fs-2xs)">…показаны 3 фичи из 8 для примера</p>' : '');
+}
+document.querySelectorAll('#lv button').forEach(b => b.addEventListener('click', () => { document.querySelectorAll('#lv button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); drawTree(b.dataset.l); }));
+drawTree('feat');
+const TOOLS = [
+  ['query_slice', 'r', 'Прочитать именованный срез; limit/offset/fields, changed_from/to', ['slice', 'params?']],
+  ['list_slices', 'r', 'Каталог срезов и их параметров', []],
+  ['find', 'r', 'Поиск записей по слову и связям', ['q', 'type?', 'limit?']],
+  ['graph', 'r', 'Окрестность записи в графе', ['id', 'depth?']],
+  ['task_set', 'w', 'Правка задачи: заголовок, заметка, оценка, роли; note_append дописывает', ['task_uid', 'title', 'note_md?|note_append?', 'expected?']],
+  ['status_set', 'w', 'Смена статуса записи; done — только с ревьюером ≠ исполнителю', ['type', 'id', 'status', 'reason?']],
+  ['rec_promote', 'w', 'Рекомендация гейта → задача', ['rec_id', 'sprint_id']],
+  ['qg_run_log', 'w', 'Записать прогон рутины с метриками', ['routine_name', 'status', 'metrics[]']],
+];
+document.getElementById('tools').innerHTML = TOOLS.map(([n, k, d, p]) => `<div class="tool"><span class="nm">${n}</span>${k === 'r' ? '<span class="chip i">чтение</span>' : '<span class="chip w">запись</span>'}<span class="d">${d}</span><span class="p">${p.map(x => `<span class="${x.includes('?') ? 'opt' : ''}">${esc(x)}</span>`).join('') || '<span class="opt">без параметров</span>'}</span></div>`).join('') + '<p class="muted" style="font-size:var(--fs-2xs)">…8 из 59 для примера; описания и параметры — из схемы инструмента, не руками</p>';
+initTabs();
+initForks();
+</script>
+</body>
+</html>
