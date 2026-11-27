@@ -95,3 +95,19 @@ describe('CI: образ v2 собирается', () => {
     expect(job).not.toMatch(/KIT_NPM_READ_TOKEN|npm_token|_authToken/);
   });
 });
+
+// SPRINT_VIZ_EMBED/EMB-L6: издатель подписи ES256 встройки Völva. Без lore.volva.embed.issuer бэкенд ES256
+// не включает (AidaLoreResource: es256 = ключи && issuer), и встройка молча остаётся на общем секрете HS256.
+// Значения — ровно те, что принимает стенд Völva (владелица 27.11: «без new у нас все же»), без «/» на конце.
+describe('издатель ES256 встройки Völva доходит до бэкенда', () => {
+  it('оба compose передают LORE_VOLVA_EMBED_ISSUER бэкенду', () => {
+    for (const f of ['docker-compose.yml', 'docker/lore-host/docker-compose.yml']) {
+      expect(read(resolve(repo, f)), f).toMatch(/^\s*- LORE_VOLVA_EMBED_ISSUER=\$\{LORE_VOLVA_EMBED_ISSUER:-\}\s*$/m);
+    }
+  });
+
+  it('выкатка препрода задаёт издателя препрода', () => {
+    expect(read(resolve(repo, '.github/workflows/lore-cd.yml')))
+      .toMatch(/^\s*LORE_VOLVA_EMBED_ISSUER: https:\/\/preprod\.lore\.odal\.seidrstudio\.pro\s*$/m);
+  });
+});
