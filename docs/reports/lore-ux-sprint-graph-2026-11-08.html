@@ -1,0 +1,72 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Граф спринтов редизайна LORE · параллельность · 08.11.2026</title><link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"><script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script><script>mermaid.initialize({startOnLoad:true,theme:'base',themeVariables:{primaryColor:'#eee9df',primaryTextColor:'#1e1a12',primaryBorderColor:'#8a560a',lineColor:'#5c5240',fontFamily:'Manrope',critBorderColor:'#c03030',critBkgColor:'#f6dcd8',taskBkgColor:'#eee9df',taskBorderColor:'#8a560a',activeTaskBkgColor:'#f3e4c6',doneTaskBkgColor:'#dde9d6'},gantt:{barHeight:22,fontSize:12,sectionFontSize:12,leftPadding:170}});</script><style>:root{--bg0:#f5f3ee;--bg1:#faf8f3;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--acc:#8a560a;--font:'Manrope',system-ui,sans-serif;--head:'Unbounded',sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:14px/1.55 var(--font)}.wrap{max-width:1100px;margin:0 auto;padding:18px 12px 60px}h1{font:800 21px/1.25 var(--head);color:var(--acc);margin:0 0 6px}h2{font:800 16px/1.3 var(--head);margin:24px 0 8px}.muted{color:var(--t2);font-size:11px}.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin:8px 0;font-size:13px}.mermaid{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:8px;overflow:auto}</style></head><body><div class="wrap">
+<h1>Граф спринтов редизайна: зависимости и параллельность</h1>
+<div class="muted">08.11.2026 · спринты заведены в LORE (SPRINT_UXR_*), даты из LORE · допущение для расчёта параллели: <b>3 дорожки агентов + приёмка владелицы</b> — поправьте, пересчитаю · красным — критический путь</div>
+
+<h2>1. Зависимости</h2>
+<div class="mermaid">
+flowchart LR
+  S0a["S0 кусок первым<br/>контракты MCP · miniLORE · Völva · :4400<br/>2 дня"]:::crit
+  S0b["S0 остальное<br/>рендер-тесты · e2e · замер «до»"]
+  S1["S1 Сервер: честный ответ<br/>7,5 чд"]
+  S2["S2 Сервер: связи · история · память<br/>11 чд"]
+  S3["S3 Инфра v2 · new.lore<br/>6,5 чд"]
+  S4["S4 UI: общие элементы · каркас · списки<br/>≈38 чд"]:::crit
+  S5["S5 UI: запись и задачи<br/>22,5 чд"]:::crit
+  S6["S6 Völva в LORE<br/>12 чд"]
+  S7A["S7A Новости<br/>9,5 чд"]
+  S7B["S7B Админка v3<br/>15 чд"]
+  S7C["S7C «Зачем»: холст<br/>13,5 чд"]
+  VIZ["SPRINT_VIZ_EMBED<br/>(Völva, внешний)"]
+  S8["S8 Переключение<br/>5,5 чд"]:::crit
+  S0a -->|gate| S1 & S2 & S3 & S4
+  S0a --> S0b
+  S1 -. контракт API .-> S4
+  S2 -. контракт API .-> S4
+  S3 -. стенд .-> S4
+  S2 -->|hard| S5
+  S4 -->|hard| S5 & S6 & S7A & S7B & S7C
+  VIZ -->|hard| S6
+  S5 -->|gate| S8
+  S7A -->|gate| S8
+  S7B -->|gate| S8
+  classDef crit fill:#f6dcd8,stroke:#c03030,stroke-width:2px;
+</div>
+<div class="card"><b>Как читать:</b> сплошная стрелка — нельзя начать без готового; пунктир — работа идёт параллельно на заглушках по контракту API (решение владелицы: S4 параллельно с S1–S3). Критический путь: <b>S0-кусок → S4 → S5 → S8</b>.</div>
+
+<h2>2. Календарь по дорожкам (Gantt, плановые даты из LORE)</h2>
+<div class="mermaid">
+gantt
+  dateFormat YYYY-MM-DD
+  axisFormat %d.%m
+  excludes weekends
+  section Страховка
+  S0 кусок первым (контракты, :4400)   :crit, s0a, 2026-11-09, 2d
+  S0 остальное (рендер, e2e, «до»)     :s0b, after s0a, 7d
+  section Сервер
+  S1 честный ответ + баги              :s1, after s0a, 2026-11-27
+  S2 связи, история, память            :s2, after s0a, 2026-12-01
+  section Инфраструктура
+  S3 второе приложение new.lore        :s3, after s0a, 2026-11-24
+  section UI · каркас
+  S4 общие элементы + каркас + списки  :crit, s4, after s0a, 2026-12-04
+  section UI · запись
+  S5 запись и задачи                   :crit, s5, 2026-12-07, 2026-12-25
+  section Дорожки после каркаса
+  S6 Völva в LORE                      :s6, 2026-12-07, 2026-12-18
+  S7A Новости                          :s7a, 2026-12-07, 2026-12-18
+  S7B Админка v3                       :s7b, 2026-12-07, 2026-12-25
+  S7C «Зачем»: холст                   :s7c, 2026-12-07, 2026-12-25
+  section Переключение
+  S8 переключение на v2                :crit, s8, 2027-01-11, 2027-01-22
+</div>
+
+<h2>3. Нагрузка по дорожкам (3 дорожки)</h2>
+<div class="card">
+<ul>
+<li><b>11.11–4.12 (≈18 раб. дней):</b> одновременно S1 (7,5) + S2 (11) + S3 (6,5) + S4 (≈38) + хвост S0 (7) ≈ <b>70 чд</b> → на 3 дорожки ≈ <b>23 дня</b> — <span style="color:#c03030"><b>не влезает в 18</b></span>. Варианты: 4 дорожки, или S4 сдвинуть конец на ≈10.12, или часть S2 (S2-05 «что помнит», S2-08 прямой адрес MCP) перенести в S5-период.</li>
+<li><b>7.12–25.12 (≈15 раб. дней):</b> S5 (22,5) + S6 (12) + S7A (9,5) + S7B (15) + S7C (13,5) ≈ <b>72,5 чд</b> → на 3 дорожки ≈ <b>24 дня</b> — <span style="color:#c03030"><b>не влезает</b></span>. Варианты: 4–5 дорожек, или S7B/S7C на январь до S8 (11.01 → S8 сдвигается на конец января).</li>
+<li><b>Критический путь сам по себе</b> (S0-кусок 2 → S4 ≈13 при 3 дорожках внутри → S5 ≈8 → S8 ≈6) ≈ <b>29 рабочих дней ≈ 6 недель</b> — значит, при достаточной ширине можно закончить к середине января.</li>
+</ul>
+<b>Вывод:</b> сроки держатся только при 4+ параллельных дорожках; при 3 — либо S7B/S7C в январь, либо S8 на конец января. Сколько дорожек закладываем?
+</div>
+</div></body></html>

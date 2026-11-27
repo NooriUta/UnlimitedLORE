@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LORE — труба CI/CD: сейчас и после</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#14110b;--bg1:#1c1810;--bg2:#241f15;--bd:#3a3222;
+  --t1:#efe6d2;--t2:#b9ab8c;--t3:#857a62;
+  --acc:#e0a33a;--suc:#8fbf6a;--wrn:#e0b84a;--dng:#e0705a;--inf:#7fa8d8;
+  --mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--t1);font:14px/1.6 'Manrope',system-ui,sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:14px 12px 60px}
+h1{font:800 19px/1.3 'Unbounded',sans-serif;color:var(--acc);margin:6px 0 4px}
+h2{font:800 15px/1.3 'Unbounded',sans-serif;margin:30px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--bd);text-transform:uppercase;letter-spacing:.02em}
+h3{font-size:14px;margin:18px 0 6px;color:var(--acc)}
+.meta{color:var(--t3);font-size:12px}
+.tldr{background:var(--bg1);border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:8px;padding:10px 12px;margin:12px 0}
+.diag{background:var(--bg1);border:1px solid var(--bd);border-radius:10px;padding:8px;overflow-x:auto;margin:8px 0}
+.diag svg{max-width:100%!important;height:auto}
+@media (max-width:700px){.diag svg{max-width:none!important}}
+.pill{display:inline-block;border-radius:999px;padding:0 8px;font-size:11px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border:1px solid}
+.p-now{color:var(--dng);border-color:var(--dng)}
+.p-after{color:var(--suc);border-color:var(--suc)}
+.p-fact{color:var(--inf);border-color:var(--inf)}
+.p-est{color:var(--wrn);border-color:var(--wrn)}
+table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:13px;margin:8px 0}
+th,td{border:1px solid var(--bd);padding:5px 8px;vertical-align:top;text-align:left}
+th{background:var(--bg2);text-transform:uppercase;font-size:11px;color:var(--t2);letter-spacing:.03em}
+code{font-family:var(--mono);font-size:.88em;background:var(--bg2);padding:0 4px;border-radius:4px;color:var(--t1)}
+ul{padding-left:20px;margin:6px 0}
+li{margin:3px 0}
+.two{display:grid;grid-template-columns:1fr;gap:10px}
+.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:10px 12px}
+.card b{color:var(--acc)}
+.legend{color:var(--t2);font-size:12px}
+</style>
+</head>
+<body><div class="wrap">
+
+<div class="meta">LORE · SPRINT_UXR_S11_TEST_OPT · 08.11.2026 · замеры на ci-server, LORE-ygg-ci (arcadedb 26.11.1)</div>
+<h1>Труба CI/CD: как сейчас и как станет</h1>
+
+<div class="tldr">
+<b>Коротко.</b> Бэкенд-джоба идёт ~45 минут не из-за раннера и не из-за очереди в базе. Причина в том, что тесты <b>83 раза</b> за прогон удаляют тестовую базу и строят схему заново: сотни DDL по ~34 мс плюс 62 миграции, то есть около 30 секунд на тестовый класс. Лечение — строить схему <b>один раз</b> за прогон, а тест-базу CI держать в памяти. Выкатка — по решению «Б»: <code>preprod</code> → ci-server со своей базой, прод на lore-host — только релиз по тегу.
+<br><span class="legend">Метки: <span class="pill p-fact">факт</span> — измерено или прочитано в коде, <span class="pill p-est">оценка</span> — прикидка, проверяется в CI до/после.</span>
+</div>
+
+<!-- ═══════════════════ CI ═══════════════════ -->
+<h2>1. Проверки PR (CI) — <span class="pill p-now">сейчас</span></h2>
+<div class="diag"><pre class="mermaid">
+---
+config:
+  layout: elk
+  theme: dark
+---
+flowchart TB
+  PR([PR в develop]):::io --> SC{ci-scope.sh<br/>какие пути тронуты?}
+  SC -->|web-next/, kit/| FE[Frontend + MCP CI<br/>tsc + vitest<br/>~1–2 мин]:::ok
+  SC -->|backend/, compose,<br/>ЛЮБОЙ .github/**| BE[Backend CI]
+  SC -->|только docs/| SKIP[тяжёлое не гоняем]:::ok
+  BE --> CMP[компиляция Gradle<br/>2–9 ядер, минуты]
+  CMP --> LOOP
+  subgraph LOOP [× 83 тестовых класса]
+    direction TB
+    R1[Quarkus перезапуск<br/>restrictToAnnotatedClass]:::bad --> R2[ресурс: DROP + CREATE<br/>базы в LORE-ygg-ci]:::bad
+    R2 --> R3[приложение строит схему<br/>сотни DDL × 34 мс<br/>+ 62 миграции]:::bad
+    R3 --> R4[собственно тесты класса<br/>секунды]
+  end
+  LOOP --> RES[зелёный / красный<br/>≈ 45 мин]:::bad
+  DB[(LORE-ygg-ci<br/>одна на все джобы<br/>диск, fsync)]:::db -.-> R2
+  DB -.-> R3
+  classDef bad fill:#3a1f18,stroke:#e0705a,color:#efe6d2
+  classDef ok fill:#1e2a17,stroke:#8fbf6a,color:#efe6d2
+  classDef io fill:#2a2212,stroke:#e0a33a,color:#efe6d2
+  classDef db fill:#1a2230,stroke:#7fa8d8,color:#efe6d2
+</pre></div>
+
+<h3>Почему так долго</h3>
+<ul>
+<li><span class="pill p-fact">факт</span> 83 класса подключают <code>LoreArcadeDbTestResource</code> с <code>restrictToAnnotatedClass = true</code>, поэтому Quarkus поднимает приложение заново на каждый класс.</li>
+<li><span class="pill p-fact">факт</span> Ресурс на каждом старте делает <code>drop database</code> + <code>create database</code> и запускает приложение с <code>lore.bootstrap=true</code> и <code>lore.migrate=true</code>. Схема строится с нуля: в инициализаторе 410 операторов, в пустой схеме v62 — 152 типа и 256 индексов.</li>
+<li><span class="pill p-fact">факт</span> Thread dump трёх старых джобов показывает одно и то же: тестовый поток стоит в <code>LoreSchemaInitializer.init</code> / <code>LoreSchemaMigrationRunner</code> и ждёт HTTP-ответа базы. CPU джобов 2–4%, хост простаивает на 84%.</li>
+<li><span class="pill p-fact">факт</span> Лог тест-базы: ~20 000 «Building index» за 10 минут, почти все на 0 записях.</li>
+<li><span class="pill p-est">оценка</span> ~30 с на класс × 83 ≈ 45 мин. Сходится с фактической длиной джоба: 43–48 мин.</li>
+</ul>
+
+<h3>Что я проверила и отбросила</h3>
+<table>
+<tr><th>Гипотеза</th><th>Проверка</th><th>Итог</th></tr>
+<tr><td>База выполняет DDL по очереди на все джобы; 6 слотов делят её скорость</td><td>1 / 2 / 4 / 6 параллельных потоков DDL в разные базы: <b>32 / 32 / 38 / 37 мс</b> на операцию</td><td><span class="pill p-now">опровергнуто</span> Латентность от числа джобов почти не растёт, ограничение параллельности (CI-02) не поможет</td></tr>
+<tr><td>Не хватает CPU или RAM</td><td>idle 84%, iowait 6–8%; свежие джобы на компиляции жгут 2–9 ядер</td><td><span class="pill p-now">опровергнуто</span></td></tr>
+<tr><td>Диск замедляет каждую DDL</td><td>Одноразовый arcadedb той же версии на tmpfs: <b>~11 мс</b> на DDL против 34</td><td><span class="pill p-after">подтверждено</span> 2/3 времени операции — синхронная запись</td></tr>
+<tr><td>Бэкенд-CI гоняется зря на фронтовых PR</td><td>Правила <code>ci-scope.sh</code>: пропуск уже есть. #869 тронул <code>.github/</code>, #872 — <code>docker-compose.yml</code></td><td><span class="pill p-est">частично</span> Правило «любой .github → всё» шире нужного</td></tr>
+</table>
+
+<h2>2. Проверки PR (CI) — <span class="pill p-after">после</span></h2>
+<div class="diag"><pre class="mermaid">
+---
+config:
+  layout: elk
+  theme: dark
+---
+flowchart TB
+  PR([PR в develop]):::io --> SC{ci-scope.sh<br/>точнее по путям}
+  SC -->|web-next/, kit/,<br/>frontend-ci.yml| FE[Frontend + MCP CI<br/>~1–2 мин]:::ok
+  SC -->|backend/** без схемы| SRV
+  SC -->|миграции, инициализатор,<br/>DDL-слайсы| SRV
+  SC -->|миграции, инициализатор,<br/>DDL-слайсы| SCH
+  SC -->|только docs/| SKIP[ничего тяжёлого]:::ok
+  subgraph SRV [«сервер»: всегда]
+    direction TB
+    C1[компиляция<br/>+ общий кэш Gradle]:::ok --> C2[тесты без live-DB]:::ok
+    C2 --> C3[live-DB тесты<br/>на ГОТОВОЙ схеме]:::ok
+  end
+  subgraph SCH [«накат схемы»: при смене модели]
+    direction TB
+    S1[пустая база → bootstrap<br/>+ все миграции с нуля<br/>ADR-LORE-023]:::ok --> S2[сверка: версия = коду,<br/>типы и индексы на месте]:::ok
+    S2 --> S3[архив шаблона<br/>lore-schema-vN.zip<br/>268 КБ, 0,4 с]:::ok
+  end
+  TPL[(шаблон схемы vN<br/>строится 1 раз за прогон)]:::db -.-> C3
+  S3 -.-> TPL
+  DB[(LORE-ygg-ci<br/>tmpfs — в памяти)]:::db -.-> C3
+  DB -.-> S1
+  SRV --> RES[зелёный ≈ 5–8 мин]:::ok
+  SCH --> RES
+  classDef ok fill:#1e2a17,stroke:#8fbf6a,color:#efe6d2
+  classDef io fill:#2a2212,stroke:#e0a33a,color:#efe6d2
+  classDef db fill:#1a2230,stroke:#7fa8d8,color:#efe6d2
+</pre></div>
+
+<div class="two">
+<div class="card"><b>А. Схема один раз за прогон (B-01, B-02, B-05).</b> Первый тест-класс проходит путь «с нуля»: пустая база → bootstrap → 62 миграции. Так доказательство fresh-пути из ADR-LORE-023 остаётся на каждой сборке. Остальные классы не удаляют базу, а чистят только данные; инициализатор видит ядро схемы и пропускает DDL. Тесты, которые сами меняют схему, остаются в режиме «чистая база».<br>
+<span class="pill p-est">оценка</span> 83 × 30 с → 1 × 30 с + 83 × ~1–2 с на чистку → фаза тестов ≈ 3–5 мин.</div>
+<div class="card"><b>Б. Тест-база CI в памяти (tmpfs).</b> Данные CI одноразовые: базы прогонов <code>lore_ci_pr_N</code> пересоздаются. Каждая DDL ускоряется ~3×.<br>
+<span class="pill p-fact">факт</span> 34 → ~11 мс на DDL (замер 08.11).<br>
+Цена: после рестарта контейнера базы пустые, и первый прогон строит их сам. Нужно «да» владелицы: раньше было решение о постоянной тест-БД.</div>
+<div class="card"><b>Разделение «сервер» / «накат схемы» (B-05).</b> Изменения модели данных случаются редко, правки сервера — часто. Полный накат гоняется только тогда, когда тронуты миграции, инициализатор или слайсы с DDL. Пропуск пишется в лог с причиной, не молча.</div>
+<div class="card"><b>Шаблон пустой базы версии N (B-06).</b> Скрипт поднимает пустую базу нужной версии модели: <code>lore.migrate.only=true</code> → <code>backup database</code> → <code>lore-schema-vN.zip</code>.<br>
+<span class="pill p-fact">факт</span> v62: 152 типа, 256 индексов, 88 МБ на диске, <b>268 КБ</b> в архиве, снимается за 0,4 с.<br>
+Ограничение: сервер запрещает <code>restore</code> по <code>file://</code>, поэтому развёртывание — распаковкой в каталог баз.</div>
+</div>
+
+<h3>Ожидаемый эффект</h3>
+<table>
+<tr><th>Этап</th><th>Сейчас</th><th>После</th><th>Основание</th></tr>
+<tr><td>Фронтовый PR</td><td>1–2 мин (+ бэкенд, если тронут .github/)</td><td>1–2 мин</td><td>сужение правила <code>.github/**</code></td></tr>
+<tr><td>Бэкенд-PR без изменения схемы</td><td>~45 мин</td><td>~5–8 мин</td><td><span class="pill p-est">оценка</span> А + Б</td></tr>
+<tr><td>Бэкенд-PR с новой миграцией</td><td>~45 мин</td><td>~8–12 мин</td><td><span class="pill p-est">оценка</span> + джоба «накат схемы»</td></tr>
+<tr><td>Одна DDL</td><td>34 мс</td><td>~11 мс</td><td><span class="pill p-fact">факт</span> замер tmpfs</td></tr>
+<tr><td>Инициализаций схемы за прогон</td><td>83</td><td>1 (+ тесты, меняющие схему)</td><td><span class="pill p-fact">факт</span> код ресурса</td></tr>
+</table>
+
+<!-- ═══════════════════ CD ═══════════════════ -->
+<h2>3. Выкатка (CD) — <span class="pill p-now">сейчас</span></h2>
+<div class="diag"><pre class="mermaid">
+---
+config:
+  layout: elk
+  theme: dark
+---
+flowchart TB
+  DEV([develop<br/>не выкатывает]):::io --> PRE([preprod]):::io
+  PRE --> CD[LORE CD на ci-server<br/>сборка образов, миграция,<br/>compose up, пробы]
+  CD --> S131[ci-server :4400<br/>бэкенд ОСТАНОВЛЕН<br/>после переезда]:::bad
+  CD -.->|шаг темы KC падает:<br/>KC уехал| KCT[тема KC]:::bad
+  MAIN([main + тег vX.Y.Z]):::io --> REL[lore-release.yml<br/>Release + Telegram]
+  IMG[образ вручную<br/>docker save / load<br/>через сессию переезда]:::bad --> LH[lore-host — ПРОД<br/>lore.odal :4400, new.lore :4402<br/>бэкенд, LORE-ygg]:::db
+  classDef bad fill:#3a1f18,stroke:#e0705a,color:#efe6d2
+  classDef io fill:#2a2212,stroke:#e0a33a,color:#efe6d2
+  classDef db fill:#1a2230,stroke:#7fa8d8,color:#efe6d2
+</pre></div>
+<ul>
+<li><span class="pill p-fact">факт</span> После окна переезда (22:09–22:16 UTC) прод LORE работает на lore-host. На ci-server бэкенд остановлен, <code>:4400</code> — пересыльщик на прод для MCP.</li>
+<li><span class="pill p-fact">факт</span> CD всё ещё целится в ci-server: выкатка на прод возможна только вручную, образом через сессию переезда. Шаг темы KC красный (SPRINT_UXR_S3_V2_INFRA/S3-15).</li>
+<li><span class="pill p-fact">факт</span> SSH-ключ CD → lore-host работает. Вход подтверждён журналом sshd на lore-host 22:35:58 UTC; доступ только с 192.168.3.131.</li>
+</ul>
+
+<h2>4. Выкатка (CD) — <span class="pill p-after">после</span> (решение «Б»)</h2>
+<div class="diag"><pre class="mermaid">
+---
+config:
+  layout: elk
+  theme: dark
+---
+flowchart TB
+  DEV([develop<br/>не выкатывает]):::io --> PRE([preprod]):::io
+  PRE --> CDP[LORE CD → препрод<br/>сборка образов vX-sha]:::ok
+  CDP --> P131[ci-server — ПРЕПРОД по IP<br/>свои порты, СВОЯ копия базы<br/>свой KC-клиент?]:::ok
+  P131 --> TEST{владелица:<br/>«пачка готова»}
+  TEST -->|да| MAIN([preprod → main<br/>+ тег vX.Y.Z]):::io
+  MAIN --> REL[lore-release.yml]:::ok
+  REL --> SSH[по SSH LORE_HOST_SSH_KEY<br/>тот же образ, что на препроде<br/>docker load + compose up]:::ok
+  SSH --> LH[lore-host — ПРОД<br/>lore.odal, new.lore]:::db
+  SSH --> KCT[тема KC<br/>~/keycloak/themes/lore]:::ok
+  LH --> PROBE[пробы: хэш бандла v1/v2,<br/>/lore/version = тег]:::ok
+  REL --> TG[Release + Telegram]:::ok
+  classDef ok fill:#1e2a17,stroke:#8fbf6a,color:#efe6d2
+  classDef io fill:#2a2212,stroke:#e0a33a,color:#efe6d2
+  classDef db fill:#1a2230,stroke:#7fa8d8,color:#efe6d2
+</pre></div>
+<ul>
+<li><b>Почему «Б».</b> Препрод и прод теперь разные машины. Препрод проверяет связку фич, не трогая боевые данные. На прод попадает только то, что ты отметила тегом. Решение D-2026-UXR-CD-PREPROD-PROD-SPLIT.</li>
+<li><b>Тот же образ.</b> Под тег новой сборки нет: на прод едет ровно то, что прошло препрод. Иначе «проверено на препроде» ничего не гарантирует.</li>
+<li><b>Что нужно до запуска «Б»:</b>
+  <ul>
+    <li>своя база препрода на ci-server: копия прода, обновляется по запросу;</li>
+    <li>порты препрода, потому что <code>:4400</code> на ci-server занят пересыльщиком MCP;</li>
+    <li>решить, нужен ли отдельный KC-клиент препрода.</li>
+  </ul>
+</li>
+<li><b>Проба после выкатки</b> (CI-04): сверка хэша бандла и <code>/lore/version</code>. «Мерж» и «200 от health» выкатку не доказывают: SPA отвечает 200 всегда.</li>
+</ul>
+
+<h2>5. Порядок работ</h2>
+<table>
+<tr><th>#</th><th>Что</th><th>Задача</th><th>Риск</th></tr>
+<tr><td>1</td><td>Замер «до»</td><td>SPRINT_UXR_S11_TEST_OPT/CI-01 — <b>сделано</b></td><td>—</td></tr>
+<tr><td>2</td><td>Схема один раз за прогон (А)</td><td>B-01 / B-02</td><td>тесты, меняющие схему, — выделить</td></tr>
+<tr><td>3</td><td>Тест-база CI в памяти (Б)</td><td>новая, после твоего «да»</td><td>базы пустеют при рестарте контейнера</td></tr>
+<tr><td>4</td><td>«Сервер» / «накат схемы»</td><td>B-05</td><td>правило путей в ci-scope.sh — с тестами</td></tr>
+<tr><td>5</td><td>Сузить «.github → всё»</td><td>CI-06</td><td>малый</td></tr>
+<tr><td>6</td><td>Шаблон пустой базы версии N</td><td>B-06 / B-07</td><td>restore по file:// запрещён — распаковка</td></tr>
+<tr><td>7</td><td>CD по «Б»: препрод на 131, прод по тегу через SSH</td><td>S3-15 / S3-17</td><td>нужна своя база препрода</td></tr>
+<tr><td>—</td><td>Ограничить бэкенд-джобы двумя</td><td>CI-02 — <b>снято</b></td><td>замер показал, что не поможет</td></tr>
+</table>
+
+</div>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs';
+mermaid.registerLayoutLoaders(elkLayouts);
+mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'strict', flowchart: { useMaxWidth: false },
+  themeVariables: { fontFamily: 'Manrope, sans-serif', fontSize: '13px', primaryColor: '#241f15', primaryBorderColor: '#e0a33a', lineColor: '#b9ab8c', primaryTextColor: '#efe6d2', clusterBkg: '#1c1810', clusterBorder: '#3a3222' } });
+await mermaid.run({ querySelector: '.mermaid' });
+document.body.dataset.rendered = '1';
+</script>
+</body></html>

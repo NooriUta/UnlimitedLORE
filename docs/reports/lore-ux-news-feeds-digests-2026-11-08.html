@@ -1,0 +1,143 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ленты и сводники изменений · LORE UX · 08.11.2026</title><link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"><style>:root{--bg0:#f5f3ee;--bg1:#faf8f3;--bg3:#eee9df;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#6f6249;--acc:#8a560a;--wrn:#a06010;--dng:#c03030;--suc:#3d7a38;--inf:#3a7060;--font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:14px/1.55 var(--font)}.wrap{max-width:1000px;margin:0 auto;padding:18px 12px 60px}h1{font:800 21px/1.25 var(--head);margin:0 0 6px;color:var(--acc)}h2{font:800 17px/1.3 var(--head);margin:28px 0 8px}.muted{color:var(--t2);font-size:11px}.mono{font-family:var(--mono);font-size:.9em}.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin:10px 0}.tldr{border-left:3px solid var(--acc)}.good{border-left:3px solid var(--suc)}.warn{border-left:3px solid var(--dng)}.card ul,.card ol{margin:6px 0 0;padding-left:20px}.card li{margin:5px 0;font-size:12.5px}table{width:100%;border-collapse:collapse;font-size:12.5px}th{font:700 10px/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px;border-bottom:1px solid var(--bd);background:var(--bg3)}td{padding:7px 6px;border-bottom:1px solid var(--bd);vertical-align:top}.tw{overflow-x:auto}.s{font:700 10px/1.4 var(--font);padding:2px 7px;border-radius:999px;white-space:nowrap;text-transform:uppercase}.b{background:#f6dcd8;color:var(--dng)}.h{background:#f6e3d0;color:var(--wrn)}.m{background:var(--bg3);color:var(--t2)}.who{font:600 10px/1 var(--mono);color:var(--inf);white-space:nowrap}</style></head><body>
+<div class="wrap">
+<h1>Ленты изменений и сводники метрик: как делают и куда встраивают</h1>
+<div class="muted">08.11.2026 · лёгкий ресёрч (≈40 мин) по запросу владелицы: «как RSS-ленту и сводник метрик изменений делают, куда встраивают» · проверено по документации: GitHub Pulse и Atom, Linear Pulse, GitLab VSA, Basecamp, Grafana · пометка <span class="s m">по знанию продукта</span> = не перепроверено в этом заходе · смежный разбор: lore-ux-news-analytics-objects-2026-11-08.html</div>
+
+<div class="card tldr"><b>Коротко</b><ul>
+<li><b>Лента и сводник — разные вещи.</b> Лента — поток событий «кто что сделал», её читают в моменте. Сводник — свёртка за период с числами и дельтой к прошлому периоду, его читают по расписанию. Сильные продукты держат оба и связывают: из числа сводника можно провалиться в события ленты.</li>
+<li><b>Главный приём против шума — свёртка.</b> События группируют по дню, объекту и автору («Иван закрыл 5 задач в SPRINT_X» вместо пяти строк). Срочное идёт мимо свёртки отдельным уведомлением.</li>
+<li><b>Персонализация держится на трёх механиках:</b> непрочитанное с «прочитано до сюда», подписка на объекты и проекты, сохранённые фильтры как своя лента (Linear Pulse, Inoreader).</li>
+<li><b>Встраивают в 5 мест:</b> домашняя страница, вкладка «Активность» на странице объекта, inbox, письмо или пуш по расписанию, адрес RSS/Atom. Бот в чате и мобильная версия продолжают сводник.</li>
+<li><b>Для LORE (решение владелицы: только лента, без уведомлений):</b> свёртка по дню и периоду с метриками прямо в ленте, «прочитано до сюда», Atom-адрес на любой фильтр (подписка по запросу читателя, не рассылка), та же лента на страницах проекта и вехи и на стартовом экране телефона, метка «агент» с указанием, от чьего имени он действовал.</li>
+</ul></div>
+
+<h2>Как делают ленту</h2>
+
+<div class="card"><b>GitHub: лента активности, уведомления, Atom</b><ul>
+<li><b>Что показывают:</b> на главной — ленту по подпискам (звёзды, follow). Отдельно — inbox уведомлений с причиной («упомянули», «назначили», «просили ревью») и фильтрами по причине и репо <span class="s m">по знанию продукта</span>.</li>
+<li><b>Atom:</b> у публичного репо есть <span class="mono">releases.atom</span>, <span class="mono">tags.atom</span>, <span class="mono">commits.atom</span> и <span class="mono">commits/{branch}/{path}.atom</span>, то есть лента по ветке и даже по одному файлу. Для issues и PR лент нет. Приватные репо без входа не отдаются.</li>
+<li><b>Урок:</b> скоуп ленты записан прямо в адресе (репо → ветка → путь), поэтому подписаться можно на любой срез.</li>
+</ul></div>
+
+<div class="card"><b>Linear: Pulse и Inbox</b> <span class="s b">сводка в inbox и Inbox — не для LORE по решению владелицы</span><ul>
+<li><b>Pulse</b> показывает не сырые события, а «апдейты» проектов и инициатив, которые пишут люди: статус (on track / at risk) и текст. Вкладка «For me» — подборка под пользователя. Сохранённые фильтры (автор, команда, проект, статус) работают как личные ленты.</li>
+<li><b>Сводка в inbox:</b> её пишет ИИ, приходит ежедневно или еженедельно к 7:00 по местному времени, ритм по умолчанию задаёт админ. Есть аудио-версия и мобильный клиент. По стороннему трекеру, запись начинается с итога в одно предложение.</li>
+<li><b>Inbox</b> — личные уведомления с действиями «прочитано», «отложить», «отписаться» <span class="s m">по знанию продукта</span>.</li>
+<li><b>Урок:</b> поток сырых событий и курируемые апдейты разделены. Один апдейт со статусом проекта ценнее сотни смен статусов задач.</li>
+</ul></div>
+
+<div class="card"><b>Jira и Confluence: поток активности, гаджеты, письма</b><ul>
+<li><b>Activity Stream</b> — гаджет для дашборда и вкладка на странице проекта или задачи. Фильтры: проект, пользователь, тип события. У потока есть RSS-адрес <span class="s m">по знанию продукта</span>.</li>
+<li><b>Confluence</b> — лента «недавно изменено» по пространству и письма-дайджесты «популярное за неделю» <span class="s m">по знанию продукта</span>.</li>
+<li><b>Урок:</b> лента как переносимый виджет: один и тот же поток с параметрами ставится на любой дашборд.</li>
+</ul></div>
+
+<div class="card"><b>Basecamp: Activity и автоматические опросы</b><ul>
+<li><b>Activity</b> — общая лента по всем проектам и отчёты: «что сделал человек», «что просрочено», Hilltop View (все Hill-чарты в одном месте). Чарты без обновлений больше 3 месяцев туда не попадают.</li>
+<li><b>Automatic Check-ins</b> — вопросы по расписанию («что сделал сегодня?»). Ответы собираются в одну ветку на странице проекта. Это замена стендапа: людей просят писать о сути, а не о кликах.</li>
+<li><b>Hill Charts</b> делят прогресс на «ещё разбираемся» и «уже делаем». Сдвиг точки на холме — тоже событие.</li>
+<li><b>Урок:</b> отсеивать устаревшее и спрашивать людей о сути.</li>
+</ul></div>
+
+<div class="card"><b>Читалки RSS: Feedly, Inoreader, Readwise Reader</b><ul>
+<li><b>Непрочитанное:</b> счётчик на папку, «отметить прочитанным всё старше» или «до сюда», отметка при прокрутке <span class="s m">по знанию продукта</span>.</li>
+<li><b>Группировка:</b> папки и источники, вид «заголовки» или «карточки», правила и фильтры (ключевые слова, приглушить) <span class="s m">по знанию продукта</span>.</li>
+<li><b>Приоритет:</b> у Feedly ИИ выделяет важное, у Readwise есть разделение «входящие / позже / архив» <span class="s m">по знанию продукта</span>.</li>
+<li><b>Урок:</b> «прочитано до сюда» — самая дешёвая механика, которая снимает тревогу «я что-то пропустил».</li>
+</ul></div>
+
+<div class="card"><b>Ранжирование в стиле Hacker News и журналы изменений продукта</b><ul>
+<li><b>Hacker News:</b> вес записи = очки, делённые на возраст в степени ≈1,8. Свежее и значимое поднимается, старое тонет само <span class="s m">по знанию продукта</span>. Для ленты изменений подходит как режим «Важное» рядом с хронологией.</li>
+<li><b>LaunchNotes, Headway, Beamer:</b> виджет «что нового» с красной точкой в шапке продукта. Категории (новое, улучшение, исправление), реакции, сегменты аудитории, письмо и RSS <span class="s m">по знанию продукта</span>.</li>
+</ul></div>
+
+<div class="card"><b>Основы RSS и Atom</b><ul>
+<li>В Atom (RFC 4287) обязательны <span class="mono">id</span>, <span class="mono">title</span>, <span class="mono">updated</span>. Читалка опрашивает адрес и сравнивает записи по <span class="mono">id</span>, поэтому id события должен быть стабильным.</li>
+<li>Фильтр живёт в адресе: <span class="mono">/feed.atom?project=X&amp;type=closed</span>. Читалки не умеют входить через OAuth, поэтому для закрытых данных в адрес кладут личный токен: только на чтение, с возможностью отзыва <span class="s m">по знанию продукта</span>.</li>
+</ul></div>
+
+<h2>Сводник метрик изменений</h2>
+
+<div class="card"><b>GitHub Insights → Pulse</b><ul>
+<li>Окно: 24 часа, 3 дня, неделя (по умолчанию) или месяц. Показывает открытые и слитые PR, открытые и закрытые issues, график коммитов топ-15 авторов.</li>
+<li>Рядом вкладки Contributors, Commits, Code frequency. Дельты к прошлому периоду нет — только абсолютные числа.</li>
+</ul></div>
+
+<div class="card"><b>GitLab: Value Stream Analytics и дашборд</b><ul>
+<li>Стадии меряются от события до события: время каждой стадии и медианный lead time (от создания до закрытия). В расчёт попадают только завершённые элементы.</li>
+<li>Value Streams Dashboard добавляет метрики DORA (частота деплоев, время до изменения, время восстановления, доля сбоев) и сравнение месяц к месяцу. Тариф Ultimate.</li>
+<li><b>Урок:</b> у метрики в своднике есть название, период и дельта, а число раскрывается в список элементов.</li>
+</ul></div>
+
+<div class="card"><b>Linear: Insights и метрики циклов</b><ul>
+<li>Объём, начато, сделано и burn-up по циклу. Insights режет данные по времени цикла и потоку <span class="s m">по знанию продукта</span>.</li>
+<li>Сводка Pulse — текст, а не числа: что изменилось, словами.</li>
+</ul></div>
+
+<div class="card"><b>Datadog и Grafana: события поверх метрик</b><ul>
+<li>Деплои и инциденты ставят на графики аннотациями. В Grafana — события Graphite по тегам или деплои Vercel с фильтром по проекту и состоянию. В Datadog есть Event Stream / Events Explorer <span class="s m">по знанию продукта</span>.</li>
+<li><b>Урок:</b> событие из ленты прямо на графике объясняет скачок метрики. Для LORE это релизы и решения на графике пропускной способности.</li>
+</ul></div>
+
+<div class="card"><b>Slack и Teams: дайджест в чат</b> <span class="s b">не для LORE по решению владелицы</span><ul>
+<li>Боты присылают сводку в канал по расписанию. Практика вендоров уведомлений: копить несрочное, срочное слать сразу, важное ставить в начало, давать выбрать частоту и тихие часы. Это консенсус практиков, а не исследования.</li>
+<li>Slack сам шлёт письма о пропущенном <span class="s m">по знанию продукта</span>.</li>
+</ul></div>
+
+<div class="card"><b>Что обычно стоит в своднике</b><ul>
+<li><b>Счётчики по типу:</b> создано, закрыто, выпущено, решено — с дельтой к прошлому периоду (▲ +3).</li>
+<li><b>Поток:</b> пропускная способность (закрыто за неделю), время цикла (медиана и 85-й перцентиль), объём в работе.</li>
+<li><b>Внимание:</b> застрявшее (нет движения N дней), смена статуса на «под риском», новые блокеры.</li>
+<li><b>Кто:</b> разбивка «люди / агенты» и топ авторов. Это прозрачность, а не рейтинг людей.</li>
+</ul></div>
+
+<h2>Куда встраивают</h2>
+<div class="muted">Строки «Inbox», «Письмо или пуш», «Бот в чате» — контекст рынка, <span class="s b">не для LORE по решению владелицы</span>.</div>
+<div class="tw"><table>
+<tr><th>Канал</th><th>У кого</th><th>Что показывают</th><th>Плюсы / минусы</th></tr>
+<tr><td>Домашняя страница</td><td>GitHub, дашборд Jira, Basecamp Activity</td><td>Лента по подпискам, гаджеты</td><td>+ видно сразу при входе · − без свёртки тонет в шуме</td></tr>
+<tr><td>Вкладка на объекте или проекте</td><td>Jira, GitLab, Confluence, GitHub Pulse</td><td>История и активность одного скоупа, метрики</td><td>+ точный контекст · − надо знать, куда идти</td></tr>
+<tr><td>Inbox в боковой панели</td><td>Linear, GitHub Notifications</td><td>Личные события с причиной, действия «прочитано / отложить»</td><td>+ разбирается до нуля · − становится второй почтой, если сыпать туда всё</td></tr>
+<tr><td>Письмо или пуш по расписанию</td><td>Linear (7:00), Confluence, Slack</td><td>Свёртка за день или неделю, резюме от ИИ</td><td>+ приходит само · − длинное и однообразное перестают читать</td></tr>
+<tr><td>RSS / Atom</td><td>GitHub (релизы, теги, коммиты), Jira, сервисы журналов изменений</td><td>Поток по срезу из адреса</td><td>+ открытый стандарт, любая читалка · − авторизация, нет свёртки</td></tr>
+<tr><td>Бот в чате</td><td>интеграции Slack и Teams, Linear</td><td>Сводка в канал, мгновенные алерты</td><td>+ там, где команда · − шум в канале, усталость</td></tr>
+<tr><td>Мобильное приложение</td><td>Linear Pulse (iOS, Android, аудио)</td><td>Сводка и лента для чтения на ходу</td><td>+ читается в паузах · − мало места, нужен итог в одну строку</td></tr>
+<tr><td>Виджет «что нового»</td><td>Beamer, Headway, LaunchNotes</td><td>Журнал изменений продукта с точкой непрочитанного</td><td>+ ненавязчиво · − про продукт, а не про работу команды</td></tr>
+<tr><td>Аннотации на графиках</td><td>Grafana, Datadog</td><td>События поверх метрик</td><td>+ объясняют скачки · − есть только там, где есть график</td></tr>
+</table></div>
+
+<h2>Грабли</h2>
+<div class="card warn"><ul>
+<li><b>Шум от механики.</b> Каждое поле и каждая смена статуса становятся отдельной строкой. Лечится свёрткой по объекту, окну и автору и скрытием служебных правок.</li>
+<li><span class="s b">не для LORE по решению владелицы</span> <b>Усталость от уведомлений.</b> Если всё шлётся сразу, человек отписывается от всего. Нужно разделить «срочно» (сразу) и «к сведению» (в свёртку), дать выбор частоты и тихие часы.</li>
+<li><b>Агенты топят людей.</b> По строке на каждое действие агента — и лента принадлежит ему. Нужны отдельный фильтр и свёртка «агент X: 14 действий».</li>
+<li><b>Пустая лента ≠ «ничего не было».</b> Упавшая выборка выглядит как тишина. Показывать «не смогли загрузить».</li>
+<li><b>Метрики без определения.</b> Время цикла все считают по-разному (в GitLab VSA — только по завершённым элементам). В подписи — от какого события до какого.</li>
+<li><b>Нестабильный id в Atom.</b> Читалка показывает одно событие дважды или теряет его.</li>
+<li><b>Длинный дайджест.</b> Его не читают. Итог в одну строку сверху, остальное по ссылке.</li>
+</ul></div>
+
+<h2>Что можно взять в LORE</h2>
+<div class="card good"><ol>
+<li><b>Свёртка в «Новостях».</b> Группировать день → объект (спринт или релиз) → автор и сворачивать в строки вида «+5 закрыто в SPRINT_X», раскрытие по клику. Переключатель «Хронология / Важное»: вес как у Hacker News — значимость типа события, затухающая с возрастом.</li>
+<li><b>«Прочитано до сюда».</b> Отметка последнего просмотра для каждого пользователя и разделитель «новое с прошлого визита» внутри самой ленты — без счётчиков и бейджей в навигации. Фильтр живёт в URL, отметка — нет.</li>
+<li><b>Atom на любой срез.</b> Текущий фильтр «Новостей» (проект, спринт, тип, автор, люди или агенты) одной кнопкой превращается в адрес <span class="mono">…/news.atom?…</span> с личным токеном только на чтение. id записи = стабильный id события.</li>
+<li><b>Сводник за период.</b> Создано / закрыто / выпущено / решено с дельтой к прошлому периоду, пропускная способность, медиана времени цикла с подписью «от какого события до какого», застрявшее. Каждое число раскрывается в отфильтрованную ленту.</li>
+<li><b>Телефон: лента на стартовом экране.</b> Открыл приложение — сверху итог дня или недели одной строкой и карточки-счётчики с дельтой, ниже свёрнутая лента. Ничего не присылается: человек сам открывает и читает. Режим «день / неделя» и фильтр в URL, ссылки в кликабельной форме LORE.</li>
+<li><b>Атрибуция агентов.</b> У события два поля: «кто сделал» (агент или сессия) и «от чьего имени» (человек). Метка «агент», фильтр «люди / агенты / все». Действия агентов по умолчанию свёрнуты.</li>
+<li><b>Та же лента внутри объектов.</b> Вкладка «Активность» с мини-сводником периода на паспорте проекта, вехи, спринта и релиза — тот же компонент с запертым скоупом. Плюс маркеры релизов и решений на графиках метрик.</li>
+<li><b>Честные состояния и меньше шума.</b> «Не смогли загрузить» отдельно от «за период ничего». Служебные правки (переразметка, переоткрытия строк SCD2) по умолчанию скрыты, переключатель «показать всё».</li>
+</ol></div>
+
+<h2>Источники</h2>
+<div class="card"><ul>
+<li><a href="https://linear.app/docs/pulse">Linear Docs — Pulse</a> · <a href="https://linear.app/changelog/2025-04-16-pulse">Changelog: Pulse</a> · <a href="https://linear.app/changelog/2025-11-13-pulse-on-mobile">Pulse on mobile</a> · <a href="https://linear.app/docs/project-updates">Project updates</a></li>
+<li><a href="https://docs.github.com/en/enterprise-server@3.20/repositories/viewing-activity-and-data-for-your-repository/using-pulse-to-view-a-summary-of-repository-activity">GitHub Docs — Using Pulse</a></li>
+<li><a href="https://feeder.co/knowledge-base/rss-feed-creation/github-rss-feeds/">Feeder — GitHub RSS feeds</a> · <a href="https://pagecrawl.io/help/tutorials/article/monitor-github-gitlab-repositories">PageCrawl — Monitor GitHub/GitLab</a></li>
+<li><a href="https://docs.gitlab.com/ee/user/group/value_stream_analytics">GitLab — Value stream analytics</a> · <a href="https://docs.gitlab.com/ee/user/analytics/dora_metrics">DORA metrics</a> · <a href="https://docs.gitlab.com/ee/user/analytics/value_streams_dashboard">Value Streams Dashboard</a></li>
+<li><a href="https://basecamp.com/features">Basecamp — Features</a> · <a href="https://basecamp.com/hill-charts">Hill Charts</a> · <a href="https://updates.37signals.com/post/new-in-basecamp-hilltop-view">Hilltop View</a></li>
+<li><a href="https://grafana.com/docs/grafana/latest/datasources/graphite/annotations/">Grafana — Graphite annotations</a> · <a href="https://grafana.com/docs/plugins/grafana-vercel-datasource/latest/annotations.md">Vercel datasource annotations</a></li>
+<li><a href="https://docs.suprsend.com/docs/best-practices-for-batching-digest">SuprSend — batching &amp; digest</a> · <a href="https://www.courier.com/guides/how-to-build-slack-and-microsoft-teams-notifications/best-practices-and-optimization">Courier — Slack/Teams best practices</a> · <a href="https://lithoblocks-site.pages.dev/blog/slack-alert-fatigue">Slack alert fatigue</a></li>
+<li><a href="https://www.rfc-editor.org/rfc/rfc4287">RFC 4287 — Atom</a>. Jira, Confluence, Notion, Feedly, Inoreader, Readwise, Beamer, Headway, LaunchNotes, Datadog, Hacker News в этом заходе не перепроверялись — в тексте помечены.</li>
+</ul></div>
+</div></body></html>
