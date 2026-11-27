@@ -23,7 +23,8 @@ public record SlicePage(Integer limit, int offset, java.util.List<String> fields
 
     private static final java.util.regex.Pattern FIELD = java.util.regex.Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
 
-    static final int MAX_LIMIT = 1000;
+    /** ADR-LORE-061 (KREG-12): страница среза — 1..3000, тот же потолок, что у {@link SliceQuery#MAX_LIMIT}. */
+    static final int MAX_LIMIT = SliceQuery.MAX_LIMIT;
 
     /** Колонка времени правки, по которой режется период (S4-04, LoreChangedAt). */
     static final String CHANGED_AT = "changed_at";

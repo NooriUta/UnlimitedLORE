@@ -54,8 +54,11 @@ final class KnowRegistry {
     static final String SOURCE_SLICE = "slice-registry";
     static final String SOURCE_TAG = "graph:KnowTag";
 
-    /** Общие параметры любого среза (SE-01): страница и проекция. */
-    static final List<String> COMMON_SLICE_PARAMS = List.of("limit", "offset", "fields");
+    /**
+     * Общие параметры любого среза: страница и проекция (SE-01), where — JSON-список условий над
+     * строками среза (KREG-12, ADR-LORE-061 шаг 2; разбор — {@link SliceQuery#parseWhere}).
+     */
+    static final List<String> COMMON_SLICE_PARAMS = List.of("limit", "offset", "fields", "where");
 
     /**
      * Входы генератора.

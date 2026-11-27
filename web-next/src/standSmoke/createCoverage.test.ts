@@ -28,10 +28,10 @@ describe('createCoverage: у какого типа есть путь созда�
     expect(createCoverage(['spec', 'doc'], ['spec'], ['spec', 'doc']).modelOnly).toEqual(['doc']);
   });
 
-  it('на настоящих CREATE_TYPES: релиз и веха — без пути, спринт — с путём', () => {
+  it('на настоящих CREATE_TYPES: релиз — без пути, спринт и веха (AP-PASSPORT-EDIT, волна 2) — с путём', () => {
     const c = createCoverage(['sprint', 'release', 'milestone'], CREATE_TYPES);
-    expect(c.withPath).toEqual(['sprint']);
-    expect(c.withoutPath).toEqual(['milestone', 'release']);
+    expect(c.withPath).toEqual(['milestone', 'sprint']);
+    expect(c.withoutPath).toEqual(['release']);
   });
 });
 

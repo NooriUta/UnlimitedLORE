@@ -26,6 +26,7 @@ const KIND_KEY: Record<CreateType, AppKey> = {
   sprint: 'create.kind.sprint', adr: 'create.kind.adr', task: 'create.kind.task',
   decision: 'create.kind.decision', spec: 'create.kind.spec', organization: 'create.kind.organization',
   pain: 'create.kind.pain', gain: 'create.kind.gain', job: 'create.kind.job', actor: 'create.kind.actor', feature: 'create.kind.feature',
+  milestone: 'create.kind.milestone',
 };
 
 export function RecordCreate({ type, fetchImpl, onCreated, onCancel, link }: RecordCreateProps) {
