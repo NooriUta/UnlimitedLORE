@@ -1790,10 +1790,16 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             if (ingestService.queryPublic("SELECT task_uid FROM KnowTask WHERE task_uid=:t LIMIT 1",
                     Map.of("t", req.task_uid())).isEmpty())
                 return badParams("task not found: " + req.task_uid());
-            if (ingestService.queryPublic("SELECT slug FROM KnowGitProject WHERE slug=:s LIMIT 1",
-                    Map.of("s", ref.gitProject())).isEmpty())
-                return badParams("git project not registered: " + ref.gitProject()
-                    + " (list: query_slice slice=\"git_projects\")");
+            // «owner/repo» — slug проекта ИЛИ свой slug репозитория из реестра (KnowRepository.full_path):
+            // PR из AIDA/miniLore_serverside — часть проекта AIDA/miniLORE, но ключ PR — его собственный репозиторий.
+            boolean isProject = !ingestService.queryPublic("SELECT slug FROM KnowGitProject WHERE slug=:s LIMIT 1",
+                    Map.of("s", ref.gitProject())).isEmpty();
+            Map<String, Object> rp = PrRepoRef.repoParams(ref.gitProject());
+            PrRepoRef.Resolved owner = PrRepoRef.resolve(ref.gitProject(), isProject, isProject || rp == null ? List.of()
+                : ingestService.queryPublic(PrRepoRef.REPO_SQL, rp), ref.number());
+            if (owner == null)
+                return badParams("git project or repository not registered: " + ref.gitProject()
+                    + " (list: query_slice slice=\"git_projects\" / \"repositories\"; repository_new — entity_upsert type=repository)");
 
             List<Map<String, Object>> existing = ingestService.queryPublic(
                 "SELECT @rid FROM CLOSED_BY WHERE @out.task_uid=:t AND @in.pr_uid=:p",
@@ -1830,7 +1836,10 @@ public class LoreSprintTaskResource extends LoreResourceBase {
             if (!made) { out.put("ok", false); out.put("reason", "ребро CLOSED_BY не появилось в графе"); }
             // MD-05: данные PR (title, url, state, merged_at…) — сразу; неудача связь не откатывает, а видна в ответе.
             if (!forgejo.configured()) out.put("pr_details_missing", "мост Forgejo не сконфигурирован — данные PR не подтянуты");
-            else out.putAll(PrBackfill.fillOne(prStore(), forgejo.prHost(), ref.gitProject(), ref.number()));
+            else if (owner.hostProject() == null)
+                out.put("pr_details_missing", "репозиторий " + ref.gitProject() + " не подключён ни к одному проекту — данные PR дотянуть не через что");
+            else if (owner.prUrl() == null) out.putAll(PrBackfill.fillOne(prStore(), forgejo.prHost(), ref.gitProject(), ref.number()));
+            else out.putAll(PrBackfill.fillOne(prStore(), PrRepoRef.viaProject(forgejo.prHost(), owner), ref.gitProject(), ref.number()));
             return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE TASK PR] %s → %s: %s", req.task_uid(), req.pr(), e.getMessage());
