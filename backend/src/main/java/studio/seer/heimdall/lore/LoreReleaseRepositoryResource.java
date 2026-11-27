@@ -11,7 +11,6 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import java.net.URI;
@@ -52,9 +51,6 @@ public class LoreReleaseRepositoryResource extends LoreResourceBase {
     @Inject
     ForgejoBridge forgejo;
 
-    /** Хост своего Forgejo: репозитории на нём — «свои», остальные (GitHub) — зеркала. */
-    @ConfigProperty(name = "lore.release.forgejo-host", defaultValue = "git.seidrstudio.pro")
-    String forgejoHost;
 
     @GET
     @Path("migrate")
@@ -125,22 +121,31 @@ public class LoreReleaseRepositoryResource extends LoreResourceBase {
     LoreReleaseRepositoryMigration.Plan currentPlan() {
         List<LoreReleaseRepositoryMigration.Release> releases = new ArrayList<>();
         for (Map<String, Object> r : ingestService.queryPublic(RELEASES_SQL, Map.of()))
-            releases.add(new LoreReleaseRepositoryMigration.Release(str(r.get("release_uid")), str(r.get("release_id")),
-                str(r.get("git_tag")), str(r.get("release_date")), strings(r.get("projects"))));
+            releases.add(new LoreReleaseRepositoryMigration.Release(text(r.get("release_uid")), text(r.get("release_id")),
+                text(r.get("git_tag")), text(r.get("release_date")), strings(r.get("projects"))));
 
+        // Свой хостинг — хосты основных (primary) адресов проектов, не зеркал; имён хостов в коде нет
+        // (SELF-PROVISION, noBakedHosts). Репозиторий-зеркало своим не бывает.
+        List<Map<String, Object>> projectRows = ingestService.queryPublic(PROJECTS_SQL, Map.of());
+        Set<String> ownHosts = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (Map<String, Object> r : projectRows)
+            for (String u : primaryBaseUrls(r.get("hosts"))) {
+                try { ownHosts.add(URI.create(u).getHost()); } catch (RuntimeException ignored) { }
+            }
         List<LoreReleaseRepositoryMigration.Repo> repos = new ArrayList<>();
         for (Map<String, Object> r : ingestService.queryPublic(REPOS_SQL, Map.of())) {
-            String url = str(r.get("url"));
+            String url = text(r.get("url"));
             if (url == null) continue;
-            String path = str(r.get("owner")) + "/" + str(r.get("name"));
+            String path = text(r.get("owner")) + "/" + text(r.get("name"));
             List<String> mo = strings(r.get("mirror_of"));
-            repos.add(new LoreReleaseRepositoryMigration.Repo(url, path, forgejoHost.equalsIgnoreCase(str(r.get("host"))),
+            String host = text(r.get("host"));
+            repos.add(new LoreReleaseRepositoryMigration.Repo(url, path, mo.isEmpty() && host != null && ownHosts.contains(host),
                 mo.isEmpty() ? null : mo.get(0)));
         }
 
         Map<String, List<String>> projectRepos = new TreeMap<>();
-        for (Map<String, Object> r : ingestService.queryPublic(PROJECTS_SQL, Map.of())) {
-            String slug = str(r.get("slug"));
+        for (Map<String, Object> r : projectRows) {
+            String slug = text(r.get("slug"));
             if (slug == null) continue;
             Set<String> urls = new TreeSet<>(strings(r.get("repos")));
             urls.addAll(primaryBaseUrls(r.get("hosts")));
@@ -150,7 +155,7 @@ public class LoreReleaseRepositoryResource extends LoreResourceBase {
         Set<String> existing = new HashSet<>();
         try {
             for (Map<String, Object> r : ingestService.queryPublic(EXISTING_SQL, Map.of()))
-                existing.add(str(r.get("u")) + "|" + LoreReleaseRepositoryMigration.norm(str(r.get("r"))));
+                existing.add(text(r.get("u")) + "|" + LoreReleaseRepositoryMigration.norm(text(r.get("r"))));
         } catch (RuntimeException e) {
             LOG.debugf("[LORE RELEASE-REPO] рёбер %s ещё нет: %s", LoreReleaseRepositoryMigration.EDGE, e.getMessage());
         }
@@ -216,12 +221,12 @@ public class LoreReleaseRepositoryResource extends LoreResourceBase {
 
     private static List<String> strings(Object o) {
         List<String> out = new ArrayList<>();
-        if (o instanceof Iterable<?> it) { for (Object x : it) if (str(x) != null) out.add(str(x)); }
-        else if (str(o) != null) out.add(str(o));
+        if (o instanceof Iterable<?> it) { for (Object x : it) if (text(x) != null) out.add(text(x)); }
+        else if (text(o) != null) out.add(text(o));
         return out;
     }
 
-    private static String str(Object o) {
+    private static String text(Object o) {
         if (o == null) return null;
         String s = String.valueOf(o).trim();
         return s.isEmpty() || "null".equals(s) ? null : s;

@@ -118,6 +118,8 @@ export const LORE_EDGE_TYPES: Record<string, LoreEdgeType> = {
   BELONGS_TO_PROJECT: { ru: 'в проекте', en: 'in project', pl: 'w projekcie', color: '--t3', layer: S },
   // D-2026-MIG-REPOSITORY-ORGANIZATION: репозитории и организации (решение владелицы 19.11.2026)
   HAS_REPOSITORY: { ru: 'основной репозиторий', en: 'primary repository', pl: 'główne repozytorium', color: '--inf' },
+  // ADR-LORE-066: релиз принадлежит репозиторию
+  RELEASE_OF: { ru: 'релиз репозитория', en: 'release of repository', pl: 'wydanie repozytorium', color: '--inf' },
   COMPONENT_REPOSITORY: { ru: 'репозиторий компонента', en: 'component repository', pl: 'repozytorium komponentu', color: '--inf' },
   MIRRORED_TO: { ru: 'зеркало', en: 'mirrored to', pl: 'kopia lustrzana', color: '--t2' },
   USES_REPOSITORY: { ru: 'использует', en: 'uses', pl: 'używa', color: '--t2' },
