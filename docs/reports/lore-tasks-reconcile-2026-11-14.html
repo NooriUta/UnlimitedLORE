@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LORE · сверка задач и решения владелицы · 14.11.2026</title>
+<style>
+:root{--bg0:#0f0d0a;--bg1:#17140f;--bg2:#1f1b14;--bd:#3a3226;--t1:#f0e8c8;--t2:#c9bd98;--t3:#8f8466;--acc:#e0a33a;--suc:#7fb36a;--wrn:#e0b13a;--dng:#d9694f;--inf:#6aa5c9;
+--fs-xs:12px;--fs-sm:13px;--fs-md:15px;--fs-lg:18px;--fs-xl:22px;--mono:"IBM Plex Mono",ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--t1);font:400 var(--fs-md)/1.55 Manrope,"Segoe UI",system-ui,sans-serif}
+main{max-width:980px;margin:0 auto;padding:16px}
+h1{font:800 var(--fs-xl)/1.2 Unbounded,Manrope,sans-serif;color:var(--acc);margin:8px 0 4px}
+h2{font:800 var(--fs-lg)/1.25 Unbounded,Manrope,sans-serif;margin:28px 0 10px;padding-top:10px;border-top:1px solid var(--bd)}
+h3{font:700 var(--fs-md)/1.3 Manrope,sans-serif;margin:0 0 6px;color:var(--t1)}
+p{margin:6px 0}
+.sub{color:var(--t3);font-size:var(--fs-sm)}
+code,.mono{font-family:var(--mono);font-size:var(--fs-sm);color:var(--acc)}
+a{color:var(--acc)}
+.lead{background:var(--bg1);border:1px solid var(--bd);border-left:3px solid var(--acc);border-radius:8px;padding:12px 14px}
+.lead ul{margin:6px 0;padding-left:20px}
+.card{background:var(--bg1);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin:12px 0}
+.card .q{color:var(--t2);font-size:var(--fs-sm);margin-bottom:6px}
+.row{display:grid;grid-template-columns:120px 1fr;gap:4px 12px;margin:6px 0}
+.row b{color:var(--t3);font-weight:600;font-size:var(--fs-sm);text-transform:uppercase;letter-spacing:.04em}
+@media (max-width:600px){.row{grid-template-columns:1fr}}
+.opt{margin:4px 0;padding:6px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg2)}
+.rec{margin-top:8px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--suc) 12%,transparent);border:1px solid color-mix(in srgb,var(--suc) 40%,transparent)}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:var(--fs-xs);border:1px solid var(--bd);color:var(--t2);margin-right:4px}
+.p-hi{border-color:var(--dng);color:var(--dng)}.p-md{border-color:var(--wrn);color:var(--wrn)}.p-lo{border-color:var(--inf);color:var(--inf)}
+.tbl{overflow-x:auto;border:1px solid var(--bd);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
+th,td{padding:6px 8px;border-bottom:1px solid var(--bd);text-align:left;vertical-align:top}
+th{background:var(--bg2);color:var(--t3);text-transform:uppercase;font-size:var(--fs-xs);letter-spacing:.05em;position:sticky;top:0}
+td.c{font-family:var(--mono);white-space:nowrap}
+.ok{color:var(--suc)}.warn{color:var(--wrn)}.bad{color:var(--dng)}.mute{color:var(--t3)}
+ol.todo li{margin:6px 0}
+</style>
+</head>
+<body><main>
+<h1>Сверка задач и решения владелицы</h1>
+<p class="sub">14.11.2026 · сессия релиза v1.17.21 · данные: LORE (срез open_tasks, изменения с 11.11, проект NooriUta/UnlimitedLORE) и git develop/теги</p>
+
+<div class="lead">
+<p><b>Коротко.</b></p>
+<ul>
+<li><b>v1.17.21</b>: всё влито в develop, промо <span class="mono">#1360</span> зелёное (полная труба + живая проверка миграций V86–V88 на снимке прода) и влито в preprod — стенд выкатывается. Релизный PR <span class="mono">#1361</span> preprod → main открыт, после зелёного CI — тег v1.17.21.</li>
+<li><b>Сверено 138 открытых задач</b>, менявшихся с 11.11 (116 из них — по коду в git). Исправлено 4 неверных статуса, проставлено 17 недостающих связей задача → PR, к релизу v1.17.21 привязаны все 13 содержательных PR и 9 спринтов.</li>
+<li><b>Нужны ваши решения — 18 пунктов</b> (раздел 2). Самые важные сверху: включение списка клиентов, кириллица в ID, защита main проверкой миграций, «done только человек».</li>
+<li><b>Могу доделать сама — 17 пунктов</b> (раздел 3), с порядком и оценкой.</li>
+</ul>
+</div>
+
+<h2>1. Что я сделала при сверке</h2>
+<div class="card">
+<h3>Статусы, которые врали</h3>
+<div class="tbl"><table>
+<tr><th>Задача</th><th>Было → стало</th><th>Почему</th></tr>
+<tr><td class="c">SPRINT_LORE_PIPELINE_HOST/PL-02</td><td>🔄 → 🟡</td><td>Короткий CI на PR и полная труба влиты (#1319, #1339, в v1.17.20). Работы сейчас нет. Остаются джоба «накат схемы» и сторож промо.</td></tr>
+<tr><td class="c">SPRINT_SEIDRKIT_GRAPH_CANVAS/GC-02</td><td>🔄 → 🟡</td><td>Код влит (#1336, v1.17.20). Остались прототип на живых графах и правка доски — нужен ваш выбор.</td></tr>
+<tr><td class="c">SPRINT_UXR_POLISH_UAT_1113/PU-16</td><td>🔄 → 🟡</td><td>Сырой JSON убран (v1.17.20), «Контент в первой тройке» закрыт порядком модели (#1352). Осталось ваше решение по счётчикам и колонке «Автор».</td></tr>
+<tr><td class="c">SPRINT_UXR_MOBILE_POLISH/MP2-11</td><td>🔄 → 🟡</td><td>Меню мест влито, но по коду НЕ сделаны две доработки 13.11: ⤢ должна сразу разворачивать, а выход из полного экрана жёстко возвращает вниз (<span class="mono">ListScreen.tsx:695</span>).</td></tr>
+</table></div>
+<p class="sub">В течение ночи до сверки: S4-29 → 🚀, S9-04 → 🟡 (режим «все, кроме…» — в 22), MINI-01/03/04/06 → 🚀, AO-02 → 🚀, WK-05 → 🚀, S7A-14 → 🚀, MCPV2-3 → ✅ (ваше слово).</p>
+</div>
+<div class="card">
+<h3>Связи с PR и релизами</h3>
+<p>Задачам, влитым этой ночью, не хватало связи «задача → PR». Проставлено 17: MINI-01, MINI-04, PL-4, S7A-14 → #1353; MINI-03, MINI-06 → #1355; WK-05 → #1349; WK-01 → #1354; S9-04 → #1359; S4-29 → #1352, #1357; PU-06, MC-07, MC-08, S9-05, MD-WINDOW → #1352; MP2-13 → #1296.</p>
+<p>Релиз v1.17.21 в LORE: PR #1343, #1344, #1347, #1348, #1349, #1350, #1351, #1352, #1353, #1354, #1355, #1357, #1359 и 9 спринтов. Качество записи — 4 из 5, не хватает только тега (поставлю после мержа в main). Запись v1.17.20 заведена (тег, дата).</p>
+</div>
+<div class="card">
+<h3>Что сверка нашла и не меняла</h3>
+<ul>
+<li><b>PU-23</b> (второй уровень раскрытия в списке спринтов) стоит 🚀, но по «Готово, когда» сделана наполовину: в #1350 только выравнивание кода и названия. Записала в заметку, проверяющий увидит. См. решение D15.</li>
+<li><b>MP2-08</b> (предупреждения под значок): в паспорте сделано; доработка 13.11 «и в списках тоже под значок» по коду не подтверждена — проверю на стенде после выкатки.</li>
+<li><b>PL-06</b> (CLAUDE.md под новый поток): CLAUDE.md проекта сегодня уже переписан под препрод на 131 и прод на lore-host — похоже, задача фактически сделана другой сессией. См. D18.</li>
+<li><b>S7A-11</b> (ваша приёмка новостей) и <b>S4-17 / S4-18 / S4-24</b> — коммиты в 21; закрыть мешает только выкатка и ваша приёмка.</li>
+</ul>
+</div>
+
+<h2>2. Нужны ваши решения и действия</h2>
+<p class="sub">Порядок — по влиянию. <span class="pill p-hi">важно</span> влияет на безопасность или данные прода; <span class="pill p-md">средне</span> — на работу людей и агентов; <span class="pill p-lo">низко</span> — вид и удобство.</p>
+<div class="card"><span class="pill p-hi">важно</span><h3>D1. Включить список разрешённых клиентов (LORE_AUTH_ALLOWED_CLIENTS)</h3>
+<div class="q">SPRINT_LORE_PRODUCT_BACKLOG/MINI-01-AZP-ALLOWLIST · едет в v1.17.21 выключенным</div>
+<div class="row"><b>Почему</b><div>Сейчас LORE принимает токен человека от любого клиента Keycloak нашего realm — в том числе от mobilepoc-app, как будто это lore-app. Фильтр по azp сделан, но по умолчанию выключен, чтобы выкатка ничего не сломала.</div></div>
+<div class="row"><b>Варианты</b><div>
+<div class="opt">А. Включить сразу после выкатки 21: список <span class="mono">lore-app, lore-mcp-*, minilore-srv, mobilepoc-app</span> (что реально ходит), остальные получат 403 CLIENT_NOT_ALLOWED.</div>
+<div class="opt">Б. Сначала неделю писать в лог «кто бы получил отказ», потом включить.</div>
+<div class="opt">В. Оставить выключенным.</div></div></div>
+<div class="row"><b>На что влияет</b><div>Все входы в LORE: веб, MCP агентов, miniLORE. Ошибка в списке = кто-то перестаёт работать до правки переменной и перезапуска.</div></div>
+<div class="row"><b>Последствия</b><div>А — закрывает дыру сразу, риск забыть клиента (лечится одной строкой). Б — безопаснее, но режима «только лог» в коде нет: это ещё работа. В — дыра остаётся.</div></div>
+<div class="rec">Рекомендую <b>А</b>, но на препроде: включить на стенде с полным списком, прогнать вход веба, MCP и miniLORE, затем — на прод тем же списком. Включает владелица (переменная окружения стенда/прода).</div></div>
+
+<div class="card"><span class="pill p-hi">важно</span><h3>D2. Кириллица в ID записей</h3>
+<div class="q">SPRINT_LORE_MEASURE_TRUTH/MT-MCP-TRUTH, п.2</div>
+<div class="row"><b>Почему</b><div>Проверка id (<span class="mono">SAFE_ID = [A-Za-z0-9_./-]</span>) стоит на 113 путях записи и на открытии паспорта. Запись с кириллическим ключом (код словаря, actor_id, kc_sub) паспортом не открыть, а на несуществующую запись с «не тем» символом ответ 400 вместо 404.</div></div>
+<div class="row"><b>Варианты</b><div>
+<div class="opt">А. Разрешить Unicode-буквы везде (и запись, и чтение).</div>
+<div class="opt">Б. Разрешить только на чтении (паспорт, история) — 404 вместо 400; запись остаётся ASCII.</div>
+<div class="opt">В. Оставить ASCII; отказ называет допустимый алфавит.</div></div></div>
+<div class="row"><b>На что влияет</b><div>Ключи MinIO-вложений, ссылки в MD (<span class="mono">[[тип:ID]]</span>), URL, экспорт в Obsidian-архив (MDA), имена файлов.</div></div>
+<div class="row"><b>Последствия</b><div>А — новые кириллические ID появятся и в путях файлов/ключах; нужна сверка всех 113 мест, риск регрессий. Б — дешёво и безопасно: кириллические записи, уже существующие, откроются, новые не появятся. В — ничего не меняется, кроме текста отказа.</div></div>
+<div class="rec">Рекомендую <b>Б</b>: закрывает реальную боль (не открывается существующее) без смены политики ID. ~0,5 дня с тестом.</div></div>
+
+<div class="card"><span class="pill p-hi">важно</span><h3>D3. Живая проверка миграций — обязательная в защите main</h3>
+<div class="q">SPRINT_LORE_PIPELINE_HOST/PL-MIGRATE-LIVE-CHECK, решение B1</div>
+<div class="row"><b>Почему</b><div>Проверка на свежем снимке прода уже ловила настоящую поломку (V84: «Supertype V not found» упала бы на проде). Сейчас она зелёная на каждом PR, но не обязательна: красный main мержится.</div></div>
+<div class="row"><b>Варианты</b><div><div class="opt">А. Сделать «LORE migrate live check» обязательной проверкой ветки main в Forgejo.</div><div class="opt">Б. Оставить информационной.</div></div></div>
+<div class="row"><b>Последствия</b><div>А — релиз с ломающей миграцией физически не пройдёт; если снимок прода недоступен, проверка пишет «не выполнилась» и релиз ждёт (это честно, но может задержать). Б — защищает только дисциплина.</div></div>
+<div class="rec">Рекомендую <b>А</b>. Это настройка защиты ветки в Forgejo — ваше действие (или ваше «да», и я сделаю через forgejo_branch_protection).</div></div>
+
+<div class="card"><span class="pill p-md">средне</span><h3>D4. «Done ставит только человек» — теперь это правило сервера</h3>
+<div class="q">SPRINT_LORE_WORK_ANY_KIND/WK-05 · едет в v1.17.21</div>
+<div class="row"><b>Почему</b><div>После 21 сервер отказывает агенту в done (409 DONE_BY_HUMAN_ONLY), а done для всех требует перехода из review/uat и доказательства (evidence_type + evidence_ref: PR, прогон, документ).</div></div>
+<div class="row"><b>Последствия</b><div>Просьбы вида «переведи в done» (как сегодня с MCP v2) агент выполнить уже не сможет — только вы, в UI. Старые done задним числом не трогаются.</div></div>
+<div class="row"><b>Варианты</b><div><div class="opt">А. Так и оставить (как решено в ADR-LORE-014-D5).</div><div class="opt">Б. Разрешить агенту done «по слову владелицы» с обязательной ссылкой на её сообщение как доказательство.</div></div></div>
+<div class="rec">Рекомендую <b>А</b>: смысл правила в том, что приёмку делает человек. Если ночные «закрой» будут частыми — вернёмся к Б отдельным решением.</div></div>
+
+<div class="card"><span class="pill p-md">средне</span><h3>D5. Класс работы при создании задачи: отказ или подсказка</h3>
+<div class="q">SPRINT_LORE_MEASURE_TRUTH/MT-CAL-CLASS-REQUIRED</div>
+<div class="row"><b>Почему</b><div>Замер 13.11: без класса (uc/jtd/enb) 48% задач в окне, у открытых — 62%. Без класса не работают калибровка оценок и правила вех.</div></div>
+<div class="row"><b>Варианты</b><div><div class="opt">А. Отказ: task_new без work_class → 400 с подсказкой допустимых значений (как сейчас с ролями).</div><div class="opt">Б. Подсказка: создаёт, но в ответе предупреждение и минус в оценке качества.</div></div></div>
+<div class="row"><b>Последствия</b><div>А — приток задач без класса прекращается сразу; агенты, не знающие класса, будут получать отказ и переспрашивать. Б — мягко, но по опыту ролей подсказки игнорируются.</div></div>
+<div class="rec">Рекомендую <b>А</b> — так уже работает для ролей, и это дало результат.</div></div>
+
+<div class="card"><span class="pill p-md">средне</span><h3>D6. Начало работы над задачей: отказ или подсказка</h3>
+<div class="q">SPRINT_LORE_MEASURE_TRUTH/MT-CAL-START</div>
+<div class="row"><b>Почему</b><div>Большинство задач закрывались прыжком planned → done, время работы не измерить.</div></div>
+<div class="row"><b>Что изменилось</b><div>WK-05 (едет в 21) уже требует review/uat перед done и вводит стадии. Прыжок planned → done сервер больше не пропустит.</div></div>
+<div class="rec">Рекомендую <b>не делать отдельного правила</b>: проверить через неделю после 21, сколько задач прошли через рабочий статус. Если мало — тогда подсказка.</div></div>
+
+<div class="card"><span class="pill p-md">средне</span><h3>D7. Откат правки текста без смены статуса</h3>
+<div class="q">SPRINT_LORE_MEASURE_TRUTH/MT-NOTE-APPEND, п.3</div>
+<div class="row"><b>Почему</b><div>Правка note_md / context_md меняет открытую версию истории на месте: прежний текст остаётся только в ответе.</div></div>
+<div class="row"><b>Варианты</b><div><div class="opt">А. Новая версия SCD2 на каждую правку текста (готовые механизмы, без миграции, ~1 день).</div><div class="opt">Б. Отдельный журнал правок текстов (новая вершина, миграция, свой срез) — дороже без выгоды.</div></div></div>
+<div class="row"><b>Последствия</b><div>А меняет смысл «версии»: версий станет больше, срезы, считающие версии как смены статуса, надо сверить (различие status/content уже есть).</div></div>
+<div class="rec">Рекомендую <b>А</b>.</div></div>
+
+<div class="card"><span class="pill p-md">средне</span><h3>D8. Подписи ролей на сервере miniLORE и переименование ключей</h3>
+<div class="q">SPRINT_UXR_POLISH_UAT_1113/PU-17, шаги 3 и 5</div>
+<div class="row"><b>Почему</b><div>Роли задачи уже только рёбрами, но в модели остались строковые author/executor/reviewer_agent. Шаг 3 — вернуть роли задачам, потерявшим их при переносе (данные прода, сухой прогон готов). Шаг 5 — снять строки и переименовать ключи ответа.</div></div>
+<div class="row"><b>Что нужно от вас</b><div>(1) «да» на запись восстановленных ролей на проде после просмотра таблицы пар; (2) поручить владельцу сервера miniLORE добавить три подписи в Cards.LABELS (author / executor / reviewer) — иначе на телефоне появится «author».</div></div>
+<div class="rec">Рекомендую порядок: подписи на сервере miniLORE → шаг 5 у нас; шаг 3 — после вашего просмотра таблицы.</div></div>
+
+<div class="card"><span class="pill p-md">средне</span><h3>D9. Audience LORE для клиента minilore-srv (PL-24)</h3>
+<div class="q">SPRINT_MINILORE_POLISH/PL-4 и связанная PL-24</div>
+<div class="row"><b>Почему</b><div>Токену minilore-srv нужен audience LORE, иначе серверные запросы miniLORE в LORE не пройдут проверку. Это правка Keycloak — ваша зона.</div></div>
+<div class="row"><b>Связь с D1</b><div>Если включаем список клиентов, minilore-srv должен быть в нём и иметь audience — делать вместе.</div></div>
+<div class="rec">Рекомендую сделать вместе с D1 на препроде: маппер audience у minilore-srv + список клиентов, потом проба из miniLORE.</div></div>
+
+<div class="card"><span class="pill p-lo">низко</span><h3>D10. Прототип экрана «Модель» в админке</h3>
+<div class="q">SPRINT_LORE_MODEL_AS_CONFIG/MC-06 · docs/prototypes/mc-06-model-screen.html</div>
+<div class="row"><b>Что решить</b><div>Годится ли раскладка: вкладки Типы / Меню и видимость / Гигиена / История; правка подписи, группы, видимости, порядка; дифф справа → «Проверить» → «Применить» с обязательным «что и зачем»; откат — новой версией.</div></div>
+<div class="rec">Посмотреть файл; «да» или список правок. Код — только после approve.</div></div>
+
+<div class="card"><span class="pill p-lo">низко</span><h3>D11. Шесть недостающих иконок</h3>
+<div class="q">SPRINT_UXR_S4_UI_SHELL_LISTS/S4-32 · docs/prototypes/s4-32-icons-choice.html</div>
+<div class="row"><b>Что решить</b><div>Места: Настройки, черновик, устарел, вне словаря, командные виды, «без релиза». На каждое — 4 кандидата (Tabler, Phosphor, Material Symbols, Remix). Выбор кликом, кнопка «Скопировать выбор».</div></div>
+<div class="rec">Совет: Tabler или Phosphor (MIT); у Remix новых версий лицензия под вопросом.</div></div>
+
+<div class="card"><span class="pill p-lo">низко</span><h3>D12. Лента «полные паспорта»</h3>
+<div class="q">SPRINT_LORE_BOARD_PASSPORTS/BP-01 · docs/prototypes/bp-01-passport-feed.html</div>
+<div class="row"><b>Что решить</b><div>(1) порядок зон паспорта в ленте (свойства, тело, связи, история) и пределы: 12 паспортов автоматически, 40 в «Контексте»; (2) историю каждой записи раскрывать или держать свёрткой.</div></div>
+<div class="rec">Рекомендую историю свёрткой (грузится при раскрытии) — иначе лента тяжелеет в разы.</div></div>
+
+<div class="card"><span class="pill p-lo">низко</span><h3>D13. Паспорт спринта: счётчики по статусам и колонка «Автор»</h3>
+<div class="q">SPRINT_UXR_POLISH_UAT_1113/PU-16</div>
+<div class="row"><b>Варианты</b><div><div class="opt">А. Вернуть как в v1: полоска счётчиков по статусам/типам и «Автор».</div><div class="opt">Б. Только полоска счётчиков. В. Ничего.</div></div></div>
+<div class="rec">Рекомендую <b>Б</b>: полоска даёт обзор «что с задачами» одним взглядом, «Автор» в таблице спринта мало кому нужен — он есть в паспорте задачи.</div></div>
+
+<div class="card"><span class="pill p-lo">низко</span><h3>D14. Колонки детей в паспортах родителей</h3>
+<div class="q">SPRINT_UXR_S9_SCALE_OPT/S9-05 · PR #1358 соседней сессии (веха: спринты с названием и статусом)</div>
+<div class="row"><b>Варианты</b><div><div class="opt">А. Общие колонки (статус · вид · код · запись) — уже работает у компонента, человека, агента; веха — в #1358.</div><div class="opt">Б. Колонки по типу ребёнка: у задач исполнитель, оценка, класс; у спринтов прогресс и даты. Фасад должен отдавать значения в связях — заметно больше работы.</div></div></div>
+<div class="rec">Рекомендую А сейчас, Б — когда станет больно на конкретном экране.</div></div>
+
+<div class="card"><span class="pill p-lo">низко</span><h3>D15. Второй уровень списка спринтов — те же колонки, что у верхнего</h3>
+<div class="q">SPRINT_UXR_POLISH_UAT_1113/PU-23</div>
+<div class="row"><b>Почему</b><div>Ваш вопрос сегодня. В 21 едет только выравнивание; однородных колонок во втором уровне нет.</div></div>
+<div class="rec">Делаю в v1.17.22 первым делом (в разделе 3, п.1). Нужно только ваше «ок» на 22, а не в 21.</div></div>
+
+<div class="card"><span class="pill p-lo">низко</span><h3>D16. Режим «все, кроме…» в выборе проектов</h3>
+<div class="q">SPRINT_UXR_S9_SCALE_OPT/S9-04</div>
+<div class="row"><b>Почему спрашиваю</b><div>Выбор проектов читают все экраны списком «какие включены». Исключение придётся разворачивать во всех потребителях и в адресе — ~1 день.</div></div>
+<div class="rec">Если «все, кроме одного» вам нужно редко — снимаю пункт; если часто — делаю в 22.</div></div>
+
+<div class="card"><span class="pill p-lo">низко</span><h3>D17. Мелкие «да / нет»</h3>
+<ul>
+<li><b>BRAGI V2-07</b> (редактор публикации v2, не начат) — перенести в бэклог и закрыть SPRINT_BRAGI_ARCHIVE_V2? Рекомендую да.</li>
+<li><b>MP2-15</b> нижний бар телефона — в эмуляции дефекта нет; нужно фото с телефона, иначе чиню вслепую.</li>
+<li><b>S6 (Völva в LORE) и S7C (холст)</b> — считать ли их частью паритета перед переключением S8? Рекомендую нет: в v1 этого не было.</li>
+<li><b>Приёмка</b> S4-17, S4-18, S4-24, S5-DOC-PASSPORT и остальные 🧪 — done ставите вы после проверки mobilepoc-78.</li>
+</ul></div>
+
+<div class="card"><span class="pill p-md">средне</span><h3>D18. Инфраструктура — ваши руки</h3>
+<ul>
+<li><b>OH-15</b>: ArcadeDB — слабый пароль root, порты 2480/2424/5432 открыты всей LAN. Рекомендую: сменить пароль root и закрыть порты фаерволом до lore-host/ci-server. Это безопасность — выше остальных пунктов здесь.</li>
+<li><b>OH-18</b>: зеркало Forgejo → GitHub не пушит — токен GitHub отклонён. Нужен новый токен (ваш аккаунт).</li>
+<li><b>OH-16</b>: Nexus admin — сброс пароля в окно обслуживания.</li>
+<li><b>OH-14</b>: уборка на 131 после переезда — не раньше 15.11, по вашему «да».</li>
+<li><b>PL-06</b>: CLAUDE.md проекта сегодня уже переписан под новый поток (препрод 131, прод lore-host) — подтвердите, что задачу можно считать сделанной; панель «Правила CLAUDE» обновлю.</li>
+</ul></div>
+
+
+<h2>3. Что могу доделать сама</h2>
+<p class="sub">Без ваших решений. Порядок — по пользе; оценка — моя, факт пишу в actual_days при закрытии.</p>
+<div class="card"><ol class="todo">
+<li><b>PU-23</b> — второй уровень раскрытия в списке спринтов: те же колонки, что у строки спринта; у отсутствующих у задачи колонок пустая ячейка, отличимая от пустого значения. <span class="sub">~0,5–1 д · сразу после тега 21</span></li>
+<li><b>MP2-11</b> — ⤢ разворачивает одним нажатием, меню мест отдельной кнопкой; выход из полного экрана возвращает в место входа, а не вниз. <span class="sub">~0,5 д</span></li>
+<li><b>MP2-08</b> — предупреждения модели в списках под общий значок (сейчас баннер над списком). Сначала проверю на стенде. <span class="sub">~0,5 д</span></li>
+<li><b>MT-MCP-TRUTH п.1</b> — строгий режим «только создать»: 409 на занятый id; форма «Новая» и MD-окно на нём. <span class="sub">~1 д</span></li>
+<li><b>SELF-PROVISION-STANDALONE</b> — ядро схемы поднимается само на пустой базе (ваше решение D-2026-LORE-AUTO-BOOTSTRAP-CORE уже есть). Тест до кода, проверка на пустой базе и снимке прода. <span class="sub">~1 д</span></li>
+<li><b>D2-Б, если одобрите</b> — кириллица на чтении паспорта/истории, 404 вместо 400. <span class="sub">~0,5 д</span></li>
+<li><b>PL-03</b> — выкладка архива пустой базы vN артефактом CI. <span class="sub">~0,5 д</span></li>
+<li><b>PL-02</b> — отдельная джоба «накат схемы» и сторож «промо не открывается без зелёной полной трубы на голове develop». <span class="sub">~1 д</span></li>
+<li><b>CI-WEBNEXT-ISOLATION</b> — 40 падений полного прогона web-next: разбирать на ci-server, не на ноуте; ≥10 прогонов со счётом. <span class="sub">~1 д</span></li>
+<li><b>E2E-STAND</b> — быстрый смоук v2 на стенде после каждой выкатки (список спринтов, паспорт, новости, админка). <span class="sub">~1 д</span></li>
+<li><b>VE-3</b> — сузить встраивание Völva до origin LORE (сейчас frame-ancestors * на /embed). Безопасность, мелкая. <span class="sub">~0,25 д</span></li>
+<li><b>PU-27</b> — сгорание и «Цель к сроку» у вех (kit-вид уже есть, нужен источник данных). Проверю, не взяла ли его другая сессия (ветка fix/pu26-27-technotes). <span class="sub">~1 д</span></li>
+<li><b>PU-26</b> — «Недавние» в меню-рейке уезжают за левый край. Та же оговорка про ветку. <span class="sub">~0,25 д</span></li>
+<li><b>CT-KIT-FIXTURES</b> — фикстуры kit/web-next из живых ответов сервера, ручные формы запрещены сторожем. <span class="sub">~1,5 д</span></li>
+<li><b>K4-MENTION-LOOK</b> — упоминание объекта везде с иконкой и цветом его типа. <span class="sub">~1 д</span></li>
+<li><b>GC-02</b> — прототип трёх режимов графа на пяти живых графах (для вашего выбора правки доски). <span class="sub">~0,5 д</span></li>
+<li><b>AO-04</b> — оценка источника отдельно от оценки ответа. <span class="sub">нужна короткая спека, ~1 д</span></li>
+</ol>
+<p class="sub">Проверки на стенде после выкатки 21 (PU-06, PU-21, AO-03, AL-SCOPE-HOLES, PL-MCP-CLIENT-MAPPERS, S7A-10 и все 🚀) — по вашему слову отдаю сессии mobilepoc-78, она переводит в 🧪.</p></div>
+
+
+<h2>4. Все сверенные задачи</h2>
+<p class="sub">116 задач в рабочих статусах (без 🧪 UAT). «Код» — коммиты в develop с кодом задачи; «где» — вошёл ли последний коммит в v1.17.20 или едет в v1.17.21. Код в коммите ещё не значит «сделано» — по спорным я читала заметки.</p>
+<div class="tbl"><table>
+<tr><th>Спринт</th><th>Задача</th><th>Статус</th><th>Код</th><th>Где</th><th>Вывод</th></tr>
+<tr><td class="c">LORE_AGENT_OBSERVABILITY</td><td class="c">AO-02</td><td>🚀 готово к выкатке</td><td>5 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">LORE_AGENT_OBSERVABILITY</td><td class="c">AO-03</td><td>🚀 готово к выкатке</td><td>4 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">LORE_AGENT_OBSERVABILITY</td><td class="c">AO-04</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">LORE_AGENT_OBSERVABILITY</td><td class="c">AO-07</td><td>🚀 готово к выкатке</td><td>4 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">LORE_AGENT_OBSERVABILITY</td><td class="c">AO-AGENT-ADD-INFISICAL</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td>Infisical — ваша зона</td></tr>
+<tr><td class="c">LORE_AGENT_OBSERVABILITY</td><td class="c">AO-MACHINE-OBJ</td><td>🚀 готово к выкатке</td><td>6 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">LORE_AGENT_OBSERVABILITY</td><td class="c">AO-WHOAMI</td><td>🚀 готово к выкатке</td><td>3 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">LORE_BOARD_PASSPORTS</td><td class="c">BP-01-FULL-PASSPORT-FEED</td><td>🔄 в работе</td><td>1 комм.</td><td><span class="ok">в 21</span></td><td>прототип готов, ждёт D12</td></tr>
+<tr><td class="c">LORE_MD_ARCHIVE</td><td class="c">MDA-01</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">LORE_MD_ARCHIVE</td><td class="c">MDA-03</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">LORE_MD_ARCHIVE</td><td class="c">MDA-04</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">LORE_MEASURE_TRUTH</td><td class="c">MT-CAL-CLASS-REQUIRED</td><td>🟡 частично</td><td><span class="mute">нет</span></td><td></td><td>ждёт D5</td></tr>
+<tr><td class="c">LORE_MEASURE_TRUTH</td><td class="c">MT-CAL-START</td><td>🟡 частично</td><td><span class="mute">нет</span></td><td></td><td>ждёт D6</td></tr>
+<tr><td class="c">LORE_MEASURE_TRUTH</td><td class="c">MT-MCP-TRUTH</td><td>🔄 в работе</td><td>13 комм.</td><td><span class="ok">в 21</span></td><td>п.1 — сама, п.2 ждёт D2</td></tr>
+<tr><td class="c">LORE_MEASURE_TRUTH</td><td class="c">MT-NOTE-APPEND</td><td>🟡 частично</td><td>3 комм.</td><td>v1.17.20 и раньше</td><td>п.3 ждёт D7</td></tr>
+<tr><td class="c">LORE_MEASURE_TRUTH</td><td class="c">MT-TASK-SHAPE-2</td><td>🟡 частично</td><td>3 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">LORE_MODEL_AS_CONFIG</td><td class="c">MC-06</td><td>🟡 частично</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td>прототип готов, ждёт D10</td></tr>
+<tr><td class="c">LORE_MODEL_AS_CONFIG</td><td class="c">MC-07</td><td>🚀 готово к выкатке</td><td>5 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">LORE_MODEL_AS_CONFIG</td><td class="c">MC-08</td><td>🚀 готово к выкатке</td><td>5 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">LORE_OWN_HOST</td><td class="c">OH-06</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">LORE_OWN_HOST</td><td class="c">OH-12</td><td>🟡 частично</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">LORE_OWN_HOST</td><td class="c">OH-13</td><td>🔄 в работе</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">LORE_OWN_HOST</td><td class="c">OH-14</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td>не раньше 15.11</td></tr>
+<tr><td class="c">LORE_OWN_HOST</td><td class="c">OH-15</td><td>🟣 бэклог</td><td><span class="mute">нет</span></td><td></td><td>безопасность, ваши руки (D18)</td></tr>
+<tr><td class="c">LORE_OWN_HOST</td><td class="c">OH-16</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td>ваши руки (D18)</td></tr>
+<tr><td class="c">LORE_OWN_HOST</td><td class="c">OH-17</td><td>🟡 частично</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td>наша половина влита; неделя наблюдения + чужие репо</td></tr>
+<tr><td class="c">LORE_OWN_HOST</td><td class="c">OH-18</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td>токен GitHub (D18)</td></tr>
+<tr><td class="c">LORE_PIPELINE_HOST</td><td class="c">PL-02</td><td>🔄 в работе</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td>→ 🟡: основное влито, остаток — джоба схемы и сторож</td></tr>
+<tr><td class="c">LORE_PIPELINE_HOST</td><td class="c">PL-03</td><td>🟡 частично</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td>остаток — артефакт CI</td></tr>
+<tr><td class="c">LORE_PIPELINE_HOST</td><td class="c">PL-06</td><td>📋 запланировано</td><td>1 комм.</td><td>v1.17.20 и раньше</td><td>похоже сделана (D18)</td></tr>
+<tr><td class="c">LORE_PIPELINE_HOST</td><td class="c">PL-MCP-CLIENT-MAPPERS</td><td>🚀 готово к выкатке</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">LORE_PIPELINE_HOST</td><td class="c">PL-MIGRATE-LIVE-CHECK</td><td>🟡 частично</td><td>9 комм.</td><td>v1.17.20 и раньше</td><td>ждёт D3</td></tr>
+<tr><td class="c">LORE_PRODUCT_BACKLOG</td><td class="c">AN-06-READINESS-CANCELLED</td><td>🚀 готово к выкатке</td><td>1 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">LORE_PRODUCT_BACKLOG</td><td class="c">DBR-01</td><td>🟡 частично</td><td>6 комм.</td><td>v1.17.20 и раньше</td><td>код с октября; остаток по заметке</td></tr>
+<tr><td class="c">LORE_PRODUCT_BACKLOG</td><td class="c">DBR-07</td><td>📋 запланировано</td><td>6 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">LORE_PRODUCT_BACKLOG</td><td class="c">FIT-04</td><td>📋 запланировано</td><td>1 комм.</td><td><span class="ok">в 21</span></td><td>код в коммите — только упоминание (пример в PU-23)</td></tr>
+<tr><td class="c">LORE_PRODUCT_BACKLOG</td><td class="c">MINI-01-AZP-ALLOWLIST</td><td>🚀 готово к выкатке</td><td>1 комм.</td><td><span class="ok">в 21</span></td><td>включение — D1</td></tr>
+<tr><td class="c">LORE_PRODUCT_BACKLOG</td><td class="c">MINI-03-ME-VIEWS-CONTRACT</td><td>🚀 готово к выкатке</td><td>1 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">LORE_PRODUCT_BACKLOG</td><td class="c">MINI-04-LIST-ROWS-CATEGORY-PROJECTS</td><td>🚀 готово к выкатке</td><td>1 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">LORE_PRODUCT_BACKLOG</td><td class="c">MINI-06-RECORD-HISTORY-RELATIONS</td><td>🚀 готово к выкатке</td><td>1 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">LORE_PRODUCT_BACKLOG</td><td class="c">MT-11</td><td>🟡 частично</td><td>4 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">LORE_PRODUCT_BACKLOG</td><td class="c">SELF-PROVISION-STANDALONE</td><td>🔄 в работе</td><td>1 комм.</td><td>v1.17.20 и раньше</td><td>решение есть, сделаю сама</td></tr>
+<tr><td class="c">LORE_PRODUCT_FIT</td><td class="c">FIT-09</td><td>🟡 частично</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">LORE_PROJECT_SCOPE</td><td class="c">AL-105</td><td>📋 запланировано</td><td>1 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">LORE_PROJECT_SCOPE</td><td class="c">AL-91</td><td>🟡 частично</td><td>5 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">LORE_PROJECT_SCOPE</td><td class="c">AL-SCOPE-HOLES</td><td>🚀 готово к выкатке</td><td>7 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">LORE_PROJECT_SCOPE</td><td class="c">AL-SWITCH-USER</td><td>🚀 готово к выкатке</td><td>3 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">LORE_ROADMAP_PER_PROJECT</td><td class="c">RM-P3</td><td>🟡 частично</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">LORE_ROADMAP_PER_PROJECT</td><td class="c">RM-P4</td><td>🟡 частично</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">LORE_ROADMAP_PER_PROJECT</td><td class="c">RM-U4</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">LORE_WORK_ANY_KIND</td><td class="c">WK-01</td><td>🟡 частично</td><td>5 комм.</td><td><span class="ok">в 21</span></td><td>админка влита; остаток — перенос разметки</td></tr>
+<tr><td class="c">LORE_WORK_ANY_KIND</td><td class="c">WK-05</td><td>🚀 готово к выкатке</td><td>7 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">QG_REBUILD</td><td class="c">QG-01</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">QG_REBUILD</td><td class="c">QG-04</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">QG_REBUILD</td><td class="c">QG-06</td><td>🟡 частично</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">QG_REBUILD</td><td class="c">QG-07</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">QG_REBUILD</td><td class="c">QG-08</td><td>🔄 в работе</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">QG_REBUILD</td><td class="c">QG-10</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">QG_REBUILD</td><td class="c">QG-11</td><td>🟡 частично</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">QG_REBUILD</td><td class="c">QG-15</td><td>🟡 частично</td><td>3 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">SEIDRKIT_GRAPH_CANVAS</td><td class="c">GC-02</td><td>🔄 в работе</td><td>4 комм.</td><td>v1.17.20 и раньше</td><td>→ 🟡: код влит, остался прототип</td></tr>
+<tr><td class="c">UXR_MOBILE_POLISH</td><td class="c">MP2-08-WARN-AGGREGATE</td><td>🔄 в работе</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">UXR_MOBILE_POLISH</td><td class="c">MP2-11-PASSPORT-PLACEMENT-STABLE</td><td>🔄 в работе</td><td><span class="mute">нет</span></td><td></td><td>→ 🟡: две доработки не сделаны</td></tr>
+<tr><td class="c">UXR_MOBILE_POLISH</td><td class="c">MP2-13-GRAPH-CARD-STYLES</td><td>🚀 готово к выкатке</td><td><span class="mute">нет</span></td><td></td><td>код в v1.17.18 (#1296), связь проставлена</td></tr>
+<tr><td class="c">UXR_MOBILE_POLISH</td><td class="c">MP2-15-BOTTOM-BAR</td><td>🔄 в работе</td><td>1 комм.</td><td><span class="ok">в 21</span></td><td>нужно фото (D17)</td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-06</td><td>🚀 готово к выкатке</td><td>4 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-07</td><td>🚀 готово к выкатке</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-09</td><td>🚀 готово к выкатке</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-11</td><td>🚀 готово к выкатке</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-16</td><td>🔄 в работе</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td>→ 🟡: ждёт D13</td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-17</td><td>🟡 частично</td><td>5 комм.</td><td><span class="ok">в 21</span></td><td>шаги 3 и 5 ждут D8</td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-18</td><td>🚀 готово к выкатке</td><td>10 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-21</td><td>🚀 готово к выкатке</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-22</td><td>🚀 готово к выкатке</td><td>2 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-23</td><td>🚀 готово к выкатке</td><td>3 комм.</td><td><span class="ok">в 21</span></td><td>🚀, но сделано наполовину (D15)</td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-25</td><td>🚀 готово к выкатке</td><td>2 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-26</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td>проверить ветку fix/pu26-27-technotes</td></tr>
+<tr><td class="c">UXR_POLISH_UAT_1113</td><td class="c">PU-27</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td>проверить ветку fix/pu26-27-technotes</td></tr>
+<tr><td class="c">UXR_S10_SEIDR_KIT_2</td><td class="c">K2-LIBRARY-DUP-PASSPORT</td><td>🚀 готово к выкатке</td><td>3 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">UXR_S10_SEIDR_KIT_2</td><td class="c">K2-VIEW-TARGET</td><td>🚀 готово к выкатке</td><td>3 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S10_SEIDR_KIT_2</td><td class="c">MD-READ-PEEK</td><td>🚀 готово к выкатке</td><td>5 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S11_TEST_OPT</td><td class="c">CI-TZ-UTC-DAY</td><td>🚀 готово к выкатке</td><td>1 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">UXR_S11_TEST_OPT</td><td class="c">CI-WEBNEXT-ISOLATION</td><td>🔄 в работе</td><td><span class="mute">нет</span></td><td></td><td>разбирать на ci-server</td></tr>
+<tr><td class="c">UXR_S11_TEST_OPT</td><td class="c">S11-PASSPORT-WARNINGS-STUB</td><td>🚀 готово к выкатке</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S11_TEST_OPT</td><td class="c">S11-SECRET-ROTATION-RACE</td><td>🚀 готово к выкатке</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S12_KIT3_VOLVA_GRAPH</td><td class="c">S5-10</td><td>🚀 готово к выкатке</td><td>4 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S13_KIT4</td><td class="c">K4-CHARTS</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">UXR_S13_KIT4</td><td class="c">K4-MENTION-LOOK</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">UXR_S4_UI_SHELL_LISTS</td><td class="c">S4-17</td><td>🚀 готово к выкатке</td><td>12 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">UXR_S4_UI_SHELL_LISTS</td><td class="c">S4-18</td><td>🚀 готово к выкатке</td><td>3 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">UXR_S4_UI_SHELL_LISTS</td><td class="c">S4-24</td><td>🚀 готово к выкатке</td><td>30 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">UXR_S4_UI_SHELL_LISTS</td><td class="c">S4-29</td><td>🚀 готово к выкатке</td><td>36 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">UXR_S4_UI_SHELL_LISTS</td><td class="c">S4-32</td><td>🔄 в работе</td><td>4 комм.</td><td><span class="ok">в 21</span></td><td>страница выбора готова, ждёт D11</td></tr>
+<tr><td class="c">UXR_S4_UI_SHELL_LISTS</td><td class="c">S4-36</td><td>🚀 готово к выкатке</td><td>16 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S4_UI_SHELL_LISTS</td><td class="c">S4-MOBILE-COMPARE</td><td>🚀 готово к выкатке</td><td>12 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">UXR_S4_UI_SHELL_LISTS</td><td class="c">S4-TECH-NOTES</td><td>🚀 готово к выкатке</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S7A_NEWS</td><td class="c">S7A-10</td><td>🚀 готово к выкатке</td><td>4 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S7A_NEWS</td><td class="c">S7A-11</td><td>🚀 готово к выкатке</td><td><span class="mute">нет</span></td><td></td><td>ваша приёмка — кода нет и не нужно</td></tr>
+<tr><td class="c">UXR_S7A_NEWS</td><td class="c">S7A-14-GROUP-BURN-FORM-VERSION</td><td>🚀 готово к выкатке</td><td>1 комм.</td><td><span class="ok">в 21</span></td><td></td></tr>
+<tr><td class="c">UXR_S7B_ADMIN</td><td class="c">S7B-02</td><td>🚀 готово к выкатке</td><td>6 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S7B_ADMIN</td><td class="c">S7B-06</td><td>🚀 готово к выкатке</td><td>11 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S7B_ADMIN</td><td class="c">S7B-07</td><td>🚀 готово к выкатке</td><td>7 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S7B_ADMIN</td><td class="c">S7B-13</td><td>🚀 готово к выкатке</td><td>11 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S7B_ADMIN</td><td class="c">S7B-14</td><td>🚀 готово к выкатке</td><td>6 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S7B_ADMIN</td><td class="c">S7B-19</td><td>🚀 готово к выкатке</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S7B_ADMIN</td><td class="c">S7B-23_2</td><td>🚀 готово к выкатке</td><td>4 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S8_SWITCH</td><td class="c">S8-06</td><td>🟡 частично</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S9_SCALE_OPT</td><td class="c">S9-04</td><td>🟡 частично</td><td>4 комм.</td><td><span class="ok">в 21</span></td><td>остаток — «все, кроме…» (D16)</td></tr>
+<tr><td class="c">UXR_S9_SCALE_OPT</td><td class="c">S9-05</td><td>🟡 частично</td><td>10 комм.</td><td><span class="ok">в 21</span></td><td>#1358 после тега 21 (D14)</td></tr>
+<tr><td class="c">UXR_S9_SCALE_OPT</td><td class="c">S9-08</td><td>🚀 готово к выкатке</td><td>1 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">UXR_S9_SCALE_OPT</td><td class="c">S9-12</td><td>🚀 готово к выкатке</td><td>12 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">VIZ_EMBED</td><td class="c">EMB-L2</td><td>🚀 готово к выкатке</td><td>1 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">VIZ_EMBED</td><td class="c">VE-2</td><td>🚀 готово к выкатке</td><td>6 комм.</td><td>v1.17.20 и раньше</td><td></td></tr>
+<tr><td class="c">VIZ_EMBED</td><td class="c">VE-3</td><td>📋 запланировано</td><td>2 комм.</td><td>v1.17.20 и раньше</td><td>сделаю сама (безопасность)</td></tr>
+<tr><td class="c">VIZ_EMBED</td><td class="c">VE-6</td><td>📋 запланировано</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+<tr><td class="c">VIZ_EMBED</td><td class="c">VOLVA-EMBED-1</td><td>🟡 частично</td><td><span class="mute">нет</span></td><td></td><td></td></tr>
+</table></div>
+<p class="sub">Источник: <span class="mono">open_tasks?changed_from=2026-11-11</span> (138 строк, 22 из них 🧪 UAT — их проверяет человек, в таблицу не включены), <span class="mono">git log origin/develop --grep=&lt;код&gt;</span>, теги v1.17.20 и снимок промо d16067e4.</p>
+</main></body></html>

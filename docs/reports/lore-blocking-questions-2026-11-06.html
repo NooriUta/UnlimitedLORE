@@ -1,0 +1,44 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Вопросы, которые держат текущую работу · 06.11.2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg0:#f5f3ee;--bg1:#faf8f3;--bg2:#ffffff;--bg3:#eee9df;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#76694f;--acc:#A86A10;--wrn:#a06010;--dng:#c03030;--suc:#3d7a38;--inf:#3a7060;
+--fs-2xs:10px;--fs-xs:11px;--fs-sm:12.5px;--fs-base:14px;--fs-lg:18px;--fs-xl:22px;--font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:var(--fs-base)/1.5 var(--font)}.wrap{max-width:900px;margin:0 auto;padding:18px 12px 60px}
+h1{font:800 var(--fs-xl)/1.25 var(--head);margin:0 0 6px}h2{font:800 var(--fs-lg)/1.3 var(--head);margin:24px 0 8px}
+.muted{color:var(--t2);font-size:var(--fs-xs)}.mono{font-family:var(--mono);font-size:.9em}.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin:10px 0}.tldr{border-left:3px solid var(--acc)}
+.card ul{margin:6px 0 0;padding-left:20px}.card li{margin:4px 0;font-size:var(--fs-sm)}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}th{font:700 var(--fs-2xs)/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px;border-bottom:1px solid var(--bd);background:var(--bg3)}
+td{padding:7px 6px;border-bottom:1px solid var(--bd);vertical-align:top}td.n{text-align:right;font-family:var(--mono)}.tw{overflow-x:auto}
+.tag{font:600 var(--fs-2xs)/1 var(--font);padding:3px 7px;border-radius:999px;background:var(--bg3);color:var(--t2);white-space:nowrap}.tag.no{color:var(--dng)}.tag.q{color:var(--wrn)}
+</style></head><body><div class="wrap">
+<h1>Что держит текущую работу</h1>
+<div class="muted">06.11.2026 · только вопросы, которые блокируют открытые задачи в спринтах, идущих сейчас (ребро GATES вопрос → задача) · прод-база system_aida_lore</div>
+<div class="card tldr"><ul>
+<li><b>Реально держат работу 10 вопросов из 228 открытых.</b> Остальные 218 текущие задачи не блокируют — их можно разбирать на ревизии, а не сейчас.</li>
+<li><b>Два блокирующих (blocker), оба ждут вашего решения:</b> железо хаба MIDGARD под LLM (держит POC голоса) и уровень «каталог» в geoid HOUND (держит 4 задачи аудита диалектов).</li>
+<li><b>По продуктам:</b> HOUND — 4 вопроса, все в двух спринтах диалектов; MIDGARD — 5, в голосе, хабе, Zigbee и онбординге; LORE — 1 (low).</li>
+<li><b>Ещё 4 задачи заблокированы без вопроса</b> — блок есть, а записи, что его снимет, нет (ниже).</li>
+</ul></div>
+<h2>Вопросы, которые держат идущие спринты</h2>
+<div class="tw"><table><tr><th></th><th>вопрос</th><th>продукт</th><th>что держит</th><th>дней</th></tr>
+<tr><td><span class="tag no">blocker</span></td><td><b class='mono'>OQ-HND028-CATALOG</b><br>Catalog как уровень идентичности: где он живёт в geoid и что считать db_name?</td><td>HOUND</td><td class='mono'>SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT<br><span class='muted'>держит задач: 4 — SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT/DSA-56, SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT/DSA-47, SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT/DSA-37, SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT/DSA-01</span></td><td class='n'>111</td></tr>
+<tr><td><span class="tag no">blocker</span></td><td><b class='mono'>Q-MIDGARD-VOICE-06</b><br>Какое железо у хаба в поставке, если он обязан крутить LLM?</td><td>MIDGARD</td><td class='mono'>SPRINT_GJALLARHORN_POC<br><span class='muted'>держит задач: 2 — SPRINT_GJALLARHORN_POC/PC-18, SPRINT_GJALLARHORN_POC/PC-17</span></td><td class='n'>68</td></tr>
+<tr><td><span class="tag q">high</span></td><td><b class='mono'>Q-MIDGARD-HS02-SACRIFICIAL-BOARD</b><br>MIDGARD / HANDSAL — на какой плате первой проверить защищённый онбординг HS-02 (жертвенная плата), прежде чем колонка?</td><td>MIDGARD</td><td class='mono'>SPRINT_MIDGARD_STARTUP<br><span class='muted'>держит задач: 1 — SPRINT_MIDGARD_STARTUP/HS-02</span></td><td class='n'>52</td></tr>
+<tr><td><span class="tag q">high</span></td><td><b class='mono'>Q-TSD-02</b><br>Файловые источники DuckDB: существующий механизм $TVF$.&lt;функция&gt; склеивает все файлы одной функции в один узел — делать ключом путь/глоб?</td><td>HOUND</td><td class='mono'>SPRINT_HOUND_TSQL_SQLITE_DUCKDB<br><span class='muted'>держит задач: 1 — SPRINT_HOUND_TSQL_SQLITE_DUCKDB/TSD-04</span></td><td class='n'>17</td></tr>
+<tr><td><span class='tag'></span></td><td><b class='mono'>Q-GLADSHEIM-CI-DEPLOY</b><br>Выкладывать ли GLADSHEIM на стенд RyzenAI из Forgejo Actions — и чем: раннер на самом стенде или ключ раннера ci-server к стенду?</td><td>MIDGARD</td><td class='mono'>SPRINT_GLADSHEIM_SERVER_CORE<br><span class='muted'>держит задач: 1 — SPRINT_GLADSHEIM_SERVER_CORE/SR-33</span></td><td class='n'>56</td></tr>
+<tr><td><span class='tag'></span></td><td><b class='mono'>Q-MIDGARD-REGISTRY-PER-HUB</b><br>Реестр узлов для двух стендов: заводить в prod-базе запись &#171;узел &#215; хаб&#187; (node_hub) и считать нынешние токены узлов парами предпрода?</td><td>MIDGARD</td><td class='mono'>SPRINT_GLADSHEIM_SERVER_CORE<br><span class='muted'>держит задач: 1 — SPRINT_GLADSHEIM_SERVER_CORE/SR-66</span></td><td class='n'>56</td></tr>
+<tr><td><span class='tag'></span></td><td><b class='mono'>Q-MIDGARD-ZS03-SECOND-C6-BSEED</b><br>ZS-03 (сниффер): нужна вторая плата C6 и сопряжённое изделие BSEED — сейчас физически нет ни того, ни другого</td><td>MIDGARD</td><td class='mono'>SPRINT_MIDGARD_ZIGBEE_STACK<br><span class='muted'>держит задач: 1 — SPRINT_MIDGARD_ZIGBEE_STACK/ZS-03</span></td><td class='n'>52</td></tr>
+<tr><td><span class='tag'></span></td><td><b class='mono'>Q-ARC-MYSQL-QUALIFIED-DB</b><br>MySQL/MariaDB: явная ссылка db1.s — геоид &lt;корень&gt;.DB1.S (как ClickHouse сейчас) или DB1.S? Корень = dbName источника или константа $DEFAULT_DB$</td><td>HOUND</td><td class='mono'>SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT<br><span class='muted'>держит задач: 4 — SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT/DSA-56, SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT/DSA-47, SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT/DSA-37, SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT/DSA-01</span></td><td class='n'>17</td></tr>
+<tr><td><span class='tag'></span></td><td><b class='mono'>Q-DIALECT-KB-CONTRADICTIONS</b><br>База знаний по диалектам: какие из найденных противоречий LORE ↔ код закрыть и в какую сторону (каталог/класс 3, регистр geoid, класс ClickHouse/MySQL, имя манифеста, статусы ADR/спек, пароли в доке)</td><td>HOUND</td><td class='mono'>SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT<br><span class='muted'>держит задач: 1 — SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT/DSA-10</span></td><td class='n'>17</td></tr>
+<tr><td><span class='tag'></span></td><td><b class='mono'>Q-VP-AGENT-PAIRS-TESTER-FULL</b><br>Пары &#171;роль — агент&#187; для tester и full: заводить ли роль тестировщика и есть ли у full пара вообще?</td><td>OMILORE</td><td class='mono'>SPRINT_LORE_PRODUCT_BACKLOG<br><span class='muted'>держит задач: 1 — SPRINT_LORE_PRODUCT_BACKLOG/MT-11</span></td><td class='n'>17</td></tr>
+</table></div>
+<h2>Заблокировано, но вопроса нет</h2>
+<div class="tw"><table><tr><th>задача</th><th>спринт (идёт)</th><th>что нужно</th></tr>
+<tr><td class="mono">SPRINT_AIDA_PREPROD_MIGRATION/AID-28</td><td>AIDA · переезд на препрод</td><td>завести вопрос: что именно блокирует</td></tr>
+<tr><td class="mono">SPRINT_HOUND_EXTERNAL_SOURCES/ES-13</td><td>HOUND · внешние источники (частично)</td><td>завести вопрос; связан ли с Q-ES-03 (держит ES-14 следующего спринта)</td></tr>
+<tr><td class="mono">SPRINT_VOLVA_CI_W2/CI-NEXUS-403</td><td>Völva · CI</td><td>доступ к Nexus (403) — внешний, нужен человек с доступом</td></tr>
+<tr><td class="mono">SPRINT_LORE_PRODUCT_BACKLOG/VD-01</td><td>LORE · бэклог продукта</td><td>внешняя блокировка: TypeScript 6 → 7, снять не раньше TS 7.1 — ждать</td></tr>
+</table></div>
+<p class="muted">Не включено: вопросы, которые держат задачи ещё не начатых спринтов (Q-ES-03 → HOUND_EXTERNAL_SOURCES_2, Q-DW-RUNE-ART-STYLE → DW_RUNE_ART); 17 задач в статусе BLOCKED внутри уже закрытых спринтов (AUTH_REDESIGN_PLAN, OBS_INTEGRATION) — это мусор учёта, работу не держат.</p>
+</div></body></html>

@@ -1,0 +1,279 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Инсайты от референсов · LORE UX · 07.11.2026</title><link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"><style>:root{--bg0:#f5f3ee;--bg1:#faf8f3;--bg2:#ffffff;--bg3:#eee9df;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#76694f;--acc:#A86A10;--wrn:#a06010;--dng:#c03030;--suc:#3d7a38;--inf:#3a7060;--fs-2xs:10px;--fs-xs:11px;--fs-sm:12.5px;--fs-base:14px;--fs-lg:17px;--fs-xl:21px;--font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:var(--fs-base)/1.55 var(--font)}.wrap{max-width:900px;margin:0 auto;padding:18px 12px 60px}h1{font:800 var(--fs-xl)/1.25 var(--head);margin:0 0 6px;color:var(--acc)}h2{font:800 var(--fs-lg)/1.3 var(--head);margin:28px 0 8px}h3{font:700 var(--fs-base)/1.3 var(--font);margin:16px 0 6px;color:var(--acc);text-transform:uppercase;letter-spacing:.05em}.muted{color:var(--t2);font-size:var(--fs-xs)}.mono{font-family:var(--mono);font-size:.9em}.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin:10px 0}.tldr{border-left:3px solid var(--acc)}.card ul{margin:6px 0 0;padding-left:20px}.card li{margin:4px 0;font-size:var(--fs-sm)}table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}th{font:700 var(--fs-2xs)/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px;border-bottom:1px solid var(--bd);background:var(--bg3)}td{padding:7px 6px;border-bottom:1px solid var(--bd);vertical-align:top}.tw{overflow-x:auto}.ins{border-left:3px solid var(--inf)}.unc{color:var(--wrn);font-size:var(--fs-xs)}</style></head><body><div class="wrap">
+
+<h1>Как референсы освобождают место для текста — и что взять LORE</h1>
+<div class="muted">07.11.2026 · Источники: документация и changelog Linear, Plane, OpenProject, Readwise Reader, Backstage, Obsidian, GitHub, Atlassian; W3C WCAG 2.1; Baymard; webtypography.net (Bringhurst). Пометка <span class="unc">UNCONFIRMED</span> — не удалось подтвердить по официальной странице.</div>
+
+<div class="card tldr">
+<ul>
+<li><b>Главный приём у всех один:</b> боковые панели сворачиваются одной клавишей, а контекст (где я, какой это элемент, что рядом) остаётся тонкой строкой — хлебными крошками, счётчиком, полоской ToC. Linear, Confluence и Readwise Reader используют клавиши <span class="mono">[</span> / <span class="mono">]</span>.</li>
+<li><b>Ширина текста ограничена, а не растянута:</b> 50–80 знаков в строке (WCAG 1.4.8 — не больше 80; Baymard — 50–75; Bringhurst — 66 знаков как идеал). Широкими делают только таблицы, диаграммы и код.</li>
+<li><b>Один экран — три плотности:</b> peek (боковая панель) → модальное окно → вся страница (Plane, Notion, OpenProject). Это одна и та же карточка, режим выбирается или запоминается.</li>
+<li><b>Метаданные уходят из постоянной колонки:</b> показываются в peek и в свёрнутой «шапке», панель свойств вызывается по требованию.</li>
+<li><b>Для LORE:</b> режим чтения по клавише + колонка ~72ch + плавающий ToC + J/K и «x / y» в шапке. Так тело задачи или ADR получает 70–80% ширины, а навигация не теряется.</li>
+</ul>
+</div>
+
+<h2>1. Как освобождают место для длинного текста</h2>
+
+<div class="card">
+<h3>Linear</h3>
+<ul>
+<li><b>Peek:</b> <span class="mono">Space</span> открывает и закрывает предпросмотр задачи из списка или доски. Если держать Space, превью видно, пока клавиша зажата. J/K или стрелки переключают элемент, и превью идёт следом. В превью: описание, исполнитель, статус, приоритет, цикл, метки, оценка, даты. Открывается только с клавиатуры. В меню Cmd/Ctrl+K есть quick look по стрелке вправо. Источник: linear.app/docs/peek.</li>
+<li><b>Левая навигация:</b> полностью сворачивается клавишей <span class="mono">[</span>, кликом по границе или командой «Collapse». Так Linear предлагает «сфокусироваться на задаче» (changelog «collapsible sidebar»).</li>
+<li>Шапка задачи с позицией «x / y» и переходом J/K к соседним задачам прямо из открытой задачи. <span class="unc">UNCONFIRMED — по документации не нашёл, известно по продукту.</span></li>
+<li>Клавиша для правой панели свойств (Cmd/Ctrl+I). <span class="unc">UNCONFIRMED — сторонние справочники противоречат друг другу.</span></li>
+<li>Свёрнутая история активности задачи (запись changelog 2025-04-03 «collapsed issue history»). <span class="unc">UNCONFIRMED — нашёл только заголовок записи, сам текст не читал.</span></li>
+</ul>
+</div>
+
+<div class="card">
+<h3>Notion</h3>
+<ul>
+<li>У каждого представления базы есть настройка «Open pages as»: side peek, center peek или full page. Side peek стоит по умолчанию, настройка общая для всех пользователей представления (release notes 20.07.2022).</li>
+<li>Страница бывает двух ширин: по умолчанию узкая колонка, плюс переключатель «Full width» в меню ••• для каждой страницы. <span class="unc">UNCONFIRMED по официальной справке (подтверждено сторонним гайдом).</span></li>
+<li>Блок «/table of contents» строит оглавление по заголовкам. Плавающий ToC справа: в свёрнутом виде видны тонкие штрихи, полный список раскрывается при наведении. <span class="unc">UNCONFIRMED — описание стороннее, и оно противоречиво.</span></li>
+</ul>
+</div>
+
+<div class="card">
+<h3>Confluence</h3>
+<ul>
+<li>Боковая панель (дерево страниц) сворачивается клавишей <span class="mono">[</span> или перетаскиванием края, выбор хранится в cookie браузера (Atlassian KB). В новой навигации (декабрь 2025) клавиша — <span class="mono">Ctrl+[</span>. <span class="unc">Подтверждено только постом сообщества; доходит ли до всех инстансов — UNCONFIRMED.</span></li>
+<li>Страница по умолчанию фиксированной ширины, есть переключатель на полную ширину. У изображений, таблиц и макросов своя ширина: fixed, wide или full. <span class="unc">Данные из сообщества 2018–2020; текущее поведение Cloud — UNCONFIRMED.</span></li>
+<li>Плавающий ToC: штатного нет (есть RFC-87 с целевым сроком 2025, вышел ли — UNCONFIRMED). Пока используют макрос в тексте или маркетплейс-приложения вроде Easy Heading.</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>Obsidian</h3>
+<ul>
+<li>Левая и правая панели сворачиваются стрелкой или командами «Toggle left/right sidebar». На мобильных панели свёрнуты по умолчанию и открываются свайпом. В правую панель можно перетащить заметку, чтобы держать её рядом (obsidian.md/help, Sidebar).</li>
+<li>Настройка «Readable line length» ограничивает ширину текста. На форуме называют фиксированный предел около 700px; ширину меняют CSS-сниппетом, а для отдельной заметки — через <span class="mono">cssclass</span>. Плагины добавляют горячую клавишу и слайдер. <span class="unc">Величина 700px — со слов пользователей форума.</span></li>
+<li>Outline (оглавление) как вкладка в боковой панели, вкладки и стопки панелей. <span class="unc">UNCONFIRMED — на просмотренной странице не описано.</span></li>
+</ul>
+</div>
+
+<div class="card">
+<h3>GitHub / GitLab</h3>
+<ul>
+<li>Для любого отрендеренного Markdown-файла GitHub сам строит оглавление по заголовкам и открывает его кнопкой «Outline» в углу файла. У заголовков есть якорные ссылки. Содержимое README сверх 500 KiB обрезается (docs.github.com, About READMEs).</li>
+<li>Широкий режим и «zen» в диффах PR, аналоги в GitLab. <span class="unc">UNCONFIRMED — не проверял.</span></li>
+</ul>
+</div>
+
+<div class="card">
+<h3>Jira (новый вид задачи)</h3>
+<ul>
+<li>Правая панель полей стала регулируемой по ширине в мае 2022 (ответ сотрудника Atlassian в сообществе).</li>
+<li>Полностью свернуть панель полей и отдать место описанию просят давно (JRACLOUD-76766). Штатной возможности не нашёл, пользователи обходятся консольными хаками. <span class="unc">Текущий статус — UNCONFIRMED.</span></li>
+<li>В июне 2026 в списках появилась «preview panel» шириной около половины экрана. Пользователи жалуются, что пропал переключатель List/Detail. <span class="unc">Это отзывы пользователей, не документация.</span></li>
+</ul>
+</div>
+
+<div class="card">
+<h3>Readwise Reader и режимы чтения</h3>
+<ul>
+<li><span class="mono">[</span> и <span class="mono">]</span> скрывают и показывают левую и правую панели. Можно задать «Hide side panels by default in reading view», то есть видимость панелей по умолчанию при входе в чтение (docs.readwise.io, Navigation FAQ).</li>
+<li>Ширина строки: по умолчанию medium, меняется клавишами <span class="mono">Shift+,</span> / <span class="mono">Shift+.</span>. Межстрочный интервал по умолчанию 1.4, меняется клавишами <span class="mono">Shift+:</span> / <span class="mono">Shift+"</span> (Appearance FAQ).</li>
+<li>Medium, Substack, Safari Reader: узкая колонка около 680–700px и крупный кегль. <span class="unc">UNCONFIRMED — точные значения не проверял.</span></li>
+</ul>
+</div>
+
+<div class="card">
+<h3>Backstage TechDocs</h3>
+<ul>
+<li>Раскладка в три зоны: слева навигация, в центре текст, справа ToC. У аддонов есть места: PrimarySidebar (над навигацией), SecondarySidebar (над ToC), Header, Subheader и Content.</li>
+<li>Аддон <b>ExpandableNavigation</b> сворачивает и разворачивает всю навигацию и запоминает выбор для всех сайтов документации. <b>TextSize</b> меняет кегль слайдером и хранит его в localStorage. <b>ReportIssue</b>: выделил текст — и сразу завёл issue. <b>LightBox</b> открывает картинки поверх страницы (backstage.io, TechDocs Addons).</li>
+</ul>
+</div>
+
+<div class="card">
+<h3>Plane / OpenProject</h3>
+<ul>
+<li><b>Plane:</b> рабочий элемент открывается в peek overview, отображение на выбор: side peek (по умолчанию), modal или full screen. Часть функций видна только в полноэкранном виде, и пользователи этого не замечали (docs.plane.so, GitHub discussion #3386).</li>
+<li><b>OpenProject:</b> кнопка «i» включает split screen рядом с таблицей, двойной клик или иконка в шапке открывает full screen. Вкладка Activity с комментариями и изменениями есть в обоих режимах, её можно фильтровать и менять порядок (docs.openproject.org).</li>
+</ul>
+</div>
+
+<h3>Сводка приёмов</h3>
+<div class="tw"><table>
+<tr><th>Приём</th><th>У кого</th><th>Что сохраняет как контекст</th><th>Что даёт LORE</th></tr>
+<tr><td>Свернуть навигацию одной клавишей</td><td>Linear <span class="mono">[</span>, Confluence <span class="mono">[</span>/<span class="mono">Ctrl+[</span>, Readwise <span class="mono">[ ]</span>, Obsidian, TechDocs</td><td>Иконку или границу для возврата, запомненный выбор</td><td>+240–300px текста одним нажатием</td></tr>
+<tr><td>Peek → modal → full page</td><td>Notion, Plane, OpenProject, Linear</td><td>Список под рукой (peek) или URL элемента (full)</td><td>Одна карточка с тремя плотностями вместо «всегда три панели»</td></tr>
+<tr><td>Ограниченная колонка текста</td><td>Notion (default width), Obsidian, Readwise, Confluence fixed</td><td>Свободные поля под ToC и заметки</td><td>Тело ADR читается, а не растягивается в строку на 200 знаков</td></tr>
+<tr><td>Широкие только отдельные блоки</td><td>Confluence (wide/full у таблиц и макросов)</td><td>Ритм текста</td><td>Mermaid и таблицы выходят за колонку, абзацы остаются узкими</td></tr>
+<tr><td>Оглавление по заголовкам</td><td>GitHub Outline, Notion ToC, TechDocs, Obsidian Outline</td><td>Структуру документа и текущую позицию</td><td>Навигация внутри длинного тела без прокрутки наугад</td></tr>
+<tr><td>Соседи по списку из открытого элемента</td><td>Linear J/K, «x / y» <span class="unc">(UNC)</span></td><td>Позицию в списке</td><td>Список можно закрыть: J/K и «x / y» сохраняют его в шапке</td></tr>
+<tr><td>Ширина и кегль на стороне читателя</td><td>Readwise, TechDocs TextSize</td><td>Личную настройку</td><td>Каждый подбирает чтение под свой экран</td></tr>
+<tr><td>Регулируемая или скрываемая панель полей</td><td>Jira (resize), Linear peek</td><td>Ключевые поля в шапке</td><td>Свойства по клавише, а не постоянной колонкой</td></tr>
+</table></div>
+
+<h2>2. Типографика длинного чтения</h2>
+<div class="card">
+<ul>
+<li><b>Длина строки.</b> WCAG 2.1, SC 1.4.8 (AAA): «ширина не более 80 знаков (40 для CJK)». Baymard: оптимально 50–75 знаков, 80 как верхний предел. Bringhurst: «строка в 66 знаков, считая пробелы, считается идеальной», для нескольких колонок 40–50. Для веба советуют задавать ширину в em или ch, чтобы мера масштабировалась вместе с кеглем (webtypography.net 2.1.2: 33em ≈ 66 знаков). Оговорка: Viget приводит исследование, где экранное чтение было быстрее на 95 знаках. Скорость при этом не равна удобству, поэтому опора — WCAG.</li>
+<li><b>Межстрочный интервал.</b> WCAG 1.4.8: не меньше 1.5 внутри абзаца, абзацный отступ не меньше 1.5 межстрочного. Readwise по умолчанию ставит 1.4. Для тела в LORE: 1.55–1.6.</li>
+<li><b>Оглавление.</b> Строится автоматически по заголовкам (GitHub, Notion, TechDocs). В свёрнутом виде видны тонкие штрихи, по hover раскрывается полный список (Notion) <span class="unc">(UNC)</span>.</li>
+<li><b>Липкая шапка.</b> Когда панели скрыты, контекст держит одна строка: хлебные крошки, код и заголовок элемента, статус, «x / y». Отдельной цитаты по sticky breadcrumbs не нашёл, это вывод из паттернов выше. <span class="unc">UNCONFIRMED как исследование.</span></li>
+<li><b>Постепенное раскрытие метаданных.</b> Peek в Linear показывает ровно ключевые поля. Остальное в панели по запросу или свёрнутой секции.</li>
+</ul>
+</div>
+
+<h2>3. Инсайты от референсов</h2>
+<p class="muted">Здесь аналитика, не пересказ фич. Фактическая опора — в разделе 1, остальное — интерпретация.</p>
+
+<div class="card ins"><h3>Linear</h3><ul>
+<li>Список никогда не теряется: из открытой задачи доступны J/K и позиция «x / y», поэтому чтение не стоит навигации. <span class="unc">(x / y — UNC)</span></li>
+<li>Peek создан для решения «открывать или нет», а не для чтения. Он по клавише и временный (зажатый Space), и поэтому не съедает место постоянно.</li>
+<li>Фокус стоит одну клавишу: <span class="mono">[</span> убирает навигацию, а не прячет её где-то в настройках.</li>
+<li>Для LORE: превью в боковой панели — для сортировки списка; читать — на всю ширину, с J/K по тому же списку.</li>
+</ul></div>
+
+<div class="card ins"><h3>Notion</h3><ul>
+<li>Способ открытия — свойство представления, а не пользователя: команда договаривается, где «читать», а где «сортировать».</li>
+<li>Узкая колонка по умолчанию, широкая — осознанным выбором. Читаемость встроена изначально, её не нужно настраивать.</li>
+<li>Для LORE: у слайса или вкладки — режим открытия (peek/full) по умолчанию; у документа — флаг «широкий», остальные узкие.</li>
+</ul></div>
+
+<div class="card ins"><h3>Jira / Confluence</h3><ul>
+<li>Антипример Jira: панель полей годами нельзя скрыть (JRACLOUD-76766). Постоянная колонка метаданных — главный враг описания задачи.</li>
+<li>У Confluence ширина — свойство блока: текст фиксированный, таблица и диаграмма широкие. Один документ — две меры.</li>
+<li>Для LORE: не повторять «вечную правую панель»; mermaid и таблицы выводить шире колонки текста.</li>
+</ul></div>
+
+<div class="card ins"><h3>Obsidian</h3><ul>
+<li>Всё вокруг текста — вкладки панелей (outline, бэклинки, файлы), их можно переставить или убрать. Центр всегда принадлежит заметке.</li>
+<li>Ограничение ширины включено как настройка, а не зашито. Пользователи сразу просят крутилку, значит одной цифры мало.</li>
+<li>Для LORE: читаемая ширина по умолчанию и ручка «уже/шире», запоминаемая для пользователя.</li>
+</ul></div>
+
+<div class="card ins"><h3>Redmine</h3><ul>
+<li>Задача — это страница: описание сверху, журнал изменений под ним. Без панелей, зато с полной шириной и прямым URL. Скучно, но текст читается.</li>
+<li>Для LORE: полностраничный вид задачи или ADR как первичный режим для чтения, а не «развёрнутая панель».</li>
+</ul></div>
+
+<div class="card ins"><h3>Plane / OpenProject</h3><ul>
+<li>Три режима одной карточки снимают спор «панель или страница», но функции не должны прятаться в одном из них: пользователи Plane не находили возможности full screen.</li>
+<li>Активность доступна в обоих режимах (OpenProject): история не привязана к размеру окна.</li>
+<li>Для LORE: в peek и full одинаковый набор действий; в peek они свёрнуты, но не отсутствуют.</li>
+</ul></div>
+
+<div class="card ins"><h3>Backstage TechDocs</h3><ul>
+<li>Документация — главный контент, а каталог только рамка: навигация сворачивается целиком, выбор запоминается для всех сайтов.</li>
+<li>У чтения есть «слоты» для инструментов (кегль, «сообщить о проблеме» по выделенному тексту) — улучшение не ломает разметку.</li>
+<li>Для LORE: «выдели текст → задача или вопрос» прямо из тела ADR или спеки.</li>
+</ul></div>
+
+<div class="card ins"><h3>Logseq / Tana</h3><ul>
+<li>Блок адресуем: на абзац можно сослаться, его можно раскрыть или свернуть. Длинный текст читается сворачиванием, а не прокруткой.</li>
+<li>Боковая панель там — стопка открытых ссылок, а не свойства: контекст — то, что я сейчас читаю рядом. <span class="unc">(по опыту продукта, UNC)</span></li>
+<li>Для LORE: сворачиваемые секции по заголовкам в MartProse; ссылку на связанный ADR открывать рядом, а не вместо.</li>
+</ul></div>
+
+<div class="card ins"><h3>SonarQube</h3><ul>
+<li>Один вердикт сверху (прошёл или не прошёл гейт), подробности ниже. Человек сначала узнаёт ответ, потом причину.</li>
+<li>Для LORE: в шапке задачи, ADR или релиза одна строка состояния (статус, блокеры, гейт); тело — ниже, без колонки цифр сбоку.</li>
+</ul></div>
+
+<div class="card ins"><h3>Port / Cortex</h3><ul>
+<li>Карточка сущности собирается из виджетов по типу: у сервиса и у команды разные «паспорта», а не одна форма.</li>
+<li>Scorecard как короткий вывод «что не так» вместо таблицы полей.</li>
+<li>Для LORE: паспорт по типу (задача, ADR, спека) с минимальным набором полей в шапке; остальное по запросу.</li>
+</ul></div>
+
+<div class="card ins"><h3>Productboard</h3><ul>
+<li>Фича связана с «голосом пользователя»: рядом с описанием видно, почему её делают.</li>
+<li>Для LORE: в шапке задачи — компактная связь с болью или решением (одна строка), а не отдельная вкладка.</li>
+</ul></div>
+
+<div class="card ins"><h3>Grafana / Atlan</h3><ul>
+<li>Grafana: у панели есть режим просмотра на весь экран и обратно. Плотная сетка не мешает изучить одно.</li>
+<li>Atlan: у ассета есть README и lineage, а поля свёрнуты в профиль. Описание — первоклассный объект.</li>
+<li>Для LORE: «развернуть блок» (mermaid, таблицу) на весь экран одной кнопкой.</li>
+</ul></div>
+
+<div class="card ins"><h3>Linear Releases</h3><ul>
+<li>Релиз — лента сгруппированных изменений с короткими пояснениями, а не таблица задач.</li>
+<li>Для LORE: релиз читается как документ (разделы и буллеты), а связанные задачи видны свёрнутым списком.</li>
+</ul></div>
+
+<div class="card ins"><h3>Langfuse</h3><ul>
+<li>Трейс — дерево слева и детали узла справа; длинные вход и выход сворачиваются и раскрываются, JSON и текст переключаются.</li>
+<li>Для LORE: в длинных телах сворачивать громоздкие блоки (код, логи) по умолчанию, раскрывать по клику.</li>
+</ul></div>
+
+<div class="card ins"><h3>Sourcegraph</h3><ul>
+<li>Чтение кода с панелью ссылок и определений по требованию: контекст подтягивается к тексту, а не висит постоянно.</li>
+<li>Для LORE: hover или peek по ссылке на сущность (SPRINT/код, ADR) прямо в теле, без перехода.</li>
+</ul></div>
+
+<h2>4. Что из этого предлагаю для LORE</h2>
+<div class="card tldr">
+<ol>
+<li><b>Режим чтения по клавише</b> (<span class="mono">[</span> — навигация, <span class="mono">]</span> — панель свойств; можно оба сразу). Выбор хранится в URL и localStorage. Опора: Linear, Confluence, Readwise.</li>
+<li><b>Липкая шапка-контекст</b> в одну строку: крошки, код, заголовок, статус-chip, «x / y» и J/K по текущему списку. Список можно закрыть, а позиция в нём остаётся. Опора: Linear.</li>
+<li><b>Колонка текста ~72ch</b> (<span class="mono">max-width: 72ch</span>, line-height 1.55–1.6). Mermaid, таблицы и код выходят шире (breakout). Опора: WCAG 1.4.8, Bringhurst, Confluence.</li>
+<li><b>Плавающий ToC</b> по заголовкам MartProse справа: в покое тонкие штрихи, по hover — список, подсветка текущей секции. Опора: Notion, GitHub Outline, TechDocs.</li>
+<li><b>Одна карточка — три плотности:</b> peek (сортировка списка) → full page (чтение). Один набор действий в обоих режимах, режим по умолчанию задаётся на вкладке. Опора: Plane, Notion, OpenProject.</li>
+<li><b>Метаданные — chip-строкой в шапке</b> вместо постоянной правой колонки; полная панель — по <span class="mono">]</span>. Опора: антипример Jira, peek Linear.</li>
+<li><b>Ручка «уже/шире» и кегль</b> на стороне читателя, запоминается. Опора: Readwise, TechDocs TextSize, Obsidian.</li>
+<li><b>Развернуть блок на весь экран</b> (mermaid, таблица) и свернуть громоздкие блоки по умолчанию. Опора: Grafana, Langfuse, TechDocs LightBox.</li>
+</ol>
+</div>
+
+<h2>5. Прогон прототипа v2 по этим практикам и нашим предложениям</h2>
+<div class="muted">Прототип <span class="mono">docs/prototypes/ux-redesign-shell-v2.html</span> на реальных данных прода. Проверен в браузере: десктоп 1440 и телефон 400, без ошибок. ✓ — есть, ◐ — частично, ✗ — нет.</div>
+<div class="tw"><table>
+<tr><th>Практика / предложение</th><th>v2</th><th>Как сделано или что осталось</th></tr>
+<tr><td>Навигация сворачивается одной клавишей, контекст — тонкой строкой</td><td>✓</td><td>При открытии записи левое меню само сворачивается в полосу иконок; <span class="mono">Ctrl+[</span> — целиком. Строка контекста: «← Спринты · разрез · фильтры / ID», «‹ 2 из 30 ›».</td></tr>
+<tr><td>Список не теряется при чтении (Linear «x / y», J/K)</td><td>✓</td><td>J/K листают соседние записи с теми же фильтрами и разрезом; Esc возвращает к списку на ту же позицию.</td></tr>
+<tr><td>Колонка текста ~72 знака, межстрочный 1.55–1.7</td><td>✓</td><td>72ch и 1.7; таблицы, mermaid и код шире колонки (замер: текст 659 px, таблица 1061 px).</td></tr>
+<tr><td>Развернуть громоздкий блок на весь экран</td><td>✓</td><td>Кнопка ⤢ у таблиц и диаграмм.</td></tr>
+<tr><td>Оглавление по заголовкам</td><td>◐</td><td>Есть в правой колонке. Если колонку спрятать (<span class="mono">]</span> или Z), оглавление пропадает. Нужен плавающий тонкий вариант, как у Notion.</td></tr>
+<tr><td>Регулятор кегля, запоминание выбора</td><td>✓</td><td>Aa: обычный / крупный / мелкий; выбор и скрытие свойств хранятся в браузере.</td></tr>
+<tr><td>Ширина колонки регулируется читателем</td><td>✗</td><td>Пока фиксирована.</td></tr>
+<tr><td>Метаданные строкой чипов, панель свойств скрываема (антипример — Jira)</td><td>✓</td><td>Чипы под заголовком + правая колонка, которая прячется клавишей <span class="mono">]</span>.</td></tr>
+<tr><td>Три плотности одной карточки: строка → peek → страница, одинаковые действия</td><td>✓</td><td>Space — peek с текстом, «Читать целиком» — страница. Смена статуса работает везде.</td></tr>
+<tr><td>Статус в 2 касания без лишних иконок (просьба владелицы)</td><td>✓</td><td>Чип статуса — кнопка → палитра реальных статусов; <span class="mono">S</span> → цифра; массово через X.</td></tr>
+<tr><td>Приложения наверху, разрезы связей вместо статусных подменю (решения 07.11)</td><td>✓</td><td>Forseti / BRAGI / MUNINN / TYR вверху; разрезы «проект / компонент / проект → компонент» на реальных 19 и 70 группах.</td></tr>
+<tr><td>Честные состояния (P-23)</td><td>✓</td><td>«Текст не выгружен» ≠ «текста нет»; «не загружено» у связей и истории; пример ошибки 403 в блоке PR.</td></tr>
+<tr><td>Фильтры в URL, один механизм (P-13), сохранённые виды (P-14)</td><td>✓</td><td>Строка чипов + окно фильтра со счётчиками на реальных данных; ссылка = вид.</td></tr>
+<tr><td>Скоуп проекта одинаково во всех разделах</td><td>✓</td><td>Выбор проекта в шапке действует на все списки (23 проекта).</td></tr>
+<tr><td>Связи «кто ссылается» (P-08), история (SCD2)</td><td>◐</td><td>В выгрузке нет: показано честное «не загружено». Вид — в прототипе v1.</td></tr>
+<tr><td>Мобильный: меню, чтение</td><td>✓</td><td>Меню — с затемнением и ✕; в режиме чтения текст на всю ширину. Нужна проверка на вашем телефоне.</td></tr>
+</table></div>
+<div class="card"><b>Находки в данных по ходу:</b><ul>
+<li>У 406 из 421 спеки статус пустой — для спек статус в UI фактически не работает. Либо задать статусы, либо не показывать колонку.</li>
+<li>В ADR есть статус <span class="mono">deprecated</span> (1 ADR), которого нет в справочнике статусов <span class="mono">shared/lore-statuses.json</span>.</li>
+<li>У 48 спринтов нет компонента, у 15 ADR и 8 спек — тоже: в разрезе по компонентам они уходят в группу «— без компонента».</li>
+</ul></div>
+
+<h2>Источники</h2>
+<div class="card"><ul>
+<li>Linear Peek — https://linear.app/docs/peek</li>
+<li>Linear changelog, collapsible sidebar — https://linear.app/changelog/unpublished-collapsible-sidebar</li>
+<li>Linear Display options — https://linear.app/docs/display-options</li>
+<li>Notion release notes 20.07.2022 (Open pages as) — https://www.notion.com/en-gb/releases/2022-07-20</li>
+<li>Notion full width (сторонний) — https://super3.super.site/blog/notion-full-width</li>
+<li>Notion floating ToC (сторонний) — https://www.simple.ink/guides/the-new-floating-notion-table-of-content-or-page-navigation</li>
+<li>Confluence: убрать боковую панель — https://support.atlassian.com/confluence/kb/how-do-i-remove-the-sidebar-in-confluence/</li>
+<li>Confluence full-height sidebar (Ctrl+[) — https://community.atlassian.com/forums/Navigation-Refresh-articles/A-full-height-sidebar-for-better-navigation/bc-p/3156390</li>
+<li>Confluence full width mode — https://community.atlassian.com/t5/Confluence-articles/Full-width-mode-is-now-available-for-the-new-editor-in/ba-p/1138727</li>
+<li>Confluence RFC-87 Floating ToC — https://community.developer.atlassian.com/t/rfc-87-floating-table-of-contents-in-confluence-cloud/89981</li>
+<li>Jira JRACLOUD-76766 — https://jira.atlassian.com/browse/JRACLOUD-76766</li>
+<li>Jira resize right panel — https://community.atlassian.com/forums/Jira-questions/How-can-he-right-pane-on-the-issues-page-be-resized/qaq-p/1523198</li>
+<li>Obsidian Sidebar — https://obsidian.md/help/User+interface/Sidebar</li>
+<li>Obsidian Readable line length (форум) — https://forum.obsidian.md/t/adjustable-readable-line-length/7564</li>
+<li>GitHub About READMEs (Outline) — https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes</li>
+<li>Readwise Reader Navigation FAQ — https://docs.readwise.io/reader/docs/faqs/navigation</li>
+<li>Readwise Reader Appearance FAQ — https://docs.readwise.io/reader/docs/faqs/appearance</li>
+<li>Backstage TechDocs Addons — https://backstage.io/docs/features/techdocs/addons</li>
+<li>Plane work items — https://docs.plane.so/core-concepts/issues/overview ; https://github.com/makeplane/plane/discussions/3386</li>
+<li>OpenProject work package views / activity — https://www.openproject.org/docs/user-guide/work-packages/work-package-views/ ; https://docs.openproject.org/user-guide/activity</li>
+<li>WCAG 2.1 SC 1.4.8 — https://www.w3.org/WAI/WCAG21/Understanding/visual-presentation.html</li>
+<li>Baymard, line length — https://baymard.com/blog/line-length-readability</li>
+<li>Bringhurst via webtypography.net 2.1.2 — https://webtypography.net/2.1.2</li>
+<li>Viget, The Line Length Misconception — https://www.viget.com/articles/the-line-length-misconception</li>
+</ul></div>
+
+</div></body></html>

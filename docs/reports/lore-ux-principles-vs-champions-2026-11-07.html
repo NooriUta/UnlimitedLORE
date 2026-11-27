@@ -1,0 +1,94 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Наши принципы и прототип против референсов · LORE UX · 07.11.2026</title><link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"><style>:root{--bg0:#f5f3ee;--bg1:#faf8f3;--bg2:#ffffff;--bg3:#eee9df;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#76694f;--acc:#A86A10;--wrn:#a06010;--dng:#c03030;--suc:#3d7a38;--inf:#3a7060;--fs-2xs:10px;--fs-xs:11px;--fs-sm:12.5px;--fs-base:14px;--fs-lg:17px;--fs-xl:21px;--font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:var(--fs-base)/1.55 var(--font)}.wrap{max-width:1000px;margin:0 auto;padding:18px 12px 60px}h1{font:800 var(--fs-xl)/1.25 var(--head);margin:0 0 6px;color:var(--acc)}h2{font:800 var(--fs-lg)/1.3 var(--head);margin:28px 0 8px}h3{font:700 var(--fs-base)/1.3 var(--font);margin:16px 0 6px;color:var(--acc);text-transform:uppercase;letter-spacing:.05em}.muted{color:var(--t2);font-size:var(--fs-xs)}.mono{font-family:var(--mono);font-size:.9em}.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin:10px 0}.tldr{border-left:3px solid var(--acc)}.card ul,.card ol{margin:6px 0 0;padding-left:20px}.card li{margin:4px 0;font-size:var(--fs-sm)}table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}th{font:700 var(--fs-2xs)/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px;border-bottom:1px solid var(--bd);background:var(--bg3)}td{padding:7px 6px;border-bottom:1px solid var(--bd);vertical-align:top}.tw{overflow-x:auto}.unc{color:var(--wrn);font-size:var(--fs-xs)}
+.v{font:700 var(--fs-2xs)/1.4 var(--font);padding:2px 7px;border-radius:999px;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+.ok{background:#e3eedd;color:var(--suc)}.dl{background:#e6eeec;color:var(--inf)}.rk{background:#f6e3d8;color:var(--dng)}.na{background:var(--bg3);color:var(--t3)}
+td:first-child{min-width:190px}</style></head><body><div class="wrap">
+<h1>Наши принципы и прототип против референсов</h1>
+<div class="muted">07.11.2026 · сравниваем 27 принципов из [[lore_ux_redesign_principles_2026_11]] и решения прототипов v1/v2 с тем, как то же самое сделали референсы и какие у них нашлись грабли · опора: заходы 1–2 (проверено по документации и исходникам), файл инсайтов от 07.11 · что не подтверждено документацией — помечено <span class="unc">UNC</span> · дизайн не меняли</div>
+
+<div class="card tldr"><b>Коротко</b><ul>
+<li><b>Совпадает с практикой — 17 из 27.</b> Команды и поиск, peek, статус в 2 касания, честные состояния, колонка текста, широкие блоки, фильтры-чипы, приложения наверху, один дом сущности, обратные ссылки, история.</li>
+<li><b>Расходимся осознанно — 5.</b> Разрезы связей вместо статусов как оси навигации; три равных лица записи; скоуп проекта на сервере для человека и агента; честный ответ бэкенда; паритет с MCP. Такого в одном продукте ни у кого нет. Это наше отличие, его стоит беречь.</li>
+<li><b>Расходимся с риском — 5.</b> Их стоит решить до кода:
+<ol>
+<li>Вечная правая колонка рядом с текстом — у референсов это главная жалоба (Jira).</li>
+<li>Автосворачивание меню при открытии записи — у референсов это всегда выбор пользователя, и он запоминается.</li>
+<li>Граф всего списка — Obsidian: глобальный граф «красив, но бесполезен», рабочий — локальный.</li>
+<li>Виды только в браузере — у всех референсов виды на сервере и есть командные по умолчанию.</li>
+<li>Правка Markdown через исходник и превью — референсы ушли в живую правку на месте, а mermaid правят переключателем «код / превью» у самого блока.</li>
+</ol></li>
+</ul></div>
+
+<h2>1. Матрица: принцип → как у референсов → вердикт</h2>
+<div class="muted"><span class="v ok">совпадает</span> — так делают референсы · <span class="v dl">осознанно</span> — расходимся, и это наше отличие · <span class="v rk">риск</span> — расходимся, а у референсов на этом месте грабли · <span class="v na">нет аналога</span></div>
+
+<h3>Навигация</h3>
+<div class="tw"><table><tr><th>Наш принцип / решение</th><th>Как у референсов</th><th>Их находка / грабли</th><th>Вердикт</th></tr>
+<tr><td><b>1.</b> Приложения — переключатель наверху</td><td>Atlassian 2025: переключатель продуктов в верхней панели, навигация продукта — в боковой</td><td>Atlassian несколько раз меняли навигацию, пользователи жаловались на перестановки. Стабильность важнее новизны.</td><td><span class="v ok">совпадает</span></td></tr>
+<tr><td><b>2.</b> Боковая панель, «Избранное» и «Недавние», Ctrl+[</td><td>Linear: Favorites над группами, сворачивание <span class="mono">[</span>. Atlassian: Recent / Starred, Ctrl+[, личная настройка «галка + порядок»</td><td>У обоих панель настраивает сам пользователь (скрыть, переставить). У нас этого нет.</td><td><span class="v ok">совпадает</span> · добавить личную настройку</td></tr>
+<tr><td>Автосворачивание меню в полосу при открытии записи (прототип v2)</td><td>Linear, Confluence, Readwise: сворачивает <b>пользователь</b> клавишей, выбор запоминается (Confluence — в cookie, TechDocs — для всех сайтов)</td><td>Никто из них не схлопывает навигацию сам при открытии записи: прыжок раскладки неожидан. Readwise даёт настройку «прятать панели в режиме чтения по умолчанию».</td><td><span class="v rk">риск</span> → делать настройкой «при чтении сворачивать: да/нет» с запоминанием</td></tr>
+<tr><td><b>3.</b> Оси навигации — разрезы связей (проект / компонент), статус — фильтр</td><td>Linear, Jira, Plane: по умолчанию группировка по статусу, команда/проект — в сайдбаре. Backstage: каталог по kind / owner / system — то есть по связям. Redmine: проект → подпроекты.</td><td>У трекеров статус — главная ось, потому что они про поток работ. LORE — про знание и его связи, ближе к Backstage.</td><td><span class="v dl">осознанно</span> · доска по статусам остаётся видом</td></tr>
+<tr><td><b>4.</b> Одна сущность — один дом, остальное — виды</td><td>Backstage: одна страница сущности, остальное — карточки и вкладки. Notion: одна база, много видов.</td><td>Notion: без владельца видов база обрастает дублями видов. Нужна гигиена видов.</td><td><span class="v ok">совпадает</span></td></tr>
+<tr><td><b>5.</b> Виды делает пользователь, встроенных подменю нет</td><td>Linear: личные + «Set as default» на всю команду. Redmine: видимость «мне / всем / ролям». Plane: public по умолчанию.</td><td>У всех есть <b>командные виды по умолчанию</b>, иначе новичок видит пустое «Избранное».</td><td><span class="v rk">риск</span> → разрешить несколько командных видов (к Q-UXR-2)</td></tr>
+</table></div>
+
+<h3>Списки и фильтры</h3>
+<div class="tw"><table><tr><th>Наш принцип / решение</th><th>Как у референсов</th><th>Их находка / грабли</th><th>Вердикт</th></tr>
+<tr><td><b>6.</b> Один механизм фильтра — строка чипов</td><td>Plane «universal filtering» (01.10.2025): строка чипов «поле · оператор · значение» под тулбаром, мгновенно. Linear: фильтры + display options.</td><td>Plane: OR/NOT только в языке запросов. Нам хватит «любое из» внутри поля и «И» между полями.</td><td><span class="v ok">совпадает</span></td></tr>
+<tr><td><b>7.</b> Всё состояние в URL, ссылка = вид</td><td>Jira (JQL в URL), Linear, Redmine</td><td>Redmine #37499: дефолтный запрос обязан быть public — иначе ссылка у коллеги пустая.</td><td><span class="v ok">совпадает</span></td></tr>
+<tr><td><b>8.</b> Один набор — список / доска / таймлайн</td><td>Notion, Plane (list / kanban / spreadsheet / calendar / gantt), Linear (list / board / timeline)</td><td>Plane: часть функций видна только в одном виде, пользователи не находили.</td><td><span class="v ok">совпадает</span></td></tr>
+<tr><td>Аналитика как вид списка (прототип v2)</td><td>Notion dashboard / chart views (2026, <span class="unc">UNC</span>). Linear Insights — графики по текущему виду в боковой панели (<span class="unc">UNC</span>). Jira — дашборды отдельно от списков.</td><td>Отдельные дашборды Jira отрываются от фильтров. Сильная сторона Linear/Notion — аналитика <b>того же отфильтрованного набора</b>.</td><td><span class="v ok">совпадает</span> (у нас тот же набор)</td></tr>
+<tr><td>Граф всего списка (прототип v2)</td><td>Obsidian: глобальный граф + локальный граф заметки с глубиной. Backstage: граф связей сущности.</td><td><b>Obsidian: глобальный граф красив, но бесполезен для работы; рабочий — локальный.</b> Backstage тоже рисует граф только вокруг сущности.</td><td><span class="v rk">риск</span> → граф списка только после сужения фильтром; основной — граф вокруг записи</td></tr>
+</table></div>
+
+<h3>Запись: контент, граф, аналитика</h3>
+<div class="tw"><table><tr><th>Наш принцип / решение</th><th>Как у референсов</th><th>Их находка / грабли</th><th>Вердикт</th></tr>
+<tr><td><b>24.</b> Контент, граф и аналитика равноправны</td><td>Backstage Overview: сетка карточек About + граф связей рядом. Atlan: README, Lineage, Profile — вкладки одного ассета. Obsidian: заметка + панели бэклинков и графа. Port: scorecard рядом с описанием.</td><td>Ни у кого все три лица не встречаются сразу; обычно это вкладки или карточки. Ближе всех Backstage — карточками на «Обзоре».</td><td><span class="v dl">осознанно</span> · наше отличие</td></tr>
+<tr><td>Мини-граф и мини-аналитика в правой колонке рядом с текстом (v2)</td><td>Jira: постоянная правая панель полей. Linear: свойства справа, прячутся. Obsidian: правая панель с бэклинками, прячется.</td><td><b>Jira: панель полей годами нельзя скрыть (JRACLOUD-76766) — главная жалоба, она съедает описание.</b> Linear и Obsidian панель прячут одной клавишей.</td><td><span class="v rk">риск</span> → колонка прячется одной клавишей (в v2 есть: <span class="mono">]</span>) и <b>запоминается</b>; при узком окне лица уходят во вкладки</td></tr>
+<tr><td><b>9.</b> Единый каркас паспорта</td><td>Backstage: шапка kind · owner · lifecycle, вкладки. Port/Cortex: паспорт <b>по типу</b>, а не одна форма.</td><td>Port: у разных типов разные виджеты, общий только каркас.</td><td><span class="v ok">совпадает</span> · общий каркас, тело по типу</td></tr>
+<tr><td><b>10.</b> Связи: «кто ссылается» и «упоминания без связи»</td><td>Obsidian Backlinks (подтверждено): linked и unlinked mentions, кнопка «связать» в Outgoing links</td><td>Без кнопки «связать» упоминания копятся мусором.</td><td><span class="v ok">совпадает</span></td></tr>
+<tr><td><b>11.</b> История — вкладка паспорта</td><td>Confluence: сравнение версий, восстановление = новая версия. OpenProject: Activity и в превью, и на полной странице.</td><td>Notion: история ограничена планом и это не видно — UI обещает больше, чем хранит.</td><td><span class="v ok">совпадает</span> · показывать, сколько истории есть</td></tr>
+<tr><td><b>25.</b> Текст не теряется: «x из y», J/K, колонка ~680 px, широкие блоки</td><td>Linear J/K и «x / y» (<span class="unc">UNC</span>). Notion ~708 px, Obsidian ~700 px, Medium ~680 px (<span class="unc">UNC</span>). Confluence: у таблиц и макросов своя ширина.</td><td>Obsidian: одной ширины мало, пользователи просят крутилку. WCAG 1.4.8: не шире 80 знаков.</td><td><span class="v ok">совпадает</span> · добавить «уже / шире»</td></tr>
+<tr><td><b>26.</b> Правка Markdown с mermaid на месте</td><td>Notion и Confluence: правка прямо в тексте (WYSIWYG). Obsidian: «Live Preview» — правишь там же, где читаешь. GitHub: вкладки Write / Preview. Mermaid у Notion: у блока свой переключатель «код / превью / рядом» (<span class="unc">UNC</span>).</td><td>Obsidian сделал Live Preview режимом по умолчанию, потому что отдельные «исходник» и «превью» неудобны. Сложные блоки (mermaid, таблицы) правят переключателем у самого блока.</td><td><span class="v rk">риск</span> (для прототипа) → в продукте TipTap на месте, а у mermaid-блока свой «код / превью»</td></tr>
+<tr><td><b>27.</b> Статус в 2 касания: чип-кнопка → палитра</td><td>Linear: клик по иконке статуса → меню с цифрами. Jira: статус-«лозенж» с выпадающим списком.</td><td>У Linear то же меню открывается и из Ctrl+K — один механизм, два входа.</td><td><span class="v ok">совпадает</span></td></tr>
+</table></div>
+
+<h3>Скорость</h3>
+<div class="tw"><table><tr><th>Наш принцип / решение</th><th>Как у референсов</th><th>Их находка / грабли</th><th>Вердикт</th></tr>
+<tr><td><b>12.</b> <span class="mono">/</span> — поиск, Ctrl+K — команды</td><td>Linear (подтверждено): ⌘K — действия над текущим видом или выделением, <span class="mono">/</span> — поиск с недавними</td><td>Linear: без подсказок клавиш новичку тяжело — нужна шпаргалка и клавиши в меню.</td><td><span class="v ok">совпадает</span></td></tr>
+<tr><td><b>13.</b> J/K, Space-peek, X, массовые действия</td><td>Linear (подтверждено): J/K, Space, X, панель массовых действий снизу. Notion: side peek. Plane / OpenProject: превью → полная страница.</td><td>Linear: peek — для решения «открывать или нет», а не для чтения. Plane: функции, видимые только в полном режиме, пользователи не находили.</td><td><span class="v ok">совпадает</span> · одинаковые действия в peek и на странице</td></tr>
+</table></div>
+
+<h3>Честность, бэкенд, хранение</h3>
+<div class="tw"><table><tr><th>Наш принцип / решение</th><th>Как у референсов</th><th>Их находка / грабли</th><th>Вердикт</th></tr>
+<tr><td><b>14.</b> Ошибка в шапке блока, «пусто» в теле</td><td>Grafana (подтверждено по исходникам): иконка ошибки в шапке панели + Inspect; «No data» — текстом в теле</td><td>Grafana: пустая панель без сообщения об ошибке — частая жалоба, ровно то, против чего принцип.</td><td><span class="v ok">совпадает</span></td></tr>
+<tr><td><b>15.</b> Свежесть и неполнота видны</td><td>Atlan: метки времени синхронизации, старение по порогам. Sourcegraph: «результаты неполные» при упоре в лимит.</td><td>DataHub: сертификат без срока со временем начинает врать.</td><td><span class="v ok">совпадает</span></td></tr>
+<tr><td><b>16.</b> Честный ответ бэкенда (полнота, scope, truncated)</td><td>Частично: Sourcegraph и Grafana на уровне UI. Как сквозной контракт API — не нашли.</td><td>—</td><td><span class="v dl">осознанно</span></td></tr>
+<tr><td><b>17–18.</b> Связи и история — общие сервисы графа</td><td>Backstage: relations в API каталога. Atlan: lineage как сервис. Dolt: <span class="mono">AS OF</span> на уровне базы.</td><td>Backstage: без культуры заполнения граф пустеет («кладбище каталога»).</td><td><span class="v ok">совпадает</span></td></tr>
+<tr><td><b>19.</b> Паритет человека и агента</td><td>Linear: приложение и публичный API на одном GraphQL; агенты — участники с атрибуцией (<span class="unc">UNC по API</span>).</td><td>—</td><td><span class="v dl">осознанно</span> · у нас сильнее: одна запись SCD2 для обоих</td></tr>
+<tr><td><b>20.</b> Скоуп проекта применяет сервер</td><td>Jira, Confluence: права на уровне проекта/пространства на сервере. Grafana: переменные дашборда.</td><td>Jira+Confluence: два набора прав — расхождения.</td><td><span class="v dl">осознанно</span> · у нас одинаково для человека и агента</td></tr>
+<tr><td><b>21–22.</b> Виды и избранное в браузере (MVP)</td><td>Linear, Notion, Redmine, Plane — виды и избранное хранятся на сервере, видны с любого устройства</td><td>Владелица читает с телефона: браузерные виды там не появятся.</td><td><span class="v rk">риск</span> → MVP годится только как прототип; к Q-UXR-2</td></tr>
+<tr><td><b>23.</b> Свежесть — свойство ответа, не хранится</td><td>Atlan, DataHub: хранят метки синхронизации у ассета</td><td>У них это свойство данных из внешнего источника; у нас — момент загрузки.</td><td><span class="v na">нет прямого аналога</span></td></tr>
+</table></div>
+
+<h2>2. Риски — что поменять до кода</h2>
+<div class="card"><ol>
+<li><b>Правая колонка рядом с текстом.</b> У Jira это главная жалоба. Колонка прячется одной клавишей, выбор запоминается для пользователя; на узких экранах граф и аналитика уходят во вкладки. Равноправие лиц сохраняется вкладками, а не постоянной колонкой.</li>
+<li><b>Автосворачивание меню.</b> Заменить на настройку «в режиме чтения сворачивать меню», с запоминанием (как Readwise и Confluence), а не делать это насильно.</li>
+<li><b>Граф всего списка.</b> Показывать после сужения фильтром (например, ≤ 60 записей) и с подсказкой «сузьте»; основной граф — вокруг записи с ползунком глубины (Obsidian, Backstage).</li>
+<li><b>Виды только в браузере.</b> Командные виды по умолчанию и хранение на сервере нужны рано — из-за телефона и новичков. Это меняет рекомендацию по Q-UXR-2.</li>
+<li><b>Правка.</b> В продукте — правка на месте (TipTap), у mermaid и таблиц — переключатель «код / превью» у блока. Разделение «исходник | превью», как в прототипе, у референсов вытеснено.</li>
+</ol></div>
+
+<h2>3. Что у референсов есть, а в наших принципах нет</h2>
+<div class="card"><ul>
+<li><b>Личная настройка панели</b> (скрыть, переставить пункты) — Linear, Atlassian.</li>
+<li><b>Режим открытия — свойство вида</b> (peek или страница) — Notion: команда договаривается, где «разбирать», а где «читать».</li>
+<li><b>Выдели текст → задача или вопрос</b> — Backstage TechDocs ReportIssue.</li>
+<li><b>Сворачиваемые секции по заголовкам</b> и сворачивание громоздких блоков по умолчанию — Logseq, Langfuse.</li>
+<li><b>Превью по наведению на ссылку</b> в тексте — Sourcegraph, Confluence smart links, Obsidian hover.</li>
+<li><b>Одна строка вердикта сверху</b> (статус, блокеры, гейт) до подробностей — SonarQube.</li>
+<li><b>«Почему делаем»</b> одной строкой в шапке задачи — Productboard (связь с болью).</li>
+</ul></div>
+
+<div class="muted">Источники — в отчётах заходов 1–2 и в lore-ux-champion-insights-2026-11-07.html (там же ссылки на документацию). Помеченное UNC — по знанию продукта, документацией не подтверждено.</div>
+</div></body></html>
