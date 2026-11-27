@@ -430,14 +430,16 @@ const LINK_DEFS = {
       if (!ids.length) return `target_id required for rel="${rel}" — a sprint id / PR number or an array of them`;
       if (!str(f.git_project)) return 'fields.git_project is required for type="release" (multi-repo safety: release_uid = "{git_project}#{release_id}")';
       const git_project = str(f.git_project);
+      // fields.pr_repo — «owner/repo», где живут номера PR, если это не репозиторий проекта релиза (27.11.2026).
+      const pr_repo = str(f.pr_repo) ? { pr_repo: str(f.pr_repo) } : {};
       if (action === 'remove') {
         return rel === 'sprint'
           ? { path: '/lore/release/unlink', body: { release_id: id, git_project, sprint_ids: ids, pr_numbers: [] } }
-          : { path: '/lore/release/unlink', body: { release_id: id, git_project, sprint_ids: [], pr_numbers: ids } };
+          : { path: '/lore/release/unlink', body: { release_id: id, git_project, sprint_ids: [], pr_numbers: ids, ...pr_repo } };
       }
       return rel === 'sprint'
         ? { path: '/lore/release/link', body: { release_id: id, sprint_ids: ids, pr_numbers: [], git_project } }
-        : { path: '/lore/release/link', body: { release_id: id, sprint_ids: [], pr_numbers: ids, git_project } };
+        : { path: '/lore/release/link', body: { release_id: id, sprint_ids: [], pr_numbers: ids, git_project, ...pr_repo } };
     },
   },
   runbook: {
@@ -722,7 +724,7 @@ export function registerEntity(server: McpServer): void {
       target_id: z.union([z.string(), z.number().int(), z.array(z.union([z.string(), z.number().int()]))]).optional()
         .describe('target id (single, or array for type=release); omit only where the old tool allowed it (task phase remove, doc parent remove)'),
       action: z.enum(['add', 'remove']).optional().describe('default "add"; not accepted for type=spec (use fields.mode)'),
-      fields: z.record(z.string(), z.unknown()).optional().describe('rel-conditional extras (git_project, kind, reason, actor_role, target_type, mode, role, summary_md, project)'),
+      fields: z.record(z.string(), z.unknown()).optional().describe('rel-conditional extras (git_project, pr_repo, kind, reason, actor_role, target_type, mode, role, summary_md, project)'),
     },
     async ({ type, id, rel, target_id, action, fields: rawFields }) => {
       const def = LINK_DEFS[type as LinkType];
