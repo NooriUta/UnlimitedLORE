@@ -359,6 +359,12 @@ jobs:
       #   * ручной запуск: both = бэкенд + v2 (v1 сюда больше НЕ входит),
       #     frontend = хотфикс v1, backend / frontend-next — по одному.
       # Дифф не вычислился — выкатываются бэкенд и v2 (как прежний «both»).
+      # 27.11.2026: база сравнения — коммит, который работает на стенде (тег образа), а не прошлый пуш:
+      # выкатка, повисшая после сборки, не теряет правку (deployed-base.sh, ci-scope.sh DEPLOYED_BASE).
+      - name: Какой коммит выкачен сейчас
+        if: github.event_name == 'push'
+        run: bash .github/scripts/deployed-base.sh
+
       - name: Resolve which services to touch
         id: which
         env:
