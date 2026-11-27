@@ -130,6 +130,13 @@ public abstract class LoreResourceBase {
         }
     }
 
+    // Регистрация выпуска (POST /lore/release): admin, superadmin или release-manager — служебная
+    // учётка CI других проектов (27.11.2026). Только этот путь; update/link/unlink — requireAdmin.
+    void requireReleaseWriter(String role) {
+        if (Whoami.RELEASE_MANAGER.equals(SeerRoleFromTokenFilter.normalizeRole(role))) return;
+        requireAdmin(role);
+    }
+
     /** Текст отказа называет то значение роли, которое пропускает (AUD-SUPERADMIN, issue SeidrStudio#8). */
     static final String ADMIN_REQUIRED =
         "admin role required: X-Seer-Role admin or superadmin (MCP: LORE_SEER_ROLE=admin; Keycloak realm role admin)";

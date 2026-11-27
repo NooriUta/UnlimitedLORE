@@ -118,14 +118,8 @@ public class SeerRoleFromTokenFilter implements ContainerRequestFilter {
             if (sent != null && !sent.equals(norm)) ctx.getHeaders().putSingle("X-Seer-Role", norm);
             return;
         }
-        final String role;
-        if (identity.hasRole("super-admin")) {
-            role = "superadmin";
-        } else if (identity.hasRole("admin")) {
-            role = "admin";
-        } else {
-            role = "viewer";
-        }
-        ctx.getHeaders().putSingle("X-Seer-Role", role);
+        // Роль — только из проверенного токена, присланный заголовок перезаписывается (CI miniLORE шлёт
+        // «X-Seer-Role: admin» — с токеном release-manager он admin не получит). Правило одно — Whoami.seerRole.
+        ctx.getHeaders().putSingle("X-Seer-Role", Whoami.seerRole(identity.getRoles()));
     }
 }
