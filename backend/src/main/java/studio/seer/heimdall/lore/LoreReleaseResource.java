@@ -38,9 +38,14 @@ public class LoreReleaseResource extends LoreResourceBase {
     public record ReleaseUpdateRequest(
         String release_id, String release_date, String git_tag,
         String description_md, Boolean is_current, String git_project) {}
+    /**
+     * pr_repo — «owner/repo», в котором живут pr_numbers, если это не репозиторий-тёзка проекта релиза
+     * (27.11.2026: выпуски сервера miniLORE лежат в проекте AIDA/miniLORE, а PR — в AIDA/miniLore_serverside).
+     * Принимается slug проекта или свой slug репозитория из реестра (PrRepoRef). Нет — как раньше, проект релиза.
+     */
     public record ReleaseLinkRequest(
         String release_id, List<Integer> pr_numbers, List<String> sprint_ids,
-        String git_project) {}
+        String git_project, String pr_repo) {}
 
     // ── Линтер полноты релиза: вердикт в ответе на запись ────────────────────
     //
@@ -419,6 +424,11 @@ public class LoreReleaseResource extends LoreResourceBase {
             String gp = projectOf(req.git_project());
             if (gp == null) return badParams(NO_PROJECT);
             String ruid = gp + "#" + req.release_id();
+            PrRepoRef.Resolved prOwner = prOwner(req.pr_repo());
+            if (req.pr_repo() != null && !req.pr_repo().isBlank() && prOwner == null)
+                return badParams("pr_repo not registered: " + req.pr_repo()
+                    + " (list: query_slice slice=\"git_projects\" / \"repositories\")");
+            String prBase = prOwner == null ? gp : req.pr_repo().strip();
             // Релиз проверяется до записи: без него PR-вершины заводились бы сиротами.
             boolean releaseExists = !ingestService.queryPublic(
                 "SELECT release_uid FROM KnowRelease WHERE release_uid=:ruid", Map.of("ruid", ruid)).isEmpty();
@@ -477,7 +487,7 @@ public class LoreReleaseResource extends LoreResourceBase {
             List<Integer> prs = req.pr_numbers() != null ? req.pr_numbers() : List.of();
             for (Integer prNum : releaseExists ? prs : List.<Integer>of()) {
                 try {
-                    String prUid = gp + "#" + prNum;
+                    String prUid = prBase + "#" + prNum;
                     if (edgeExists("SHIPPED_IN", "pr_uid", prUid, "release_uid", ruid)) {
                         prsLinked++;
                         linkedPrs.add(prNum);
@@ -486,7 +496,7 @@ public class LoreReleaseResource extends LoreResourceBase {
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "UPDATE KnowPR SET pr_uid=:uid, pr_number=:n, git_project=:gp " +
                         "UPSERT WHERE pr_uid=:uid",
-                        Map.of("uid", prUid, "n", prNum, "gp", gp))).await().indefinitely();
+                        Map.of("uid", prUid, "n", prNum, "gp", prBase))).await().indefinitely();
                     writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql",
                         "CREATE EDGE SHIPPED_IN " +
                         "FROM (SELECT FROM KnowPR WHERE pr_uid=:uid) " +
@@ -506,10 +516,21 @@ public class LoreReleaseResource extends LoreResourceBase {
             // S2-14: и новые, и уже привязанные PR дозаполняются из Forgejo — повторный
             // release_link по старому релизу и есть дозаполнение. Связь от сбоя
             // обогащения не откатывается, но сбой виден в pr_details_missing.
-            if (!linkedPrs.isEmpty()) {
-                java.util.Optional<ForgejoBridge.Repo> repo = forgejo.resolve(gp);
+            if (!linkedPrs.isEmpty() && prOwner != null && prOwner.prUrl() != null) {
+                // PR чужого для проекта релиза репозитория — дотяжка через проект этого репозитория по адресу PR.
                 for (Integer prNum : linkedPrs) {
-                    String why = enrichPr(repo, gp + "#" + prNum, prNum);
+                    PrRepoRef.Resolved one = new PrRepoRef.Resolved(prOwner.hostProject(),
+                        prOwner.prUrl().replaceAll("/pulls/\\d+$", "/pulls/" + prNum));
+                    Map<String, Object> r = one.hostProject() == null
+                        ? Map.of("pr_details_missing", "репозиторий " + prBase + " не подключён ни к одному проекту")
+                        : PrBackfill.fillOne(prStore(), PrRepoRef.viaProject(forgejo.prHost(), one), prBase, prNum);
+                    if (r.containsKey("pr_details_missing")) prDetailsMissing.add("PR #" + prNum + ": " + r.get("pr_details_missing"));
+                    else prsEnriched++;
+                }
+            } else if (!linkedPrs.isEmpty()) {
+                java.util.Optional<ForgejoBridge.Repo> repo = forgejo.resolve(prBase);
+                for (Integer prNum : linkedPrs) {
+                    String why = enrichPr(repo, prBase + "#" + prNum, prNum);
                     if (why == null) prsEnriched++;
                     else prDetailsMissing.add("PR #" + prNum + ": " + why);
                 }
@@ -554,6 +575,18 @@ public class LoreReleaseResource extends LoreResourceBase {
      * почему нет (проект без primary-хоста, ответ Forgejo не 2xx, пустой ответ,
      * исключение). Ключи SET — только из фиксированного набора ForgejoBridge.prFields.
      */
+    /** pr_repo → владелец PR по общему правилу PrRepoRef; пусто — null (PR живут в репозитории проекта релиза). */
+    private PrRepoRef.Resolved prOwner(String prRepo) {
+        if (prRepo == null || prRepo.isBlank()) return null;
+        String r = prRepo.strip();
+        if (!r.matches("[\\w.-]+/[\\w.-]+")) return null;
+        boolean isProject = !ingestService.queryPublic("SELECT slug FROM KnowGitProject WHERE slug=:s LIMIT 1",
+            Map.of("s", r)).isEmpty();
+        Map<String, Object> rp = PrRepoRef.repoParams(r);
+        return PrRepoRef.resolve(r, isProject, isProject || rp == null ? List.of()
+            : ingestService.queryPublic(PrRepoRef.REPO_SQL, rp), 1);
+    }
+
     private String enrichPr(java.util.Optional<ForgejoBridge.Repo> repo, String prUid, int prNum) {
         if (repo.isEmpty()) return "у проекта нет primary-хоста Forgejo в hosts[] — поля не подтянуты";
         try {
@@ -578,7 +611,7 @@ public class LoreReleaseResource extends LoreResourceBase {
     // ── Write-path: unlink sprint or PR from a release ───────────────────────────
 
     public record ReleaseUnlinkRequest(String release_id, String git_project,
-                                       List<String> sprint_ids, List<Integer> pr_numbers) {}
+                                       List<String> sprint_ids, List<Integer> pr_numbers, String pr_repo) {}
 
     @POST
     @Path("release/unlink")
@@ -592,6 +625,10 @@ public class LoreReleaseResource extends LoreResourceBase {
         String gp = projectOf(req.git_project());
         if (gp == null) return badParams(NO_PROJECT);
         String ruid = gp + "#" + req.release_id();
+        PrRepoRef.Resolved prOwner = prOwner(req.pr_repo());
+        if (req.pr_repo() != null && !req.pr_repo().isBlank() && prOwner == null)
+            return badParams("pr_repo not registered: " + req.pr_repo());
+        String prBase = prOwner == null ? gp : req.pr_repo().strip();
         int sprintsRemoved = 0, prsRemoved = 0;
         List<String> requestedSprints = req.sprint_ids() != null ? req.sprint_ids() : List.of();
         List<Integer> requestedPrs = req.pr_numbers() != null ? req.pr_numbers() : List.of();
@@ -615,7 +652,7 @@ public class LoreReleaseResource extends LoreResourceBase {
                 } catch (Exception e) { errors.add("sprint " + sid + ": " + e.getMessage()); }
             }
             for (Integer prNum : requestedPrs) {
-                String prUid = gp + "#" + prNum;
+                String prUid = prBase + "#" + prNum;
                 try {
                     int n = deleteEdges("SHIPPED_IN",
                         "@out.pr_uid=:uid AND @in.release_uid=:ruid",
