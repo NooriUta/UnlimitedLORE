@@ -167,6 +167,15 @@ jobs:
         if: always()
         run: mkdir -p stand-report && cp -r web-next/e2e/.stand-report/. stand-report/ 2>/dev/null; ls stand-report | head -50 || true
 
+      # 26.11.2026 (Forgejo 17, прогон 11182): 77/77 pass, а джоба красная — выгрузка упала
+      # «Create Artifact Container: socket hang up» ×5. Гипотеза: адрес сервиса артефактов —
+      # внутреннее имя, которое контейнер джобы перестал разрешать (та же причина, что у
+      # preprod.lore). Диагностика адреса — до выгрузки; сама выгрузка не роняет итог тестов.
+      - name: Сервис артефактов — адрес и достижимость (диагностика)
+        if: always()
+        continue-on-error: true
+        run: bash .github/scripts/artifact-endpoint-diag.sh
+
       # Прогон 11265 (26.11.2026, v1.19.1): 76/76 pass, а джоба красная — «Create Artifact Container: socket hang up» ×5.
       # Итог смоука = итог тестов (их шаг выше не защищён); выгрузка скринов — не повод держать шлагбаум прода.
       # Литерал true: выражение ${{ … }} Forgejo в этом поле не разбирает (workflowForgejoBools.test.ts).

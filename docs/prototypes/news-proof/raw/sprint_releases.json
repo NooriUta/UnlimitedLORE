@@ -1,0 +1,5367 @@
+{
+  "rows": [
+    {
+      "sprint_id": "PLAN_HOUND_D4_PARITY",
+      "release_ids": [
+        "v1.5.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_AIDA_PREPROD_MIGRATION",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_AIDA_TIMESERIES",
+      "release_ids": [
+        "v1.4.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_AI_AUTODOCS_BASIC",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_AI_CPG_AUTODOCS_BACKLOG",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ALERTS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ALT_AIJ",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/studio"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ALT_AIJ_WORK",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/studio"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ALT_MLSD",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/studio"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ALT_MLSD_WORK",
+      "release_ids": [],
+      "no_release_required": true,
+      "git_projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ALT_SMART_WORK",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/studio"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ANVIL_CORE",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ANVIL_IDE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_APR13_MAY9_M1",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ARC26",
+      "release_ids": [
+        "v1.3.32"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ARCADEDB_2671_AUDIT",
+      "release_ids": [
+        "v1.7.0",
+        "v1.7.1",
+        "v1.0.29"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ARCADEDB_2671_UPGRADE",
+      "release_ids": [
+        "v1.7.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ARCADEDB_2691_UPGRADE",
+      "release_ids": [
+        "aida-odal-2026-10-20"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ARCADEDB_26_11_ALL",
+      "release_ids": [
+        "v1.7.9",
+        "v1.7.6",
+        "aida-odal-2026-11-05",
+        "v1.15.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/BOKVIT",
+        "AIDA/Datawanderers-ServerandLore",
+        "NooriUta/volva",
+        "AIDA/miniLORE",
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ARCADE_2667_RESEARCH",
+      "release_ids": [
+        "v1.6.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ARCADE_2672_UPGRADE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ARCADE_2681_UPGRADE",
+      "release_ids": [
+        "aida-odal-2026-10-20"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ARCADE_META",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ARCH_HOUSEKEEPING",
+      "release_ids": [
+        "v1.7.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "release_ids": [
+        "v1.6.19"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_AUTH_REDESIGN",
+      "release_ids": [
+        "v1.3.11"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "release_ids": [
+        "v1.4.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BACKEND_DATA_LAYER",
+      "release_ids": [
+        "v1.3.17"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BACKUP_STRATEGY",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BENCH_RUN",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BIRTHDAY_HOUSEKEEPING",
+      "release_ids": [
+        "v1.6.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BLOG2",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": true,
+      "git_projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BLOG3",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BLOG4",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BOKVIT_FOUNDATION",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/BOKVIT"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "release_ids": [
+        "v1.4.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/BRAGI",
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BRAGI_ARCHIVE_FOLLOWUP",
+      "release_ids": [
+        "v1.0.28"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BRAGI_ARCHIVE_IMPL",
+      "release_ids": [
+        "v1.0.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BRAGI_ARCHIVE_V2",
+      "release_ids": [
+        "v1.16.0",
+        "v1.0.33"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_BRAGI_PLATFORM_RENDER",
+      "release_ids": [
+        "v1.0.33",
+        "v1.0.31",
+        "v1.0.30"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/BRAGI",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_C22",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_C23",
+      "release_ids": [
+        "v1.2.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_CANVAS_FIX",
+      "release_ids": [
+        "v1.6.19"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_CFP",
+      "release_ids": [],
+      "no_release_required": true,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_CFP_ABS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_CFP_SUB",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/studio"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_CHDIAL",
+      "release_ids": [
+        "v1.1.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_CHUR_ADMIN_PROD",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_CHUR_UPLOAD_PROXY",
+      "release_ids": [
+        "v1.5.6"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_CICD",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_CICD_POL",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_CI_SELECTIVE_FAST",
+      "release_ids": [
+        "v1.5.9"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_COMBINED_TRACKB_LOOM_S2",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_COMBINED_TRACKB_LOOM_S2_APR2026",
+      "release_ids": [
+        "v1.1.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_COMPETITOR_UX_GAPS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_COMPONENT_IDENTITY",
+      "release_ids": [
+        "v1.0.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_CONTENT_PIPELINE_JUL_AUG",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DALIWGT",
+      "release_ids": [
+        "v1.6.15"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DALI_CORE_S1",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DALI_DIALECTS_LORE_VIZ",
+      "release_ids": [
+        "v1.6.8"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DALI_JOBENGINE_MIGRATION",
+      "release_ids": [
+        "v1.7.10"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26",
+      "release_ids": [
+        "v1.4.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DALI_UC3_UC4",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DALI_UI_S1",
+      "release_ids": [
+        "v1.7.10",
+        "v1.6.14"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DALI_UP",
+      "release_ids": [
+        "v1.1.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DATASET_TRUST_LABELS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DATA_MODELING_METHODOLOGY",
+      "release_ids": [
+        "v1.6.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DEDUP_REWRITE",
+      "release_ids": [
+        "v1.5.13"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DEMO_SCRIPT",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DEMO_TENANT_MODULE",
+      "release_ids": [
+        "v1.5.4"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DEPS_JUNE26",
+      "release_ids": [
+        "v1.3.32"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DEP_UPGRADES_JUN26",
+      "release_ids": [
+        "v1.5.13"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DEVELOP_CONSOLIDATION_JUN13",
+      "release_ids": [
+        "v1.6.6"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DEV_DEFECTS",
+      "release_ids": [
+        "v1.3.18"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA-TestPlayGround"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DIALECT_IDENTIFICATION",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DIALECT_IDENTIFICATION_2",
+      "release_ids": [
+        "aida-odal-2026-11-05",
+        "v1.8.0",
+        "dialect-ident-wave2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DIALECT_MATURITY_ASSESSMENT",
+      "release_ids": [
+        "v1.6.14"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DM_02_RATE_LIMIT",
+      "release_ids": [
+        "v1.5.9"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DOCS_ARCH_JUN26",
+      "release_ids": [
+        "v1.5.7.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DS1",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DSC",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DUC2",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_CONTENT_PACKS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_DECISIONS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_INFRA",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_LOAD",
+      "release_ids": [
+        "dw-server-v0.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_LORE_AREAS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_METHOD",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_PILOT_PROTO",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_QUALITY",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_SERVER_CORE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_SETTINGS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_SRV_AUTH",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_SRV_COMBAT",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_SRV_ECONOMY",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_SRV_FOUNDATION",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_SRV_GAME",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_SRV_HA",
+      "release_ids": [
+        "dw-server-v0.3.0",
+        "dw-server-v0.2.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_SRV_REALTIME",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_SRV_SOCIAL",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_TEMPLATES",
+      "release_ids": [
+        "dw-server-v0.2.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_UNITY_STAND",
+      "release_ids": [
+        "dw-server-v0.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DWL_WILD_LANDS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DW_AI_ASSETS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DW_CHARACTERS",
+      "release_ids": [
+        "dw-unity-0.1.10-mvp-test",
+        "dw-unity-0.1.8-mvp-test",
+        "dw-unity-0.1.7-mvp-test",
+        "dw-unity-0.1.6-mvp-test",
+        "dw-unity-0.1.4-mvp-test",
+        "dw-unity-0.1.3-mvp-test",
+        "dw-unity-0.1.2-mvp-test"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DW_MIGRATION",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DW_PORTRAIT",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DW_RUNE_ART",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DW_TRAVEL",
+      "release_ids": [
+        "dw-unity-0.1.10-mvp-test"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_DW_VISUAL",
+      "release_ids": [
+        "dw-unity-0.1.10-mvp-test",
+        "dw-unity-0.1.8-mvp-test",
+        "dw-unity-0.1.7-mvp-test",
+        "dw-unity-0.1.6-mvp-test",
+        "dw-unity-0.1.4-mvp-test",
+        "dw-unity-0.1.3-mvp-test",
+        "dw-unity-0.1.2-mvp-test"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ELKQW",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ELK_M2_KNOT",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_FE_SITE_SPLIT",
+      "release_ids": [
+        "v1.6.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_FRIGG_SESSION_AUTH",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GAP_SP",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GEOID_PHASE_C_FLIP",
+      "release_ids": [
+        "v1.6.22"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GEOID_STRUCTURAL_ID",
+      "release_ids": [
+        "v1.6.22"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GJALLARHORN_ACOUSTICS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "release_ids": [
+        "gladsheim-v0.2.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "release_ids": [
+        "gladsheim-v0.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_PROFILE",
+      "release_ids": [
+        "gladsheim-v0.2.0",
+        "gladsheim-v0.1.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "release_ids": [
+        "sensor-node-mesha-2026-09-21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "release_ids": [
+        "vord-v0.1.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "release_ids": [
+        "gladsheim-v0.6.0",
+        "gladsheim-v0.6.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GLADSHEIM_AGENT_HARNESS",
+      "release_ids": [
+        "gladsheim-v0.6.4",
+        "gladsheim-v0.6.3",
+        "gladsheim-v0.6.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "release_ids": [
+        "gladsheim-v0.5.5",
+        "v0.1.3",
+        "v0.1.2",
+        "v0.1.1",
+        "v0.1.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GLADSHEIM_INTENTS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GLADSHEIM_INTENT_TOOLS",
+      "release_ids": [
+        "gladsheim-v0.6.7",
+        "gladsheim-v0.6.6",
+        "gladsheim-v0.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "release_ids": [
+        "gladsheim-v0.6.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GLADSHEIM_MULTIROOM_SYNC",
+      "release_ids": [
+        "gladsheim-v0.5.13"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "release_ids": [
+        "gladsheim-v0.6.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "release_ids": [
+        "gladsheim-v0.6.13",
+        "gladsheim-v0.6.12",
+        "gladsheim-v0.6.10",
+        "gladsheim-v0.6.9",
+        "gladsheim-v0.6.8",
+        "gladsheim-v0.6.7",
+        "gladsheim-v0.6.6",
+        "gladsheim-v0.3.0",
+        "gladsheim-v0.2.0",
+        "gladsheim-v0.1.0",
+        "gladsheim-v0.6.1",
+        "gladsheim-v0.5.17",
+        "gladsheim-v0.5.15",
+        "gladsheim-v0.5.12",
+        "gladsheim-v0.5.7"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "release_ids": [
+        "gladsheim-v0.6.12",
+        "gladsheim-v0.6.8",
+        "gladsheim-v0.5.15",
+        "gladsheim-v0.5.17",
+        "gladsheim-v0.5.16",
+        "midgard-8099-2026-09-22",
+        "gladsheim-v0.5.14",
+        "gladsheim-v0.5.12",
+        "gladsheim-v0.5.10",
+        "gladsheim-v0.5.9",
+        "gladsheim-v0.5.8",
+        "gladsheim-v0.5.6",
+        "gladsheim-v0.5.4",
+        "gladsheim-v0.5.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "release_ids": [
+        "gladsheim-v0.6.11",
+        "gladsheim-v0.5.11",
+        "gladsheim-v0.5.10",
+        "gladsheim-v0.5.9",
+        "gladsheim-v0.5.8",
+        "gladsheim-v0.5.6",
+        "gladsheim-v0.5.5",
+        "gladsheim-v0.5.4",
+        "gladsheim-v0.5.3",
+        "gladsheim-v0.5.2",
+        "gladsheim-v0.5.1",
+        "gladsheim-v0.5.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GREENPLUM_EXTENSION",
+      "release_ids": [
+        "v1.7.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_GREENPLUM_PARTITION_DDL",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/udwe-mig-gen",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_H38",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HADM",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HAPI",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HBS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HBUG",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HC0",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "release_ids": [
+        "v1.3.17"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HEIMDALL_BENCH_PANEL",
+      "release_ids": [
+        "v1.6.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HEIMDALL_BENCH_RELEASE",
+      "release_ids": [
+        "v1.6.6",
+        "v1.6.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/ODIN",
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HEIMDALL_FRONTEND_TESTS",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HEIMDALL_NAV_REDESIGN",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HEIMDALL_OVERVIEW_POLISH",
+      "release_ids": [
+        "v1.6.19"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA-TestPlayGround",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HEIMDALL_PROD_STABILITY",
+      "release_ids": [
+        "v1.7.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HEIMDALL_SPRINT4",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HEIMDALL_TENANT_ADMIN",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HEIMDALL_UX_ANALYTICS_REDESIGN",
+      "release_ids": [
+        "v1.3.17"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HEIMDALL_UX_REDESIGN",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HELM_CHART",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HFCHARTS",
+      "release_ids": [
+        "v1.6.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HFS",
+      "release_ids": [
+        "v1.7.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HG7",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HIRE_MID_DE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/studio"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOTFIX_V157_1_ONBOARDING",
+      "release_ids": [
+        "v1.5.7.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_ARCADEDB_DIALECT",
+      "release_ids": [
+        "aida-odal-2026-11-05",
+        "aida-odal-2026-10-20",
+        "v1.8.0",
+        "v1.8.0",
+        "v1.8.0",
+        "v1.8.0",
+        "v1.8.0",
+        "v1.8.0",
+        "v1.8.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "release_ids": [
+        "v1.6.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_ATOM_DIAGNOSTICS",
+      "release_ids": [
+        "v1.5.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V1",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V2",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V3",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_CALL_MERGE_TAILS",
+      "release_ids": [
+        "v1.6.7"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_CONSTRAINT_FOLDING",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_CONSTRAINT_REALITY_CHECK",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_CONSTR_CHECK",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_CONSTR_FOLD",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_DALI_HYGIENE",
+      "release_ids": [
+        "v1.7.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_DATAFLOW_AC",
+      "release_ids": [
+        "v1.6.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_DB_LABEL",
+      "release_ids": [
+        "v1.6.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_DDL_SNIPPET_RID",
+      "release_ids": [
+        "v1.6.4"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_DIALECT_DEPTH",
+      "release_ids": [
+        "v1.6.9"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_DIALECT_MODEL_DEPTH",
+      "release_ids": [
+        "v1.6.9",
+        "v1.6.7"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_DIALECT_SEMANTICS_AUDIT",
+      "release_ids": [
+        "aida-odal-2026-11-05"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_DUPLICATION_FIX",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_DUP_FIX",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_EDGE_TAXONOMY_V1",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_EDGE_V1",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_EXTERNAL_SOURCES",
+      "release_ids": [
+        "aida-odal-2026-10-20"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_EXTERNAL_SOURCES_2",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_GEOID_DB_ROOT",
+      "release_ids": [
+        "v1.6.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_GRAMMAR_TOLERANCE",
+      "release_ids": [
+        "v1.6.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_GREENPLUM_GRAMMAR",
+      "release_ids": [
+        "v1.7.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "release_ids": [
+        "v1.6.17"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_LINT_GUARD",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_MPP_DIALECTS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_MYSQL_LISTENER",
+      "release_ids": [
+        "v1.6.7"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_NAMESPACE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_OBJECT_DEDUP",
+      "release_ids": [
+        "v1.6.22"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_OUT_PARAM",
+      "release_ids": [
+        "v1.6.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_PARSER_HARDENING",
+      "release_ids": [
+        "v1.3.22"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "release_ids": [
+        "v1.3.25"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_PG_CH_DIALECTS",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V1",
+      "release_ids": [
+        "v1.3.22"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "release_ids": [
+        "v1.3.25"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_PREDICATE_FLOW",
+      "release_ids": [
+        "v1.6.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_READS_FROM_INVERSION",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_READS_INV",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "release_ids": [
+        "v1.6.12"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_S3",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_SBV3_SESSION_RESTAMP",
+      "release_ids": [
+        "v1.6.6"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_SCALAR_BRIDGE",
+      "release_ids": [
+        "v1.6.4"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_SCHEMA_CLEANUP",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_SPEC_STORAGE",
+      "release_ids": [
+        "v1.3.18"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_TSQL_SQLITE_DUCKDB",
+      "release_ids": [
+        "v1.7.10"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUND_VTABLE_SESSION_SCOPE",
+      "release_ids": [
+        "v1.6.9"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUSEKEEPING_JUL26",
+      "release_ids": [
+        "v1.6.17"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUSEKEEPING_JUL26_v2",
+      "release_ids": [
+        "v1.6.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUSEKEEPING_JUL26_v3",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUSEKEEPING_JUN26",
+      "release_ids": [
+        "v1.4.4"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HOUSEKEEPING_NOV26",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HRB",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HS2B",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HS5",
+      "release_ids": [
+        "v1.3.13"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_HS6",
+      "release_ids": [
+        "v1.3.13"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_INCORPORATION_IP",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/studio"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_INFISICAL_ROLLOUT",
+      "release_ids": [
+        "v1.7.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_INFRA_BACKLOG",
+      "release_ids": [
+        "aida-odal-2026-11-05",
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_INFRA_V3",
+      "release_ids": [
+        "v1.7.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_K0",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_K8S",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_K8S_MIGRATION",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA",
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_KNOT_DALISNIPPET_CLEANUP",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_KNOT_TBL",
+      "release_ids": [
+        "v1.6.22"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LANDING",
+      "release_ids": [
+        "v1.6.17"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LEADS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LINEAGE_TAILS",
+      "release_ids": [
+        "v1.6.4"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LLM_DIALECT_GUARD",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOC_REFACTOR",
+      "release_ids": [
+        "v1.3.18"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM5L",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM_5K",
+      "release_ids": [
+        "v1.6.10"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM_BUGA",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM_BUGB",
+      "release_ids": [
+        "v1.6.10"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM_CANVAS_GAPS_JUN26",
+      "release_ids": [
+        "v1.4.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM_COLUMNS_REPAIR",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "release_ids": [
+        "v1.6.10"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM_NAV_CLEANUP",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM_NAV_FIX",
+      "release_ids": [
+        "v1.4.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM_PHASE3_CLOSE",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "release_ids": [
+        "v1.4.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM_TABLE_COLUMNS",
+      "release_ids": [
+        "v1.5.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LOOM_TIMEREWIND",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_ADMIN_HOUSEKEEPING",
+      "release_ids": [
+        "v1.15.0",
+        "v1.14.1",
+        "v1.14.0",
+        "v1.13.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_ADMIN_PANEL",
+      "release_ids": [
+        "v1.16.0",
+        "v1.1.0",
+        "v1.0.57",
+        "v1.0.56",
+        "v1.0.55",
+        "v1.0.50",
+        "v1.0.48"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_ADR_MODULE_FIXES",
+      "release_ids": [
+        "v1.0.37"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_AGENT_OBSERVABILITY",
+      "release_ids": [
+        "v1.16.0",
+        "v1.15.0",
+        "v1.14.1",
+        "v1.12.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_BOARD_PASSPORTS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_CI_MIRROR",
+      "release_ids": [
+        "v1.13.1",
+        "v1.12.1",
+        "v1.12.0",
+        "v1.12.0",
+        "v1.12.0",
+        "v1.4.0",
+        "v1.2.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_CI_SERVER_MIGRATION",
+      "release_ids": [
+        "v1.1.0",
+        "v1.0.57",
+        "v1.0.55"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/forgejo-mcp",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_COMPONENTS_EXT",
+      "release_ids": [
+        "LORE_v1.0.20"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_COMPONENTS_PASSPORT",
+      "release_ids": [
+        "v1.0.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_COMPONENTS_UX",
+      "release_ids": [
+        "v1.0.19"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_DB_RESILIENCE",
+      "release_ids": [
+        "v1.13.0",
+        "v1.11.0",
+        "v1.11.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_DB_UPGRADE_REGRESSION",
+      "release_ids": [
+        "v1.12.0",
+        "v1.6.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_DEPS_DOMPURIFY",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_DEPS_HOUSEKEEPING",
+      "release_ids": [
+        "v1.14.0",
+        "v1.13.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_FOREIGN_INSTALL",
+      "release_ids": [
+        "v1.8.1",
+        "v1.8.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_FORGEJO_INTEGRATION",
+      "release_ids": [
+        "v1.0.52"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_HISTORY_REDESIGN",
+      "release_ids": [
+        "v1.0.19"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_HOUSEKEEPING",
+      "release_ids": [
+        "LORE_v1.0.20",
+        "LORE_v1.0.18",
+        "v1.0.17"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_HOUSEKEEPING_2026W29",
+      "release_ids": [
+        "v1.0.47"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_KNOWDOC_CLEANUP",
+      "release_ids": [
+        "v1.0.37"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_KNOWDOC_TREE",
+      "release_ids": [
+        "v1.0.37"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_KNOWDOC_UI",
+      "release_ids": [
+        "v1.0.36"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_MCP_DOCSYNC_GAPS",
+      "release_ids": [
+        "v1.14.0",
+        "v1.13.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_MCP_EVOLUTION",
+      "release_ids": [
+        "v1.0.49",
+        "v1.0.47",
+        "v1.0.45"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_MCP_GAPS",
+      "release_ids": [
+        "v1.0.25"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_MCP_GAPS_2",
+      "release_ids": [
+        "v1.0.26"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_MCP_GAPS_3",
+      "release_ids": [
+        "v1.0.30",
+        "v1.0.29"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_MD_ARCHIVE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_MEASURE_TRUTH",
+      "release_ids": [
+        "v1.16.0",
+        "v1.15.0",
+        "v1.13.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_MOBILE_UX",
+      "release_ids": [
+        "v1.3.0",
+        "v1.0.32",
+        "v1.0.31"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_NEW_QG_FOR_PLATFORM",
+      "release_ids": [
+        "v1.0.25"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_ONE_TRUTH",
+      "release_ids": [
+        "v1.9.1",
+        "v1.9.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_OWN_HOST",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_PLANBOARD_COMPONENTS",
+      "release_ids": [
+        "v1.0.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_PLANBOARD_UX",
+      "release_ids": [
+        "v1.0.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_PRODUCT_ANALYTICS",
+      "release_ids": [
+        "v1.1.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_PRODUCT_BACKLOG",
+      "release_ids": [
+        "v1.16.0",
+        "v1.15.0",
+        "v1.14.1",
+        "v1.12.1",
+        "v1.7.1",
+        "v1.7.0",
+        "v1.4.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_PRODUCT_FIT",
+      "release_ids": [
+        "v1.16.0",
+        "v1.14.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_PRODUCT_LAYER",
+      "release_ids": [
+        "v1.0.58",
+        "v1.0.57",
+        "v1.0.54",
+        "v1.0.53"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_PROD_HARDENING",
+      "release_ids": [
+        "v1.0.42"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_PROJECT_SCOPE",
+      "release_ids": [
+        "v1.16.0",
+        "v1.14.0",
+        "v1.12.1",
+        "v1.12.0",
+        "v1.4.0",
+        "v1.2.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_QG_INTEGRATION",
+      "release_ids": [
+        "v1.6.20"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_QG_RUNBOOK_VIZ",
+      "release_ids": [
+        "LORE_v1.0.20"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_RELEASE_FLOW",
+      "release_ids": [
+        "v1.0.22"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_ROADMAP_PER_PROJECT",
+      "release_ids": [
+        "v1.16.0",
+        "v1.15.0",
+        "v1.14.1",
+        "v1.14.0",
+        "v1.12.1",
+        "v1.12.0",
+        "v1.11.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_ROUTINES_EXTENSION",
+      "release_ids": [
+        "v1.0.19"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_SCD2_HYGIENE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_SCHEMA_VERSIONING",
+      "release_ids": [
+        "v1.0.51"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_SECRETS_VAULT",
+      "release_ids": [
+        "v1.2.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_SLICE_ERGONOMICS",
+      "release_ids": [
+        "v1.13.0",
+        "v1.12.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_SPRINT_DEPS",
+      "release_ids": [
+        "v1.0.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_TASK_NOTE_MD_FIX",
+      "release_ids": [
+        "v1.6.9"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_TASK_ROLE_EDGES",
+      "release_ids": [
+        "v1.10.0",
+        "v1.10.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_TIMELINE_UX",
+      "release_ids": [
+        "v1.5.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_UX_FILTERS_LINKS",
+      "release_ids": [
+        "v1.0.47",
+        "v1.0.46"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_UX_OPTIMIZATION",
+      "release_ids": [
+        "v1.15.0",
+        "v1.14.1",
+        "v1.0.44",
+        "v1.0.41",
+        "v1.0.40",
+        "v1.0.43"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_VERSION_DRIFT",
+      "release_ids": [
+        "v1.4.0",
+        "v1.2.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_WORK_ANY_KIND",
+      "release_ids": [
+        "v1.16.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_LORE_WRITE_TOOLS",
+      "release_ids": [
+        "LORE_v1.0.20"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_M0CLOSE",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MCP_SERVER",
+      "release_ids": [
+        "v1.0.16"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_CLIMATE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_CURTAINS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "release_ids": [
+        "sjon-v0.3.0",
+        "sjon-v0.2.1",
+        "sjon-v0.2.0",
+        "sjon-v0.1.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_LIGHT",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_LIGHTING",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_OWN_MODEL",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "release_ids": [
+        "sjon-v0.2.0",
+        "sjon-v0.1.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_PLANPARSE_PROD",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/TEIKN",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_PLAN_IMPORT",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/TEIKN",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_PLAN_UI",
+      "release_ids": [
+        "gladsheim-v0.4.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "release_ids": [
+        "gladsheim-v0.2.0",
+        "sensor-node-mesha-2026-09-21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_UC_GAPS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_BENCH",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_GATEWAY",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "release_ids": [
+        "midgard-zigbee-v0.1.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIGGEN_ENGINE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIGGEN_ENVS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIGGEN_PIPELINE",
+      "release_ids": [
+        "miggen-2026-08-17",
+        "miggen-2026-08-16"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIGGEN_UI_REPORTS",
+      "release_ids": [
+        "miggen-2026-08-17",
+        "miggen-2026-08-16"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIG_GEN_PYTHON",
+      "release_ids": [
+        "miggen-2026-08-17",
+        "miggen-2026-08-16"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMFW",
+      "release_ids": [
+        "v1.3.26"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_CORE",
+      "release_ids": [
+        "v1.3.25"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_FOUNDATION",
+      "release_ids": [
+        "v1.3.26"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_GATEWAY",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_GATEWAY_POSTHL",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_HYBRID",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_HYBRID_POSTHL",
+      "release_ids": [
+        "v1.7.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_LOCAL_LLM",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_ONPREM",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_ONPREM_AUG",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_PKG",
+      "release_ids": [
+        "v1.6.12"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "release_ids": [
+        "v1.3.25"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "release_ids": [
+        "v1.3.26"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_TIER25",
+      "release_ids": [
+        "v1.3.41"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMIR_TOKEN_USAGE_ACCOUNTING",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MIMREH",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/studio"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_ACCESS",
+      "release_ids": [
+        "v0.3.0",
+        "v0.3.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_BIG_FILES",
+      "release_ids": [
+        "v1.11.193"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_CONTRACT",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLore_serverside",
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_CUTOVER",
+      "release_ids": [
+        "v1.11.183",
+        "v0.3.119",
+        "v0.3.118",
+        "v1.11.182",
+        "v1.11.181",
+        "v1.11.180",
+        "v1.11.179",
+        "v1.11.178",
+        "v1.11.177",
+        "v1.11.176",
+        "v1.11.175",
+        "v1.11.174",
+        "v1.11.170",
+        "v1.11.158",
+        "minilore-link-2026-10-20e",
+        "minilore-srv-v0.3.91",
+        "v1.11.157",
+        "v1.11.156",
+        "minilore-link-2026-10-20c",
+        "v1.11.155",
+        "minilore-srv-v0.3.90",
+        "v1.11.154",
+        "v1.11.153",
+        "minilore-srv-v0.3.89",
+        "v1.11.152",
+        "minilore-link-2026-10-20b",
+        "minilore-1.11.151",
+        "minilore-srv-v0.3.88",
+        "minilore-srv-v0.3.87",
+        "minilore-srv-v0.3.86",
+        "minilore-1.11.149",
+        "minilore-link-2026-10-20",
+        "minilore-srv-v0.3.84",
+        "minilore-1.11.147",
+        "minilore-1.11.146",
+        "v0.3.82",
+        "v0.3.80",
+        "minilore-1.11.144",
+        "v0.3.78",
+        "v0.3.78",
+        "minilore-1.11.143",
+        "minilore-1.11.142",
+        "v0.3.77",
+        "minilore-1.11.141",
+        "v0.3.76",
+        "v0.3.75",
+        "v1.11.2",
+        "minilore-1.11.140",
+        "minilore-1.11.139",
+        "v0.3.74",
+        "minilore-1.11.138",
+        "v0.3.73",
+        "v0.3.72",
+        "v0.3.71",
+        "minilore-1.11.137",
+        "minilore-1.11.136",
+        "minilore-1.11.135",
+        "minilore-1.11.134",
+        "minilore-1.11.127",
+        "minilore-1.11.126",
+        "minilore-1.11.125",
+        "minilore-1.11.124",
+        "minilore-1.11.123",
+        "minilore-1.11.122",
+        "minilore-1.11.121",
+        "minilore-1.11.120",
+        "minilore-1.11.119",
+        "minilore-1.11.118",
+        "minilore-1.11.117",
+        "minilore-1.11.133",
+        "minilore-1.11.132",
+        "minilore-1.11.131",
+        "minilore-1.11.130",
+        "minilore-1.11.129",
+        "v0.3.70",
+        "v0.3.69",
+        "minilore-1.11.128",
+        "v0.3.68",
+        "v0.3.67",
+        "v0.3.67",
+        "v0.3.66",
+        "v0.3.65",
+        "v0.3.64",
+        "v0.3.63",
+        "v1.11.1",
+        "v0.3.62",
+        "v0.3.61",
+        "minilore-1.11.116",
+        "v0.3.60",
+        "minilore-1.11.116",
+        "minilore-1.11.115",
+        "minilore-1.11.115",
+        "v0.3.59",
+        "v0.3.58",
+        "v0.3.57",
+        "v0.3.56",
+        "v0.3.55",
+        "minilore-1.11.114",
+        "v0.3.54",
+        "minilore-1.11.113",
+        "minilore-1.11.112",
+        "v0.3.53",
+        "minilore-1.11.111",
+        "v0.3.52",
+        "v0.3.51",
+        "minilore-1.11.110",
+        "minilore-1.11.109",
+        "minilore-1.11.108",
+        "minilore-1.11.107",
+        "minilore-1.11.108",
+        "minilore-1.11.107",
+        "minilore-v1.11.106",
+        "minilore-v1.11.105",
+        "minilore-v1.11.104",
+        "v0.3.50",
+        "minilore-1.11.103",
+        "minilore-1.11.102",
+        "minilore-1.11.100",
+        "v0.3.48",
+        "minilore-1.11.99",
+        "v0.3.47",
+        "minilore-1.11.98",
+        "minilore-1.11.97",
+        "minilore-1.11.96",
+        "minilore-1.11.95",
+        "minilore-1.11.94",
+        "v0.3.44",
+        "minilore-1.11.92",
+        "v0.3.43",
+        "minilore-1.11.90",
+        "minilore-1.11.89",
+        "v0.3.42",
+        "v0.3.41",
+        "minilore-app-1.11.80",
+        "minilore-app-1.11.80",
+        "v1.11.51",
+        "v1.11.50",
+        "v0.3.25",
+        "v1.11.48",
+        "v1.11.47",
+        "link-2026-08-25",
+        "v0.3.23",
+        "link-2026-08-25",
+        "minilore-v1.11.43",
+        "v0.3.21",
+        "minilore-v1.11.41",
+        "minilore-v1.11.39",
+        "minilore-v1.11.20",
+        "minilore-v1.11.18",
+        "v1.11.10",
+        "v1.10.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE",
+        "AIDA/miniLore_serverside",
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_DEEP_ARCHIVE",
+      "release_ids": [
+        "v0.3.126",
+        "v0.3.125",
+        "v0.3.124",
+        "v0.3.123",
+        "v0.3.122",
+        "v1.11.192"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_DIALOGUES",
+      "release_ids": [
+        "v0.3.15",
+        "v0.3.4",
+        "v0.3.5",
+        "v0.3.6",
+        "v0.3.7",
+        "v0.3.8",
+        "v0.3.9"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_ENTITY_TYPES",
+      "release_ids": [
+        "v0.3.40",
+        "v0.3.39",
+        "v0.3.38",
+        "v0.3.37",
+        "v0.3.34",
+        "v0.3.33",
+        "v0.3.32",
+        "v0.3.31",
+        "v0.3.30",
+        "v0.3.29",
+        "v0.3.35",
+        "v0.3.28",
+        "v0.3.36"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLore_serverside",
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_FILES",
+      "release_ids": [
+        "v0.3.24",
+        "link-2026-08-25",
+        "v0.3.20",
+        "v0.3.1",
+        "v0.3.12",
+        "v0.3.13",
+        "v0.3.14"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLore_serverside",
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_FOUNDATION",
+      "release_ids": [
+        "v0.3.117",
+        "v1.11.173",
+        "v1.11.172",
+        "v1.11.171",
+        "v1.11.170",
+        "minilore-v1.0.0",
+        "v0.5.43",
+        "v0.5.35",
+        "v0.5.31.1",
+        "v0.5.29",
+        "v0.5.27",
+        "v0.5.23",
+        "v0.5.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_HUB",
+      "release_ids": [
+        "v0.3.10",
+        "v0.3.11"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLore_serverside",
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_LINK",
+      "release_ids": [
+        "v1.11.185",
+        "v0.3.120",
+        "link-v0.2.2",
+        "link-v0.2.1",
+        "link-2026-08-25",
+        "link-2026-08-25",
+        "link-2026-08-25",
+        "link-2026-08-25",
+        "link-2026-08-24",
+        "v0.3.22"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLore_serverside",
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_LIVE",
+      "release_ids": [
+        "v1.11.184",
+        "v0.3.113",
+        "v0.3.112",
+        "v0.3.111",
+        "v0.3.110",
+        "v0.3.109",
+        "v0.3.108",
+        "v0.3.107",
+        "v0.3.105",
+        "v0.3.104",
+        "v0.3.103",
+        "minilore-srv-v0.3.102",
+        "1.11.167",
+        "minilore-srv-v0.3.101",
+        "1.11.166",
+        "minilore-srv-v0.3.100",
+        "1.11.165",
+        "v0.3.99",
+        "v0.3.97",
+        "1.11.164",
+        "v0.3.96",
+        "1.11.163",
+        "1.11.162",
+        "1.11.161",
+        "minilore-srv-v0.3.94",
+        "v1.11.160",
+        "minilore-srv-v0.3.93",
+        "v1.11.159",
+        "minilore-srv-v0.3.92",
+        "minilore-1.11.151",
+        "minilore-1.11.150",
+        "minilore-1.11.148",
+        "minilore-srv-v0.3.85",
+        "minilore-1.11.146",
+        "v0.3.81",
+        "minilore-1.11.145",
+        "v0.3.3"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLore_serverside",
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_OPEN",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "release_ids": [
+        "v1.11.198"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_PROJECT_VIEW",
+      "release_ids": [
+        "v1.11.191",
+        "v1.11.190",
+        "v1.11.189",
+        "v0.3.121",
+        "v1.11.188",
+        "v1.11.187",
+        "v1.11.186"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_READ",
+      "release_ids": [
+        "v0.3.16",
+        "v0.3.15"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_SRV_CORE",
+      "release_ids": [
+        "v0.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "release_ids": [
+        "minilore-v1.11.197",
+        "minilore-v1.11.196",
+        "v1.11.195",
+        "v1.11.194"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MINILORE_UX",
+      "release_ids": [
+        "v1.10.1",
+        "v1.0.3"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MOBILEPOC_MVP",
+      "release_ids": [
+        "v0.3.116",
+        "v0.3.115",
+        "v0.3.114",
+        "v0.3.109"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "release_ids": [
+        "v1.5.11"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MT_NEXT",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MT_NEXT_BACKLOG",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_MUT",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_NAMED_AGENTS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OBSERVABILITY_OTEL",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OBS_INTEGRATION",
+      "release_ids": [
+        "v1.6.15"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ODIN_VEC_ARCH",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/ODIN"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OEM_PARTNER_PROGRAM",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OL_CONSUMER_VALIDATION",
+      "release_ids": [
+        "v1.7.0",
+        "v1.6.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OL_FACETS_EXTRACTION",
+      "release_ids": [
+        "v1.7.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OL_INTEGRATION",
+      "release_ids": [
+        "v1.4.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OL_MAPPER_V2",
+      "release_ids": [
+        "v1.4.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OL_MT04_FIX",
+      "release_ids": [
+        "v1.4.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OL_STATIC_RUNTIME_XREF",
+      "release_ids": [
+        "v1.5.6"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OL_TESTSTAND",
+      "release_ids": [
+        "v1.4.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OL_XREF_PHASE2",
+      "release_ids": [
+        "v1.5.7"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OL_XREF_PHASE3",
+      "release_ids": [
+        "v1.5.9"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OL_XREF_PHASE4",
+      "release_ids": [
+        "v1.5.10"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OL_XREF_PHASE5",
+      "release_ids": [
+        "v1.5.11"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OL_XREF_PHASE6_8",
+      "release_ids": [
+        "v1.5.13"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OSI_METRICS_LAYER",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_OUTREACH",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/studio"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PENTEST_EXTERNAL",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PHANTOM",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "release_ids": [
+        "v1.4.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PLANITEM_RETIRE",
+      "release_ids": [
+        "v1.14.0",
+        "v1.0.36",
+        "v1.0.33"
+      ],
+      "no_release_required": false,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PLPGSQL_BODY_PARSING",
+      "release_ids": [
+        "v1.7.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PLPGSQL_GRAMMAR_ANTLR",
+      "release_ids": [
+        "v1.8.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY",
+      "release_ids": [
+        "v1.3.26"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PMODE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PREPROD_BOOTSTRAP",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PRICING",
+      "release_ids": [
+        "v1.6.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PROD_OBSERVABILITY",
+      "release_ids": [
+        "v1.6.6"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PROD_VERIFY_DOCKERLOCAL",
+      "release_ids": [
+        "v1.6.17"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_PROD_YC",
+      "release_ids": [
+        "v1.6.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_Q29_MCP_EVAL",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_Q30_ALGO",
+      "release_ids": [
+        "v1.6.12"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_Q30_ARCADEDB_SURVEY",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_Q6_SCHEMA",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_Q7API",
+      "release_ids": [
+        "v1.6.22"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_Q9_ANVIL_BE",
+      "release_ids": [
+        "v1.6.6"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_QG_COVERAGE",
+      "release_ids": [
+        "v1.0.22"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_QG_HOUSEKEEPING_2026W27",
+      "release_ids": [
+        "v1.7.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_QG_REBUILD",
+      "release_ids": [
+        "v1.16.0",
+        "v1.15.0",
+        "v1.14.1",
+        "v1.13.0",
+        "v1.8.0",
+        "v1.7.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_QG_VIOLATIONS",
+      "release_ids": [
+        "v1.6.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_Q_MT6B",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_RAGVPARSE_UI",
+      "release_ids": [
+        "v1.0.16"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/ODIN",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_RAG_BLOG",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_RAG_REPORT",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/ODIN"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_RAG_SETUP",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/ODIN"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_RAG_VS_PARSE_PHASE3A",
+      "release_ids": [
+        "v1.6.4"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/ODIN"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_RAG_VS_PARSE_PHASE3B",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/ODIN"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_RBAC_SVC_USERS",
+      "release_ids": [
+        "v1.5.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_RBKC",
+      "release_ids": [
+        "v1.6.15"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_RBMT",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_REMOVE_MODULE_FEDERATION",
+      "release_ids": [
+        "v1.3.26"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_ROLLOUT_PIPELINE",
+      "release_ids": [
+        "rollout-2026-08-17",
+        "rollout-2026-08-16"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/udwe-rollout"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_RST",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SCD2_ACTIVEKEY_FIX",
+      "release_ids": [
+        "v1.6.22"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "release_ids": [
+        "v1.6.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SDK_PACKAGING",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SECURITY_DEPS_MAY26",
+      "release_ids": [
+        "v1.3.32"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SEIDR_SITE_PRESTAGE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SEIDR_SITE_RELEASE_NOTES",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV",
+      "release_ids": [
+        "site-v1.4.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SEO_MARKETING_ACTIONS",
+      "release_ids": [
+        "v1.6.21"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SEO_MARKETING_W2",
+      "release_ids": [
+        "v1.4.3"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "release_ids": [
+        "v1.2.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "release_ids": [
+        "v1.4.3"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SEO_SITE_WAVE3",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SHT_VRD_TENANT",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SHUTTLE_C2X",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SHUTTLE_DEPRECATIONS_MAY26",
+      "release_ids": [
+        "v1.5.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SHUTTLE_L024",
+      "release_ids": [
+        "v1.1.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SHUTTLE_M2E",
+      "release_ids": [
+        "v1.6.10"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SHUTTLE_TENANT",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "release_ids": [
+        "v1.6.13"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "release_ids": [
+        "v1.6.14",
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SITE_PERF_V1",
+      "release_ids": [
+        "v1.1.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "release_ids": [
+        "v1.6.8"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SITE_SEO_V2",
+      "release_ids": [
+        "v1.6.11"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "release_ids": [
+        "v1.0.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SITE_V1",
+      "release_ids": [
+        "v1.5.6"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SITE_V2_ORDER",
+      "release_ids": [
+        "v1.5.9"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "release_ids": [
+        "v1.6.4"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SITE_V3_CONTENT",
+      "release_ids": [
+        "v1.5.10"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SITE_V4_DOCS_DEPTH",
+      "release_ids": [
+        "v1.5.11"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SKADI_ADAPTERS",
+      "release_ids": [
+        "v1.7.1"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "release_ids": [
+        "v1.1.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SKADI_PG",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SKULD_OPERATIONAL_METRICS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SKULD_V1",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SLIDES",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/studio"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SOURCE_FILE_DENORM",
+      "release_ids": [
+        "v1.3.27"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "release_ids": [
+        "v1.6.9"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "release_ids": [
+        "v1.6.10"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SOVEREIGN_AI_MESSAGING",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SPLSCR",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SSOT_HEALTH",
+      "release_ids": [
+        "v1.4.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_STAB_DALI_LOOM",
+      "release_ids": [
+        "v1.3.17"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_STAR_EXPANSION",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SYSTEM_AIDA_LORE",
+      "release_ids": [
+        "v1.6.6"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_SYSTIMESTAMP_FIX",
+      "release_ids": [
+        "v1.6.4"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_TECH_REGISTRY",
+      "release_ids": [
+        "v1.0.30"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_TENANT_SECRETS_V2",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_TPG_MT_STABILIZATION",
+      "release_ids": [
+        "v1.3.12"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA-TestPlayGround"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_TRACK_B_PRE_M2",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UDWE_AF3_ENGINE_FORK",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UI_POLISH_ROUND5",
+      "release_ids": [
+        "v1.3.17"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S0_SAFETY",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S10_SEIDR_KIT",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S1_HONEST_API",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S2_GRAPH_MEMORY",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S3_V2_INFRA",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S4_UI_SHELL_LISTS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S5_RECORD_TASKS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S6_VOLVA_IN_LORE",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S7A_NEWS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S7B_ADMIN",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S7C_WHY_CANVAS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S8_SWITCH",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_UXR_S9_SCALE_OPT",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VAULT_HARDENING",
+      "release_ids": [
+        "v1.7.7"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VERDANDI_MOBILE",
+      "release_ids": [
+        "v1.6.20"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VERDANDI_UX_MOBILE",
+      "release_ids": [
+        "v1.3.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VERSION_AUDIT_APR26",
+      "release_ids": [
+        "v1.3.17"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VIZ_EMBED",
+      "release_ids": [
+        "v1.16.0"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "release_ids": [
+        "v0.1.6-m0.65.2.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "release_ids": [
+        "v0.0.5-m0.62.4"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_BRANDING_W2",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "release_ids": [
+        "v0.1.7-m0.65.2.5",
+        "v0.1.6-m0.65.2.5",
+        "v0.1.5-m0.65.2.5",
+        "v0.0.5-m0.62.4"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_CI_W2",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_CI_W3",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_DATASTORY",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_DRIVER_XRAY_SQL",
+      "release_ids": [
+        "v0.0.0.2"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "release_ids": [
+        "v0.1.5-m0.65.2.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_HELP",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_HOUND_BRIDGE",
+      "release_ids": [
+        "v0.1.5-m0.65.2.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA",
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "release_ids": [
+        "v0.1.5-m0.65.2.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "release_ids": [
+        "v0.1.5-m0.65.2.5",
+        "v0.0.5-m0.62.4"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "release_ids": [
+        "v0.1.6-m0.65.2.5",
+        "v0.0.0.3"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_SSO_OIDC",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "release_ids": [
+        "v0.1.8-m0.65.2.5",
+        "v0.1.6-m0.65.2.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "release_ids": [
+        "v0.1.6-m0.65.2.5",
+        "v0.1.5-m0.65.2.5"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_WAVE0_5MIN_DEMO",
+      "release_ids": [
+        "v1.5.4"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_WAVE1_UI",
+      "release_ids": [
+        "v1.6.10"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_WAVE2_SAAS_ENABLERS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_WAVE3_NEW_UCS",
+      "release_ids": [],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "sprint_id": "SPRINT_YC_DEPLOY_FIXES_APR24",
+      "release_ids": [
+        "v1.3.7"
+      ],
+      "no_release_required": null,
+      "git_projects": [
+        "NooriUta/AIDA"
+      ]
+    }
+  ],
+  "_page": {
+    "limit": 1000,
+    "offset": 0,
+    "total": 520,
+    "has_more": false,
+    "fields": [
+      "sprint_id",
+      "release_ids",
+      "no_release_required",
+      "git_projects"
+    ],
+    "fields_checked": true
+  }
+}
