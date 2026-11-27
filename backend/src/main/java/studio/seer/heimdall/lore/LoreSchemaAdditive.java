@@ -53,7 +53,7 @@ final class LoreSchemaAdditive {
      * Номер схемы кода. Поднимать при КАЖДОМ изменении {@link #CHANGES} и закреплять новый хэш в {@link #PINNED}
      * (сторож хэша — как у номера модели: «схема сменилась, а номер тот же» — красный).
      */
-    static final int VERSION = 5;
+    static final int VERSION = 6;
 
     /** Номер → хэш доводки. Прежние номера не правятся: их отметка уже лежит в базах. */
     static final Map<Integer, String> PINNED = Map.of(
@@ -61,7 +61,8 @@ final class LoreSchemaAdditive {
         2, "1fb90ce03ae56244",
         3, "7f859c257fe15414",
         4, "8db786982331b847",
-        5, "a4b19c3f6c60ca04");
+        5, "a4b19c3f6c60ca04",
+        6, "0000000000000000");
 
     /** Последний шаг V. Реестр шагов заморожен: новое — только в {@link #CHANGES}. */
     static final int LAST_V_STEP = 100;
@@ -151,6 +152,11 @@ final class LoreSchemaAdditive {
         "CREATE VERTEX TYPE ClRoutineMetric IF NOT EXISTS",
         "CREATE PROPERTY ClRoutineMetric.basis IF NOT EXISTS STRING");
 
+    // ── v6 · ADR-LORE-066 фаза А: релиз принадлежит репозиторию — ребро KnowRelease → KnowRepository. ─────────────
+    // Ставит миграция release-of-repository (LoreReleaseRepositoryMigration); рёбра BELONGS_TO_PROJECT пока остаются.
+    static final List<String> RELEASE_OF_DDL = List.of(
+        "CREATE EDGE TYPE RELEASE_OF IF NOT EXISTS");
+
     // ── v4 · SPRINT_LORE_ADMIN_POLISH/AP-APPEARANCE (1а): свой стиль — статья palette с JSON токенов. Поле и в истории
     // словаря: правка своего стиля — такая же версия статьи, как правка подписи (AL-43). Посев — подписи шести наших
     // палитр (SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS, 5а).
@@ -225,7 +231,9 @@ final class LoreSchemaAdditive {
         new Change("product_history", "SPRINT_LORE_ADMIN_POLISH/AP-PASSPORT-EDIT (доводка v5): SCD2-история боли, выгоды, работы, "
                 + "роли продукта и фичи — KnowPainHist, KnowGainHist, KnowJobHist, KnowProjectActorHist, KnowUseCaseHist; "
                 + "начальная версия «как есть» у записей без истории",
-            PRODUCT_HIST_DDL, ProductHistory.fingerprint(), sql -> ProductHistory.seed(sql, typeNames(sql))));
+            PRODUCT_HIST_DDL, ProductHistory.fingerprint(), sql -> ProductHistory.seed(sql, typeNames(sql))),
+        new Change("release_of_repository", "ADR-LORE-066 фаза А (доводка v6): ребро RELEASE_OF — релиз принадлежит репозиторию",
+            RELEASE_OF_DDL, null, null));
 
     /** Шаги V после модели 1.18 → запись доводки, которая несёт то же самое на базу из модели. */
     static final Map<Integer, String> FROM_V_STEPS = Map.of(
