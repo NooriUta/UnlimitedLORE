@@ -181,6 +181,8 @@ services:
       # (LORE_VOLVA_EMBED_SECRET) бэкенд берёт через SecretProvider — env или Infisical.
       # Пусто → /lore/embed/volva/* отвечает 503 «не настроено».
       - LORE_VOLVA_EMBED_SITE_URL=${LORE_VOLVA_EMBED_SITE_URL:-}
+      # EMB-L6: издатель подписи ES256 (claim iss). Пусто — ES256 не включается, встройка остаётся на HS256.
+      - LORE_VOLVA_EMBED_ISSUER=${LORE_VOLVA_EMBED_ISSUER:-}
       # LINKS-VIEW-HOLDER: адрес сервера miniLORE для читателя «держателей» записи. Пусто → not_configured.
       # Препрод: http://minilore-srv-preprod:8080 (общая сеть headscale-net; задаётся в lore-cd.yml).
       - lore.minilore.url=${LORE_MINILORE_URL:-}
