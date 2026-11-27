@@ -35,9 +35,11 @@ say_summary() {
 # fetch URL → глобальные BODY, CODE, CTYPE. Код выхода curl не роняет скрипт:
 # «нет ответа» — это CODE=000, и решает классификатор ниже, а не set -e.
 fetch() {
-  local net=() raw
+  local net=() res=() raw
   [ -n "${PROBE_NETWORK:-}" ] && net=(--network "$PROBE_NETWORK")
-  raw="$(docker run --rm "${net[@]}" "$IMAGE" curl -s -m 15 \
+  # Фолбэк имени на IP, как у прода (владелец 26.11): PREPROD_RESOLVE=имя:443:IP — TLS по имени, соединение по IP.
+  [ -n "${PREPROD_RESOLVE:-}" ] && res=(--resolve "$PREPROD_RESOLVE")
+  raw="$(docker run --rm "${net[@]}" "$IMAGE" curl "${res[@]}" -s -m 15 \
     -w '\n%{http_code} %{content_type}' "$1" 2>/dev/null)"
   local last="${raw##*$'\n'}"
   BODY="${raw%$'\n'*}"

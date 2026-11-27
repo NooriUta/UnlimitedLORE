@@ -1,0 +1,5010 @@
+{
+  "rows": [
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-4",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T08:44:59.580Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-5",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T08:57:16.075Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-6",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T09:18:32.759Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_DEEP_ARCHIVE/DA-6",
+      "sprint_id": "SPRINT_MINILORE_DEEP_ARCHIVE",
+      "valid_from": "2026-11-07T09:18:38.351Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-7",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T09:18:45.422Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-6",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T09:18:46.164Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_DEEP_ARCHIVE/DA-6",
+      "sprint_id": "SPRINT_MINILORE_DEEP_ARCHIVE",
+      "valid_from": "2026-11-07T09:18:46.961Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-7",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T09:19:06.397Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-8",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T10:04:58.737Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-5",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T10:06:35.840Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-9",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T10:33:02.003Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-10",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:32:19.089Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-11",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:34:32.399Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-12",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:34:36.299Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-13",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:34:40.161Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-14",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:34:43.758Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-15",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:34:47.460Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-16",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:34:51.053Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-17",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:34:57.071Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-9",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:35:13.215Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-11",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:35:13.290Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-12",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:35:13.352Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-13",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:35:13.411Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-14",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:35:13.465Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-15",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:35:13.525Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-16",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:35:13.583Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-17",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:35:13.638Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-8",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:35:13.733Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-10",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T11:46:13.408Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-5",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T12:50:10.281Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-9",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T12:50:10.363Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-11",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T12:50:10.423Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-12",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T12:50:10.485Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-13",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T12:50:10.545Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-14",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T12:50:10.605Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-15",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T12:50:10.663Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-16",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T12:50:10.725Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-17",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T12:50:10.783Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-8",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T12:50:17.311Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-1",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T13:05:20.751Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-2",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T13:05:26.766Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-3",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T13:05:31.323Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-4",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T13:05:35.770Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-5",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T13:05:40.327Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-6",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T13:05:45.547Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-7",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T13:05:46.331Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-8",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T13:05:46.331Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-8",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T13:17:38.765Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-9",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T13:17:38.864Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-10",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T13:17:38.923Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-11",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T13:17:38.977Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-12",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T13:19:10.153Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_TG_LOOK/TG-10",
+      "sprint_id": "SPRINT_MINILORE_TG_LOOK",
+      "valid_from": "2026-11-07T13:29:30.060Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_DEEP_ARCHIVE/DA-7",
+      "sprint_id": "SPRINT_MINILORE_DEEP_ARCHIVE",
+      "valid_from": "2026-11-07T14:04:11.765Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-13",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:46:45.909Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-14",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:46:51.468Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-15",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:46:55.813Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-16",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:47:00.746Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-17",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:47:05.031Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-18",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:47:10.557Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-19",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:47:14.770Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-20",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:47:26.968Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-21",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:47:34.736Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-22",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:47:41.524Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-23",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:47:48.242Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-24",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:47:55.164Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-13",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T16:48:41.582Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-14",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T17:11:07.144Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-14",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T17:11:15.912Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-15",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T17:11:16.546Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-25",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T17:12:43.761Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-17",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T17:16:50.606Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-16",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T17:19:18.289Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-15",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T17:25:25.742Z"
+    },
+    {
+      "task_uid": "SPRINT_MINILORE_POLISH/PL-17",
+      "sprint_id": "SPRINT_MINILORE_POLISH",
+      "valid_from": "2026-11-07T17:25:26.547Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-05",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T16:44:20.211Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-01",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:36:13.978Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-02",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:36:16.699Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-03",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:36:19.583Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-04",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:36:30.465Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-05",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:36:33.343Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-06",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:36:35.128Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-07",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:36:40.081Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-08",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:36:51.841Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-09",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:36:53.967Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-10",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:36:55.621Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-11",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:36:58.718Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-01",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:38:05.225Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-03",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:38:18.164Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-02",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:38:21.183Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-02",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-22T23:53:49.520Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/HS-01",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T00:02:40.355Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/HS-02",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T00:02:43.049Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/HS-03",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T00:02:47.355Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/HS-04",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T00:02:50.532Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/HS-05",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T00:16:10.091Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-06",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T00:18:40.972Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/HS-01",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T01:57:28.491Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-04",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T01:57:30.622Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-04",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T07:47:21.244Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-06",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T07:47:24.126Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-07",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T08:15:48.482Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/GD-01",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T09:24:59.731Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/GD-02",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T09:25:02.359Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/GD-03",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T09:25:07.374Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/GD-04",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T09:25:09.994Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/GD-05",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T09:25:37.335Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/GD-06",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T09:25:40.604Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/GD-07",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T09:25:42.955Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-12",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-08-23T09:25:44.844Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_OWN_MODEL/OM-02",
+      "sprint_id": "SPRINT_MIDGARD_OWN_MODEL",
+      "valid_from": "2026-08-24T19:19:42.711Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_OWN_MODEL/OM-01",
+      "sprint_id": "SPRINT_MIDGARD_OWN_MODEL",
+      "valid_from": "2026-08-24T17:38:30.919Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_OWN_MODEL/OM-02",
+      "sprint_id": "SPRINT_MIDGARD_OWN_MODEL",
+      "valid_from": "2026-08-24T17:38:34.333Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_OWN_MODEL/OM-03",
+      "sprint_id": "SPRINT_MIDGARD_OWN_MODEL",
+      "valid_from": "2026-08-24T17:38:36.504Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_OWN_MODEL/OM-04",
+      "sprint_id": "SPRINT_MIDGARD_OWN_MODEL",
+      "valid_from": "2026-08-24T17:38:39.167Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_OWN_MODEL/OM-01",
+      "sprint_id": "SPRINT_MIDGARD_OWN_MODEL",
+      "valid_from": "2026-08-24T18:49:55.334Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_OWN_MODEL/OM-05",
+      "sprint_id": "SPRINT_MIDGARD_OWN_MODEL",
+      "valid_from": "2026-08-24T21:19:40.386Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_OWN_MODEL/OM-06",
+      "sprint_id": "SPRINT_MIDGARD_OWN_MODEL",
+      "valid_from": "2026-08-25T03:40:22.338Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-01",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:56:35.857Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-02",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:56:42.810Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-03",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:56:46.434Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-04",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:56:49.066Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-05",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:56:55.746Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-06",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:56:59.559Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-07",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:57:02.772Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-08",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:57:05.505Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-09",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:57:12.609Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-10",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:57:14.631Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-11",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:57:18.841Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-12",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:57:20.861Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-13",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:57:27.275Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-14",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T14:57:29.096Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-01",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T15:07:32.249Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-15",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T16:04:22.147Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-16",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T16:04:25.335Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-02",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T16:08:07.193Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-04",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T16:08:08.722Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-17",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T16:21:51.116Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-17",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T16:22:29.899Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-18",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T16:26:35.978Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-18",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T16:27:46.600Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-01",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:33:57.878Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-02",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:33:57.973Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-03",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:33:58.066Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-04",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:33:58.158Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-09",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:33:58.256Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-10",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:33:58.348Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-11",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:33:58.440Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-12",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:33:58.531Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-13",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:33:58.622Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-14",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:33:58.730Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-15",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:33:58.821Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-18",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:33:58.912Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-05",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:34:05.647Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-06",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:34:05.740Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-07",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:34:05.846Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-08",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:34:05.943Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-16",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:34:06.041Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-17",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T19:34:06.142Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-19",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T21:54:55.082Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-20",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T21:55:06.314Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-05",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T21:55:13.483Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-06",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T21:55:13.579Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-07",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T21:55:13.683Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-08",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T21:55:13.789Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-16",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T21:55:13.885Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-17",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T21:55:13.985Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-19",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T22:11:22.246Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-20",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-08-29T22:11:22.339Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_UC_GAPS/GAP-01",
+      "sprint_id": "SPRINT_MIDGARD_UC_GAPS",
+      "valid_from": "2026-08-30T09:36:34.420Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_UC_GAPS/GAP-02",
+      "sprint_id": "SPRINT_MIDGARD_UC_GAPS",
+      "valid_from": "2026-08-30T09:36:43.745Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_UC_GAPS/GAP-03",
+      "sprint_id": "SPRINT_MIDGARD_UC_GAPS",
+      "valid_from": "2026-08-30T09:37:05.711Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_UC_GAPS/GAP-04",
+      "sprint_id": "SPRINT_MIDGARD_UC_GAPS",
+      "valid_from": "2026-08-30T09:37:12.526Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_UC_GAPS/GAP-05",
+      "sprint_id": "SPRINT_MIDGARD_UC_GAPS",
+      "valid_from": "2026-08-30T09:37:34.283Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-01",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:41:01.914Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-02",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:41:06.747Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-03",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:41:15.076Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-04",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:41:28.958Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-05",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:41:33.801Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-06",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:41:41.330Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-07",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:41:53.008Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-08",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:41:59.397Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-09",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:42:06.476Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-10",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:42:19.110Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-11",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:42:26.958Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-12",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:42:37.027Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-13",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:42:49.106Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-14",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:42:54.990Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-15",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T09:55:59.464Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-16",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T10:14:26.497Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-17",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T10:14:36.602Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-18",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T10:14:53.029Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-19",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T10:15:00.445Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-20",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T10:15:15.980Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-21",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T10:15:28.327Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-22",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-08-30T10:42:54.371Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_BENCH/ZB-01",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_BENCH",
+      "valid_from": "2026-08-30T21:11:09.347Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_BENCH/ZB-02",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_BENCH",
+      "valid_from": "2026-08-30T21:11:21.072Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_BENCH/ZB-03",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_BENCH",
+      "valid_from": "2026-08-30T21:11:35.307Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_BENCH/ZB-04",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_BENCH",
+      "valid_from": "2026-08-30T21:11:46.796Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_BENCH/ZB-05",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_BENCH",
+      "valid_from": "2026-08-30T21:12:01.039Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-19",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T07:43:32.544Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-01",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-08-31T19:11:12.999Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-02",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-08-31T19:11:49.799Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-03",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-08-31T19:12:07.758Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-04",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-08-31T19:12:22.990Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-05",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-08-31T19:12:38.278Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-06",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-08-31T19:12:52.447Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-07",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-08-31T19:13:07.198Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-08",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-08-31T19:13:24.473Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_REPLY/VR-01",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "valid_from": "2026-08-31T19:21:21.112Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_REPLY/VR-02",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "valid_from": "2026-08-31T19:21:37.783Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_REPLY/VR-03",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "valid_from": "2026-08-31T19:21:52.790Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_REPLY/VR-04",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "valid_from": "2026-08-31T19:22:09.136Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_REPLY/VR-05",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "valid_from": "2026-08-31T19:44:47.349Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-01",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T09:20:40.583Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-02",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T09:21:04.563Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-03",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T09:21:29.238Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-04",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T09:21:48.080Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-05",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T09:22:18.691Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-06",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T09:22:54.334Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-07",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T09:23:17.703Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-01",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T11:55:39.493Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-02",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T11:55:39.611Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-03",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T11:55:39.704Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-08",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T11:56:12.342Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-09",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T11:56:32.152Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-10",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T11:56:50.467Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-11",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T11:57:11.349Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-12",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T11:57:29.479Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-13",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T16:42:53.697Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-14",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T19:56:52.283Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-15",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T19:57:12.423Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-16",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-01T19:57:34.426Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-17",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-02T03:19:14.002Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-18",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-02T03:19:39.399Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-19",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-05T16:49:53.965Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-20",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-05T16:50:04.719Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-21",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-05T16:54:26.661Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-22",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-05T17:23:15.486Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-23",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-05T18:11:24.405Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-24",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-07T05:55:21.648Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-25",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-07T13:16:59.859Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ZVUK/ZV-01",
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "valid_from": "2026-09-08T04:46:24.235Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ZVUK/ZV-02",
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "valid_from": "2026-09-08T04:46:36.795Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ZVUK/ZV-01",
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "valid_from": "2026-09-08T04:51:42.212Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-26",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-07T14:01:43.040Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-27",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-07T15:50:26.528Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ZVUK/ZV-03",
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "valid_from": "2026-09-08T04:46:50.271Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ZVUK/ZV-04",
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "valid_from": "2026-09-08T04:47:04.933Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ZVUK/ZV-05",
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "valid_from": "2026-09-08T04:47:24.080Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ZVUK/ZV-06",
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "valid_from": "2026-09-08T04:47:38.610Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ZVUK/ZV-02",
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "valid_from": "2026-09-08T04:51:46.888Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ZVUK/ZV-03",
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "valid_from": "2026-09-08T04:51:51.545Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ZVUK/ZV-04",
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "valid_from": "2026-09-08T04:51:56.758Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ZVUK/ZV-05",
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "valid_from": "2026-09-08T04:52:02.035Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ZVUK/ZV-06",
+      "sprint_id": "SPRINT_GJALLARHORN_ZVUK",
+      "valid_from": "2026-09-08T04:52:06.779Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-19",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T12:39:37.090Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-20",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T12:39:43.724Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-10",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T12:39:49.753Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-09",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T12:41:05.167Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-27",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T12:41:11.154Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-25",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T13:28:26.057Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-26",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T13:28:28.937Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_REPLY/VR-01",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "valid_from": "2026-09-08T13:36:24.584Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-09",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-08T13:37:40.810Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-23",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T13:42:21.919Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-11",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-09T23:27:36.387Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-12",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T00:19:18.975Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-24",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T13:42:29.985Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-07",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T13:42:38.654Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-21",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T13:42:45.270Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-12",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-08T13:42:50.981Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/GD-01",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-08T13:42:58.170Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/GD-05",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-08T13:43:04.655Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-22",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T13:50:47.915Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-15",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T14:03:44.854Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-27",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T14:03:52.461Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-11",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T14:03:59.273Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-01",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-08T14:09:15.733Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-02",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-08T14:09:33.965Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-03",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-08T14:09:53.172Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-04",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-08T14:10:18.941Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-05",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-08T14:10:39.783Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-06",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-08T14:11:03.470Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-07",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-08T15:24:58.263Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-08",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-08T15:25:22.193Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-09",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-08T15:25:46.026Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/HS-06",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-08T16:27:47.968Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-07",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T15:52:50.661Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-14",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T16:17:45.348Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-21",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-08T16:48:38.992Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ACOUSTICS/AC-01",
+      "sprint_id": "SPRINT_GJALLARHORN_ACOUSTICS",
+      "valid_from": "2026-09-08T16:51:16.233Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ACOUSTICS/AC-02",
+      "sprint_id": "SPRINT_GJALLARHORN_ACOUSTICS",
+      "valid_from": "2026-09-08T16:51:29.354Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ACOUSTICS/AC-03",
+      "sprint_id": "SPRINT_GJALLARHORN_ACOUSTICS",
+      "valid_from": "2026-09-08T16:51:44.005Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ACOUSTICS/AC-04",
+      "sprint_id": "SPRINT_GJALLARHORN_ACOUSTICS",
+      "valid_from": "2026-09-08T16:52:00.417Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ACOUSTICS/AC-05",
+      "sprint_id": "SPRINT_GJALLARHORN_ACOUSTICS",
+      "valid_from": "2026-09-08T16:52:12.755Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ACOUSTICS/AC-06",
+      "sprint_id": "SPRINT_GJALLARHORN_ACOUSTICS",
+      "valid_from": "2026-09-08T16:52:25.979Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ACOUSTICS/AC-07",
+      "sprint_id": "SPRINT_GJALLARHORN_ACOUSTICS",
+      "valid_from": "2026-09-08T16:52:39.533Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_ACOUSTICS/AC-08",
+      "sprint_id": "SPRINT_GJALLARHORN_ACOUSTICS",
+      "valid_from": "2026-09-08T16:52:53.693Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-10",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-09T23:26:47.989Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-11",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-09T23:27:00.649Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-29",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-09T23:27:27.827Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-29",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-09T23:27:18.517Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-10",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-09T23:27:32.370Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-10",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T00:07:10.091Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-11",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T00:07:29.450Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-12",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T00:07:49.932Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-12",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T00:18:49.244Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-30",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T00:29:17.358Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-30",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T00:29:21.379Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-13",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T04:35:40.795Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-13",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T04:55:24.693Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-13",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T04:55:29.579Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-14",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T05:20:05.492Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-15",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T05:20:28.160Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-14",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T05:20:33.205Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-15",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T05:20:38.326Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-14",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T05:38:51.011Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-16",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T05:53:57.268Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-16",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T05:54:12.973Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-17",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T06:03:29.677Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-17",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T06:03:37.062Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-31",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T06:16:11.875Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-32",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T06:16:35.227Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-15",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T06:17:46.736Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-31",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T06:31:20.770Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-33",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T06:31:34.537Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-34",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T06:40:06.295Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-18",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T06:40:44.416Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-18",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T07:18:27.631Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-35",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T07:24:55.203Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-36",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T07:30:24.266Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-19",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T07:31:15.171Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-36",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T07:47:07.362Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-24",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T11:13:11.934Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-43",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T14:16:29.243Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-16",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T07:35:19.342Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-20",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T07:47:16.038Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-20",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T08:01:32.699Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-37",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T08:02:05.405Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-38",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T08:02:11.650Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-39",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T08:02:21.196Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-40",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T08:02:27.699Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-41",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T08:02:34.717Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-42",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T08:02:41.364Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-35",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T08:03:38.174Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-08",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T15:53:30.013Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-21",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T08:43:08.056Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-22",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T08:43:20.295Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-23",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T08:49:14.898Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-23",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T08:52:32.839Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-22",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T09:02:05.995Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-20",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T10:51:25.340Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-09",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T15:53:30.117Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-26",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T11:51:30.604Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-10",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T15:53:30.221Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-17",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T09:37:29.350Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-24",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T11:03:49.416Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-25",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T11:30:07.952Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-43",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T11:31:20.582Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-18",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T11:35:04.556Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-26",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T11:50:55.859Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-27",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T12:15:32.088Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-27",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T12:15:49.961Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-28",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T14:17:12.259Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-28",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T15:10:35.746Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-29",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T15:10:52.126Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-29",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T15:11:28.793Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-30",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T15:47:00.267Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-32",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T15:47:22.438Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-25",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T15:50:33.613Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-43",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-11T09:31:37.619Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-1",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-11T16:50:24.210Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-2",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-11T16:50:29.019Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-3",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-11T16:50:34.948Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-4",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-11T16:50:37.305Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-13",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T18:14:47.717Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-31",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T15:47:11.023Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-33",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T15:48:30.371Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-01",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T15:51:15.766Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-30",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T15:52:16.727Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-05",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T15:53:29.889Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-03",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T15:53:33.035Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-11",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T15:53:36.356Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-12",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T15:53:36.466Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-13",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T15:53:36.572Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-15",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T15:53:36.680Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-17",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T15:53:36.793Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-33",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T15:53:43.709Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-34",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T15:53:59.537Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-02",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-10T15:54:36.231Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-07",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-10T15:54:36.372Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-09",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-10T15:54:36.476Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-10",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-10T15:54:36.578Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-06",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-10T15:54:38.615Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-08",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-10T15:54:38.738Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-12",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-10T15:54:38.843Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-13",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-10T15:54:38.943Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-14",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-10T15:54:39.046Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_REPLY/VR-02",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "valid_from": "2026-09-10T15:54:39.151Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-12",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T15:56:05.909Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-16",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T15:58:35.226Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-15",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T15:59:30.992Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-02",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T15:59:41.139Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/GD-05",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-10T15:59:47.655Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-21",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T16:00:58.675Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-31",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T16:11:01.271Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-32",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T16:26:57.468Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-35",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T16:49:56.462Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-34",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T16:49:45.055Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-35",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T16:55:56.785Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-30",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T17:19:17.617Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-19",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T17:21:47.920Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-32",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T17:39:15.789Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-05",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T18:35:39.705Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_REPLY/VR-03",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "valid_from": "2026-09-10T21:09:25.824Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-05",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-10T18:37:45.471Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-08",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-10T18:37:47.273Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-03",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T18:55:54.357Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-20",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T19:59:49.782Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-03",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:07:26.613Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-36",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:17:03.117Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-36",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:16:23.243Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-37",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:18:24.488Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-37",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:19:19.563Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-38",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:47:07.420Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-39",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:47:16.729Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-40",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:47:22.443Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-41",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:47:31.627Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-42",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:47:37.948Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-43",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:47:46.118Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-38",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:48:49.260Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-39",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:48:51.265Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-40",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:48:53.349Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-41",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T20:48:55.477Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_REPLY/VR-04",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "valid_from": "2026-09-10T21:09:25.934Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_REPLY/VR-05",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "valid_from": "2026-09-10T21:09:26.044Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-41",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T21:12:05.696Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-12",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T21:12:05.822Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-13",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T21:12:05.932Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-14",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T21:12:06.040Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-17",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T21:12:06.147Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-01",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-10T21:12:06.252Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-03",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-10T21:12:06.367Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-11",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-10T21:12:06.477Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-06",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T21:12:09.969Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-11",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T21:12:10.083Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-07",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T21:12:10.190Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-15",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T21:12:10.300Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-20",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T21:12:10.407Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-19",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-10T21:12:12.852Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-40",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T21:42:01.122Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-34",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T21:43:03.338Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-32",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T22:10:32.659Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-37",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T22:11:12.275Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-32",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-10T22:13:35.501Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-44",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T22:13:42.798Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-42",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-10T22:17:02.268Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-45",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T02:02:02.074Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-45",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T02:15:50.990Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-46",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T02:33:09.597Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-46",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T02:33:45.458Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-44",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T02:37:22.198Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-15",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T02:45:49.733Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-47",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T02:53:09.583Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-18",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-11T02:53:48.753Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-01",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T03:28:05.139Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-02",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T03:28:24.447Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-03",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T03:28:45.936Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-04",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T03:29:04.979Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-05",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T03:29:25.217Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-06",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T03:29:48.192Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-07",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T03:30:20.126Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-08",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T03:30:42.618Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-09",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T03:31:06.233Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-10",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T03:31:26.500Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-11",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T03:31:47.240Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-12",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T03:32:09.246Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-48",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:37:28.965Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-49",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:37:35.796Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-50",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:37:42.215Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-51",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:37:49.837Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-52",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:37:58.395Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-53",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:38:06.676Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-54",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:38:13.959Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-55",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:38:20.327Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-56",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:38:26.399Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-57",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:38:32.303Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-58",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:38:38.355Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-59",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:38:45.770Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-60",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:38:52.185Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-61",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:38:59.026Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-62",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:46:32.679Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-21",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-11T03:51:30.856Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-21",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-11T03:52:42.892Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-49",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:59:34.083Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-62",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T03:59:35.593Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-48",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T04:14:51.339Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-55",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T04:20:53.921Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-56",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T04:26:00.741Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-58",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T04:28:50.227Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-60",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T04:34:33.460Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-57",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T04:37:10.108Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-48",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T04:41:31.122Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-59",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T04:48:58.244Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-54",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T04:54:16.696Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-63",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T05:28:23.376Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-64",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T05:28:30.787Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-65",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T05:28:38.519Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-66",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T05:28:47.637Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-52",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T05:28:56.607Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-01",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T06:57:07.507Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-02",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T06:57:14.037Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-03",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T06:57:20.956Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-04",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T06:57:26.933Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-05",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T06:57:32.876Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-06",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T06:57:39.964Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-07",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T06:57:46.523Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-08",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T06:57:53.188Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-20",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T06:59:39.994Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-21",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T06:59:51.753Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-22",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:00:01.211Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-23",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:00:08.236Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-24",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:00:18.191Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-25",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:00:27.101Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-26",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:00:35.743Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-27",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:00:47.488Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-28",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:00:55.176Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-29",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:01:04.639Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-30",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:01:11.565Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-28",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:05:36.180Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-27",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:05:38.018Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-29",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:05:39.927Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-24",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:07:55.526Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-22",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:10:07.718Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-20",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:10:36.073Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-26",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:10:38.111Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-21",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:11:20.832Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-02",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:12:30.169Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-03",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:17:57.113Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-01",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:23:19.437Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-20",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:24:27.400Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-23",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:24:29.186Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-19",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-11T07:26:56.056Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-38",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-11T07:26:58.088Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-12",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-11T07:26:59.981Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-05",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-11T07:27:02.365Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-47",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T07:27:03.789Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-07",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-11T07:27:04.238Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/GD-01",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-11T07:27:06.458Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-40",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-11T07:27:08.351Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-18",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-11T07:28:14.522Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-08",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:28:30.984Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-21",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-11T07:34:25.216Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-29",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-11T07:34:27.323Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-05",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:34:35.063Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-62",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T07:36:59.110Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-61",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T07:38:03.753Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-04",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:51:52.612Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-06",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:51:54.338Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-04",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:59:38.461Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-06",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T07:59:40.200Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-60",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T08:08:14.741Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-33",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T08:13:29.075Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-66",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T08:29:02.814Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-04",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-11T08:46:44.411Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_POC/PC-05",
+      "sprint_id": "SPRINT_GJALLARHORN_POC",
+      "valid_from": "2026-09-11T08:46:47.315Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-31",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-11T15:44:17.694Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-67",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T16:26:11.339Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-5",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-11T17:04:46.226Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-68",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T17:58:35.220Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-69",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T17:58:45.291Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-70",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T17:58:58.138Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-71",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T17:59:10.529Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-13",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T18:14:31.643Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-14",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T18:20:42.586Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-72",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T18:19:49.085Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-14",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T18:20:33.193Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-75",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-12T02:51:48.210Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-1",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-11T18:23:26.788Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-2",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-11T18:28:35.095Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-73",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T18:32:26.192Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-74",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-11T18:33:49.714Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-13",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T18:46:05.908Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-14",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-11T18:46:09.076Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-77",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-12T05:21:59.410Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-3",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-12T03:32:14.548Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-2",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-12T03:06:05.592Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-76",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-12T03:55:14.559Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-23",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-12T04:21:46.107Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-77",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-12T05:59:48.314Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-24",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-12T06:04:42.222Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-78",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T12:34:14.498Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-78",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T11:43:08.449Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-79",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T12:13:20.040Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-25",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-13T12:16:09.966Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-44",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-13T12:34:50.737Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-79",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T12:44:58.232Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-45",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-13T13:01:01.880Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-80",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T13:01:52.462Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-81",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T13:17:12.913Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-82",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T14:01:20.926Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-83",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T14:11:31.354Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-84",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T14:12:24.180Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-6",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-13T14:28:32.497Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-84",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T14:42:12.199Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-83",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T14:52:02.267Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-86",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T16:06:08.978Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-85",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T17:08:43.179Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-26",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-13T15:58:44.117Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-85",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T16:06:01.849Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-87",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T16:06:19.130Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-88",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T16:06:25.336Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-89",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T16:26:18.983Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-89",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T17:09:16.693Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-7",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-13T17:10:18.354Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-27",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-13T17:16:22.837Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-86",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T17:20:09.857Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-91",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T17:37:26.027Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-90",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T17:36:49.833Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-92",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T17:38:37.879Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-88",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T17:41:05.104Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-01",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-13T17:53:38.933Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-02",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-13T17:53:55.433Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-03",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-13T17:54:07.709Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-04",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-13T17:55:00.368Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-93",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T17:55:04.005Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-87",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-13T17:57:18.635Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-05",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-13T17:55:06.754Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-28",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-13T17:57:21.572Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-06",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-13T17:57:45.472Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-BLE-ONBOARD",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T02:57:28.348Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-MUSIC-ROOMS-PROTO",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-14T02:57:47.030Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-LOCK-STALE",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-14T02:57:55.408Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-91",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T03:08:57.384Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-07",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T03:16:56.198Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-08",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T04:02:06.315Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-09",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T04:10:56.364Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-94",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T04:31:56.961Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-10",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T05:25:22.045Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-09",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T05:36:42.974Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-11",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T05:41:25.890Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-12",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T05:46:41.151Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-46",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T06:21:08.853Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-14",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T06:27:21.513Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-13",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T05:56:27.802Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-14",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T06:16:09.039Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-15",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T09:06:42.889Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-47",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T07:26:00.091Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-95",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T09:13:23.434Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-96",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T09:13:35.449Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-97",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T10:11:36.478Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-48",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T10:12:56.457Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-96",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T10:15:45.807Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-95",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T10:15:48.251Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-97",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T10:15:50.913Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-13",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T10:17:53.649Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-34",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T10:17:53.785Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-44",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T10:17:53.943Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-45",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T10:17:54.103Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-46",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T10:17:54.217Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-47",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T10:17:54.326Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-24",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T10:17:54.434Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-25",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T10:17:54.543Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-23",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T10:17:56.097Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-26",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T10:17:56.228Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-28",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T10:17:56.338Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-32",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T10:17:56.447Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-90",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T10:22:16.857Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-98",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T10:23:52.684Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-16",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T10:27:35.563Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-72",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T10:28:15.216Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-98",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T10:29:44.514Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-59",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T10:29:55.477Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-48",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T10:44:13.066Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-49",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T10:44:47.637Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-49",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T10:44:55.574Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-94",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T11:28:47.507Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-17",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T12:02:13.653Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-99",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T12:03:22.422Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-99",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T12:04:52.255Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-100",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T12:54:35.861Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-18",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T12:48:52.789Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-100",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T12:52:51.788Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-101",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T15:40:59.734Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_BENCH/ZB-01",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_BENCH",
+      "valid_from": "2026-09-14T15:52:12.914Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-102",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T15:52:57.827Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-19",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T16:04:48.283Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-103",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T16:09:42.500Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-93",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T16:18:54.628Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-102",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T16:18:57.086Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-32",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T16:20:02.301Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-HOME-ARC",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T16:43:03.301Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_GATEWAY/ZG-01",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_GATEWAY",
+      "valid_from": "2026-09-14T17:49:50.177Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_GATEWAY/ZG-02",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_GATEWAY",
+      "valid_from": "2026-09-14T17:49:54.373Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_GATEWAY/ZG-03",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_GATEWAY",
+      "valid_from": "2026-09-14T17:49:59.365Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_GATEWAY/ZG-04",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_GATEWAY",
+      "valid_from": "2026-09-14T17:50:03.400Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_GATEWAY/ZG-05",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_GATEWAY",
+      "valid_from": "2026-09-14T17:50:07.816Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_GATEWAY/ZG-06",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_GATEWAY",
+      "valid_from": "2026-09-14T17:50:11.031Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-KEYS-PRESS",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T18:02:21.826Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-TESTS-BROKEN",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T18:02:30.220Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-LEVEL-NOW",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T18:12:28.808Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-104",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T18:12:00.054Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-RAIL-SWIPE",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T18:23:39.209Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-RAIL-STUB",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T18:36:43.096Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-29",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T18:37:14.832Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-29",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T18:37:27.214Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-71",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T18:38:16.375Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-76",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T18:38:16.487Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-105",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T18:43:00.696Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-RAIL-RELEASE",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T18:45:53.018Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-NET-SATELLITE",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T18:57:19.957Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-HOME-SWIPE",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T18:58:21.910Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-106",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T19:44:46.493Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-HOME-ARC",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:47:24.265Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-KEYS-PRESS",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:47:24.395Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-TESTS-BROKEN",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:47:24.510Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-LEVEL-NOW",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:47:24.626Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-RAIL-SWIPE",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:47:24.746Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-RAIL-STUB",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:47:24.865Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-RAIL-RELEASE",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:47:24.975Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-HOME-SWIPE",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:47:25.084Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-NET-SATELLITE",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:47:25.193Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-05",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:50:07.885Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-07",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:50:08.045Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-08",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:50:08.150Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-10",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:50:08.285Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-11",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:50:08.404Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-12",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:50:08.528Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-16",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:50:08.640Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-17",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:50:08.751Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-18",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:50:08.858Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-6",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-14T19:54:54.249Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-4",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-14T19:54:55.168Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-7",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-14T19:55:17.485Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-MUSIC-ROOMS-PROTO",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-14T19:55:17.611Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-LOCK-STALE",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-14T19:57:28.403Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-07",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-14T19:58:07.275Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-08",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-14T19:58:07.386Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-03",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-14T19:58:07.496Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-03",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:58:17.797Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-04",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T19:58:17.922Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-01",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T19:59:52.887Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-MUSIC-ROOMS-PROTO",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-14T20:05:01.521Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-MUSIC-ROOMS-PROTO",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-14T20:05:14.638Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-19",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T20:06:31.625Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-01",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-14T20:10:05.494Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-02",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-14T20:10:05.608Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-04",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-14T20:10:05.717Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-05",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-14T20:10:05.824Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-09",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-14T20:10:05.931Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-10",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-14T20:10:06.048Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-11",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-14T20:10:06.153Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-02",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T20:23:19.768Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-03",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T20:23:19.880Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-04",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T20:23:19.991Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-BLE-ONBOARD",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T20:24:17.693Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-49",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T20:28:39.992Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-08",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T20:29:25.986Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-09",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-14T20:29:26.105Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_GATEWAY/ZG-01",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_GATEWAY",
+      "valid_from": "2026-09-14T20:31:57.633Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-30",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T20:44:10.438Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-107",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T20:44:40.213Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-STACK-27K",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T20:45:54.327Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-ICONS-RASTER-DROP",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T20:46:01.939Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-31",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T21:03:43.118Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-OTA-ALL",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-14T21:22:08.943Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-32",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T21:56:23.017Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-33",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-14T21:57:15.915Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-107",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T21:57:43.220Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-106",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-14T21:58:14.370Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-NET-SATELLITE",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T05:56:47.976Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-108",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T06:00:37.279Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-109",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T06:09:26.242Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_PROFILE/VP-01",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_PROFILE",
+      "valid_from": "2026-09-15T06:11:35.342Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-109",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T06:11:35.342Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_PROFILE/VP-02",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_PROFILE",
+      "valid_from": "2026-09-15T06:11:37.687Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-108",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T06:11:37.687Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_PROFILE/VP-10",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_PROFILE",
+      "valid_from": "2026-09-15T06:13:08.584Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-29",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-15T06:13:08.584Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_PROFILE/VP-11",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_PROFILE",
+      "valid_from": "2026-09-15T06:13:11.004Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-33",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-15T06:13:11.004Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_PROFILE/VP-10",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_PROFILE",
+      "valid_from": "2026-09-15T06:13:30.708Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_PROFILE/VP-11",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_PROFILE",
+      "valid_from": "2026-09-15T06:13:30.848Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_INTENT_TOOLS/IT-01",
+      "sprint_id": "SPRINT_GLADSHEIM_INTENT_TOOLS",
+      "valid_from": "2026-09-15T06:37:46.149Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-11",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-15T09:05:19.004Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-DEVICE-SCREEN",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T07:12:07.122Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_PROFILE/VP-02",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_PROFILE",
+      "valid_from": "2026-09-15T09:09:33.587Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-31",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-15T09:05:20.739Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-28",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-15T09:10:46.272Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-26",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:12:18.085Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-81",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:12:21.064Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-88",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:12:24.650Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-89",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:12:28.513Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-91",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:12:31.447Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-44",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:13:30.080Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-06",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-15T09:14:14.196Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-07",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-15T09:14:14.317Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-37",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-15T09:14:14.429Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-22",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:17:17.689Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-23",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:17:20.900Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-42",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:17:24.717Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-67",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:17:28.133Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-73",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:17:31.746Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-75",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:17:34.885Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-78",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:17:37.810Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-80",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:17:41.589Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_PROFILE/VP-12",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_PROFILE",
+      "valid_from": "2026-09-15T09:18:08.656Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-84",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:18:10.121Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-85",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:18:13.320Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-86",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:18:17.174Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-87",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:18:20.873Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_PROFILE/VP-12",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_PROFILE",
+      "valid_from": "2026-09-15T09:18:29.907Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-NET-SATELLITE",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T09:24:14.716Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-06",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T09:24:33.297Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-DEVICE-SCREEN",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T09:24:34.936Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-5",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-15T09:27:11.029Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/HS-01",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-15T09:37:21.022Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-07",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-15T10:10:55.358Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-DEVICE-SCREEN",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T10:20:02.276Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/HS-04",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-15T09:37:23.330Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-01",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T09:39:28.866Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-02",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T09:39:34.234Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-03",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T09:39:39.233Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-06",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T09:40:27.391Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-10",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T09:40:34.731Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-13",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T09:40:42.670Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-04",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T09:40:51.243Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_GATEWAY/ZG-03",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_GATEWAY",
+      "valid_from": "2026-09-15T09:40:51.243Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-05",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T09:40:53.801Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_BENCH/ZB-02",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_BENCH",
+      "valid_from": "2026-09-15T09:40:53.801Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-07",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T09:40:56.307Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_BENCH/ZB-03",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_BENCH",
+      "valid_from": "2026-09-15T09:40:56.307Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-08",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T09:40:59.106Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_BENCH/ZB-05",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_BENCH",
+      "valid_from": "2026-09-15T09:40:59.106Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-09",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T09:41:01.984Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_GATEWAY/ZG-04",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_GATEWAY",
+      "valid_from": "2026-09-15T09:41:01.984Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-12",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T09:41:05.378Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_GATEWAY/ZG-05",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_GATEWAY",
+      "valid_from": "2026-09-15T09:41:05.378Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-44",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:41:40.770Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_GATEWAY/ZG-02",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_GATEWAY",
+      "valid_from": "2026-09-15T09:44:11.927Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-45",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:48:05.180Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-61",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T09:48:07.781Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/SU-08",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-15T09:48:10.625Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-02",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T10:25:59.502Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-NET-SATELLITE",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T10:29:40.937Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-02",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T10:35:02.294Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-01",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-15T11:07:15.080Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-32",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-15T11:11:30.457Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-92",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T11:26:12.423Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-06",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T11:35:32.039Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-01",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-15T11:40:58.101Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-05",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-15T12:00:28.480Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-09",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-15T12:00:28.609Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-10",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-15T12:00:28.721Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-11",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-15T12:00:28.829Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-14",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-15T12:00:28.936Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-STACK-27K",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T12:00:33.660Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-40",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-15T13:30:39.698Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-21",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T05:42:37.620Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-13",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T13:48:19.274Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-OTA-ALL",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T13:49:08.078Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-103",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T13:49:45.858Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-30",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-15T13:54:02.844Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-ICONS-RASTER-DROP",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T13:56:20.986Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-83",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T14:01:04.978Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-01",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:01:49.195Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-02",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:01:55.534Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-79",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T14:02:36.024Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-03",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:02:02.791Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-04",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:02:08.906Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-05",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:02:15.835Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-06",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:02:23.409Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-07",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:02:34.790Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-08",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:02:41.348Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-09",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:02:48.963Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-10",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:02:56.387Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-11",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:03:02.208Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-77",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T14:03:02.927Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-12",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:03:12.216Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-90",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T14:03:22.274Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-13",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:03:30.553Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-01",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:04:15.145Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-02",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:04:16.952Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-03",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:04:18.836Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-04",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:04:20.612Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-05",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:04:22.365Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-06",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:04:24.029Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-07",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:04:25.910Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-08",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:04:27.739Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-09",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:04:29.284Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-10",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:04:30.969Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-11",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T14:04:32.619Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-53",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T14:04:45.207Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-31",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-15T14:06:24.412Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-22",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-15T14:19:49.739Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-103",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T14:22:08.241Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_INTENT_TOOLS/IT-01",
+      "sprint_id": "SPRINT_GLADSHEIM_INTENT_TOOLS",
+      "valid_from": "2026-09-15T14:27:26.917Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-29",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-15T14:29:18.294Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-04",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-15T14:30:34.667Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-40",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-15T14:34:16.734Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-05",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T14:36:43.829Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-106",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T14:38:17.256Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-23",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-15T14:59:34.918Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-OTA-ALL",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T15:03:08.085Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NEW_WAKEWORD/NW-13",
+      "sprint_id": "SPRINT_GJALLARHORN_NEW_WAKEWORD",
+      "valid_from": "2026-09-15T15:17:11.665Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-STACK-27K",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T16:48:10.017Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-80",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T17:46:36.505Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-15",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T18:23:12.578Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-39",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-15T18:32:15.407Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-70",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T18:44:35.228Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-04",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T18:48:29.978Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-02",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T18:50:17.623Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-02",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-15T19:13:20.361Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-04",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-15T19:13:20.491Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-13",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-09-15T19:13:20.605Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-19",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-09-15T19:13:20.720Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-4",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-15T20:06:52.157Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_LIGHTING/L-01",
+      "sprint_id": "SPRINT_MIDGARD_LIGHTING",
+      "valid_from": "2026-09-15T20:08:41.760Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_CURTAINS/CU-01",
+      "sprint_id": "SPRINT_MIDGARD_CURTAINS",
+      "valid_from": "2026-09-15T20:08:45.140Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-NET-SATELLITE",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T20:12:02.421Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-15",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-22T12:46:06.946Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_CLIMATE/CL-01",
+      "sprint_id": "SPRINT_MIDGARD_CLIMATE",
+      "valid_from": "2026-09-15T20:08:12.831Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_CLIMATE/CLIM-01",
+      "sprint_id": "SPRINT_MIDGARD_CLIMATE",
+      "valid_from": "2026-09-15T20:09:07.636Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_LIGHT/LI-01",
+      "sprint_id": "SPRINT_MIDGARD_LIGHT",
+      "valid_from": "2026-09-15T20:11:00.748Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_LIGHTING/L-01",
+      "sprint_id": "SPRINT_MIDGARD_LIGHTING",
+      "valid_from": "2026-09-15T20:12:50.903Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/ST-TELEM-DEBUG-FLAG",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-15T20:46:35.602Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_PANEL/PC-3",
+      "sprint_id": "SPRINT_MIDGARD_PANEL",
+      "valid_from": "2026-09-15T21:26:35.529Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_MULTIROOM_SYNC/SR-92",
+      "sprint_id": "SPRINT_GLADSHEIM_MULTIROOM_SYNC",
+      "valid_from": "2026-09-15T21:30:53.013Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-92",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-15T21:30:53.013Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-43",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-09-15T21:54:43.614Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-01",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-15T21:58:59.547Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-04",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-16T20:33:08.732Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-05",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-16T20:33:08.864Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-20",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-17T05:50:00.705Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-25",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T05:22:07.707Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-22",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T05:42:37.775Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-23",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T05:42:37.917Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-25",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T05:42:39.636Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_PROFILE/VP-20",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_PROFILE",
+      "valid_from": "2026-09-19T07:45:35.284Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_PROFILE/VP-20",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_PROFILE",
+      "valid_from": "2026-09-19T07:45:54.764Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_INTENT_TOOLS/IT-10",
+      "sprint_id": "SPRINT_GLADSHEIM_INTENT_TOOLS",
+      "valid_from": "2026-09-18T23:59:03.656Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_INTENT_TOOLS/IT-10",
+      "sprint_id": "SPRINT_GLADSHEIM_INTENT_TOOLS",
+      "valid_from": "2026-09-18T23:59:33.283Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/HS-02",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-19T09:08:12.621Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/HS-03",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-19T09:08:12.750Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-02",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-19T09:09:02.873Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-03",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-19T09:09:03.001Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-06",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-19T09:09:03.121Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-08",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-19T09:09:03.238Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-10",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-19T09:10:57.830Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ZIGBEE_STACK/ZS-13",
+      "sprint_id": "SPRINT_MIDGARD_ZIGBEE_STACK",
+      "valid_from": "2026-09-19T09:10:57.947Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-21",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-20T20:22:21.417Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-22",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-20T20:22:36.288Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-23",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-20T20:23:19.203Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-24",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-20T20:24:50.997Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_STARTUP/ST-TELEM-DEBUG-FLAG",
+      "sprint_id": "SPRINT_MIDGARD_STARTUP",
+      "valid_from": "2026-09-21T05:13:31.498Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-23",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T05:44:42.433Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-22",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T05:45:03.547Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-21",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T05:45:12.691Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-26",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T06:00:00.525Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-26",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T06:00:16.720Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-26",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T06:46:51.572Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-22",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T07:27:17.373Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-59",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-21T08:08:12.144Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-22",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T12:33:45.547Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-22",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T14:50:11.154Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-24",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T12:46:23.862Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-27",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T21:39:20.722Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-27",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-21T21:39:14.599Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-27",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-22T06:48:19.057Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-25",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-22T05:53:19.613Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-34",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-22T06:28:05.282Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-21",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-09-22T07:03:13.423Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-34",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-09-22T08:00:40.805Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-44",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-22T09:39:04.750Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-80",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-22T12:46:09.477Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-94",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-22T12:46:58.797Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-59",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-22T13:26:45.591Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-27",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-22T13:35:54.882Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_MULTIROOM_SYNC/MR-01",
+      "sprint_id": "SPRINT_GLADSHEIM_MULTIROOM_SYNC",
+      "valid_from": "2026-09-22T14:22:31.542Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_MULTIROOM_SYNC/MR-01",
+      "sprint_id": "SPRINT_GLADSHEIM_MULTIROOM_SYNC",
+      "valid_from": "2026-09-22T14:39:57.343Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-68",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-22T15:50:51.188Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-43",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-23T18:40:42.933Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-01",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:25:30.655Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-02",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:25:35.638Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-03",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:25:40.474Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-04",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:25:45.516Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-05",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:25:49.899Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-06",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:25:53.530Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-07",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:25:57.519Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-08",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:26:01.717Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-09",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:26:05.010Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-10",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:26:09.383Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-11",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:26:12.680Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-12",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:26:16.943Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-13",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:26:20.545Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-14",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T19:26:24.346Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-15",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T20:26:44.020Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-16",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T20:26:49.979Z"
+    }
+  ],
+  "_page": {
+    "limit": 1000,
+    "offset": 3000,
+    "total": 13267,
+    "has_more": true
+  }
+}

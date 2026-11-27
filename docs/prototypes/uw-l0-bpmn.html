@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workflow L0 BPMN</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/diagram-js.css">
+<link rel="stylesheet" href="https://unpkg.com/bpmn-js@17.11.1/dist/assets/bpmn-js.css">
+<style>
+/* Прототип SPEC-LORE-L0-STATUS-WORKFLOWS в нотации BPMN 2.0 (слово владельца 26.11: «сделай всё же в нотации BPMN с указанием ролей,
+   иконками типов задач и иконками возможностей агент/человек — а то всё сливается в кубике и нет шлюзов переходов»).
+   Дорожки = роли; userTask (👤) — только человек-приёмщик; serviceTask (⚙) — исполнитель с ролью дорожки: агент 🤖 или человек 👤;
+   шлюзы — исключающие (X); blocked/waiting — промежуточное событие-условие; failed — конец с ошибкой. Геометрия задаётся явно. */
+:root{--bg:#14120e;--bg2:#1c1913;--bg3:#25211a;--bd:#3a3326;--t1:#efe6d2;--t2:#b8ab90;--t3:#7f735c;--acc:#d9a441;--suc:#8fb85f;--wrn:#d9a441;--dng:#d0644f;--inf:#6fa3c4;--paper:#fbf7ee;--ink:#2a241a;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--mono:'IBM Plex Mono',monospace}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--t1:#2a241a;--t2:#5d523f;--t3:#8a7d64;--acc:#a8741a;--suc:#4f7a2a;--dng:#b0412d;--inf:#2f6f96}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t1);font:400 var(--fs-sm)/1.5 'Manrope',sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg2);border-bottom:1px solid var(--bd);padding:8px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+h1{font:800 var(--fs-lg)/1 'Unbounded',sans-serif;margin:0 10px 0 0}
+nav{display:flex;gap:5px;flex-wrap:wrap}
+nav a{color:var(--t2);text-decoration:none;border:1px solid var(--bd);border-radius:999px;padding:2px 9px;font-size:var(--fs-xs);white-space:nowrap}
+nav a:hover{border-color:var(--acc);color:var(--acc)}
+nav a[aria-selected="true"]{background:var(--acc);border-color:var(--acc);color:var(--bg);font-weight:700}
+main{padding:12px 14px}
+section{border:1px solid var(--bd);border-radius:8px;background:var(--bg2);margin:0 0 14px;padding:10px 12px;min-width:0}
+h2{font:800 var(--fs-md)/1.2 'Unbounded',sans-serif;text-transform:uppercase;letter-spacing:.04em;margin:2px 0 6px}
+.meta{color:var(--t3);font-size:var(--fs-xs);margin:0 0 8px}.meta b{color:var(--t2)}
+.chip{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:1px 8px;font-size:var(--fs-2xs);color:var(--t2);margin-right:4px}
+.canvas{height:max(420px,calc(100vh - 230px));touch-action:none;background:var(--paper);border:1px solid var(--bd);border-radius:6px;position:relative;overflow:hidden}
+.zoom{display:flex;gap:4px;align-items:center;justify-content:flex-end;margin:4px 0}
+.zoom button{background:var(--bg3);color:var(--t1);border:1px solid var(--bd);border-radius:999px;min-width:30px;height:26px;font:600 var(--fs-sm) var(--mono);cursor:pointer}
+.zoom button:hover{border-color:var(--acc);color:var(--acc)}
+.zoom .ttl{display:none;margin-right:auto;font:800 var(--fs-sm) 'Unbounded',sans-serif;color:var(--t1)}
+.stage.full{position:fixed;inset:0;z-index:50;background:var(--bg2);padding:8px;display:flex;flex-direction:column}
+.stage.full .canvas{flex:1;height:auto}
+.stage.full .ttl{display:block}
+body.noscroll{overflow:hidden}
+.zoom span{color:var(--t3);font:var(--fs-2xs) var(--mono);min-width:38px;text-align:center}
+.ov{font:600 var(--fs-xs)/1 'Manrope',sans-serif;white-space:nowrap;pointer-events:none}
+.ov-io{font:400 var(--fs-2xs)/1.25 var(--mono);color:var(--ink);background:#fff8e6;border:1px solid #e3d3ad;border-radius:4px;padding:1px 4px;white-space:nowrap}
+.ov-cap{background:#fff;border:1px solid #cfc2a6;border-radius:999px;padding:1px 5px}
+.ov-kind{font-size:var(--fs-md)}
+.lg-ok{background:#e6f2da;color:#3d6b1f;border:1px solid #9cc27a;border-radius:999px;padding:1px 6px;font:600 var(--fs-2xs) var(--mono);white-space:nowrap}
+.lg-lore{background:#fbe3dc;color:#9a3622;border:1px solid #e0a08f;border-radius:999px;padding:1px 6px;font:600 var(--fs-2xs) var(--mono);white-space:nowrap}
+.lg-no{background:#eee;color:#555;border:1px solid #bbb;border-radius:999px;padding:1px 6px;font:600 var(--fs-2xs) var(--mono)}
+.utables{margin-top:8px;overflow-x:auto}
+.sipoc-t td{font-size:var(--fs-sm)}.sipoc-t .si{padding:1px 0}.sipoc-t .st{color:var(--acc);font-family:var(--mono);font-size:var(--fs-xs)}.sipoc-t .dir{color:var(--t3);font-size:var(--fs-xs)}
+.err{color:var(--dng);font:var(--fs-xs) var(--mono)}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-xs)}
+th,td{border-bottom:1px solid var(--bd);padding:4px 6px;text-align:left;vertical-align:top}
+th{color:var(--t3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;font-size:var(--fs-2xs)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Workflow L0 · BPMN</h1>
+  <nav id="nav"><a href="#legend">Легенда</a></nav>
+</header>
+<main>
+<section id="legend">
+  <h2>Легенда</h2>
+  <p class="meta"><b>Нотация BPMN 2.0</b>, по виду работы — отдельный пул. <b>Дорожка = роль</b> (одна и та же у человека и агента, роли full на схемах нет).
+  Дорожка «приёмщик задачи 👤» — назначенный человек-приёмщик, его роль должна входить в роли гейта вида (ответ владельца «6 б», 26.11).
+  Mermaid-версия со всеми объектами — <a href="uw-l0-workflows.html" style="color:var(--acc)">uw-l0-workflows.html</a>.</p>
+  <table>
+    <tr><th>знак</th><th>смысл</th></tr>
+    <tr><td>⚙ serviceTask + <span class="ov-cap">🤖 👤</span></td><td>стадию делает исполнитель с ролью дорожки — агент или человек; 🔧 под задачей — рекомендуемые инструменты агента</td></tr>
+    <tr><td>👤 userTask + <span class="ov-cap">👤</span></td><td>только человек: выход из uat, чтение владельцем, решение, ответ, протокол, done — агенту не делегируется</td></tr>
+    <tr><td>◇ X исключающий шлюз</td><td>ветвление по условию: класс работы, результат стадий, приёмка</td></tr>
+    <tr><td>◎ событие-условие</td><td>blocked / waiting — ждём снятия препятствия или ответа адресата (причина обязательна)</td></tr>
+    <tr><td>⊗ конец с ошибкой</td><td>failed — отрицательный исход вида (у вида без failed его нет)</td></tr>
+    <tr><td><span class="ov-io">← вход · → выход</span></td><td>канал artifacts: что стадия потребляет и производит (workflow.artifacts, PR #1855)</td></tr>
+    <tr><td>иконка слева сверху</td><td>вид работы по типу задачи: <span id="kindIcons"></span></td></tr>
+  </table>
+</section>
+<div id="kinds"></div>
+</main>
+
+<script src="https://unpkg.com/bpmn-js@17.11.1/dist/bpmn-navigated-viewer.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/elkjs@0.9.3/lib/elk.bundled.js"></script>
+<script>
+// Данные — как в uw-l0-workflows.html и lore-model.json (workflow.kinds + flow, PR #1855); роли стадий — предложено мной 26.11.
+const HUMAN = new Set(['uat', 'owner_read', 'decision_in', 'answer_in', 'protocol', 'approval']);
+const KINDS = [
+  {k:'dev', l:'разработка', icon:'🛠', types:'dev, test, design', st:['design','implement','test'], rv:['stand_check','uat'], ev:'PR (влит) — релиз отдельно, в 🚚 поставке', failed:null, blocked:true},
+  {k:'doc', l:'документ', icon:'📄', types:'docs', st:['draft','review_text'], rv:['agent_review','owner_read'], ev:'запись LORE', failed:null, blocked:true},
+  {k:'ops', l:'ops / инфраструктура', icon:'🔧', types:'ops', st:['diagnose','fix','measure'], rv:['stand_check'], ev:'замер; PR, если менялся код', failed:'failed', blocked:true},
+  {k:'research', l:'исследование', icon:'🔍', types:'research, analytics', st:['collect','analyse','write'], rv:['agent_review','owner_read'], ev:'запись LORE с выводом', failed:null, blocked:true},
+  {k:'external', l:'внешнее решение', icon:'⚖', types:'legal', st:['preparing','submitted','under_review'], rv:['decision_in'], ev:'документ, номер заявки', failed:'отказ', blocked:true},
+  {k:'funnel', l:'воронка', icon:'🤝', types:'sales, hiring, cfp', st:['lead','contacted','meeting','pilot'], rv:['answer_in'], ev:'LOI, договор, оффер', failed:'проиграли', blocked:true},
+  {k:'routine', l:'регламент', icon:'📅', types:'finance, support', st:['period_open','reconciling'], rv:['report','agent_review'], ev:'закрытый период + отчёт', failed:'просрочен', blocked:false},
+  {k:'content', l:'контент', icon:'📣', types:'content', st:['draft','ready'], rv:['agent_review','approval','scheduled'], ev:'URL публикации', failed:null, blocked:true},
+  {k:'hardware', l:'железо', icon:'🔩', types:'procurement', st:['prototype','testing','waiting_supplier'], rv:['agent_review','protocol'], ev:'протокол испытаний', failed:'не прошло испытания', blocked:true},
+];
+// content: scheduled — и стадия, и приёмка в модели; на схеме — одна стадия в active, приёмка — подтверждение done.
+// исполнитель стадии — первая роль; полный список — в подписи дорожки
+const WHO = {
+  'dev:design':['architect','developer'], 'dev:implement':['developer'], 'dev:test':['tester','developer'], 'dev:stand_check':['tester','developer'],
+  'dev:uat':['pm','tester','architect'],
+  'doc:agent_review':['architect'], 'research:agent_review':['architect'], 'routine:agent_review':['pm'], 'content:agent_review':['marketer'], 'hardware:agent_review':['tester'],
+  'content:approval':['pm','marketer'],
+  'doc:draft':['analyst','architect','developer','marketer'], 'doc:review_text':['architect','analyst'], 'doc:owner_read':['pm','architect','product-analyst'],
+  'ops:diagnose':['developer'], 'ops:fix':['developer'], 'ops:measure':['developer','tester'], 'ops:stand_check':['tester','developer'],
+  'research:collect':['analyst','product-analyst','architect'], 'research:analyse':['analyst','product-analyst','architect'], 'research:write':['analyst','product-analyst','architect'],
+  'research:owner_read':['pm','product-analyst'],
+  'external:preparing':['analyst','pm'], 'external:submitted':['pm'], 'external:under_review':['pm'], 'external:decision_in':['pm'],
+  'funnel:lead':['marketer','product-analyst'], 'funnel:contacted':['marketer','pm'], 'funnel:meeting':['pm','marketer'], 'funnel:pilot':['pm','product-analyst'], 'funnel:answer_in':['pm','marketer'],
+  'routine:period_open':['pm','analyst'], 'routine:reconciling':['analyst'], 'routine:report':['pm'],
+  'content:draft':['marketer'], 'content:ready':['marketer'], 'content:scheduled':['marketer'],
+  'hardware:prototype':['developer'], 'hardware:testing':['tester','developer'], 'hardware:waiting_supplier':['pm'], 'hardware:protocol':['tester','pm'],
+};
+const TOOLS = {
+  'dev:design':'entity_upsert adr/spec, query_slice', 'dev:implement':'forgejo, forgejo_pr_new', 'dev:test':'forgejo_ci_status, get_job_logs',
+  'dev:stand_check':'qg_read, смоук стенда', 'doc:draft':'entity_upsert spec/doc', 'doc:review_text':'task_shape, quality_check',
+  'ops:diagnose':'get_job_logs, metric_get', 'ops:fix':'forgejo_pr_new', 'ops:measure':'metric_log, qg_run_log', 'ops:stand_check':'qg_read',
+  'research:collect':'search, find, WebSearch', 'research:analyse':'graph, task_shape', 'research:write':'entity_upsert doc/decision',
+  'funnel:lead':'search, find', 'routine:reconciling':'query_slice, metric_get', 'content:draft':'bragi_pub_new', 'content:ready':'quality_check',
+};
+// канал artifacts — kinds.*.flow из lore-model.json (PR #1855)
+const IO = {
+  'dev:design':[['uc','adr','code'],['spec']], 'dev:implement':[['spec','code'],['code','tests','branch','pr']], 'dev:test':[['code','tests','pr'],['ci_run']],
+  'dev:stand_check':[['pr','ci_run'],['stand_report','review_report']], 'dev:uat':[['stand_report','review_report'],[]],
+  'doc:draft':[['uc','adr'],['draft']], 'doc:review_text':[['draft'],['doc']], 'doc:agent_review':[['doc'],['review_report']], 'doc:owner_read':[['doc','review_report'],[]],
+  'ops:diagnose':[['code'],['diagnosis']], 'ops:fix':[['diagnosis','code'],['code','tests','branch','pr']], 'ops:measure':[['pr'],['measurement']], 'ops:stand_check':[['measurement'],['stand_report','review_report']],
+  'research:collect':[[],['sources']], 'research:analyse':[['sources'],['findings']], 'research:write':[['findings'],['doc','decision']], 'research:agent_review':[['doc','decision'],['review_report']], 'research:owner_read':[['doc','review_report'],[]],
+  'external:preparing':[[],['draft']], 'external:submitted':[['draft'],['submission']], 'external:under_review':[['submission'],[]], 'external:decision_in':[['submission'],['external_decision']],
+  'funnel:lead':[[],['lead']], 'funnel:contacted':[['lead'],[]], 'funnel:meeting':[['lead'],[]], 'funnel:pilot':[['lead'],[]], 'funnel:answer_in':[['lead'],['agreement']],
+  'routine:period_open':[[],[]], 'routine:reconciling':[[],['findings']], 'routine:report':[['findings'],['period_report']], 'routine:agent_review':[['period_report'],['review_report']],
+  'content:draft':[[],['draft']], 'content:ready':[['draft'],[]], 'content:scheduled':[['draft'],['publication']], 'content:agent_review':[['draft'],['review_report']], 'content:approval':[['draft','review_report'],[]],
+  'hardware:prototype':[[],['prototype']], 'hardware:testing':[['prototype'],['test_protocol']], 'hardware:waiting_supplier':[[],[]], 'hardware:agent_review':[['test_protocol'],['review_report']], 'hardware:protocol':[['test_protocol','review_report'],[]],
+};
+
+const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const LANE_H = 270, POOL_X = 20, POOL_Y = 20, HEAD = 30, COL_W = 270, X0 = POOL_X + HEAD + 40 + 90;
+const ACC = 'acceptor';
+
+// Подпроцесс вида — ТОЛЬКО его вариативный кусок (слово владельца 26.11: «подзадача тогда должна не весь путь расписывать
+// от предыдущих, а только свой вариативный кусок»). Общий путь — класс работы, результат стадий, blocked/failed, гейт 👤,
+// «принято?», done — живёт в 🧭 universal. Здесь: (1) стадии вида; (2) приёмка вида без гейта 👤, если у вида она есть.
+function build(kind) {
+  const K = kind.k, nodes = [], flows = [], lanes = [];
+  const laneOf = (role) => { if (!lanes.includes(role)) lanes.push(role); return role; };
+  const roleOf = (s) => (WHO[K + ':' + s] || ['developer'])[0];
+  const review = kind.rv.filter(s => !HUMAN.has(s));
+  kind.st.concat(review).forEach(s => laneOf(roleOf(s)));
+  const gate = kind.rv.find(s => HUMAN.has(s)) || 'подтвердить done';
+  let col = 0;
+  const add = (n) => { nodes.push(n); return n; };
+  const task = (prefix, st) => add({id: prefix + st, type:'serviceTask', name:st, stage:st, lane:roleOf(st), col:col++, cap:'🤖 👤', tools:TOOLS[K + ':' + st], io:IO[K + ':' + st]});
+  // (1) стадии вида — вызываются из 🧭 шлюзом «вид работы?»
+  add({id:'sa_start', type:'startEvent', name:'из 🧭: вид работы = ' + K, lane:roleOf(kind.st[0]), col:col++});
+  const st = kind.st.map(x => task('s_', x));
+  flows.push(['sa_start', st[0].id, '']);
+  for (let i = 1; i < st.length; i++) flows.push([st[i-1].id, st[i].id, '']);
+  add({id:'sa_end', type:'endEvent', name:'в 🧭: «результат стадий?»', lane:st[st.length-1].lane, col:col++});
+  flows.push([st[st.length-1].id, 'sa_end', '']);
+  // (2) внутренняя приёмка агентом (RFD → UAT) — из 🧭 после «готово к приёмке». Решение 25 (26.11): агент не принял —
+  // задача остаётся в своей стадии (доработка там же); гейт 👤 — в 🧭, решение человека там же.
+  const hIdx = kind.rv.findIndex(x => HUMAN.has(x));
+  const preGate = (hIdx < 0 ? kind.rv : kind.rv.slice(0, hIdx)).filter(x => !HUMAN.has(x));
+  const postGate = hIdx < 0 ? [] : kind.rv.slice(hIdx + 1).filter(x => !HUMAN.has(x));
+  if (preGate.length) {
+    col++;
+    add({id:'sb_start', type:'startEvent', name:'из 🧭: внутренняя приёмка агентом (RFD → UAT)', lane:roleOf(preGate[0]), col:col++});
+    const rv = preGate.map(x => task('r_', x));
+    flows.push(['sb_start', rv[0].id, '']);
+    for (let i = 1; i < rv.length; i++) flows.push([rv[i-1].id, rv[i].id, '']);
+    const last = rv[rv.length-1];
+    add({id:'sb_ok', type:'exclusiveGateway', name:'агент принял?', lane:last.lane, col:col++});
+    flows.push([last.id, 'sb_ok', '']);
+    add({id:'sb_end', type:'endEvent', name:'→ uat · в 🧭: гейт 👤 ' + gate, lane:last.lane, col:col++});
+    flows.push(['sb_ok', 'sb_end', 'да'], ['sb_ok', last.id, 'нет · доработка в той же стадии', 'back-pool']);
+  }
+  // (3) шаги после решения человека (content: публикация после согласования)
+  if (postGate.length) {
+    col++;
+    add({id:'sc_start', type:'startEvent', name:'из 🧭: после решения 👤 «да»', lane:roleOf(postGate[0]), col:col++});
+    const pg = postGate.map(x => task('p_', x));
+    flows.push(['sc_start', pg[0].id, '']);
+    for (let i = 1; i < pg.length; i++) flows.push([pg[i-1].id, pg[i].id, '']);
+    add({id:'sc_end', type:'endEvent', name:'в 🧭: done · доказательство', lane:pg[pg.length-1].lane, col:col++});
+    flows.push([pg[pg.length-1].id, 'sc_end', '']);
+  }
+  return { nodes, flows, lanes, cols: col, gate, review };
+}
+
+// Статусы артефактов в подпроцессах (слово владельца 26.11: «в подпроцессах не указаны артефакты и их статусы»).
+// OUT — в каком статусе стадия выдаёт артефакт; NEED — в каком статусе вход-запись должна быть (основание).
+const OUT = { review_report:'ок | замечания', code:'новый | изменён', tests:'новые | изменены', spec:'proposed', adr:'proposed', uc:'proposed', doc:'версия', decision:'proposed', draft:'черновик', branch:'создана', pr:'открыт → влит',
+  ci_run:'зелёный', release:'выпущен', stand_report:'зелёный', diagnosis:'записан', measurement:'снят', sources:'собраны', findings:'записаны',
+  submission:'подана', external_decision:'получено', lead:'заведён', agreement:'подписан', period_report:'закрыт', publication:'опубликован',
+  prototype:'собран', test_protocol:'подписан' };
+const NEED = { code:'есть в репозитории', uc:'proposed | active', adr:'proposed | accepted', spec:'proposed | accepted' };
+function dataObjects(model) {
+  // Под каждой стадией — свои ссылки на артефакты (BPMN: много dataObjectReference на один dataObject),
+  // связи короткие и вертикальные, ничего не пересекают: «← вход [нужный статус]», «→ выход [статус после стадии]».
+  const D = [], madeBefore = new Set();
+  for (const n of [...model.nodes].sort((a, b) => a.col - b.col)) {
+    if (n.type !== 'serviceTask' || !n.io) continue;
+    const items = n.io[0].map(a => ({ a, dir: 'in' })).concat(n.io[1].map(a => ({ a, dir: 'out' })));
+    const step = items.length >= 5 ? 52 : items.length >= 4 ? 60 : 74;
+    const outsHere = n.io[1];
+    items.forEach((it, i) => {
+      const cx = n.cx + (i - (items.length - 1) / 2) * step, id = 'd_' + it.dir + '_' + it.a + '_' + n.id;
+      const st = it.dir === 'in' ? (madeBefore.has(it.a) ? OUT[it.a] : (NEED[it.a] || OUT[it.a] || 'есть')) : (OUT[it.a] || 'создан');
+      D.push({ id, obj: 'o_' + it.a, name: (it.dir === 'in' ? '← ' : '→ ') + it.a + ' [' + st + ']', cx, cy: n.y + n.h + 55, task: n,
+        links: [it.dir === 'in' ? [id, n.id] : [n.id, id]] });
+    });
+    markMade(madeBefore, n);
+  }
+  D.forEach(d => Object.assign(d, { x: d.cx - 18, y: d.cy - 25, w: 36, h: 50 }));
+  return D;
+}
+function markMade(set, n) { n.io[1].forEach(a => set.add(a)); }
+
+// 🚚 Поставка по веткам git (владелец 26.11: «релиз — это стадия веток в git, dev — не релиз»; «про зонтики не забудь»;
+// «у нас dev, preprod, prod»; «prod и тег — это релиз, PR не всегда релиз»; «нужно указать, откуда режется тег релиза»).
+// Отдельный workflow над группой задач (зонтик / спринт), а не стадия вида работы. Модель: workflow.delivery (PR #1861).
+function buildDelivery() {
+  const lanes = ['CI · авто', 'агент', 'человек 👤'], nodes = [], flows = [];
+  let col = 0; const add = (n) => { nodes.push({ col: col++, ...n }); return n; };
+  add({ id: 'd_start', type: 'startEvent', name: 'задача исполнена · PR feature/* или fix/*', lane: 'агент' });
+  add({ id: 'd_ci', type: 'serviceTask', name: 'PR в зонтик · CI на PR', lane: 'CI · авто', cap: '⚙' });
+  add({ id: 'd_ci_ok', type: 'exclusiveGateway', name: 'CI зелёный?', lane: 'CI · авто' });
+  add({ id: 'd_merge', type: 'serviceTask', name: 'мерж в зонтик umbrella/<тема>-<ддмм> → задача ready_for_deploy', lane: 'агент', cap: '🤖' });
+  add({ id: 'd_umb', type: 'userTask', name: 'зонтик → develop одним PR, полный CI · по слову владельца (env dev, без деплоя)', lane: 'человек 👤', cap: '👤' });
+  add({ id: 'd_promo', type: 'serviceTask', name: 'промо: снимок develop → preprod (promote/<дата>-<sha8>)', lane: 'агент', cap: '🤖' });
+  add({ id: 'd_stand', type: 'serviceTask', name: 'выкатка на стенд preprod · смоук', lane: 'CI · авто', cap: '⚙' });
+  add({ id: 'd_smoke_ok', type: 'exclusiveGateway', name: 'смоук зелёный?', lane: 'CI · авто' });
+  add({ id: 'd_uat', type: 'serviceTask', name: 'внутренняя приёмка агентом → задачи uat', lane: 'агент', cap: '🤖' });
+  add({ id: 'd_accept', type: 'userTask', name: 'приёмка зонтика / спринта: решение человека по задачам', lane: 'человек 👤', cap: '👤' });
+  add({ id: 'd_rel', type: 'userTask', name: 'релиз: preprod → main · только по слову владельца (env prod)', lane: 'человек 👤', cap: '👤' });
+  add({ id: 'd_tag', type: 'serviceTask', name: 'тег vX.Y.Z режется с main (тег обязан быть в main) + RELEASE-<tag>.md', lane: 'агент', cap: '🤖' });
+  add({ id: 'd_end', type: 'endEvent', name: 'prod · релиз: задачи в uat или done', lane: 'человек 👤' });
+  flows.push(['d_start', 'd_ci', 'PR класса feature'], ['d_ci', 'd_ci_ok', ''], ['d_ci_ok', 'd_merge', 'да'], ['d_ci_ok', 'd_ci', 'нет · правка', 'back-pool'],
+    ['d_merge', 'd_umb', 'PR класса umbrella'], ['d_umb', 'd_promo', 'develop'], ['d_promo', 'd_stand', 'PR класса promote'], ['d_stand', 'd_smoke_ok', ''],
+    ['d_smoke_ok', 'd_uat', 'да'], ['d_smoke_ok', 'd_promo', 'нет · чинить и новое промо', 'back-pool'], ['d_uat', 'd_accept', 'uat'],
+    ['d_accept', 'd_rel', 'набор для релиза'], ['d_rel', 'd_tag', 'PR класса release'], ['d_tag', 'd_end', '']);
+  return { nodes, flows, lanes, cols: col };
+}
+
+function geometry(model) {
+  const { nodes, lanes, cols } = model;
+  const laneY = (l) => POOL_Y + lanes.indexOf(l) * LANE_H;
+  const poolW = HEAD + 40 + cols * COL_W + 40;
+  const poolH = lanes.length * LANE_H;
+  for (const n of nodes) {
+    const cx = X0 + n.col * COL_W + (n.low || 0);
+    const cy = laneY(n.lane) + (n.low !== undefined ? 185 : 75);
+    let w = 36, h = 36;
+    if (n.type.endsWith('Task')) { w = 180; h = 100; }
+    else if (n.type === 'exclusiveGateway') { w = 50; h = 50; }
+    Object.assign(n, { x: cx - w / 2, y: cy - h / 2, w, h, cx, cy });
+  }
+  return { poolW, poolH, laneY };
+}
+
+function route(a, b, mode, poolBottom) {
+  const ar = [a.x + a.w, a.cy], bl = [b.x, b.cy];
+  if (mode === 'down') return [[a.cx, a.y + a.h], [a.cx, a.y + a.h + 30], [b.cx, a.y + a.h + 30], [b.cx, b.y]];
+  if (mode === 'below') { const y = a.y + a.h + 55; return [[a.cx, a.y + a.h], [a.cx, y], [b.cx, y], [b.cx, b.y + b.h]]; }
+  if (mode === 'back-low') { const up = b.cy < a.cy; return [[a.x, a.cy], [b.cx - 30, a.cy], [b.cx - 30, up ? b.y + b.h : b.y]]; }
+  if (mode === 'back-pool') { const y = poolBottom + 30; return [[a.cx, a.y + a.h], [a.cx, y], [b.cx + 30, y], [b.cx + 30, b.y + b.h]]; }
+  if (Math.abs(a.cy - b.cy) < 1) return [ar, bl];
+  const mx = (ar[0] + bl[0]) / 2;
+  return [ar, [mx, a.cy], [mx, b.cy], bl];
+}
+
+function toXml(kind, model) {
+  const { nodes, flows, lanes } = model;
+  const g = geometry(model);
+  const D = dataObjects(model); model.data = D;
+  const allPos = Object.fromEntries([...model.nodes, ...D].map(n => [n.id, n]));
+  const links = D.flatMap(d => d.links);
+  const dxml = [...new Set(D.map(d => d.obj))].map(o => `<bpmn:dataObject id="p_${kind.k}_${o}"/>`).join('') + D.map(d => `<bpmn:dataObjectReference id="${d.id}" name="${esc(d.name)}" dataObjectRef="p_${kind.k}_${d.obj}"/>`).join('')
+    + links.map(([a, b], i) => `<bpmn:association id="as${i}" sourceRef="${a}" targetRef="${b}" associationDirection="One"/>`).join('');
+  const ddi = D.map(d => `<bpmndi:BPMNShape id="${d.id}_di" bpmnElement="${d.id}"><dc:Bounds x="${Math.round(Math.max(d.task.x - 10, Math.min(d.task.x + d.task.w - 26, d.cx - 18)))}" y="${d.y}" width="36" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="${d.cx - 30}" y="${d.y + 52}" width="60" height="42"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>`).join('')
+    + links.map(([a, b], i) => { const d = allPos[a].id.startsWith('d_') ? allPos[a] : allPos[b], t = d.task;
+        const x = Math.round(Math.max(t.x + 8, Math.min(t.x + t.w - 8, d.cx)));
+        const top = [x, d.y], bottom = [x, t.y + t.h];
+        const [pa, pb] = allPos[a].id.startsWith('d_') ? [top, bottom] : [bottom, top];
+        return `<bpmndi:BPMNEdge id="as${i}_di" bpmnElement="as${i}"><di:waypoint x="${pa[0]}" y="${pa[1]}"/><di:waypoint x="${pb[0]}" y="${pb[1]}"/></bpmndi:BPMNEdge>`; }).join('');
+  const P = 'p_' + kind.k;
+  const laneName = (l) => kind.delivery ? l : l + ' · 🤖 агент или 👤 человек';
+  const inc = {}, out = {};
+  flows.forEach(([s, t], i) => { (out[s] = out[s] || []).push('f' + i); (inc[t] = inc[t] || []).push('f' + i); });
+  const byId = Object.fromEntries(nodes.map(n => [n.id, n]));
+  const el = (n) => {
+    const io = (inc[n.id] || []).map(f => `<bpmn:incoming>${f}</bpmn:incoming>`).join('') + (out[n.id] || []).map(f => `<bpmn:outgoing>${f}</bpmn:outgoing>`).join('');
+    const def = n.def === 'conditional' ? `<bpmn:conditionalEventDefinition id="${n.id}_c"><bpmn:condition xsi:type="bpmn:tFormalExpression">препятствие снято</bpmn:condition></bpmn:conditionalEventDefinition>`
+      : n.def === 'error' ? `<bpmn:errorEventDefinition id="${n.id}_e"/>` : '';
+    return `<bpmn:${n.type} id="${n.id}" name="${esc(n.name)}">${io}${def}</bpmn:${n.type}>`;
+  };
+  const sf = flows.map(([s, t, name], i) => `<bpmn:sequenceFlow id="f${i}" sourceRef="${s}" targetRef="${t}"${name ? ` name="${esc(name)}"` : ''}/>`).join('');
+  const laneSet = `<bpmn:laneSet id="${P}_ls">` + lanes.map(l => `<bpmn:lane id="${P}_l_${l.replace(/\W/g,'_')}" name="${esc(laneName(l))}">` +
+    nodes.filter(n => n.lane === l).map(n => `<bpmn:flowNodeRef>${n.id}</bpmn:flowNodeRef>`).join('') + '</bpmn:lane>').join('') + '</bpmn:laneSet>';
+  const shapes = [`<bpmndi:BPMNShape id="${P}_di" bpmnElement="${P}_part" isHorizontal="true"><dc:Bounds x="${POOL_X}" y="${POOL_Y}" width="${g.poolW}" height="${g.poolH}"/></bpmndi:BPMNShape>`]
+    .concat(lanes.map(l => `<bpmndi:BPMNShape id="${P}_l_${l.replace(/\W/g,'_')}_di" bpmnElement="${P}_l_${l.replace(/\W/g,'_')}" isHorizontal="true"><dc:Bounds x="${POOL_X + HEAD}" y="${g.laneY(l)}" width="${g.poolW - HEAD}" height="${LANE_H}"/></bpmndi:BPMNShape>`))
+    .concat(nodes.map(n => {
+      // подпись шлюза — над ним (снизу уходят ветки «препятствие»/«провал»), события — под ним
+      const ly = n.type === 'exclusiveGateway' ? n.y - 32 : n.y + n.h + 4;
+      const lbl = n.type.endsWith('Task') ? '' : `<bpmndi:BPMNLabel><dc:Bounds x="${n.cx - 60}" y="${ly}" width="120" height="28"/></bpmndi:BPMNLabel>`;
+      return `<bpmndi:BPMNShape id="${n.id}_di" bpmnElement="${n.id}"${n.type === 'exclusiveGateway' ? ' isMarkerVisible="true"' : ''}><dc:Bounds x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}"/>${lbl}</bpmndi:BPMNShape>`;
+    }));
+  const poolBottom = POOL_Y + g.poolH;
+  const edges = flows.map(([s, t, , mode], i) => {
+    const pts = route(byId[s], byId[t], mode, poolBottom);
+    return `<bpmndi:BPMNEdge id="f${i}_di" bpmnElement="f${i}">` + pts.map(([x, y]) => `<di:waypoint x="${Math.round(x)}" y="${Math.round(y)}"/>`).join('') + '</bpmndi:BPMNEdge>';
+  });
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="defs_${kind.k}" targetNamespace="https://lore.seidrstudio.pro/workflow">
+<bpmn:collaboration id="${P}_col"><bpmn:participant id="${P}_part" name="${esc(kind.icon + ' ' + kind.k + ' — ' + kind.l)}" processRef="${P}"/></bpmn:collaboration>
+<bpmn:process id="${P}" isExecutable="false">${laneSet}${nodes.map(el).join('')}${sf}${dxml}</bpmn:process>
+<bpmndi:BPMNDiagram id="${P}_d"><bpmndi:BPMNPlane id="${P}_pl" bpmnElement="${P}_col">${shapes.join('')}${edges.join('')}${ddi}</bpmndi:BPMNPlane></bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+}
+
+document.getElementById('kindIcons').textContent = KINDS.map(k => k.icon + ' ' + k.k).join(' · ');
+// Закладки (слово владельца 26.11: «сделай закладками»): легенда и по закладке на вид работы; выбор — в адресе (#dev).
+// Диаграмма вида строится при первом открытии закладки: bpmn-js в скрытом контейнере не знает размеров.
+const host = document.getElementById('kinds'), nav = document.getElementById('nav');
+window.__bpmn = { done: 0, total: KINDS.length + 2, warnings: 0, errors: [] };
+const panels = { legend: { sec: document.getElementById('legend') } };
+nav.querySelector('a').dataset.tab = 'legend';
+for (const kind of [{ k: 'universal', l: 'универсальный workflow', icon: '🧭', universal: true }, { k: 'delivery', l: 'поставка по веткам git', icon: '🚚', delivery: true }, ...KINDS]) {
+  const sec = document.createElement('section'); sec.id = kind.k; sec.hidden = true;
+  const accRoles = (kind.universal || kind.delivery) ? [] : [...new Set(kind.rv.filter(s => HUMAN.has(s)).flatMap(s => WHO[kind.k + ':' + s] || []))];
+  const intro = kind.delivery
+    ? `<p class="meta"><b>Поставка — отдельный workflow над группой задач (зонтик или спринт), не стадия вида работы.</b> Ветки: feature/fix → зонтик → develop (dev) → preprod (стенд) → main + тег (prod). Класс PR на каждом шаге: feature, umbrella, promote, release. Зонтик в develop и релиз — только по слову владельца; промо — без отдельного разрешения; тег режется с main. В релиз входят задачи в uat или done. Модель: workflow.delivery (PR #1861, в зонтике next5).</p>`
+    : kind.universal
+    ? `<p class="meta"><b>Да, все виды и классы задач — в одном процессе.</b> Общее у всех: класс работы (основание uc → сценарий, enb → ADR), результат стадий (готово / препятствие / провал), гейт приёмщика 👤 и done с доказательством. Разное — только стадии вида: они вынесены в подпроцесс (callActivity), который выбирает шлюз «вид работы?» по типу задачи; в LangGraph4j это подграф. Клик по подпроцессу открывает закладку вида. Метки <span class="lg-ok">✓ LG4j</span> / <span class="lg-lore">⚠ LORE</span> — где хватает LangGraph4j, а где механику несёт движок LORE. Объекты данных с [состоянием] — статусная модель артефактов.</p>`
+    : `<p class="meta"><b>Только вариативный кусок вида</b> — общий путь (класс работы, результат стадий, blocked/failed, гейт 👤, «принято?», done) в <a href="#universal" style="color:var(--acc)">🧭 universal</a>. <b>Типы задач:</b> ${kind.types} · <b>гейт 👤 вида:</b> ${kind.rv.find(x => HUMAN.has(x)) || 'подтвердить done'} (роли приёмщика: ${accRoles.join(', ') || 'роль гейта вида'}) · <b>доказательство done:</b> ${kind.ev}${kind.failed ? ' · <b>failed:</b> ' + kind.failed : ''}</p>`;
+  sec.innerHTML = `<h2>${kind.icon} ${kind.k} — ${kind.l}</h2>
+    ${intro}
+    <div class="stage"><div class="zoom"><b class="ttl">${kind.icon} ${kind.k}</b><button data-z="-" aria-label="Уменьшить">−</button><span>—</span><button data-z="+" aria-label="Увеличить">+</button><button data-z="fit" aria-label="Вписать">⤢</button><button data-z="full" aria-label="На весь экран" title="На весь экран">⛶</button></div>
+    <div class="canvas"></div></div><p class="err"></p>${kind.universal ? '<div class="utables"></div>' : '<div class="sipoc"></div>'}`;
+  host.appendChild(sec);
+  const a = document.createElement('a'); a.href = '#' + kind.k; a.dataset.tab = kind.k; a.textContent = kind.icon + ' ' + kind.k; nav.appendChild(a);
+  panels[kind.k] = { sec, kind };
+}
+// ── Универсальный workflow (вопрос владельца 26.11: «на универсальном едином workflow можно совместить все классы задач?»).
+// Один процесс L0: общее ядро (класс работы → вид → результат → приёмка → done), вид работы — вызываемый подпроцесс
+// (callActivity = подграф LangGraph4j). Метки ✓/⚠ — где хватает LangGraph4j, а где механику несёт движок LORE
+// (отчёт BPMN-vs-LangGraph4j-2611). Объекты данных с [состоянием] — статусная модель артефактов: артефакты создаются,
+// редактируются и реализуются через задачи (слово владельца 26.11).
+const LG = {
+  u_class: ['ok', 'шлюз X → условное ребро'],
+  u_base: ['ok', 'связать — обычный узел; проверки здесь нет'],
+  u_review: ['lore', 'проверка класса: основание (REALIZES / JUSTIFIED_BY) или результат (PRODUCES) — гард узла движка LORE'],
+  u_kind: ['ok', 'шлюз X по типу задачи → условное ребро'],
+  u_result: ['ok', 'шлюз X → условное ребро'],
+  u_blocked: ['lore', 'ожидание события / таймер — нет в LangGraph4j: interrupt + планировщик LORE'],
+  u_failed: ['ok', 'конец с ошибкой → флаг в state + ребро'],
+  u_accept: ['lore', 'RBAC и приёмщик — нет в LangGraph4j: interrupt, resume только через API LORE'],
+  u_ok: ['lore', 'решение человека: цель из ответа (done / cancelled / blocked / стадия) + кто, когда, почему — проверка в API LORE'],
+  u_cancel: ['ok', 'конец → END графа'],
+  u_done: ['lore', 'статусы артефактов (реализован, в силе) — движок LORE по каналу artifacts'],
+};
+const ART = [
+  ['сценарий (uc, feature)', 'proposed → active → shipped · in_rework · dropped', 'заводит pm / product-analyst (proposed); active, shipped, in_rework вычисляет движок по задачам с REALIZES: первая взята — active, все done — shipped, переоткрыта — in_rework', 'задача класса uc его реализует'],
+  ['ADR', 'draft → proposed → accepted · deferred · superseded', 'создаёт стадия design (dev) или write (research); accepted — 👤 владелец «да»; superseded — новым ADR', 'задачи класса enb ссылаются на него (JUSTIFIED_BY); реализован, когда все enb-задачи done — предложено мной'],
+  ['спека', 'proposed → accepted · deprecated · superseded', 'создаёт design (dev) или draft (doc); правит review_text; accepted — 👤 owner_read', 'реализуется задачами dev по ней'],
+  ['решение', 'по словарю decision_status', 'создаёт write (research), external:decision_in', '—'],
+  ['док, runbook', 'статусов нет (версии текста)', 'создаёт review_text (doc), write (research); правки — новые версии', '—'],
+  ['branch, PR, прогон CI, релиз, отчёт смоука', 'создан → влит / выпущен / зелёный (из Forgejo)', 'stage-артефакты dev/ops: implement, fix, test, stand_check', 'доказательство done вида'],
+];
+// ELK (слово владельца 26.11: «сделай их elk тоже»). В ELK нет BPMN-дорожек, поэтому каждая дорожка раскладывается
+// отдельно (layered, слева направо, ортогональные стрелки), дорожки ставятся одна под другой, а редкие переходы
+// между дорожками достраиваются ортогонально. Объекты данных — тоже узлы ELK, связи с ними — его рёбра.
+async function elkLane(nodes, edges) {
+  const elk = new ELK();
+  const g = await elk.layout({ id: 'root', layoutOptions: {
+      'elk.algorithm': 'layered', 'elk.direction': 'RIGHT', 'elk.edgeRouting': 'ORTHOGONAL',
+      'elk.spacing.nodeNode': '45', 'elk.layered.spacing.nodeNodeBetweenLayers': '70', 'elk.spacing.edgeNode': '25',
+      'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES', 'elk.padding': '[top=40,left=60,bottom=50,right=40]' },
+    children: nodes.map(n => ({ id: n.id, width: n.w, height: n.h + (n.lbl || 0) })),
+    edges: edges.map(([s, t], i) => ({ id: 'e' + i, sources: [s], targets: [t] })) });
+  const pos = Object.fromEntries(g.children.map(c => [c.id, c]));
+  const routes = g.edges.map(e => { const sec = e.sections[0]; return [sec.startPoint, ...(sec.bendPoints || []), sec.endPoint].map(p => [p.x, p.y]); });
+  return { pos, routes, w: g.width, h: g.height };
+}
+async function universalElk() {
+  const base = universalXml(true);
+  const N = base.nodes, D = base.data, F = base.flows;
+  const laneOfId = Object.fromEntries([...N.map(n => [n.id, n.lane]), ...D.map(d => [d.id, d.lane])]);
+  const res = {};
+  for (const L of ['E', 'A']) {
+    const items = [...N, ...D].filter(n => laneOfId[n.id] === L).map(n => ({ ...n, lbl: n.type && !n.type.endsWith('Task') && n.type !== 'callActivity' ? 30 : 0 }));
+    const ids = new Set(items.map(n => n.id));
+    const inside = F.map((f, i) => ({ f, i })).filter(({ f }) => ids.has(f.s) && ids.has(f.t));
+    const assoc = D.map(d => [d.from, d.to]).filter(([a, b]) => ids.has(a) && ids.has(b));
+    const out = await elkLane(items, inside.map(({ f }) => [f.s, f.t]).concat(assoc));
+    res[L] = { out, inside, nAssoc: assoc.length, items };
+  }
+  return base.finish(res);
+}
+function universalXml(raw) {
+  const H_E = 980, H_A = 230, Y = POOL_Y, LA = Y + H_E, W = 2140, CY = Y + H_E / 2, CYA = LA + H_A / 2;
+  const N = [], F = [], D = [];
+  const node = (id, type, name, cx, cy, w, h, extra = {}) => N.push({ id, type, name, x: cx - w / 2, y: cy - h / 2, w, h, cx, cy, lane: extra.lane || 'E', ...extra });
+  node('u_start', 'startEvent', 'задача взята в работу', 140, CY, 36, 36);
+  node('u_class', 'exclusiveGateway', 'класс работы?', 260, CY, 50, 50);
+  node('u_base', 'serviceTask', 'связать основание, если оно уже есть: uc → сценарий, enb → ADR', 420, CY, 180, 100, { cap: '🤖 👤' });
+  node('u_merge', 'exclusiveGateway', '', 590, CY, 50, 50);
+  node('u_kind', 'exclusiveGateway', 'вид работы? (по типу задачи)', 700, CY, 50, 50);
+  KINDS.forEach((k, i) => node('u_k_' + k.k, 'callActivity', k.icon + ' ' + k.k + ': ' + k.st.join(' → '), 920, Y + 70 + i * 100, 220, 80, { kind: k.k, cap: '🤖 👤' }));
+  node('u_join', 'exclusiveGateway', '', 1120, CY, 50, 50);
+  node('u_result', 'exclusiveGateway', 'результат стадий?', 1230, CY, 50, 50);
+  node('u_blocked', 'intermediateCatchEvent', 'blocked / waiting · причина, адресат', 1170, Y + 950, 36, 36, { def: 'conditional' });
+  node('u_failed', 'endEvent', 'failed · у видов, где он есть', 1290, Y + 950, 36, 36, { def: 'error' });
+  node('u_review', 'callActivity', 'внутренняя приёмка агентом (RFD → UAT) · проверка класса: основание ИЛИ результат', 1430, CY, 200, 90, { cap: '🤖' });
+  node('u_accept', 'userTask', 'гейт 👤 (uat): приёмка зонтиком или спринтом · owner_read · approval · protocol', 1650, CYA, 200, 100, { lane: 'A', cap: '👤' });
+  node('u_ok', 'exclusiveGateway', 'решение человека (кто · когда · почему)', 1840, CYA, 50, 50, { lane: 'A' });
+  node('u_cancel', 'endEvent', 'cancelled 👤', 1980, CYA + 75, 36, 36, { lane: 'A' });
+  node('u_done', 'endEvent', 'done 👤 · доказательство вида', 1980, CYA, 36, 36, { lane: 'A' });
+  // объекты данных — статусная модель артефактов (BPMN dataObject с [состоянием])
+  const data = (id, name, cx, cy, from, to) => D.push({ id, name, x: cx - 18, y: cy - 25, w: 36, h: 50, cx, cy, from, to });
+  data('d_uc', 'сценарий [proposed]', 340, Y + 120, 'd_uc', 'u_base');
+  data('d_adr', 'ADR [proposed | accepted]', 500, Y + 120, 'd_adr', 'u_base');
+  data('d_art', 'артефакты вида [создан · изменён]', 1230, Y + 140, 'u_join', 'd_art');
+  data('d_real', 'сценарий [shipped] · ADR [реализован] · PR [влит]', 1980, LA + 40, 'u_done', 'd_real');
+  D.forEach(d => { d.lane = d.id === 'd_real' ? 'A' : 'E'; });
+  const by = Object.fromEntries(N.map(n => [n.id, n]));
+  const R = (n) => [n.x + n.w, n.cy], L = (n) => [n.x, n.cy];
+  const flow = (s, t, name, pts) => F.push({ s, t, name, pts: pts || [R(by[s]), L(by[t])] });
+  flow('u_start', 'u_class', ''); flow('u_class', 'u_base', 'uc · enb'); flow('u_base', 'u_merge', '');
+  flow('u_class', 'u_merge', 'jtd · основание создаст сама задача', [[260, CY + 25], [260, CY + 70], [590, CY + 70], [590, CY + 25]]);
+  flow('u_merge', 'u_kind', '');
+  for (const k of KINDS) { const t = by['u_k_' + k.k];
+    flow('u_kind', t.id, k.types, [[725, CY], [770, CY], [770, t.cy], [t.x, t.cy]]);
+    flow(t.id, 'u_join', '', [[t.x + t.w, t.cy], [1060, t.cy], [1060, CY], [1095, CY]]); }
+  flow('u_join', 'u_result', ''); flow('u_result', 'u_review', 'готово → ready_for_deploy');
+  flow('u_result', 'u_blocked', 'препятствие', [[1230, CY + 25], [1230, Y + 900], [1170, Y + 900], [1170, Y + 932]]);
+  flow('u_result', 'u_failed', 'провал', [[1230, CY + 25], [1230, Y + 900], [1290, Y + 900], [1290, Y + 932]]);
+  flow('u_blocked', 'u_kind', 'снято', [[1152, Y + 950], [715, Y + 950], [715, CY + 25]]);
+  flow('u_review', 'u_accept', '', [[1530, CY], [1545, CY], [1545, CYA], [1550, CYA]]);
+  flow('u_accept', 'u_ok', ''); flow('u_ok', 'u_done', 'done · доказательство');
+  flow('u_ok', 'u_cancel', 'cancelled', [[1865, CYA], [1900, CYA], [1900, CYA + 75], [1962, CYA + 75]]);
+  flow('u_ok', 'u_blocked', 'blocked · waiting', [[1840, CYA - 25], [1840, LA - 12], [1170, LA - 12], [1170, Y + 968]]);
+  flow('u_ok', 'u_kind', 'вернуть на стадию · причина', [[1840, CYA + 25], [1840, LA + H_A + 30], [700, LA + H_A + 30], [700, CY + 25]]);
+  if (raw) return { nodes: N, data: D, flows: F, finish: (res) => {
+    // дорожка E сверху, A под ней; A сдвинута вправо, чтобы приёмка шла после «приёмки вида»
+    const ox = POOL_X + HEAD, oyE = Y, E = res.E.out, A = res.A.out;
+    const place = (r, dx, dy) => { for (const it of r.items) { const p = r.out.pos[it.id], n = N.find(x => x.id === it.id) || D.find(x => x.id === it.id);
+      n.x = p.x + dx; n.y = p.y + dy; n.cx = n.x + n.w / 2; n.cy = n.y + n.h / 2; } };
+    place(res.E, ox, oyE);
+    const hE = E.h, review = N.find(n => n.id === 'u_review');
+    const accTmp = res.A.out.pos['u_accept'];
+    const dxA = Math.max(ox, review.x + review.w + 60 - accTmp.x);
+    place(res.A, dxA, oyE + hE);
+    const hA = A.h, Wp = Math.max(ox + E.w, dxA + A.w) + 40 - POOL_X;
+    res.E.inside.forEach(({ i }, k) => { F[i].pts = E.routes[k].map(([x, y]) => [x + ox, y + oyE]); });
+    res.A.inside.forEach(({ i }, k) => { F[i].pts = A.routes[k].map(([x, y]) => [x + dxA, y + oyE + hE]); });
+    const assocPts = {};
+    D.forEach(d => { const r = d.lane === 'E' ? res.E : res.A, base = d.lane === 'E' ? [ox, oyE] : [dxA, oyE + hE];
+      const k = [...r.items].length; const idx = D.filter(x => x.lane === d.lane).indexOf(d);
+      const route = r.out.routes[r.inside.length + idx]; if (route) assocPts[d.id] = route.map(([x, y]) => [x + base[0], y + base[1]]); });
+    // переходы между дорожками — ортогонально
+    const by2 = Object.fromEntries(N.map(n => [n.id, n]));
+    F.forEach(f => { if ((by2[f.s].lane) === (by2[f.t].lane)) return;
+      const a = by2[f.s], b = by2[f.t];
+      if (f.s === 'u_review') { const mx = a.x + a.w + 25; f.pts = [[a.x + a.w, a.cy], [mx, a.cy], [mx, b.cy], [b.x, b.cy]]; }
+      else { const yb = oyE + hE + hA + 30; f.pts = [[a.cx, a.y + a.h], [a.cx, yb], [b.cx, yb], [b.cx, b.y + b.h]]; } });
+    return build2(Wp, hE, hA, assocPts);
+  } };
+  return build2(W - 0, H_E, H_A, null);
+  function build2(Wp, hE, hA, assocPts) {
+  const LA2 = Y + hE;
+  const inc = {}, out = {}; F.forEach((f, i) => { (out[f.s] = out[f.s] || []).push('uf' + i); (inc[f.t] = inc[f.t] || []).push('uf' + i); });
+  const el = (n) => { const io = (inc[n.id] || []).map(f => `<bpmn:incoming>${f}</bpmn:incoming>`).join('') + (out[n.id] || []).map(f => `<bpmn:outgoing>${f}</bpmn:outgoing>`).join('');
+    const def = n.def === 'conditional' ? `<bpmn:conditionalEventDefinition id="${n.id}_c"><bpmn:condition xsi:type="bpmn:tFormalExpression">препятствие снято</bpmn:condition></bpmn:conditionalEventDefinition>` : n.def === 'error' ? `<bpmn:errorEventDefinition id="${n.id}_e"/>` : '';
+    return `<bpmn:${n.type} id="${n.id}" name="${esc(n.name)}">${io}${def}</bpmn:${n.type}>`; };
+  const lane = (id, name, ids) => `<bpmn:lane id="${id}" name="${esc(name)}">${ids.map(i => `<bpmn:flowNodeRef>${i}</bpmn:flowNodeRef>`).join('')}</bpmn:lane>`;
+  const dataXml = D.map(d => `<bpmn:dataObject id="${d.id}_o"/><bpmn:dataObjectReference id="${d.id}" name="${esc(d.name)}" dataObjectRef="${d.id}_o"/>`).join('')
+    + D.map(d => `<bpmn:association id="${d.id}_a" sourceRef="${d.from}" targetRef="${d.to}" associationDirection="One"/>`).join('');
+  const shapes = N.map(n => { const ly = n.type === 'exclusiveGateway' ? n.y - 32 : n.y + n.h + 4;
+    const lbl = (n.type.endsWith('Task') || n.type === 'callActivity') ? '' : `<bpmndi:BPMNLabel><dc:Bounds x="${n.cx - 60}" y="${ly}" width="120" height="28"/></bpmndi:BPMNLabel>`;
+    return `<bpmndi:BPMNShape id="${n.id}_di" bpmnElement="${n.id}"${n.type === 'exclusiveGateway' ? ' isMarkerVisible="true"' : ''}${n.type === 'callActivity' ? ' isExpanded="false"' : ''}><dc:Bounds x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}"/>${lbl}</bpmndi:BPMNShape>`; })
+    .concat(D.map(d => `<bpmndi:BPMNShape id="${d.id}_di" bpmnElement="${d.id}"><dc:Bounds x="${d.x}" y="${d.y}" width="${d.w}" height="${d.h}"/><bpmndi:BPMNLabel><dc:Bounds x="${d.cx - 70}" y="${d.y + d.h + 2}" width="140" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>`));
+  const all = Object.fromEntries([...N, ...D].map(n => [n.id, n]));
+  const assocEdges = D.map(d => { const a = all[d.from], b = all[d.to];
+    if (assocPts && assocPts[d.id]) return `<bpmndi:BPMNEdge id="${d.id}_a_di" bpmnElement="${d.id}_a">` + assocPts[d.id].map(([x, y]) => `<di:waypoint x="${Math.round(x)}" y="${Math.round(y)}"/>`).join('') + '</bpmndi:BPMNEdge>';
+    return `<bpmndi:BPMNEdge id="${d.id}_a_di" bpmnElement="${d.id}_a"><di:waypoint x="${Math.round(a.cx)}" y="${Math.round(a.cy < b.cy ? a.y + a.h : a.y)}"/><di:waypoint x="${Math.round(b.cx)}" y="${Math.round(a.cy < b.cy ? b.y : b.y + b.h)}"/></bpmndi:BPMNEdge>`; });
+  const edges = F.map((f, i) => `<bpmndi:BPMNEdge id="uf${i}_di" bpmnElement="uf${i}">` + f.pts.map(([x, y]) => `<di:waypoint x="${Math.round(x)}" y="${Math.round(y)}"/>`).join('') + '</bpmndi:BPMNEdge>');
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="defs_u" targetNamespace="https://lore.seidrstudio.pro/workflow">
+<bpmn:collaboration id="u_col"><bpmn:participant id="u_part" name="🧭 универсальный workflow задачи (L0)" processRef="u_proc"/></bpmn:collaboration>
+<bpmn:process id="u_proc" isExecutable="false"><bpmn:laneSet id="u_ls">${lane('u_lE', 'исполнитель · роль по виду работы · 🤖 агент или 👤 человек', N.filter(n => n.lane === 'E').map(n => n.id).concat(D.filter(d => d.id !== 'd_real').map(d => d.id)).filter(i => !i.startsWith('d_')))}${lane('u_lA', 'приёмщик задачи 👤 (человек)', N.filter(n => n.lane === 'A').map(n => n.id))}</bpmn:laneSet>${N.map(el).join('')}${F.map((f, i) => `<bpmn:sequenceFlow id="uf${i}" sourceRef="${f.s}" targetRef="${f.t}"${f.name ? ` name="${esc(f.name)}"` : ''}/>`).join('')}${dataXml}</bpmn:process>
+<bpmndi:BPMNDiagram id="u_d"><bpmndi:BPMNPlane id="u_pl" bpmnElement="u_col">
+<bpmndi:BPMNShape id="u_part_di" bpmnElement="u_part" isHorizontal="true"><dc:Bounds x="${POOL_X}" y="${Y}" width="${Wp}" height="${hE + hA}"/></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="u_lE_di" bpmnElement="u_lE" isHorizontal="true"><dc:Bounds x="${POOL_X + HEAD}" y="${Y}" width="${Wp - HEAD}" height="${hE}"/></bpmndi:BPMNShape>
+<bpmndi:BPMNShape id="u_lA_di" bpmnElement="u_lA" isHorizontal="true"><dc:Bounds x="${POOL_X + HEAD}" y="${LA2}" width="${Wp - HEAD}" height="${hA}"/></bpmndi:BPMNShape>
+${shapes.join('')}${edges.join('')}${assocEdges.join('')}</bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>`;
+  return { xml, nodes: N };
+  }
+}
+// SIPOC вида (вопрос владельца 26.11: «может, нам из этого поможет матрица SIPOC или похожая?»): строка на стадию —
+// Supplier (кто дал вход) · Input [статус] · Process (стадия, роль) · Output [статус] · Customer (кто берёт выход).
+// Строится из тех же данных, что схема (flow модели + роли стадий), поэтому таблица и схема не разойдутся.
+const RECORD_MAKER = { code: 'репозиторий (код до задачи)', uc: 'pm / product-analyst (запись LORE)', adr: 'architect / developer (запись LORE)', spec: 'design или doc:draft (запись LORE)' };
+function sipoc(kind) {
+  // По артефакту: вход — «что [статус] ← откуда», выход — «что [статус] → кому». Строка на стадию, пункт на строку.
+  const K = kind.k, stages = kind.st.concat(kind.rv.filter(x => !HUMAN.has(x)));
+  const gate = kind.rv.find(x => HUMAN.has(x)) || 'подтвердить done';
+  const producer = {}, items = [];
+  const isProof = (a) => /^(pr|release|publication|agreement|period_report|test_protocol|external_decision|doc|decision|stand_report|measurement|submission)$/.test(a);
+  for (const st of stages) {
+    const [cin, cout] = IO[K + ':' + st] || [[], []];
+    const ins = cin.map(a => ({ a, state: producer[a] ? OUT[a] : (NEED[a] || OUT[a] || 'есть'), from: producer[a] || RECORD_MAKER[a] || '🧭 / запись LORE' }));
+    const outs = cout.map(a => { const c = stages.slice(stages.indexOf(st) + 1).filter(x => (IO[K + ':' + x] || [[]])[0].includes(a));
+      return { a, state: OUT[a] || 'создан', to: c.length ? c.join(', ') : (isProof(a) ? '🧭 гейт 👤 ' + gate + ' — доказательство' : '🧭 результат стадий') }; });
+    items.push({ st, roles: (WHO[K + ':' + st] || []).join(', '), ins, outs });
+    cout.forEach(x => { producer[x] = st; });
+  }
+  sipoc.items = items;
+  const li = (xs, arrow, key) => xs.length ? xs.map(x => `<div class="si"><b>${esc(x.a)}</b> <span class="st">[${esc(x.state)}]</span> <span class="dir">${arrow} ${esc(x[key])}</span></div>`).join('') : '<span class="dir">—</span>';
+  return '<h3 class="meta" style="margin-top:10px"><b>SIPOC вида</b> — S поставщик · I вход · P стадия · O выход · C потребитель</h3>'
+    + '<div style="overflow-x:auto"><table class="sipoc-t"><tr><th>P · стадия · роли</th><th>S → I · берёт [статус] ← откуда</th><th>O → C · выдаёт [статус] → кому</th></tr>'
+    + items.map(r => `<tr><td><b>${esc(r.st)}</b><br><span class="dir">${esc(r.roles)}</span></td><td>${li(r.ins, '←', 'from')}</td><td>${li(r.outs, '→', 'to')}</td></tr>`).join('') + '</table></div>';
+}
+const UNIVERSAL = { k: 'universal', l: 'универсальный workflow', icon: '🧭', universal: true };
+function universalTables() {
+  return `<h3 class="meta" style="margin-top:10px"><b>Где хватает LangGraph4j, а где механику несёт движок LORE</b></h3>
+    <table><tr><th>элемент</th><th></th><th>как исполняется</th></tr>${Object.entries(LG).map(([id, [k, t]]) =>
+      `<tr><td>${esc(id.replace('u_', ''))}</td><td>${k === 'ok' ? '<span class="lg-ok">✓ LangGraph4j</span>' : '<span class="lg-lore">⚠ движок LORE</span>'}</td><td>${esc(t)}</td></tr>`).join('')}
+    <tr><td>параллель (+)</td><td><span class="lg-lore">⚠ ограничено</span></td><td>в ветке один шаг, без условий и без 👤 — в L0 не используется</td></tr>
+    <tr><td>inclusive, complex, signal, компенсация</td><td><span class="lg-no">✕ нет</span></td><td>в дизайнере запрещены (подмножество из отчёта)</td></tr></table>
+    <h3 class="meta" style="margin-top:10px"><b>Основание и результат — разные понятия</b> <span class="chip">предложено мной</span></h3>
+    <p class="meta">Слово владельца 26.11: «документация типа ADR и enb, которые сами создают ADR и uc, не могут иметь ADR и uc в начале — возможно, там тоже нужно развести понятия».</p>
+    <table><tr><th>понятие</th><th>связь</th><th>когда есть</th><th>пример</th></tr>
+    <tr><td><b>основание</b> — вход</td><td>REALIZES → сценарий (uc) · JUSTIFIED_BY → ADR (enb)</td><td>запись существует до задачи; связать можно на старте</td><td>задача dev «сделать фильтр where» реализует сценарий UC-… и обоснована ADR-LORE-061</td></tr>
+    <tr><td><b>результат</b> — выход</td><td>PRODUCES → ADR, сценарий, спека, док</td><td>запись создаёт сама задача; к review — в статусе proposed</td><td>задача doc «написать ADR-LORE-061»: на старте ADR нет, к review — ADR-LORE-061 [proposed]</td></tr>
+    <tr><td><b>правило класса</b></td><td colspan="2">проверяется на входе в review, а не на старте: uc — REALIZES <i>или</i> PRODUCES сценарий; enb — JUSTIFIED_BY <i>или</i> PRODUCES ADR; jtd — ничего</td><td>задачи, которые потом пойдут по ADR-LORE-061, берут его уже основанием</td></tr></table>
+    <h3 class="meta" style="margin-top:10px"><b>Статусная модель артефактов: создаются, редактируются и реализуются через задачи</b></h3>
+    <table><tr><th>артефакт</th><th>статусы</th><th>создаёт / правит / двигает статус</th><th>реализуется задачей</th></tr>
+    ${ART.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>
+    <p class="legend">Статусы из кода и словарей LORE (adr_status, spec_status, UcReadinessCalculator). Смену статуса артефакта делает движок LORE, а не агент: стадия задачи пишет артефакт в канал artifacts (produces), а движок по событию задачи (взята, done, переоткрыта) переводит статус. «ADR реализован» — предложено мной, такого статуса в коде нет.</p>`;
+}
+async function render(p) {
+  const { sec, kind } = p;
+  const U = kind.universal ? await universalElk().catch(e => { window.__bpmn.errors.push('elk: ' + e.message); return universalXml(); }) : null;
+  const model = U ? { nodes: U.nodes } : kind.delivery ? buildDelivery() : build(kind);
+  const viewer = new BpmnJS({ container: sec.querySelector('.canvas') });
+  p.viewer = viewer;
+  return viewer.importXML(U ? U.xml : toXml(kind, model)).then(({ warnings }) => {
+    window.__bpmn.warnings += warnings.length;
+    if (warnings.length) sec.querySelector('.err').textContent = 'предупреждения импорта: ' + warnings.map(w => w.message).join('; ');
+    const canvas = viewer.get('canvas'), overlays = viewer.get('overlays'), reg = viewer.get('elementRegistry');
+    if (U) sec.querySelector(".utables").innerHTML = universalTables(); else if (!kind.delivery) sec.querySelector('.sipoc').innerHTML = sipoc(kind);
+    if (U) {
+      // клик по подпроцессу вида — открыть его закладку
+      viewer.on('element.click', (e) => { const n = model.nodes.find(x => x.id === e.element.id); if (n && n.kind) { history.replaceState(null, '', '#' + n.kind); activate(n.kind); } });
+      // где хватает LangGraph4j (✓), а где механику несёт движок LORE (⚠)
+      for (const [id, [k, t]] of Object.entries(LG))
+        overlays.add(id, { position: { top: -30, left: -10 }, html: `<div class="ov ${k === 'ok' ? 'lg-ok' : 'lg-lore'}" title="${esc(t)}">${k === 'ok' ? '✓ LG4j' : '⚠ LORE'}</div>` });
+    }
+    for (const n of model.nodes) {
+      if (!n.type.endsWith('Task') && n.type !== 'callActivity') continue;
+      if (!U) overlays.add(n.id, { position: { top: -14, left: -8 }, html: `<div class="ov ov-kind">${kind.icon}</div>` });
+      if (U && n.kind) overlays.add(n.id, { position: { bottom: 14, right: 4 }, html: `<div class="ov ov-io">открыть стадии ›</div>` });
+      overlays.add(n.id, { position: { top: -11, right: 36 }, html: `<div class="ov ov-cap">${n.cap}</div>` });
+      const [cin, cout] = n.io || [[], []];
+      const lines = [U ? '' : '', n.tools ? '🔧 ' + n.tools : ''].filter(Boolean);
+      if (lines.length) overlays.add(n.id, { position: { bottom: 18, left: 4 }, html: `<div class="ov ov-io">${lines.map(esc).join('<br>')}</div>` });
+    }
+    const label = sec.querySelector('.zoom span');
+    const show = () => { label.textContent = Math.round(canvas.zoom() * 100) + '%'; };
+    // Узкий экран: «вписать всё» даёт ~12% — нечитаемо. Стартуем с 45% от левого верхнего угла; ⤢ вписывает целиком.
+    const start = () => { canvas.zoom('fit-viewport');
+      if (canvas.zoom() < 0.4) { const o = canvas.viewbox().outer; canvas.viewbox({ x: 0, y: 0, width: o.width / 0.45, height: o.height / 0.45 }); } };
+    start(); show();
+    p.start = start;
+    // Касания: один палец — тянуть, два — масштаб (у bpmn-js 17 своей тач-навигации нет).
+    const el = sec.querySelector('.canvas'); let t0 = null;
+    const pts = (e) => [...e.touches].map(t => [t.clientX, t.clientY]);
+    const dist = (q) => Math.hypot(q[0][0] - q[1][0], q[0][1] - q[1][1]);
+    el.addEventListener('touchstart', (e) => { t0 = { q: pts(e), z: canvas.zoom() }; }, { passive: true });
+    el.addEventListener('touchmove', (e) => {
+      if (!t0) return; e.preventDefault(); const q = pts(e);
+      if (q.length === 1 && t0.q.length === 1) { canvas.scroll({ dx: q[0][0] - t0.q[0][0], dy: q[0][1] - t0.q[0][1] }); t0.q = q; }
+      else if (q.length === 2 && t0.q.length === 2) { const r = el.getBoundingClientRect();
+        canvas.zoom(Math.max(0.1, Math.min(3, t0.z * dist(q) / dist(t0.q))), { x: (q[0][0] + q[1][0]) / 2 - r.left, y: (q[0][1] + q[1][1]) / 2 - r.top }); }
+    }, { passive: false });
+    el.addEventListener('touchend', () => { t0 = null; });
+    sec.querySelector('.zoom').addEventListener('click', (e) => {
+      const z = e.target.dataset.z; if (!z) return;
+      if (z === 'full') { toggleFull(sec, canvas, start); return; }
+      if (z === 'fit') canvas.zoom('fit-viewport'); else canvas.zoom(canvas.zoom() * (z === '+' ? 1.3 : 1 / 1.3));
+      show();
+    });
+    viewer.on('canvas.viewbox.changed', show);
+    window.__bpmn.done++;
+    sec.dataset.elements = String(reg.getAll().length);
+  }).catch(err => { window.__bpmn.errors.push(kind.k + ': ' + err.message); sec.querySelector('.err').textContent = 'ошибка импорта: ' + err.message; });
+}
+// На весь экран (слово владельца 26.11): Fullscreen API, а где его нет (iPhone) — фиксированный слой поверх страницы.
+function toggleFull(sec, canvas, start) {
+  const st = sec.querySelector('.stage'), on = !st.classList.contains('full');
+  st.classList.toggle('full', on); document.body.classList.toggle('noscroll', on);
+  st.querySelector('[data-z="full"]').textContent = on ? '✕' : '⛶';
+  try {
+    if (on && st.requestFullscreen) st.requestFullscreen().catch(() => {});
+    if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  } catch (e) { /* остаётся слой */ }
+  requestAnimationFrame(() => { canvas.resized(); start(); });
+}
+document.addEventListener('fullscreenchange', () => {
+  if (document.fullscreenElement) return;
+  const st = document.querySelector('.stage.full'); if (st) st.querySelector('[data-z="full"]').click();
+});
+addEventListener('keydown', (e) => { if (e.key === 'Escape') { const st = document.querySelector('.stage.full'); if (st && !document.fullscreenElement) st.querySelector('[data-z="full"]').click(); } });
+function activate(id) {
+  if (!panels[id]) id = 'legend';
+  for (const [k, p] of Object.entries(panels)) p.sec.hidden = k !== id;
+  for (const a of nav.querySelectorAll('a')) a.setAttribute('aria-selected', String(a.dataset.tab === id));
+  const p = panels[id];
+  if (p.kind) {
+    if (!p.viewer) render(p);
+    else { p.viewer.get('canvas').resized(); if (p.start) p.start(); }
+  }
+  window.scrollTo(0, 0);
+}
+nav.addEventListener('click', (e) => {
+  const a = e.target.closest('a[data-tab]'); if (!a) return;
+  e.preventDefault(); history.replaceState(null, '', '#' + a.dataset.tab); activate(a.dataset.tab);
+});
+addEventListener('hashchange', () => activate(location.hash.slice(1)));
+activate(location.hash.slice(1) || 'legend');
+</script>
+</body>
+</html>

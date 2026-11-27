@@ -74,6 +74,16 @@ public class LoreRequestStats {
         return method != null && !AgentScopeFilter.READ_METHODS.contains(method.toUpperCase());
     }
 
+    /**
+     * Что пишется в журнал действий: изменяющий вызов — как раньше (AO-01) и, по шагу 7 ADR-LORE-061
+     * (SPRINT_LORE_KNOW_REGISTRY/KREG-12), отказ GET-среза (код 400 и выше): до этого ошибки срезов не оставляли
+     * следа, и «сколько раз агенты спотыкаются о срезы» было не посчитать. Удачное чтение журнал не засоряет.
+     */
+    static boolean journalledCall(String method, String family, int status) {
+        if (isJournalled(method)) return true;
+        return "slice".equals(family) && status >= 400;
+    }
+
     @ConfigProperty(name = "lore.stats.enabled", defaultValue = "true")
     boolean statsEnabled;
 
@@ -178,6 +188,28 @@ public class LoreRequestStats {
                     LOG.warnf("[LORE ACTION] точка %s %s не записана: %s", family, entityOrPath, LoreUpstream.detail(e)));
         } catch (Exception e) {
             LOG.warnf("[LORE ACTION] точка %s %s не записана: %s", family, entityOrPath, LoreUpstream.detail(e));
+        }
+    }
+
+    /** Дверь сессии: не чаще раза в 5 минут на сессию (первый вызов — сразу). */
+    private final AgentSessionDoor.Throttle sessionThrottle = new AgentSessionDoor.Throttle(300);
+
+    /**
+     * Дверь сессии в MCP (слово владельца 26.11.2026): агент прислал X-Lore-Session-Id — сервер сам
+     * заводит {@code KnowAgentSession} и LOGGED_BY к агенту. Асинхронно и без права уронить вызов:
+     * сбой — строка в логе.
+     */
+    void touchAgentSession(String rawSession, String clientId, String machine) {
+        if (!statsEnabled || !loreEnabled) return;
+        String sid = AgentSessionDoor.canon(rawSession);
+        if (sid == null || !sessionThrottle.due(sid, Instant.now())) return;
+        AgentSessionDoor.Script s = AgentSessionDoor.script(sid, clientId, machine, Instant.now().toString());
+        try {
+            writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sqlscript", s.sql(), s.params()))
+                .subscribe().with(ok -> { }, e ->
+                    LOG.warnf("[LORE SESSION] сессия %s не записана: %s", sid, LoreUpstream.detail(e)));
+        } catch (Exception e) {
+            LOG.warnf("[LORE SESSION] сессия %s не записана: %s", sid, LoreUpstream.detail(e));
         }
     }
 

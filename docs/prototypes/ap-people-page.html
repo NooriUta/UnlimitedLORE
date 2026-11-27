@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Прототип — личная страница человека (AP-PEOPLE-PAGE)</title>
+<style>
+  :root { --bg:#f7f5f0; --bg1:#fff; --bd:#e3ddd0; --t1:#1f1b14; --t2:#5c5446; --t3:#8a8273; --acc:#b7791f; --suc:#2f855a; --wrn:#c27c0e; --dng:#c0392b; --inf:#2b6cb0; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 Manrope, system-ui, sans-serif; background:var(--bg); color:var(--t1); }
+  .note { max-width:980px; margin:16px auto 0; padding:10px 14px; border:1px dashed var(--acc); border-radius:10px; color:var(--t2); background:#fffaf0; font-size:13px; }
+  .page { max-width:980px; margin:12px auto 40px; background:var(--bg1); border:1px solid var(--bd); border-radius:14px; overflow:hidden; }
+  .crumb { padding:10px 18px; color:var(--t3); font-size:12px; border-bottom:1px solid var(--bd); }
+  .head { display:flex; gap:16px; align-items:center; padding:18px; }
+  .ava { width:64px; height:64px; border-radius:50%; background:var(--acc); color:#fff; display:grid; place-items:center; font:800 24px Unbounded, sans-serif; flex:none; }
+  h1 { margin:0; font:800 22px Unbounded, sans-serif; }
+  .login { font-family:"IBM Plex Mono", monospace; color:var(--t2); font-size:13px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .chip { border:1px solid var(--bd); border-radius:999px; padding:2px 10px; font-size:12px; color:var(--t2); background:var(--bg); }
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; padding:0 18px 14px; }
+  .kpi { border:1px solid var(--bd); border-radius:10px; padding:10px; }
+  .kpi b { display:block; font:800 20px Unbounded, sans-serif; }
+  .kpi span { color:var(--t3); font-size:12px; }
+  .tabs { display:flex; gap:4px; padding:0 12px; border-bottom:1px solid var(--bd); overflow-x:auto; }
+  .tab { padding:10px 12px; border:0; background:none; font:600 13px Manrope, sans-serif; color:var(--t2); cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; }
+  .tab[aria-selected="true"] { color:var(--t1); border-color:var(--acc); }
+  .tab small { color:var(--t3); font-weight:500; }
+  .panel { padding:16px 18px; display:none; }
+  .panel.on { display:block; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--t3); padding:6px 8px; border-bottom:1px solid var(--bd); }
+  td { padding:7px 8px; border-bottom:1px solid #f0ece3; }
+  .st { border-radius:999px; padding:1px 8px; font-size:11px; border:1px solid currentColor; }
+  .st.wip { color:var(--inf); } .st.uat { color:#5a4fcf; } .st.done { color:var(--suc); } .st.blk { color:var(--dng); }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .card { border:1px solid var(--bd); border-radius:10px; padding:12px; }
+  .card h3 { margin:0 0 8px; font-size:13px; }
+  .card .src { color:var(--t3); font-size:11px; font-family:"IBM Plex Mono", monospace; }
+  .bars { display:flex; align-items:flex-end; gap:6px; height:110px; padding-top:6px; }
+  .bars div { flex:1; background:var(--acc); border-radius:4px 4px 0 0; position:relative; }
+  .bars div::after { content:attr(data-v); position:absolute; top:-16px; left:0; right:0; text-align:center; font-size:10px; color:var(--t3); }
+  .axis { display:flex; gap:6px; font-size:10px; color:var(--t3); } .axis span { flex:1; text-align:center; }
+  .stack { display:flex; height:18px; border-radius:6px; overflow:hidden; margin:8px 0; }
+  .legend { display:flex; flex-wrap:wrap; gap:10px; font-size:12px; color:var(--t2); }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:4px; }
+  .feed { list-style:none; margin:0; padding:0; }
+  .feed li { display:grid; grid-template-columns:70px 1fr; gap:10px; padding:9px 0; border-bottom:1px solid #f0ece3; }
+  .feed time { color:var(--t3); font-size:12px; font-family:"IBM Plex Mono", monospace; }
+  .feed .what { color:var(--t2); font-size:12px; }
+  .ref { color:var(--inf); text-decoration:none; }
+  .no { margin-top:14px; padding:10px; border-radius:10px; background:#f3f7fb; color:var(--t2); font-size:12px; }
+  @media (max-width:640px) { .kpis { grid-template-columns:repeat(2,1fr); } .grid2 { grid-template-columns:1fr; } .head { align-items:flex-start; } }
+</style>
+</head>
+<body>
+<div class="note">
+  Прототип [[task:SPRINT_LORE_ADMIN_POLISH/AP-PEOPLE-PAGE]] — раскладка, данные условные. Страница видна всем, кто вошёл; на неё ведёт клик по логину или имени (автор, исполнитель, приёмщик, люди проекта, новости).
+  <b>Прав, ролей, почты и полей учётки здесь нет</b> — они остаются в админке. Строится на компонентах kit: паспорт (шапка + вкладки), таблица, графики K4-CHARTS, лента новостей с фильтром по автору.
+</div>
+
+<div class="page">
+  <div class="crumb">Forseti · Люди · <span class="login">omiloreadmin</span></div>
+  <div class="head">
+    <div class="ava">О</div>
+    <div>
+      <h1>Ольга</h1>
+      <div class="login">omiloreadmin</div>
+      <div class="chips"><span class="chip">UnlimitedLORE</span><span class="chip">miniLORE</span><span class="chip">MIDGARD</span><span class="chip">core-services</span></div>
+    </div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><b>12</b><span>в работе</span></div>
+    <div class="kpi"><b>7</b><span>на приёмке (UAT)</span></div>
+    <div class="kpi"><b>41</b><span>закрыто за 30 дней</span></div>
+    <div class="kpi"><b>2,4 д</b><span>медиана цикла</span></div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-p="tasks">Задачи <small>60</small></button>
+    <button class="tab" role="tab" aria-selected="false" data-p="analytics">Аналитика</button>
+    <button class="tab" role="tab" aria-selected="false" data-p="feed">Лента <small>128</small></button>
+  </div>
+
+  <section class="panel on" id="tasks">
+    <table>
+      <thead><tr><th>Задача</th><th>Роль в задаче</th><th>Статус</th><th>Спринт</th></tr></thead>
+      <tbody>
+        <tr><td><a class="ref" href="#">MIG-01</a> Перенос на новую модель</td><td>приёмщик</td><td><span class="st wip">в работе</span></td><td>MODEL_DOCS_TIDY</td></tr>
+        <tr><td><a class="ref" href="#">AP-PEOPLE-PAGE</a> Личная страница человека</td><td>автор</td><td><span class="st wip">в работе</span></td><td>ADMIN_POLISH</td></tr>
+        <tr><td><a class="ref" href="#">K4-CHARTS</a> Графики одним семейством</td><td>приёмщик</td><td><span class="st uat">UAT</span></td><td>S13_KIT4</td></tr>
+        <tr><td><a class="ref" href="#">MP2-15</a> Нижний бар на телефоне</td><td>автор</td><td><span class="st blk">ждёт решения</span></td><td>MOBILE_POLISH</td></tr>
+        <tr><td><a class="ref" href="#">WK-05</a> Единый workflow</td><td>приёмщик</td><td><span class="st done">сделано</span></td><td>WORK_ANY_KIND</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="panel" id="analytics">
+    <div class="grid2">
+      <div class="card"><h3>Закрыто по неделям</h3>
+        <div class="bars"><div style="height:40%" data-v="6"></div><div style="height:65%" data-v="10"></div><div style="height:52%" data-v="8"></div><div style="height:90%" data-v="14"></div><div style="height:58%" data-v="9"></div><div style="height:75%" data-v="11"></div></div>
+        <div class="axis"><span>12.10</span><span>19.10</span><span>26.10</span><span>02.11</span><span>09.11</span><span>16.11</span></div>
+        <div class="src">tasks · по исполнителю/приёмщику</div></div>
+      <div class="card"><h3>Задачи сейчас по статусам</h3>
+        <div class="stack"><span style="flex:12;background:var(--inf)"></span><span style="flex:7;background:#5a4fcf"></span><span style="flex:3;background:var(--dng)"></span><span style="flex:38;background:var(--suc)"></span></div>
+        <div class="legend"><span><i class="dot" style="background:var(--inf)"></i>в работе 12</span><span><i class="dot" style="background:#5a4fcf"></i>UAT 7</span><span><i class="dot" style="background:var(--dng)"></i>ждёт 3</span><span><i class="dot" style="background:var(--suc)"></i>сделано 38</span></div>
+        <div class="src">user_tasks · status</div></div>
+      <div class="card"><h3>Время цикла (дни, медиана по неделям)</h3>
+        <div class="bars"><div style="height:55%" data-v="3,1"></div><div style="height:48%" data-v="2,7"></div><div style="height:60%" data-v="3,4"></div><div style="height:40%" data-v="2,2"></div><div style="height:45%" data-v="2,5"></div><div style="height:43%" data-v="2,4"></div></div>
+        <div class="axis"><span>12.10</span><span>19.10</span><span>26.10</span><span>02.11</span><span>09.11</span><span>16.11</span></div>
+        <div class="src">history · в работе → сделано</div></div>
+      <div class="card"><h3>Где работает (задачи по проектам)</h3>
+        <div class="stack"><span style="flex:31;background:var(--acc)"></span><span style="flex:14;background:var(--inf)"></span><span style="flex:9;background:var(--suc)"></span><span style="flex:6;background:var(--t3)"></span></div>
+        <div class="legend"><span><i class="dot" style="background:var(--acc)"></i>UnlimitedLORE 31</span><span><i class="dot" style="background:var(--inf)"></i>miniLORE 14</span><span><i class="dot" style="background:var(--suc)"></i>MIDGARD 9</span><span><i class="dot" style="background:var(--t3)"></i>прочие 6</span></div>
+        <div class="src">user_tasks · проект спринта</div></div>
+    </div>
+  </section>
+
+  <section class="panel" id="feed">
+    <ul class="feed">
+      <li><time>08:44</time><div>Перевела <a class="ref" href="#">K4-CHARTS</a> в UAT<div class="what">задача · SPRINT_UXR_S13_KIT4</div></div></li>
+      <li><time>08:10</time><div>Решение по составу архива <a class="ref" href="#">MDA-01</a><div class="what">заметка задачи · SPRINT_LORE_MD_ARCHIVE</div></div></li>
+      <li><time>вчера</time><div>Завела задачу <a class="ref" href="#">MT-SPRINT-SIZE-GUARD</a><div class="what">задача · SPRINT_LORE_MEASURE_TRUTH</div></div></li>
+      <li><time>20.11</time><div>Приняла <a class="ref" href="#">WK-05</a> — сделано<div class="what">статус · SPRINT_LORE_WORK_ANY_KIND</div></div></li>
+    </ul>
+    <div class="src" style="margin-top:8px">news/v2 · автор = этот человек (тот же фильтр, что в «Новостях»)</div>
+  </section>
+
+  <div class="no" style="margin:0 18px 18px">Чего на странице нет по замыслу: роли LORE (viewer/admin), проектные роли с правами, почта, kc_sub, вход и сессии — это админка.</div>
+</div>
+
+<div class="note">Карточка агента вне админки (владелица 21.11: «агенты вне админки тоже — личная карта, минимум: просто чьи они»). Открывается щелчком по агенту в ленте, истории, паспорте. Без client_id, секретов, ролей и доступов.</div>
+<div class="page">
+  <div class="crumb">Forseti · Агенты · <span class="login">Claude Code · full</span></div>
+  <div class="head">
+    <div class="ava" style="background:#5c5446">🤖</div>
+    <div>
+      <h1>Claude Code · full</h1>
+      <div class="login">машина LEGION · профиль full</div>
+      <div class="chips"><span class="chip">чей: <a class="ref" href="#">Ольга (omiloreadmin)</a></span><span class="chip">UnlimitedLORE</span><span class="chip">miniLORE</span></div>
+    </div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><b>9</b><span>в работе</span></div>
+    <div class="kpi"><b>14</b><span>на приёмке (UAT)</span></div>
+    <div class="kpi"><b>63</b><span>сделано за 30 дней</span></div>
+    <div class="kpi"><b>сегодня 09:12</b><span>последнее действие</span></div>
+  </div>
+  <div class="no" style="margin:0 18px 18px">Владельца нет — в шапке «чей: владелец не указан», а не пусто. Вкладки — те же, что у человека: задачи, аналитика, лента.</div>
+</div>
+<script>
+  for (const b of document.querySelectorAll('.tab')) b.onclick = () => {
+    for (const x of document.querySelectorAll('.tab')) x.setAttribute('aria-selected', String(x === b));
+    for (const p of document.querySelectorAll('.panel')) p.classList.toggle('on', p.id === b.dataset.p);
+  };
+</script>
+</body>
+</html>

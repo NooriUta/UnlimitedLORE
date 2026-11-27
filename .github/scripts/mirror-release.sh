@@ -29,8 +29,14 @@ SRC_API="$HOST/api/v1/repos/$SRC_REPO"
 DST_API="$HOST/api/v1/repos/$DST_REPO"
 
 if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.0$'; then
-  echo "::notice::выпуск в зеркале $DST_REPO не трогаем: $TAG — не vX.Y.0 (зеркала выносятся при смене x.y)"
-  exit 0
+  # Исключение — только явным входом ручной трубы (владелец 26.11.2026, v1.19.1: «выпусти отдельно в SeidrStudio,
+  # мимо нашего правила»). Основная труба ALLOW_PATCH не передаёт — для неё правило «только vX.Y.0» прежнее.
+  if [ "${ALLOW_PATCH:-0}" = "1" ]; then
+    echo "::notice::$TAG — не vX.Y.0, но перенос разрешён явно (ALLOW_PATCH=1, ручной запуск)"
+  else
+    echo "::notice::выпуск в зеркале $DST_REPO не трогаем: $TAG — не vX.Y.0 (зеркала выносятся при смене x.y)"
+    exit 0
+  fi
 fi
 
 if [ -z "${DST_TOKEN:-}" ]; then

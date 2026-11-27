@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Новости v2 — проверка алгоритмов на реальных данных LORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+:root{--bg:#faf6ee;--bg2:#fffdf8;--bg3:#f3ecdf;--bd:#e4d8c4;--t1:#2a2116;--t2:#5c4e3c;--t3:#8a7a64;--acc:#8a560a;--acc2:#c98a1e;--suc:#2e7d32;--wrn:#a86400;--dng:#b3261e;--inf:#1f5f8b;
+--fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;--mono:'IBM Plex Mono',ui-monospace,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t1);font:var(--fs-md)/1.5 Manrope,system-ui,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:14px}
+h1{font:800 var(--fs-2xl)/1.15 Unbounded,sans-serif;margin:6px 0 4px;color:var(--acc)}
+h2{font:800 var(--fs-lg)/1.2 Unbounded,sans-serif;margin:0 0 8px;color:var(--t1);text-transform:uppercase;letter-spacing:.02em}
+h3{font-weight:700;font-size:var(--fs-md);margin:12px 0 6px;color:var(--t2);text-transform:uppercase;letter-spacing:.04em}
+.sub{color:var(--t2);font-size:var(--fs-sm)}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:10px;padding:12px;margin:12px 0}
+.look{background:var(--bg3);border-left:3px solid var(--acc2);border-radius:6px;padding:8px 10px;margin:8px 0;font-size:var(--fs-sm);color:var(--t2)}
+.look b{color:var(--t1)}
+.pill{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:2px 9px;margin:2px 3px 2px 0;font-size:var(--fs-xs);background:var(--bg2);color:var(--t2);white-space:nowrap}
+.pill.on{background:var(--acc);border-color:var(--acc);color:#fff}
+button.pill{cursor:pointer;font-family:inherit}
+.ok{color:var(--suc)}.bad{color:var(--dng)}.unk{color:var(--wrn)}
+.chip-ok{background:#e7f3e8;border-color:#b9dcbb;color:var(--suc)}
+.chip-bad{background:#fbe9e7;border-color:#efc1bb;color:var(--dng)}
+.chip-unk{background:#fff3e0;border-color:#f0d3a4;color:var(--wrn)}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
+th{text-align:left;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.05em;color:var(--t3);border-bottom:1px solid var(--bd);padding:4px 6px;white-space:nowrap;background:var(--bg2);position:sticky;top:0}
+td{border-bottom:1px solid #efe6d6;padding:3px 6px;vertical-align:top}
+td.n,th.n{text-align:right;font-family:var(--mono);white-space:nowrap}
+tr.tot td{font-weight:700;background:var(--bg3)}
+tr.clk{cursor:pointer}tr.clk:hover td{background:#fbf3e3}
+tr.sel td{background:#f6e7c8}
+.mono{font-family:var(--mono);font-size:var(--fs-xs)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.kpi{border:1px solid var(--bd);border-radius:8px;padding:8px;background:var(--bg2)}
+.kpi .v{font:600 var(--fs-xl) var(--mono);color:var(--acc)}
+.kpi .l{font-size:var(--fs-2xs);color:var(--t3);text-transform:uppercase;letter-spacing:.05em}
+details>summary{cursor:pointer;font-weight:700;color:var(--acc)}
+.eq{overflow-x:auto;padding:2px 0}
+.chk{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px dashed #eadfcb}
+.chk .st{flex:0 0 auto;width:22px;height:22px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:var(--fs-xs)}
+.st.ok{background:var(--suc)}.st.bad{background:var(--dng)}.st.unk{background:var(--wrn)}
+.chk .tx{flex:1;min-width:0;font-size:var(--fs-sm)}
+.find{border-left:3px solid var(--dng);background:#fdf1ef;padding:8px 10px;border-radius:6px;margin:6px 0;font-size:var(--fs-sm)}
+.find.w{border-left-color:var(--wrn);background:#fff7ea}
+.find.g{border-left-color:var(--suc);background:#eef7ef}
+pre{white-space:pre-wrap;word-break:break-all;font-family:var(--mono);font-size:var(--fs-2xs);background:var(--bg3);padding:8px;border-radius:6px;max-height:340px;overflow:auto}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+@media (max-width:480px){.wrap{padding:8px}.card{padding:9px}h1{font-size:var(--fs-xl)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Новости v2: проверка алгоритмов на живых данных</h1>
+<div class="sub">Спека SPEC-LORE-UXR-NEWS-ALGORITHMS v0.5.0 · прод LORE, выгрузка через MCP query_slice · неделя <span id="periodTxt"></span></div>
+<div id="volume" class="row" style="margin-top:6px"></div>
+
+<div class="card" id="summary">
+<h2>Коротко</h2>
+<div id="sumBody"></div>
+</div>
+
+<div class="card">
+<h2>1. Сырые события и дедуп</h2>
+<div class="look"><b>На что вы смотрите.</b> Это все события недели, которые удалось собрать из LORE: создание, закрытие, переоткрытие, смена статуса задач; создание и закрытие спринтов; релизы; создание и правки ADR, решений и спек. Одна строка таблицы — один вид события у одного типа записи. Дедуп по §5 не уменьшает число событий, он только склеивает строки ленты «элемент · вид · день» в одну строку с кратностью ×N. Правило «день создания не даёт „изменено“» убирает правки в день рождения записи.</div>
+<div class="row"><span class="sub">День:</span><button class="pill tzb on" data-tz="msk">Москва</button><button class="pill tzb" data-tz="utc">UTC</button></div>
+<div id="rawBlock"></div>
+</div>
+
+<div class="card">
+<h2>2. Счёт парой и группировки (§7.1)</h2>
+<div class="look"><b>На что вы смотрите.</b> Каждое число — пара «событий · элементов». Элемент, который относится к нескольким группам (задача общего спринта двух репозиториев, ADR двух компонентов), считается <b>полностью в каждой</b> группе. Поэтому сумма по группам больше итога, а итог — это объединение, его надо читать отдельно. Разница между суммой и итогом в точности равна числу «лишних» принадлежностей: $\sum_x(|G(x)|-1)$. Колонка «×N» показывает, сколько элементов группы живут ещё и в других группах. Нажмите на строку — ниже появятся события этой группы.</div>
+<div class="eq">$$N_{ev}(g)=|E_g|,\quad N_{el}(g)=|X(E_g)|,\quad M=|\{x:|G(x)|\ge2\}|,\quad \sum_g N_{el}(g)=N^{\Sigma}_{el}+\sum_x(|G(x)|-1)$$</div>
+<div class="row" id="grpBtns"></div>
+<div id="grpBlock"></div>
+<div id="grpEvents"></div>
+<div id="grpExample"></div>
+</div>
+
+<div class="card">
+<h2>3. Сгорание задач спринтов (§7.2)</h2>
+<div class="look"><b>На что вы смотрите.</b> Сгорание считается по <b>состоянию</b>, а не по событиям: сколько задач было открыто на начало недели $O(t_0)$ и сколько открыто сейчас $O(t_1)$. Разность — это и есть сгорание: больше нуля — открытой работы стало меньше, меньше нуля — больше. Она раскладывается на $C$ (были открыты, стали закрыты) минус $A$ (не было или были закрыты — стали открыты). $W$ — сколько задач закрыто хотя бы раз внутри недели (включая заведённые и закрытые в ту же неделю), $R$ — переоткрытые. Состояние на $t_0$ берётся из истории задачи (history_task) — у каждой строки в сыром массиве указан источник.</div>
+<div class="eq">$$\mathrm{Burn}=O(t_0)-O(t_1)=C-A$$</div>
+<div id="burnBlock"></div>
+</div>
+
+<div class="card">
+<h2>4. ADR, решения, спеки (§7.3)</h2>
+<div class="look"><b>На что вы смотрите.</b> У знаний нет сгорания; спека требует очередь «на рассмотрении» $Q(t)$ на обеих границах и поток $\mathrm{Flow}=Q(t_0)-Q(t_1)=Acc+Rej-New$. Ниже — что из этого реально вычисляется по данным LORE, а что нет (и почему). Где данных не хватает, число не подставлено, а показан честный диапазон.</div>
+<div class="eq">$$\mathrm{Flow}=Q(t_0)-Q(t_1)=Acc+Rej-New$$</div>
+<div id="knowBlock"></div>
+</div>
+
+<div class="card">
+<h2>5. Ревалидация (§10)</h2>
+<div class="look"><b>На что вы смотрите.</b> Инварианты 1–8 прогоняются вживую на каждом варианте группировки из раздела 2 и на сгорании. Зелёный — выполнено, красный — нарушено (с примерами id), жёлтый — не смогли проверить (данных нет, это не «пусто»). Ниже — сверка двух расчётов: состояние по снимку против состояния, восстановленного проигрыванием событий.</div>
+<div id="valBlock"></div>
+</div>
+
+<div class="card">
+<h2>6. Сырые данные</h2>
+<div class="look"><b>На что вы смотрите.</b> Оба массива вшиты в страницу как есть: события недели и состояния задач на границах. Все числа выше посчитаны из них прямо в браузере. Здесь же — откуда взята каждая колонка и чего данные дать не могут.</div>
+<div id="rawData"></div>
+</div>
+<div class="sub" id="detHash" style="margin:10px 0 30px"></div>
+</div>
+
+<script id="data" type="application/json">/*DATA*/</script>
+<script>
+'use strict';
+const D = JSON.parse(document.getElementById('data').textContent);
+const T0 = D.meta.t0, T1 = D.meta.t1;
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = n => n == null ? '—' : String(n);
+const pair = (a, b) => `<span class="mono">${fmt(a)} · ${fmt(b)}</span>`;
+const KIND_RU = {created:'заведено/создано',closed:'закрыта',cancelled:'снята',reopened:'переоткрыта',status:'сменила статус',changed:'изменено','version?':'версия (вид неизвестен)',released:'выпущен',version:'новая версия'};
+const TYPE_RU = {task:'задача',sprint:'спринт',release:'релиз',adr:'ADR',decision:'решение',spec:'спека'};
+const NOPROJ = '(без проекта)', NOCOMP = '(без компонента)', NOSPR = '(вне спринта)';
+
+function mskDay(at){ const d = new Date(Date.parse(at) + 3*3600e3); return d.toISOString().slice(0,10); }
+function mskTime(at){ const d = new Date(Date.parse(at) + 3*3600e3); return d.toISOString().slice(11,16); }
+function dayOf(e, tz){ return e.at ? (tz === 'utc' ? e.at.slice(0,10) : mskDay(e.at)) : e.day; }
+function elKey(e){ return e.t + ':' + e.el; }
+function authorCls(e){ return e.a === true ? 'агент' : e.a === false ? 'человек' : 'неизвестно'; }
+
+// ---------- §1/§5: подготовка набора E ----------
+function prepare(tz){
+  const raw = D.events;
+  const createdDay = {};
+  for (const e of raw) if (e.k === 'created') createdDay[elKey(e)] = dayOf(e, tz);
+  const dropped = [], E = [];
+  for (const e of raw) {
+    if (e.k === 'changed' && createdDay[elKey(e)] && createdDay[elKey(e)] === dayOf(e, tz)) { dropped.push(e); continue; }
+    E.push(e);
+  }
+  const rows = new Map();
+  for (const e of E) { const k = elKey(e) + '|' + e.k + '|' + dayOf(e, tz); const r = rows.get(k); if (r) r.mult++; else rows.set(k, {key:k, e, mult:1}); }
+  return {raw, E, dropped, rows:[...rows.values()]};
+}
+
+// ---------- §7.1: группировки ----------
+const VARIANTS = [
+  {id:'project', ru:'проект', g:e => (e.p && e.p.length) ? e.p : [NOPROJ], elementLevel:true},
+  {id:'component', ru:'компонент', g:e => (e.c && e.c.length) ? e.c : [NOCOMP], elementLevel:true},
+  {id:'type', ru:'тип элемента', g:e => [TYPE_RU[e.t]], elementLevel:true},
+  {id:'kind', ru:'вид события', g:e => [KIND_RU[e.k] || e.k], elementLevel:false},
+  {id:'sprint', ru:'спринт', g:e => [e.s || NOSPR], elementLevel:true},
+  {id:'author', ru:'автор', g:e => [authorCls(e)], elementLevel:false},
+  {id:'day', ru:'день', g:(e,tz) => [dayOf(e,tz)], elementLevel:false},
+  {id:'projcomp', ru:'проект → компонент', g:e => (e.p && e.p.length) ? e.p : [NOPROJ], elementLevel:true, sub:e => (e.c && e.c.length) ? e.c : [NOCOMP]},
+];
+function groupCount(E, gfn, tz){
+  const groups = new Map(); const Gx = new Map(); const elsAll = new Set();
+  for (const e of E) {
+    const k = elKey(e); elsAll.add(k);
+    const gs = [...new Set(gfn(e, tz))];
+    if (!Gx.has(k)) Gx.set(k, new Set());
+    for (const g of gs) {
+      Gx.get(k).add(g);
+      let G = groups.get(g); if (!G) groups.set(g, G = {g, ev:0, els:new Set(), agEv:0, agEls:new Set(), events:[]});
+      G.ev++; G.els.add(k); G.events.push(e);
+      if (e.a === true) { G.agEv++; G.agEls.add(k); }
+    }
+  }
+  const list = [...groups.values()].map(G => {
+    let multi = 0; for (const k of G.els) if (Gx.get(k).size >= 2) multi++;
+    return {g:G.g, ev:G.ev, el:G.els.size, multi, agEv:G.agEv, agEl:G.agEls.size, events:G.events};
+  }).sort((a,b) => b.ev - a.ev || (a.g < b.g ? -1 : 1));
+  let M = 0, extra = 0; for (const s of Gx.values()) { if (s.size >= 2) M++; extra += s.size - 1; }
+  const agEvT = E.filter(e => e.a === true).length, agElT = new Set(E.filter(e => e.a === true).map(elKey)).size;
+  return {list, totEv:E.length, totEl:elsAll.size, M, extra, Gx, agEvT, agElT};
+}
+
+// ---------- §6: свёртка серий (вид, автор, родитель, окно 30 мин) ----------
+function rollup(E){
+  const parent = e => e.t === 'task' ? 'sprint:' + e.s : e.t === 'decision' ? 'adr:' + (e.parent || '-') : 'type:' + e.t;
+  const timed = E.filter(e => e.at).slice().sort((a,b) => a.at < b.at ? -1 : a.at > b.at ? 1 : a.id < b.id ? -1 : 1);
+  const open = new Map(); const series = [];
+  for (const e of timed) {
+    const key = e.k + '|' + (e.w || 'unknown') + '|' + parent(e);
+    const s = open.get(key); const t = Date.parse(e.at);
+    if (s && t - s.last <= 30*60e3) { s.items.push(e); s.last = t; }
+    else { const ns = {key, items:[e], last:t}; open.set(key, ns); series.push(ns); }
+  }
+  for (const e of E) if (!e.at) series.push({key:e.k + '|day|' + e.day, items:[e]});
+  return series;
+}
+
+// ---------- §7.2: сгорание ----------
+function burn(){
+  const st = D.taskStates; const unt = D.untouchedBySprint;
+  const proj = sid => (D.sprints[sid] && D.sprints[sid].p && D.sprints[sid].p.length) ? D.sprints[sid].p : [NOPROJ];
+  const ev = D.events.filter(e => e.t === 'task');
+  const closedIn = new Set(ev.filter(e => e.k === 'closed' || e.k === 'cancelled').map(e => e.el));
+  const bornClosed = new Set(D.taskStates.filter(s => s.src === 'created_in_P_single_version' && s.cat_t1 === 'closed').map(s => s.uid));
+  const reopened = new Set(ev.filter(e => e.k === 'reopened').map(e => e.el));
+  const mk = () => ({O0:0, O1:0, C:0, A:0, W:0, R:0, unk:0, unkOpen1:0, n:0, bornClosed:0, untouchedOpen:0, ex:{C:[],A:[],U:[]}});
+  const by = {sprint:{}, project:{}, all:mk()};
+  const add = (bucket, key) => bucket[key] = bucket[key] || mk();
+  for (const u of unt) {
+    const targets = [by.all, add(by.sprint, u.sprint_id), ...proj(u.sprint_id).map(p => add(by.project, p))];
+    for (const b of targets) { b.O0 += u.open; b.O1 += u.open; b.untouchedOpen += u.open; b.n += u.open + u.closed; b.unk += u.unknown; }
+  }
+  for (const s of st) {
+    const targets = [by.all, add(by.sprint, s.sprint_id), ...proj(s.sprint_id).map(p => add(by.project, p))];
+    const o0 = s.cat_t0 === 'open' ? 1 : 0, o1 = s.cat_t1 === 'open' ? 1 : 0;
+    for (const b of targets) {
+      b.n++;
+      if (s.cat_t0 === 'unknown' || s.cat_t1 == null) { b.unk++; b.unkOpen1 += o1; if (b.ex.U.length < 10) b.ex.U.push(s.uid); continue; }
+      b.O0 += o0; b.O1 += o1;
+      if (s.cat_t0 === 'open' && s.cat_t1 === 'closed') { b.C++; if (b.ex.C.length < 10) b.ex.C.push(s.uid); }
+      if ((s.cat_t0 === 'closed' || s.cat_t0 === 'absent') && s.cat_t1 === 'open') { b.A++; if (b.ex.A.length < 10) b.ex.A.push(s.uid); }
+      if (closedIn.has(s.uid) || bornClosed.has(s.uid)) b.W++;
+      if (bornClosed.has(s.uid)) b.bornClosed++;
+      if (reopened.has(s.uid)) b.R++;
+    }
+  }
+  return by;
+}
+
+// ---------- §7.3: знания ----------
+function knowledge(){
+  const K = D.knowledge; const d0 = D.meta.days_local[0], d1 = D.meta.days_local[1];
+  const inP = d => d && d >= d0 && d <= d1;
+  const isProp = s => /^(PROPOSED|proposed|DRAFT|draft)$/.test(String(s));
+  const isRej = s => /^(rejected|REJECTED)$/.test(String(s));
+  const isAcc = s => /^(ACCEPTED|accepted|fixed|done)$/.test(String(s));
+  const isSup = s => /^(SUPERSEDED|superseded|DEPRECATED|deprecated)$/.test(String(s));
+  function queue(list){
+    const ex = list.filter(x => x.created && x.created <= d1);
+    const Q1 = ex.filter(x => isProp(x.status)).length;
+    const pre = ex.filter(x => x.created < d0), newP = ex.filter(x => inP(x.created));
+    const Q0lo = pre.filter(x => isProp(x.status)).length;                       // сейчас на рассмотрении → были и на t0 (если обратных переходов нет)
+    const Q0hi = Q0lo + pre.filter(x => !isProp(x.status)).length;               // каждая решённая могла решиться именно в P
+    const newProp = newP.filter(x => isProp(x.status)).length;
+    const noDate = list.filter(x => !x.created).length;
+    return {Q1, Q0lo, Q0hi, flowLo:Q0lo - Q1, flowHi:Q0hi - Q1, newAll:newP.length, newProp, newDecided:newP.filter(x => isAcc(x.status) || isRej(x.status)).length,
+      supNow:list.filter(x => isSup(x.status)).length, supNew:newP.filter(x => isSup(x.status)).length, accNow:list.filter(x => isAcc(x.status)).length, noDate, newList:newP};
+  }
+  const adr = queue(K.adrs), dec = queue(K.decisions);
+  const accAdr = new Set(K.adrs.filter(a => isAcc(a.status)).map(a => a.id));
+  const adrCh = D.events.filter(e => e.t === 'adr' && e.k === 'changed');
+  const rev = adrCh.filter(e => accAdr.has(e.el));
+  const specV = D.events.filter(e => e.t === 'spec' && e.k === 'version');
+  const childByAdr = {}; for (const d of K.decisions) if (d.parent) childByAdr[d.parent] = (childByAdr[d.parent] || 0) + 1;
+  const adrNewChildren = adr.newList.map(a => ({id:a.id, status:a.status, children:childByAdr[a.id] || 0}));
+  return {adr, dec, revEv:rev.length, revEl:new Set(rev.map(e => e.el)).size, adrChEv:adrCh.length, adrChEl:new Set(adrCh.map(e => e.el)).size, accAdr:accAdr.size,
+    specVev:specV.length, specVel:new Set(specV.map(e => e.el)).size, specNew:D.events.filter(e => e.t === 'spec' && e.k === 'created').length, adrNewChildren};
+}
+
+// ---------- §10: инварианты ----------
+function validate(tz){
+  const P = prepare(tz); const checks = [];
+  const push = (inv, name, ok, detail, ex) => checks.push({inv, name, ok, detail, ex:(ex || []).slice(0,10)});
+  for (const V of VARIANTS) {
+    const R = groupCount(P.E, V.g, tz);
+    const bad1 = R.list.filter(g => g.ev < g.el);
+    push(1, `N_ev ≥ N_el — ${V.ru}`, bad1.length === 0 && R.totEv >= R.totEl, `групп ${R.list.length}, итог ${R.totEv} · ${R.totEl}`, bad1.map(g => g.g));
+    const maxEv = Math.max(...R.list.map(g => g.ev)), maxEl = Math.max(...R.list.map(g => g.el));
+    const sumEv = R.list.reduce((s,g) => s + g.ev, 0), sumEl = R.list.reduce((s,g) => s + g.el, 0);
+    push(2, `max ≤ итог ≤ сумма — ${V.ru}`, maxEv <= R.totEv && R.totEv <= sumEv && maxEl <= R.totEl && R.totEl <= sumEl,
+      `события ${maxEv} ≤ ${R.totEv} ≤ ${sumEv}; элементы ${maxEl} ≤ ${R.totEl} ≤ ${sumEl}`);
+    push(3, `Σ N_el(g) − N_el = Σ(|G(x)|−1) — ${V.ru}`, sumEl - R.totEl === R.extra, `${sumEl} − ${R.totEl} = ${sumEl - R.totEl}; Σ(|G|−1) = ${R.extra}; M = ${R.M}`);
+    const shares = R.list.map(g => [g.ev ? g.agEv/g.ev : null, g.el ? g.agEl/g.el : null]).flat().filter(x => x != null);
+    push(7, `доли ∈ [0,1] — ${V.ru}`, shares.every(x => x >= 0 && x <= 1), `${shares.length} долей; агентских событий ${R.agEvT} из ${R.totEv}`);
+    const S = rollup(P.E); const rEv = S.reduce((s,x) => s + x.items.length, 0); const rEl = new Set(S.flatMap(x => x.items.map(elKey))).size;
+    if (V.id === 'project') push(8, 'свёртка не меняет чисел (итог)', rEv === R.totEv && rEl === R.totEl, `серий ${S.length}; по сериям ${rEv} · ${rEl}, без свёртки ${R.totEv} · ${R.totEl}`);
+    if (V.sub) {
+      let okSub = true; const exs = [];
+      for (const g of R.list) { const sub = groupCount(g.events, V.sub, tz); const s2 = sub.list.reduce((s,x) => s + x.el, 0);
+        if (!(sub.totEl === g.el && s2 - sub.totEl === sub.extra && sub.list.every(x => x.ev >= x.el))) { okSub = false; exs.push(g.g); } }
+      push(3, 'подгруппировка проект → компонент: те же правила на каждом уровне', okSub, `${R.list.length} проектов проверено`, exs);
+    }
+  }
+  // 6: разбивки по видам и типам
+  const kindSum = groupCount(P.E, VARIANTS[3].g, tz).list.reduce((s,g) => s + g.ev, 0);
+  const typeSum = groupCount(P.E, VARIANTS[2].g, tz).list.reduce((s,g) => s + g.ev, 0);
+  push(6, 'разбивки по видам и по типам в сумме дают N_ev', kindSum === P.E.length && typeSum === P.E.length, `по видам ${kindSum}, по типам ${typeSum}, N_ev ${P.E.length}`);
+  // 4: сгорание
+  const B = burn(); const bad4 = [];
+  for (const [lvl, obj] of [['спринт', B.sprint], ['проект', B.project]]) for (const [k, b] of Object.entries(obj)) if (b.O0 - b.O1 !== b.C - b.A) bad4.push(lvl + ' ' + k);
+  if (B.all.O0 - B.all.O1 !== B.all.C - B.all.A) bad4.push('итог');
+  push(4, 'Burn = C − A = O(t0) − O(t1) (по задачам с известным состоянием)', bad4.length === 0,
+    `итог: O(t0)−O(t1) = ${B.all.O0}−${B.all.O1} = ${B.all.O0 - B.all.O1}; C−A = ${B.all.C}−${B.all.A} = ${B.all.C - B.all.A}; исключено с неизвестным t0: ${B.all.unk}`, bad4);
+  if (B.all.unk > 0) push(4, 'состояние на t0 известно для всех задач', false, `${B.all.unk} задач без единой датированной версии (valid_from = null у всей истории) — в O(t0) и O(t1) не входят; на Burn недели не влияют, но O(t) занижено на ${B.all.unk}`, (D.meta.noDated || []).concat(B.all.ex.U));
+  // 5: очередь знаний
+  const K = knowledge();
+  push(5, 'ADR: Flow = Acc + Rej − New = Q(t0) − Q(t1)', null, `не вычисляется: у ADR нет истории статуса (KnowADRHist хранит только тела), момент принятия неизвестен. Q(t1) = ${K.adr.Q1}; Q(t0) ∈ [${K.adr.Q0lo}, ${K.adr.Q0hi}]`);
+  push(5, 'Решения: Flow = Acc + Rej − New = Q(t0) − Q(t1)', null, `не вычисляется: у решения нет истории вовсе (decision_history_all — ${D.meta.counts.decisions ? '7 легаси-строк июня' : '—'}), статус только текущий. Q(t1) = ${K.dec.Q1}; Q(t0) ∈ [${K.dec.Q0lo}, ${K.dec.Q0hi}]`);
+  // 10.2 сверка снимок ↔ события
+  const st = D.taskStates.filter(s => s.src === 'history');
+  const drift = st.filter(s => s.cat_t1 !== s.cat_t1_snapshot);
+  push('10.2', 'O(t1): история на t1 ↔ текущий снимок all_tasks', drift.length === 0, `сверено ${st.length} задач с историей; расхождений ${drift.length}`, drift.map(s => s.uid));
+  const replayBad = []; let replayed = 0;
+  const evBy = {}; for (const e of D.events) if (e.t === 'task' && e.src === 'history_task') (evBy[e.el] = evBy[e.el] || []).push(e);
+  const cat = raw => { if (raw == null) return null; const s = String(raw).trim().toUpperCase(); return (s.startsWith('✅') || s.startsWith('🚫') || /^(DONE|CLOSED|MERGED|ЗАВЕРШ|ЗАКРЫТ|CANCEL|ОТМЕН)/.test(s)) ? 'closed' : 'open'; };
+  for (const s of st) {
+    let state = s.cat_t0; replayed++;
+    for (const e of (evBy[s.uid] || []).sort((a,b) => a.at < b.at ? -1 : 1)) {
+      if (e.k === 'closed' || e.k === 'cancelled') state = 'closed'; else if (e.k === 'reopened') state = 'open'; else state = cat(e.to) || state;
+    }
+    if (state !== s.cat_t1_snapshot) replayBad.push(s.uid);
+  }
+  push('10.2', 'O(t1): состояние t0 + проигрывание событий ↔ снимок', replayBad.length === 0, `проиграно ${replayed} задач; расхождений ${replayBad.length}`, replayBad);
+  const hc = D.meta.histCoverage;
+  push('10.2', 'набор версий: history_task ↔ task_created_dates (до t1)', hc.rowsMismatchCount === 0, `задач с историей ${hc.preWithHist + hc.newMultiWithHist}; не совпал набор версий у ${hc.rowsMismatchCount}`, hc.rowsMismatch);
+  const unk = D.events.filter(e => e.k === 'version?').length;
+  push('10.2', 'у каждой версии задачи в периоде определён вид события', unk === 0, `версий без вида: ${unk} (задачи без истории)`);
+  return checks;
+}
+
+// ---------- рендер ----------
+let TZ = 'msk', VAR = 'project', SEL = null;
+function renderVolume(){
+  const m = D.meta, c = m.counts;
+  const els = new Set(D.events.map(elKey)).size;
+  const days = new Set(D.events.map(e => dayOf(e, 'msk'))).size;
+  $('#periodTxt').textContent = `${m.days_local[0]} … ${m.days_local[1]} (МСК): t0 = ${T0}, t1 = ${T1}`;
+  $('#volume').innerHTML = [`событий ${D.events.length}`, `элементов ${els}`, `дней ${days}`, `источников 13 срезов`, `задач в состояниях ${D.taskStates.length}`, `history_task ${c.history_task_fetched}`].map(x => `<span class="pill">${x}</span>`).join('');
+}
+function renderRaw(){
+  const P = prepare(TZ);
+  const by = {}; for (const e of P.raw) { const k = e.t + '|' + e.k; by[k] = by[k] || {t:e.t, k:e.k, n:0, els:new Set(), timed:0}; by[k].n++; by[k].els.add(e.el); if (e.at) by[k].timed++; }
+  const rowsBy = {}; for (const r of P.rows) { const k = r.e.t + '|' + r.e.k; rowsBy[k] = (rowsBy[k] || 0) + 1; }
+  const dropBy = {}; for (const e of P.dropped) { const k = e.t + '|' + e.k; dropBy[k] = (dropBy[k] || 0) + 1; }
+  let h = '<div class="scroll"><table><tr><th>тип</th><th>вид</th><th class="n">событий</th><th class="n">элементов</th><th class="n">со временем</th><th class="n">снято «день создания»</th><th class="n">строк ленты после дедупа</th></tr>';
+  for (const r of Object.values(by).sort((a,b) => b.n - a.n)) { const k = r.t + '|' + r.k;
+    h += `<tr><td>${TYPE_RU[r.t]}</td><td>${esc(KIND_RU[r.k] || r.k)}</td><td class="n">${r.n}</td><td class="n">${r.els.size}</td><td class="n">${r.timed}</td><td class="n">${dropBy[k] || 0}</td><td class="n">${rowsBy[k] || 0}</td></tr>`; }
+  const multRows = P.rows.filter(r => r.mult > 1);
+  h += `<tr class="tot"><td colspan="2">итого</td><td class="n">${P.raw.length}</td><td class="n">${new Set(P.raw.map(elKey)).size}</td><td class="n">${P.raw.filter(e => e.at).length}</td><td class="n">${P.dropped.length}</td><td class="n">${P.rows.length}</td></tr></table></div>`;
+  const ex = multRows.sort((a,b) => b.mult - a.mult)[0];
+  h += `<div class="look">Набор $E$ после дедупа: <b>${P.E.length} событий</b> в <b>${P.rows.length} строках</b> ленты; строк с кратностью ×2 и больше — ${multRows.length}. ${ex ? `Пример: <span class="mono">${esc(ex.e.el)}</span> · ${esc(KIND_RU[ex.e.k] || ex.e.k)} · ${ex.key.split('|').pop()} — одна строка ×${ex.mult}: событий ${ex.mult}, элементов 1.` : ''} Строк без времени (только дата: релизы, создание ADR и решений) — ${P.raw.filter(e => !e.at).length}; у них в ленте «время неизвестно», а день не зависит от пояса.</div>`;
+  $('#rawBlock').innerHTML = h;
+}
+function renderGroups(){
+  $('#grpBtns').innerHTML = VARIANTS.map(v => `<button class="pill vb ${v.id === VAR ? 'on' : ''}" data-v="${v.id}">${v.ru}</button>`).join('');
+  const P = prepare(TZ); const V = VARIANTS.find(v => v.id === VAR); const R = groupCount(P.E, V.g, TZ);
+  const sumEv = R.list.reduce((s,g) => s + g.ev, 0), sumEl = R.list.reduce((s,g) => s + g.el, 0);
+  let h = `<div class="kpis" style="margin:8px 0"><div class="kpi"><div class="v">${R.totEv} · ${R.totEl}</div><div class="l">итог (объединение)</div></div><div class="kpi"><div class="v">${sumEv} · ${sumEl}</div><div class="l">сумма по группам</div></div><div class="kpi"><div class="v">${R.M}</div><div class="l">M: элементов в ≥2 группах</div></div><div class="kpi"><div class="v">${R.extra}</div><div class="l">Σ(|G(x)|−1)</div></div><div class="kpi"><div class="v">${R.list.length}</div><div class="l">групп</div></div></div>`;
+  h += '<div class="scroll" style="max-height:420px;overflow-y:auto"><table><tr><th>группа</th><th class="n">событий · элементов</th><th class="n">×N (живут и в других)</th><th class="n">доля агента, ev</th>' + (V.sub ? '<th>подгруппы: компонент — событий · элементов</th>' : '') + '</tr>';
+  for (const g of R.list) {
+    const share = g.ev ? (g.agEv / g.ev) : null;
+    let sub = '';
+    if (V.sub) { const S = groupCount(g.events, V.sub, TZ); sub = `<td class="mono">${S.list.slice(0,6).map(x => `${esc(x.g)} ${x.ev}·${x.el}`).join('; ')}${S.list.length > 6 ? ` … ещё ${S.list.length - 6}` : ''}${S.M ? ` <span class="pill">M=${S.M}</span>` : ''}</td>`; }
+    h += `<tr class="clk ${SEL === g.g ? 'sel' : ''}" data-g="${esc(g.g)}"><td>${esc(g.g)}</td><td class="n">${g.ev} · ${g.el}</td><td class="n">${g.multi ? '×' + g.multi : ''}</td><td class="n">${share == null ? 'нет данных' : (share * 100).toFixed(1) + '%'}</td>${sub}</tr>`;
+  }
+  h += `<tr class="tot"><td>Σ по группам</td><td class="n">${sumEv} · ${sumEl}</td><td></td><td></td>${V.sub ? '<td></td>' : ''}</tr><tr class="tot"><td>итог (объединение)</td><td class="n">${R.totEv} · ${R.totEl}</td><td class="n">M=${R.M}</td><td class="n">${R.totEv ? (R.agEvT / R.totEv * 100).toFixed(1) + '%' : 'нет данных'}</td>${V.sub ? '<td></td>' : ''}</tr></table></div>`;
+  h += `<div class="look">Сумма элементов по группам ${sumEl} = итог ${R.totEl} + ${R.extra} лишних принадлежностей. ${V.elementLevel ? 'Разрез по признаку элемента: элемент попадает в группу целиком.' : 'Разрез по признаку события (вид, автор, день): элемент попадает в каждую группу, где у него есть событие, поэтому M здесь — «элементы с событиями разных видов/дней».'}</div>`;
+  $('#grpBlock').innerHTML = h;
+  document.querySelectorAll('#grpBlock tr.clk').forEach(tr => tr.onclick = () => { SEL = SEL === tr.dataset.g ? null : tr.dataset.g; renderGroups(); renderMath(); });
+  document.querySelectorAll('.vb').forEach(b => b.onclick = () => { VAR = b.dataset.v; SEL = null; renderGroups(); renderMath(); });
+  if (SEL) { const g = R.list.find(x => x.g === SEL);
+    if (g) { const rows = g.events.slice().sort((a,b) => (b.at || b.day) < (a.at || a.day) ? -1 : 1).slice(0, 60);
+      $('#grpEvents').innerHTML = `<h3>События группы «${esc(SEL)}»: ${g.ev} · ${g.el}${g.ev > 60 ? ' (первые 60)' : ''}</h3><div class="scroll"><table><tr><th>когда</th><th>тип</th><th>элемент</th><th>вид</th><th>группы элемента</th><th>кто</th></tr>` +
+        rows.map(e => `<tr><td class="mono">${e.at ? (TZ === 'msk' ? mskTime(e.at) + ' · ' + e.at.slice(11,16) + ' UTC · ' + dayOf(e,TZ) : e.at.slice(0,16).replace('T',' ')) : e.day + ' · время неизвестно'}</td><td>${TYPE_RU[e.t]}</td><td class="mono">${esc(e.el)}</td><td>${esc(KIND_RU[e.k] || e.k)}</td><td class="mono">${esc([...R.Gx.get(elKey(e))].join(', '))}</td><td>${esc(e.w || 'неизвестно')}</td></tr>`).join('') + '</table></div>'; } }
+  else $('#grpEvents').innerHTML = '';
+  // пример мультипринадлежности
+  let best = null; for (const [k, s] of R.Gx) if (!best || s.size > best[1].size || (s.size === best[1].size && k < best[0])) best = [k, s];
+  if (best && best[1].size >= 2) { const evs = P.E.filter(e => elKey(e) === best[0]);
+    $('#grpExample').innerHTML = `<div class="look"><b>Пример из данных.</b> <span class="mono">${esc(best[0])}</span> входит в ${best[1].size} группы разреза «${V.ru}»: ${[...best[1]].map(esc).join(', ')}. ${V.elementLevel ? `У него ${evs.length} событий в периоде — в каждой из этих групп он добавляет все ${evs.length} событий и 1 элемент, а в итоге считается один раз. Вклад в Σ(|G(x)|−1): ${best[1].size - 1}.` : `Его события разошлись по ${best[1].size} группам; в каждой он считается 1 элементом, в итоге — один раз.`}</div>`; }
+  else $('#grpExample').innerHTML = '<div class="look">В этом разрезе нет элементов, входящих в две группы и больше.</div>';
+}
+function burnRow(name, b){
+  const burnV = b.O0 - b.O1; const cls = burnV > 0 ? 'ok' : burnV < 0 ? 'bad' : '';
+  return `<tr><td>${esc(name)}</td><td class="n">${b.O0}</td><td class="n">${b.O1}</td><td class="n ${cls}">${burnV > 0 ? '+' : ''}${burnV}</td><td class="n">${b.C}</td><td class="n">${b.A}</td><td class="n">${b.W}</td><td class="n">${b.R}</td><td class="n">${b.bornClosed}</td><td class="n ${b.unk ? 'unk' : ''}">${b.unk}</td></tr>`;
+}
+function renderBurn(){
+  const B = burn(); const a = B.all; const burnV = a.O0 - a.O1;
+  let h = `<div class="kpis"><div class="kpi"><div class="v">${a.O0}</div><div class="l">O(t0) открыто на начало</div></div><div class="kpi"><div class="v">${a.O1}</div><div class="l">O(t1) открыто сейчас</div></div><div class="kpi"><div class="v ${burnV > 0 ? 'ok' : 'bad'}">${burnV > 0 ? '+' : ''}${burnV}</div><div class="l">Burn = O(t0) − O(t1)</div></div><div class="kpi"><div class="v">${a.C} − ${a.A}</div><div class="l">C − A</div></div><div class="kpi"><div class="v">${a.W}</div><div class="l">W сделано внутри недели</div></div><div class="kpi"><div class="v">${a.R}</div><div class="l">R переоткрыто</div></div><div class="kpi"><div class="v">${a.bornClosed}</div><div class="l">рождены закрытыми</div></div><div class="kpi"><div class="v ${a.unk ? 'unk' : 'ok'}">${a.unk}</div><div class="l">t0 неизвестно</div></div></div>`;
+  const head = '<tr><th>группа</th><th class="n">O(t0)</th><th class="n">O(t1)</th><th class="n">Burn</th><th class="n">C</th><th class="n">A</th><th class="n">W</th><th class="n">R</th><th class="n">рожд. закр.</th><th class="n">t0 ?</th></tr>';
+  const projs = Object.entries(B.project).filter(([,b]) => b.O0 || b.O1 || b.C || b.A || b.W).sort((x,y) => Math.abs(y[1].O0 - y[1].O1) - Math.abs(x[1].O0 - x[1].O1) || y[1].W - x[1].W || (x[0] < y[0] ? -1 : 1));
+  const sumC = projs.reduce((s,[,b]) => s + b.C, 0);
+  h += `<h3>По проектам (мультипринадлежность: задача общего спринта — в каждом его проекте)</h3><div class="scroll"><table>${head}${projs.map(([k,b]) => burnRow(k, b)).join('')}<tr class="tot"><td>Σ по проектам (C)</td><td colspan="3"></td><td class="n">${sumC}</td><td colspan="5"></td></tr>${burnRow('итог (объединение)', a)}</table></div>`;
+  const spr = Object.entries(B.sprint).filter(([,b]) => b.C || b.A || b.W || b.R || b.unk).sort((x,y) => (y[1].C + y[1].A + y[1].W) - (x[1].C + x[1].A + x[1].W) || (x[0] < y[0] ? -1 : 1));
+  h += `<details><summary>По спринтам: ${spr.length} спринтов с движением за неделю</summary><div class="scroll" style="max-height:420px;overflow-y:auto"><table>${head}${spr.map(([k,b]) => burnRow(k + (D.sprints[k] && D.sprints[k].p.length > 1 ? ' ×' + D.sprints[k].p.length : ''), b)).join('')}</table></div></details>`;
+  const shared = spr.find(([k,b]) => D.sprints[k] && D.sprints[k].p.length > 1 && (b.C || b.W));
+  const exC = a.ex.C[0], exA = a.ex.A[0];
+  h += `<div class="look"><b>Пример из данных.</b> ${shared ? `Спринт <span class="mono">${esc(shared[0])}</span> привязан к ${D.sprints[shared[0]].p.length} репозиториям (${D.sprints[shared[0]].p.map(esc).join(', ')}): его C = ${shared[1].C}, W = ${shared[1].W} попадают в строку каждого из них — поэтому Σ C по проектам (${sumC}) больше итогового C (${a.C}).` : ''} ${exC ? `Задача <span class="mono">${esc(exC)}</span> была открыта на t0 и закрыта к t1 — она в C.` : ''} ${exA ? `Задача <span class="mono">${esc(exA)}</span> на t0 не существовала или была закрыта, а сейчас открыта — она в A.` : ''}</div>`;
+  $('#burnBlock').innerHTML = h;
+}
+function renderKnow(){
+  const K = knowledge();
+  const q = (name, x) => `<tr><td>${name}</td><td class="n">${x.Q1}</td><td class="n unk">[${x.Q0lo}; ${x.Q0hi}]</td><td class="n unk">[${x.flowLo}; ${x.flowHi}]</td><td class="n">${x.newAll} (на рассм. ${x.newProp}, уже решены ${x.newDecided})</td><td class="n unk">не вычисляется</td><td class="n">${x.supNow} (из новых ${x.supNew})</td><td class="n">${x.noDate}</td></tr>`;
+  let h = `<div class="scroll"><table><tr><th>класс</th><th class="n">Q(t1)</th><th class="n">Q(t0)</th><th class="n">Flow</th><th class="n">поступило в P</th><th class="n">Acc / Rej / TTD</th><th class="n">заменено сейчас</th><th class="n">без даты создания</th></tr>${q('ADR', K.adr)}${q('решения', K.dec)}</table></div>`;
+  h += `<div class="find"><b>Формула §7.3 на реальных данных не вычисляется.</b> Q(t0) требует статус ADR на начало недели, а статус живёт только на вершине (KnowADRHist хранит тела, без статуса); у решений истории нет вовсе. Поэтому Acc, Rej, TTD и сам Flow — только диапазоном. Диапазон Q(t0): нижняя граница — те, кто на рассмотрении сейчас и создан до недели; верхняя — плюс все уже решённые, созданные до недели (каждая могла решиться именно в эту неделю).</div>`;
+  h += `<h3>Устойчивость</h3><div class="scroll"><table><tr><th>метрика</th><th class="n">события · элементы</th><th>как считано</th></tr>
+<tr><td>правки ADR в P</td><td class="n">${K.adrChEv} · ${K.adrChEl}</td><td>adr_history_all, строки в P, кроме первой строки ADR</td></tr>
+<tr><td>пересмотры Rev (правки действующих ADR)</td><td class="n">${K.revEv} · ${K.revEl}</td><td>правки ADR, которые <b>сейчас</b> ACCEPTED — допущение: статус на момент правки тот же</td></tr>
+<tr><td>доля пересмотров Rev_el / действующих</td><td class="n">${(K.revEl / K.accAdr * 100).toFixed(1)}%</td><td>знаменатель — действующих ADR сейчас: ${K.accAdr}</td></tr>
+<tr><td>спеки: новые версии V</td><td class="n">${K.specVev} · ${K.specVel}</td><td>spec_history_all, строки в P, кроме создания; semver по каждой версии не разобрать — в истории нет поля version</td></tr>
+<tr><td>спеки: создано</td><td class="n">${K.specNew}</td><td>timeline_specs / первая строка истории</td></tr></table></div>`;
+  h += `<h3>«Решений на ADR» — для ADR, созданных в P (принятых в P определить нельзя)</h3><div class="row">${K.adrNewChildren.map(a => `<span class="pill">${esc(a.id)} · ${esc(a.status)} · решений ${a.children}</span>`).join('')}</div>`;
+  $('#knowBlock').innerHTML = h;
+}
+function renderVal(){
+  const checks = validate(TZ);
+  const ok = checks.filter(c => c.ok === true).length, bad = checks.filter(c => c.ok === false).length, unk = checks.filter(c => c.ok === null).length;
+  let h = `<div class="row" style="margin-bottom:6px"><span class="pill chip-ok">выполнено ${ok}</span><span class="pill chip-bad">нарушено ${bad}</span><span class="pill chip-unk">не смогли проверить ${unk}</span><span class="pill">пояс: ${TZ === 'msk' ? 'Москва' : 'UTC'}</span></div>`;
+  h += checks.map(c => `<div class="chk"><div class="st ${c.ok === true ? 'ok' : c.ok === false ? 'bad' : 'unk'}">${c.ok === true ? '✓' : c.ok === false ? '✗' : '?'}</div><div class="tx"><b>${esc(String(c.inv))}.</b> ${esc(c.name)}<br><span class="mono">${esc(c.detail)}</span>${c.ex.length ? `<br><span class="mono bad">${c.ex.map(esc).join(', ')}</span>` : ''}</div></div>`).join('');
+  $('#valBlock').innerHTML = h;
+  return checks;
+}
+function renderRawData(){
+  const m = D.meta, c = m.counts, hc = m.histCoverage;
+  const src = {}; for (const e of D.events) src[e.src] = (src[e.src] || 0) + 1;
+  const ssrc = {}; for (const s of D.taskStates) ssrc[s.src] = (ssrc[s.src] || 0) + 1;
+  let h = `<h3>Источники (MCP query_slice, прод)</h3><div class="scroll"><table><tr><th>срез</th><th class="n">строк</th><th>что взято</th></tr>
+<tr><td>task_created_dates</td><td class="n">${c.task_hist_rows}</td><td>все строки истории задач (uid, спринт, valid_from) — 14 страниц по 1000, перекрытие страниц сверено</td></tr>
+<tr><td>history_task ×${c.history_task_fetched}</td><td class="n">—</td><td>цепочка статусов по задаче: для всех задач, существовавших до недели и тронутых в ней (${hc.preWithHist} из ${hc.pre}), и для заведённых в неделю с ≥2 версиями (${hc.newMultiWithHist} из ${hc.newMulti}); ошибок ${c.history_task_errors}</td></tr>
+<tr><td>all_tasks</td><td class="n">${c.tasks_total}</td><td>текущий статус, спринт, компонент задачи — снимок t1</td></tr>
+<tr><td>sprints</td><td class="n">${c.sprints}</td><td>проекты (git_projects) и компоненты спринта, created_date, done_date</td></tr>
+<tr><td>releases_since(2026-10-24)</td><td class="n">${c.releases_window}</td><td>релизы недели (только дата)</td></tr>
+<tr><td>adrs · adr_history_all</td><td class="n">${c.adrs} · ${c.adr_hist_rows}</td><td>статус сейчас, дата создания (без времени), правки</td></tr>
+<tr><td>decisions · timeline_decisions</td><td class="n">${c.decisions}</td><td>статус сейчас, дата создания (без времени), updated_at (только последняя правка)</td></tr>
+<tr><td>specs · timeline_specs · spec_history_all</td><td class="n">${c.specs} · ${c.spec_hist_rows}</td><td>статус и версия сейчас, создание, версии</td></tr>
+<tr><td>agent_actions</td><td class="n">${c.agent_actions}</td><td>журнал вызовов MCP — хранит последние 500 вызовов, окно ${m.agent_actions_window.map(x => x.slice(5,16).replace('T',' ')).join(' … ')} UTC</td></tr></table></div>`;
+  h += `<h3>Чего данные дать не могут</h3><ul class="sub">
+<li><b>Кто записал версию.</b> В строках истории нет автора. Атрибуция «агент» — только по журналу agent_actions (±10 с, тот же id), а он помнит лишь последние ~4 часа. Остальное — «неизвестно», людей опознать нечем.</li>
+<li><b>Статус ADR и решений на t0.</b> Нет истории статуса → очередь Q(t0), Acc, Rej, TTD только диапазоном.</li>
+<li><b>Время</b> у создания ADR, решений и у релизов — только дата.</li>
+<li><b>Правки решений</b> — только последняя (updated_at на вершине), промежуточные теряются.</li>
+<li><b>Версии спек</b> — без номера версии в истории, semver по событию не разобрать.</li>
+<li><b>Срезы с потолком:</b> adr_history_all и spec_history_all отдают последние 300 строк (неделя покрыта целиком: самая ранняя строка ${m.spec_hist_min.slice(0,10)}); timeline_specs — 400 из ${c.specs} спек, недостающие даты создания взяты из истории.</li>
+<li><b>done_date спринта</b> — valid_from последней DONE-версии: правка закрытого спринта сдвигает дату.</li></ul>`;
+  h += `<h3>Состав массивов</h3><div class="row">${Object.entries(src).map(([k,v]) => `<span class="pill">${esc(k)}: ${v}</span>`).join('')}</div><div class="row">${Object.entries(ssrc).map(([k,v]) => `<span class="pill">состояние: ${esc(k)} — ${v}</span>`).join('')}</div>`;
+  h += `<details><summary>События (первые 40 из ${D.events.length})</summary><pre>${esc(JSON.stringify(D.events.slice(0,40), null, 1))}</pre></details>`;
+  h += `<details><summary>Состояния задач на t0/t1 (первые 40 из ${D.taskStates.length}) + нетронутые по спринтам</summary><pre>${esc(JSON.stringify(D.taskStates.slice(0,40), null, 1))}\n…\n${esc(JSON.stringify(D.untouchedBySprint.slice(0,15), null, 1))}</pre></details>`;
+  h += `<div class="row" style="margin-top:6px"><button class="pill" id="dl">скачать весь массив JSON</button></div>`;
+  $('#rawData').innerHTML = h;
+  $('#dl').onclick = () => { const b = new Blob([JSON.stringify(D)], {type:'application/json'}); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'news-proof-data.json'; a.click(); };
+}
+function renderSummary(checks){
+  const P = prepare(TZ); const R = groupCount(P.E, VARIANTS[0].g, TZ); const B = burn().all; const K = knowledge();
+  const bad = checks.filter(c => c.ok === false), unk = checks.filter(c => c.ok === null);
+  let h = `<div class="kpis"><div class="kpi"><div class="v">${R.totEv} · ${R.totEl}</div><div class="l">событий · элементов за неделю</div></div><div class="kpi"><div class="v">${R.M}</div><div class="l">в ≥2 проектах (M)</div></div><div class="kpi"><div class="v ${B.O0 - B.O1 > 0 ? 'ok' : 'bad'}">${B.O0 - B.O1 > 0 ? '+' : ''}${B.O0 - B.O1}</div><div class="l">сгорание задач</div></div><div class="kpi"><div class="v">${checks.filter(c => c.ok === true).length}/${checks.length}</div><div class="l">проверок зелёные</div></div></div>`;
+  h += `<div id="findings">/*FINDINGS*/</div>`;
+  $('#sumBody').innerHTML = h;
+}
+function computeAll(){
+  // чистый расчёт без DOM — для проверки детерминизма
+  const out = {};
+  for (const tz of ['msk','utc']) { const P = prepare(tz); out[tz] = {E:P.E.length, rows:P.rows.length, dropped:P.dropped.length,
+    groups:VARIANTS.map(V => { const R = groupCount(P.E, V.g, tz); return [V.id, R.totEv, R.totEl, R.M, R.extra, R.list.map(g => [g.g, g.ev, g.el, g.multi])]; }),
+    checks:validate(tz).map(c => [c.inv, c.name, c.ok, c.detail]) }; }
+  const B = burn(); out.burn = {all:[B.all.O0, B.all.O1, B.all.C, B.all.A, B.all.W, B.all.R, B.all.unk], project:Object.keys(B.project).sort().map(k => [k, B.project[k].O0, B.project[k].O1, B.project[k].C, B.project[k].A])};
+  out.know = knowledge(); delete out.know.adr.newList; delete out.know.dec.newList;
+  return JSON.stringify(out);
+}
+function hash(s){ let h1 = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h1 ^= s.charCodeAt(i); h1 = Math.imul(h1, 16777619) >>> 0; } return h1.toString(16).padStart(8,'0'); }
+function renderMath(){ if (window.katex) document.querySelectorAll('.eq, .look').forEach(el => {
+  el.innerHTML = el.innerHTML.replace(/\$\$([\s\S]+?)\$\$/g, (m, x) => katex.renderToString(x, {displayMode:true, throwOnError:false})).replace(/\$([^$\n]+?)\$/g, (m, x) => katex.renderToString(x, {throwOnError:false})); }); }
+function renderAll(){
+  renderVolume(); renderRaw(); renderGroups(); renderBurn(); renderKnow(); const checks = renderVal(); renderRawData(); renderSummary(checks); renderMath();
+  document.querySelectorAll('.tzb').forEach(b => { b.classList.toggle('on', b.dataset.tz === TZ); b.onclick = () => { TZ = b.dataset.tz; SEL = null; renderAll(); }; });
+}
+window.__compute = computeAll;
+window.addEventListener('load', () => {
+  renderAll();
+  const a = computeAll(), b = computeAll();
+  window.__det = {same: a === b, hash: hash(a), len: a.length};
+  $('#detHash').textContent = `Детерминизм: расчёт выполнен дважды — ${a === b ? 'результаты идентичны' : 'РАСХОЖДЕНИЕ'}, отпечаток ${hash(a)} (${a.length} байт).`;
+});
+</script>
+</body>
+</html>

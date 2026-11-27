@@ -55,9 +55,11 @@ final class LoreRecordValues {
 
     /** {@code values} записи по строке главного среза — вместе со статусом записи. */
     static Map<String, Object> values(String type, Map<String, Object> r) {
-        // S4-MODEL-RECORD: все типы — общим сборщиком по описаниям from; неизвестный тип — как спека (как раньше).
+        // S4-MODEL-RECORD: типы с ручной записью — общим сборщиком по описаниям from.
+        // KREG-13: тип без ручной записи — из модели (LoreRecordFrom.fromModel); неизвестный — пусто, а не «как спека».
         List<LoreRecordFrom.Val> d = LoreRecordFrom.VALUES.get(type);
-        Map<String, Object> v = LoreRecordFrom.assemble(d != null ? d : LoreRecordFrom.VALUES.get("spec"), r);
+        if (d == null) d = LoreRecordFrom.fromModel(type);
+        Map<String, Object> v = LoreRecordFrom.assemble(d != null ? d : List.of(), r);
         if ("task".equals(type)) dropLeftoversOfOtherStatuses(v);
         return v;
     }

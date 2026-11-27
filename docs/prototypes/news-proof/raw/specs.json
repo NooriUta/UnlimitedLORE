@@ -1,0 +1,4044 @@
+{
+  "rows": [
+    {
+      "spec_id": "AIDA_DB_TOPOLOGY",
+      "status": null,
+      "version": "1.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "FRIGG"
+    },
+    {
+      "spec_id": "ANVIL_SERVICE",
+      "status": null,
+      "version": "1.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "ANVIL"
+    },
+    {
+      "spec_id": "ANVIL_SPEC",
+      "status": null,
+      "version": "2.3",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "ANVIL"
+    },
+    {
+      "spec_id": "ARCADEDB_KNOWN_ISSUES",
+      "status": null,
+      "version": "1.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "YGG"
+    },
+    {
+      "spec_id": "AUTH_FLOW",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "BACKEND_ARCHITECTURE",
+      "status": null,
+      "version": "1.3",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "AIDA"
+    },
+    {
+      "spec_id": "CHUR_SERVICE",
+      "status": null,
+      "version": "1.1.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "CHUR"
+    },
+    {
+      "spec_id": "CHUR_TENANT_API",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "CHUR"
+    },
+    {
+      "spec_id": "CLICKHOUSE_GRAMMAR_MAPPING",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "DALI_DYNAMIC_SQL_PIPELINE_SPEC",
+      "status": null,
+      "version": "1.0 (2026-06-08)",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "DALI"
+    },
+    {
+      "spec_id": "DALI_OVERVIEW",
+      "status": null,
+      "version": "2.0.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "DALI"
+    },
+    {
+      "spec_id": "DALI_PARSE_INGESTION_SPEC",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "DALI"
+    },
+    {
+      "spec_id": "DALI_SPEC",
+      "status": null,
+      "version": "1.3",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "DALI"
+    },
+    {
+      "spec_id": "DALI_SQL_AST_NORMALIZER_SPEC",
+      "status": null,
+      "version": "1.2 (2026-06-08) — regex L2 deprecated, AST tree-walker prim",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "DALI"
+    },
+    {
+      "spec_id": "DATA_RETENTION_POLICY",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "AIDA"
+    },
+    {
+      "spec_id": "EDGE_TAXONOMY_ANALYSIS",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "EVENTS_REFERENCE",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HEIMDALL_BE"
+    },
+    {
+      "spec_id": "FRIGG_TENANT_SCHEMA",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "FRIGG"
+    },
+    {
+      "spec_id": "FRONTEND_ARCHITECTURE",
+      "status": null,
+      "version": "2.0.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SEIDR"
+    },
+    {
+      "spec_id": "HEIMDALL_DALI_API",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HEIMDALL_BE"
+    },
+    {
+      "spec_id": "HEIMDALL_SOURCES_UI",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HEIMDALL_FE"
+    },
+    {
+      "spec_id": "HOUND_API_DESIGN",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_AS_SERVICE_SPEC",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_ATOM_LINEAGE_SPEC",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_BULK_COLLECT_SCALAR_BRIDGE",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_CLASSIFICATION_SPEC",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_CLICKHOUSE_DIALECT",
+      "status": null,
+      "version": "1.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_CREATE_TABLE_ALGORITHM",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_DATAFLOW_FORMATION_SPEC",
+      "status": null,
+      "version": "1.0 · **Дата:** 2026-06-09",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_DIALECT_DETECTION",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_DIALECT_DORIS",
+      "status": null,
+      "version": "1.2.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_DIALECT_SCHEMA_HIERARCHY",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_DIALECT_STARROCKS",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_GEOID_DBROOT_IMPL",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_GEOID_SPEC",
+      "status": null,
+      "version": "2.5",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_INDEX",
+      "status": null,
+      "version": "1.1.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_MARIADB_DIALECT",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_MPP_DIALECTS",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_MYSQL_DIALECT",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_PARSE_COVERAGE_NO_SILENT_LOSS",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_PG_FUNCTION_BODY_SPEC",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_PLPGSQL_LEXER_CONTRACT",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_PLSQL_GRAMMAR_GAPS_CORPUS_RULES",
+      "status": null,
+      "version": "1.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_PLSQL_LINEAGE_GAPS_S3",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_POSTGRESQL_DIALECT",
+      "status": null,
+      "version": "1.2",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_PREDICATE_FLOW_SPEC",
+      "status": null,
+      "version": "1.2 · 2026-07-07",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_SOURCE_IDENTITY_SPEC",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_SOURCE_IDENTITY_TEST_MATRIX",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "HOUND_SVC_D4_SIZING_2026-06-11",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "OBS"
+    },
+    {
+      "spec_id": "HOUND_TRINO_DIALECT",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "INSPECTOR_KNOT_SPEC",
+      "status": null,
+      "version": "1.2",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "INTEGRATIONS_MATRIX",
+      "status": null,
+      "version": "1.8",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "AIDA"
+    },
+    {
+      "spec_id": "KNOT_INSPECTOR",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "LOOM_CANVAS_ALGORITHMS",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "LOOM_L2_EDGE_SEMANTICS",
+      "status": null,
+      "version": "1.4",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "LOOM_LAYOUT_PERF",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "LOOM_NAVIGATION",
+      "status": null,
+      "version": "1.0 · 2026-07-07",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "LOOM_PERFORMANCE_ANALYSIS",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "LORE_DB_SCHEMA_MERMAID",
+      "status": null,
+      "version": "1.2",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "LORE_DB_SPEC",
+      "status": null,
+      "version": "v1.0.58",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "LORE_MCP_SERVER",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "LORE_SCHEMA_V12_NEW_TYPES",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "LORE_SLICES_CONTRACTS",
+      "status": null,
+      "version": "1.2",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "LORE_STANDALONE_APP",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "LORE_STORAGE_GOAL_KAOS_TRIZ_TOC",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "MIMIR_DEEPSEEK_VALIDATION_REPORT",
+      "status": null,
+      "version": "1.0 (initial draft)",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "MIMIR"
+    },
+    {
+      "spec_id": "MIMIR_LLM_TOPOLOGY",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "MIMIR"
+    },
+    {
+      "spec_id": "MIMIR_LOCAL_DEV",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "MIMIR"
+    },
+    {
+      "spec_id": "MIMIR_OPEN_QUESTIONS",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "MIMIR"
+    },
+    {
+      "spec_id": "MIMIR_SDK_COMPARISON",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "MIMIR"
+    },
+    {
+      "spec_id": "MIMIR_SPEC",
+      "status": null,
+      "version": "4.0.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "MIMIR"
+    },
+    {
+      "spec_id": "MIMIR_TENANT_CONTRACT",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "MIMIR"
+    },
+    {
+      "spec_id": "MODULES_TECH_STACK",
+      "status": null,
+      "version": "4.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "AIDA"
+    },
+    {
+      "spec_id": "MTN-01",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-02",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-04",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-05",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-06",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-07",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-08",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-09",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-11",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-12",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-13",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-15",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-17",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-18",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-19",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-20",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-21",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-22",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-23",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-24",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-25",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-26",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-27",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-28",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-29",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-30",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-31",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-32",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-33",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-34",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-35",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-36",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-37",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-38",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-39",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-40",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-41",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-42",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-43",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-44",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-45",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-46",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-47",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-48",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-49",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-50",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-51",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-52",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-53",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-54",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-55",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-56",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-57",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-58",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-59",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-60",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-61",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-62",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-63",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-64",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-65",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-66",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MTN-67",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MULTI_APP_TOPOLOGY",
+      "status": null,
+      "version": "2.0.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "MYSQL_MARIADB_GEOID",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "MYSQL_MARIADB_GRAMMAR_MAPPING",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "MYSQL_SEMANTIC_LISTENER_IMPL_SPEC",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "OL_ALGORITHMS_SPEC",
+      "status": null,
+      "version": "1.1 (2026-10-20)",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "OL"
+    },
+    {
+      "spec_id": "OL_CONNECTION_MAPPING_SPEC",
+      "status": null,
+      "version": "1.2",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "OL"
+    },
+    {
+      "spec_id": "OL_IDENTIFIER_MAPPING_SPEC",
+      "status": null,
+      "version": "1.3",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "OTEL_PLATFORM_SPEC",
+      "status": null,
+      "version": "0.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "OBS"
+    },
+    {
+      "spec_id": "PGSQL_GRAMMAR_MAPPING",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "PROTO_HEIMDALL_ANALYTICS_IMPROVEMENTS",
+      "status": null,
+      "version": "0.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HEIMDALL_FE"
+    },
+    {
+      "spec_id": "RBAC_MULTITENANT",
+      "status": null,
+      "version": "2.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "REMOTE_BATCH_WRITE_FLOW",
+      "status": null,
+      "version": "1.1 (Phase 5..8 update — SCD, stmt_geoid_v2, FULL-scan vanis",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "SAGA_CONTENT_RENDERING",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SAGA_HTML_DOC_RENDERING_RESEARCH",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SAGA_INGEST_PIPELINE",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SAGA_NORMALIZATION_DESIGN",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SAGA_PLAN_AS_DB_RENDER",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SAGA_PLAN_VALIDATION",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SAGA_RELEASES_DATA_MODEL",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SAGA_SCHEMA_VS_DOCS_ANALYSIS",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SAGA_UI_WIREFRAMES",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SAGA_VISUALIZATION_SPEC",
+      "status": null,
+      "version": "1.1",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SCD_HISTORIZATION_SPEC",
+      "status": null,
+      "version": "1.2 (жизненный цикл нод/рёбер + критическое ревью, 2026-06-0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "SECRETS_MANAGEMENT",
+      "status": null,
+      "version": "1.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "SEMANTIC_LAYER_SPEC",
+      "status": null,
+      "version": "0.5.0",
+      "projects": [
+        "NooriUta/volva",
+        "NooriUta/AIDA"
+      ],
+      "component_id": "DALI"
+    },
+    {
+      "spec_id": "SERVER_SIDE_RBAC",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "SHUTTLE_ADMIN_MUTATIONS_SPEC",
+      "status": null,
+      "version": "1.0 (2026-06-08)",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SHT"
+    },
+    {
+      "spec_id": "SHUTTLE_SERVICE",
+      "status": null,
+      "version": "1.2",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SHT"
+    },
+    {
+      "spec_id": "SHUTTLE_TENANT_ISOLATION",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SHT"
+    },
+    {
+      "spec_id": "SI-14-experiment-report",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "SI-16-hash-experiment-paper",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "SI20_BACKTICK_GRAMMAR_DELTA",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "SKADI_SOURCE_SPEC",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SKADI"
+    },
+    {
+      "spec_id": "SKADI_SPEC",
+      "status": null,
+      "version": "3.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SKADI"
+    },
+    {
+      "spec_id": "SKULD_SPEC",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SKULD"
+    },
+    {
+      "spec_id": "SNIPPET_STORAGE_AUDIT_2026-06-10",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "SPEC-ADMIN-LORE-UC",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-DIALECT-IDENT-001",
+      "status": null,
+      "version": "0.2.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "TUNGA"
+    },
+    {
+      "spec_id": "SPEC-DIALECT-IDENT-METRICS-001",
+      "status": null,
+      "version": "1.4.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "TUNGA"
+    },
+    {
+      "spec_id": "SPEC-DW-HY3D-UNITS",
+      "status": "proposed",
+      "version": "1.1.0",
+      "projects": [
+        "AIDA/Datawanderers-Unity"
+      ],
+      "component_id": null
+    },
+    {
+      "spec_id": "SPEC-DW-UNIT-GAIT",
+      "status": "accepted",
+      "version": "1.2.0",
+      "projects": [
+        "AIDA/Datawanderers-Unity"
+      ],
+      "component_id": null
+    },
+    {
+      "spec_id": "SPEC-DWL-EXPORT",
+      "status": "accepted",
+      "version": "1.5.0-draft.3",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "component_id": null
+    },
+    {
+      "spec_id": "SPEC-DWL-LOADTEST",
+      "status": "proposed",
+      "version": "0.1.1",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "component_id": "DW_SRV"
+    },
+    {
+      "spec_id": "SPEC-DWL-LORE-DB",
+      "status": "accepted",
+      "version": "1.5.0",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "component_id": null
+    },
+    {
+      "spec_id": "SPEC-DWL-RUNE-DREAMS",
+      "status": "proposed",
+      "version": "0.2.4",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "component_id": null
+    },
+    {
+      "spec_id": "SPEC-DWL-SERVER",
+      "status": "accepted",
+      "version": "0.2.0",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "component_id": null
+    },
+    {
+      "spec_id": "SPEC-DWU-LORE-READ",
+      "status": "accepted",
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/Datawanderers-Unity"
+      ],
+      "component_id": null
+    },
+    {
+      "spec_id": "SPEC-FJMCP-001",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "FORGEJO"
+    },
+    {
+      "spec_id": "SPEC-FJMCP-002",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "FORGEJO"
+    },
+    {
+      "spec_id": "SPEC-GLADSHEIM-VOICE-ACT-RULE",
+      "status": null,
+      "version": "0.4.0",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ],
+      "component_id": "GLADSHEIM"
+    },
+    {
+      "spec_id": "SPEC-HEIMDALL-TOPOLOGY-001",
+      "status": null,
+      "version": "0.1.2",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HEIMDALL"
+    },
+    {
+      "spec_id": "SPEC-HOUND-DIALECT-ONBOARDING-001",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "SPEC-INFRA-NET-001",
+      "status": null,
+      "version": "1.4.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "INFRA"
+    },
+    {
+      "spec_id": "SPEC-INFRA-ODAL-DNS",
+      "status": null,
+      "version": "1.0.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": null
+    },
+    {
+      "spec_id": "SPEC-KC-001",
+      "status": "proposed",
+      "version": "1.0.1",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "KC"
+    },
+    {
+      "spec_id": "SPEC-LANDING-CRITICAL-ANALYSIS-20260606",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "SPEC-LORE-FIELD-LABELS",
+      "status": null,
+      "version": "1.2.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "LORE"
+    },
+    {
+      "spec_id": "SPEC-LORE-PLAN-MODEL",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-PRODUCT-LAYER-FOR-GATEWAY",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "LORE"
+    },
+    {
+      "spec_id": "SPEC-LORE-RELEASE-NOTES",
+      "status": null,
+      "version": "2.0.0",
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/volva",
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-LORE-UX-GRAPH-VIEWS",
+      "status": "proposed",
+      "version": "1.1.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-ADMIN-REVIEW",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-CHAMPION-INSIGHTS",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-COMPOSITE-OBJECTS",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-CRITIQUE-R1",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-CRITIQUE-R2",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-CRITIQUE-R3-SCALE",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-EMBED-BLOCKS",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-ALGORITHMS",
+      "status": "proposed",
+      "version": "0.5.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-FEEDS",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-OBJECTS",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-PARITY",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-PROTO-ADMIN",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-PROTO-NEWS",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-PROTO-WHY",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-PROTOTYPES",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-RESEARCH-PASS1",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-RESEARCH-PASS2",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-S1-CONTRACTS",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-S2-CONTRACTS",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-SPRINT-CHAIN",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-V2-PARALLEL",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-VS-CHAMPIONS",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-WHY-CANVAS-TECH",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-WHY-PROPOSAL",
+      "status": "proposed",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-LORE-WORK-ANY-KIND",
+      "status": "proposed",
+      "version": "0.1.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-MCP-SERVERS-001",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI_MCP"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-AUDIO-FRONTEND",
+      "status": null,
+      "version": "1.7.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "GJALLARHORN"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BEHAVIOR-001",
+      "status": null,
+      "version": "0.3.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "THING"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BOM",
+      "status": null,
+      "version": "0.5.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITOR-CARDS",
+      "status": null,
+      "version": "1.5.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITORS-FULL",
+      "status": null,
+      "version": "1.2.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-DEVICES-001",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-FINDINGS-BY-COMPONENT",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-HUB-CLASSES",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "GLADSHEIM"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-LLM-001",
+      "status": null,
+      "version": "1.0.1",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "GLADSHEIM"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MARKET-MATRIX",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MATTER-001",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MODEL-001",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MODEL-TRAINING-001",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "TEIKN"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MULTISENSOR-PINOUT",
+      "status": "proposed",
+      "version": "0.1.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-NODE-PROTOCOL",
+      "status": null,
+      "version": "1.3.5",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "GLADSHEIM"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-OUTAGE-CASES",
+      "status": null,
+      "version": "1.5.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-P4C5-WATCH",
+      "status": null,
+      "version": "1.3.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "EITRI"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "status": null,
+      "version": "2.4.1",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PANEL-001",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "SJON"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PANEL-HW-001",
+      "status": null,
+      "version": "0.3.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "SJON"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLAN-IMPORT-001",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "TEIKN"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLAN-WALL-MODEL-001",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "TEIKN"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-ALGO",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "GLADSHEIM"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-ENSEMBLE-001",
+      "status": null,
+      "version": "2.1.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "TEIKN"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-METRICS",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-NAMING-001",
+      "status": null,
+      "version": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "TEIKN"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "status": null,
+      "version": "1.9.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PROFILES-001",
+      "status": null,
+      "version": "1.2.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "KVASIR"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-RASTER-VECTOR-001",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "TEIKN"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-S31-WATCH",
+      "status": null,
+      "version": "1.3.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "EITRI"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-SONG-ID-001",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-SPATIAL-ANALYTICS",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "VOG"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-TRUST-LEVELS",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "VEBAND"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-UC-PRIORITY",
+      "status": null,
+      "version": "1.2.1",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VENDOR-TRENDS",
+      "status": null,
+      "version": "2.1.1",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-CONSUMPTION",
+      "status": null,
+      "version": "1.0.1",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "GJALLARHORN"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-HW-OPTIONS",
+      "status": null,
+      "version": "0.4.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "MIDGARD"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-I2S-LINK",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "GJALLARHORN"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-NODE-FIRMWARE",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "GJALLARHORN"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-WEATHER-001",
+      "status": null,
+      "version": "1.2.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "GLADSHEIM"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-XMOS-DFU-I2C",
+      "status": null,
+      "version": "1.3.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "GJALLARHORN"
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-ZIGBEE-CRATE-BOUNDARIES",
+      "status": null,
+      "version": "0.8.0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ],
+      "component_id": "GLADSHEIM"
+    },
+    {
+      "spec_id": "SPEC-MINILORE-APP-DESIGN",
+      "status": "accepted",
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": null
+    },
+    {
+      "spec_id": "SPEC-MINILORE-ARCHIVE",
+      "status": "accepted",
+      "version": "0.2.0",
+      "projects": [
+        "AIDA/miniLore_serverside"
+      ],
+      "component_id": "MINILORE"
+    },
+    {
+      "spec_id": "SPEC-MINILORE-FRAMES",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-MINILORE-LINK-DAEMON",
+      "status": null,
+      "version": "1.1.0",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE"
+    },
+    {
+      "spec_id": "SPEC-MINILORE-PHONE-API",
+      "status": null,
+      "version": "0.2.1",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-MINILORE_LINK-002",
+      "status": null,
+      "version": "1.2.0",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_LINK"
+    },
+    {
+      "spec_id": "SPEC-MINILORE_LINK-CHANNELS-001",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_LINK"
+    },
+    {
+      "spec_id": "SPEC-ODIN-VEC-001",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/ODIN"
+      ],
+      "component_id": "ODIN"
+    },
+    {
+      "spec_id": "SPEC-ODIN-VEC-002",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/ODIN"
+      ],
+      "component_id": "ODIN"
+    },
+    {
+      "spec_id": "SPEC-ODIN-VEC-003",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/ODIN"
+      ],
+      "component_id": "ODIN"
+    },
+    {
+      "spec_id": "SPEC-PROD-DOCKER-BASELINE-20260628",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "OBS"
+    },
+    {
+      "spec_id": "SPEC-QG-ARCHITECTURE",
+      "status": null,
+      "version": "0.9.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "QG"
+    },
+    {
+      "spec_id": "SPEC-QG-JOB-CONTRACT",
+      "status": null,
+      "version": "0.1.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "QG"
+    },
+    {
+      "spec_id": "SPEC-RBAC-OMILORE-AGENTS",
+      "status": null,
+      "version": "1.3.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-SECRETS-001",
+      "status": "proposed",
+      "version": "1.2.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "SPEC-SITE-RELEASE-NOTES",
+      "status": "accepted",
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/seidr-site"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-SITEDOCS-HANDOVER",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-ANVIL-JAVA",
+      "status": null,
+      "version": "21",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "ANVIL"
+    },
+    {
+      "spec_id": "SPEC-TECH-ANVIL-QUARKUS",
+      "status": null,
+      "version": "3.36.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "ANVIL"
+    },
+    {
+      "spec_id": "SPEC-TECH-BRAGI-MARKED",
+      "status": null,
+      "version": "18.0.6",
+      "projects": [
+        "NooriUta/BRAGI"
+      ],
+      "component_id": "BRAGI"
+    },
+    {
+      "spec_id": "SPEC-TECH-BRAGI-MINIO",
+      "status": null,
+      "version": "latest (не закреплён)",
+      "projects": [
+        "NooriUta/BRAGI"
+      ],
+      "component_id": "BRAGI"
+    },
+    {
+      "spec_id": "SPEC-TECH-BRAGI-TIPTAP",
+      "status": null,
+      "version": "3.27.1",
+      "projects": [
+        "NooriUta/BRAGI"
+      ],
+      "component_id": "BRAGI"
+    },
+    {
+      "spec_id": "SPEC-TECH-BRAGI-TIPTAP-MARKDOWN",
+      "status": null,
+      "version": "0.9.0",
+      "projects": [
+        "NooriUta/BRAGI"
+      ],
+      "component_id": "BRAGI"
+    },
+    {
+      "spec_id": "SPEC-TECH-DALI-JAVA",
+      "status": null,
+      "version": "21",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "DALI"
+    },
+    {
+      "spec_id": "SPEC-TECH-DALI-JOBRUNR",
+      "status": null,
+      "version": "8.7.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "DALI"
+    },
+    {
+      "spec_id": "SPEC-TECH-DALI-QUARKUS",
+      "status": null,
+      "version": "3.36.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "DALI"
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI-REACT",
+      "status": null,
+      "version": "19.2.7",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI-TYPESCRIPT",
+      "status": null,
+      "version": "6.0.3",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI-VIS-DATA",
+      "status": null,
+      "version": "8.0.4",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI-VIS-TIMELINE",
+      "status": null,
+      "version": "8.5.1",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI-VITE",
+      "status": null,
+      "version": "8.1.5",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI"
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI_MCP-MCP-SDK-MODELCONTEXTPROTOCOL-SDK-",
+      "status": null,
+      "version": "1.18.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI_MCP"
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI_MCP-NODE-JS",
+      "status": null,
+      "version": "26",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI_MCP"
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI_MCP-TSX",
+      "status": null,
+      "version": "4.23.1",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI_MCP"
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI_MCP-TYPESCRIPT",
+      "status": null,
+      "version": "7.0.2",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI_MCP"
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI_MCP-VITEST",
+      "status": null,
+      "version": "4.1.10",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI_MCP"
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI_MCP-ZOD",
+      "status": null,
+      "version": "4.4.3",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "FORSETI_MCP"
+    },
+    {
+      "spec_id": "SPEC-TECH-FRIGG-ARCADEDB",
+      "status": null,
+      "version": "26.11.1 (живой odal подтверждён 05.11.2026) · плагины через ARCADEDB_SETTINGS",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "FRIGG"
+    },
+    {
+      "spec_id": "SPEC-TECH-GLADSHEIM-ARCADEDB",
+      "status": null,
+      "version": "26.11.1 · стенд: плагины AutoBackupScheduler, Postgres, Prometheus, MCP · прод LORE-ygg: плагины — у сессии LORE",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ],
+      "component_id": "GLADSHEIM"
+    },
+    {
+      "spec_id": "SPEC-TECH-GLADSHEIM-JAVA",
+      "status": null,
+      "version": "21 (уровень языка) / OpenJDK 21.0.12.1 LTS (рантайм)",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ],
+      "component_id": "GLADSHEIM"
+    },
+    {
+      "spec_id": "SPEC-TECH-GLADSHEIM-QUARKUS",
+      "status": null,
+      "version": "3.39.2",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ],
+      "component_id": "GLADSHEIM"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-CHROMIUM",
+      "status": null,
+      "version": "НЕ ЗАКРЕПЛЕНА — две плавающие величины подряд",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-ESLINT",
+      "status": null,
+      "version": "10.8.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-GEIST-",
+      "status": null,
+      "version": "5.3.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-I18NEXT",
+      "status": null,
+      "version": "26.3.6",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-LUCIDE-REACT",
+      "status": null,
+      "version": "1.28.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-MERMAID",
+      "status": null,
+      "version": "11.16.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-NGINX",
+      "status": null,
+      "version": "1.30.4",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-NODE-JS",
+      "status": null,
+      "version": "24 (образ node:24-alpine)",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-PUPPETEER-CORE",
+      "status": null,
+      "version": "25.4.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-REACT",
+      "status": null,
+      "version": "19.2.8",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-REACT-MARKDOWN",
+      "status": null,
+      "version": "10.1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-REACT-ROUTER",
+      "status": null,
+      "version": "7.18.2",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-TAILWIND-CSS",
+      "status": null,
+      "version": "4.3.3",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-TYPESCRIPT",
+      "status": null,
+      "version": "6.0.3",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-TYPESCRIPT-TYPES-",
+      "status": null,
+      "version": "node 26.1.2 / react 19.2.18 / react-dom 19.2.4",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-VITE",
+      "status": null,
+      "version": "8.2.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-ZUSTAND",
+      "status": null,
+      "version": "5.0.14",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HARPA"
+    },
+    {
+      "spec_id": "SPEC-TECH-HEIMDALL_BE-JAVA",
+      "status": null,
+      "version": "21",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HEIMDALL_BE"
+    },
+    {
+      "spec_id": "SPEC-TECH-HEIMDALL_BE-JOBRUNR",
+      "status": null,
+      "version": "8.7.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HEIMDALL_BE"
+    },
+    {
+      "spec_id": "SPEC-TECH-HEIMDALL_BE-QUARKUS",
+      "status": null,
+      "version": "3.36.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HEIMDALL_BE"
+    },
+    {
+      "spec_id": "SPEC-TECH-HND-ANTLR",
+      "status": null,
+      "version": "4.13.2",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "SPEC-TECH-HND-ARCADEDB",
+      "status": null,
+      "version": "26.11.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "SPEC-TECH-HND-JAVA",
+      "status": null,
+      "version": "21",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-DOCKER",
+      "status": null,
+      "version": "runtime (без закреплённой версии движка)",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "INFRA"
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-FORGEJO",
+      "status": null,
+      "version": "15.0.5",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "INFRA"
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-FORGEJO-RUNNER",
+      "status": null,
+      "version": "12.13.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "INFRA"
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-GRADLE",
+      "status": null,
+      "version": "9.6.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "INFRA"
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-NGINX",
+      "status": null,
+      "version": "1.31-alpine",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "INFRA"
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-NODE-JS",
+      "status": null,
+      "version": "24 (node:24-alpine)",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "INFRA"
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-POSTGRESQL-INFISICAL-DB-",
+      "status": null,
+      "version": "16-alpine",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "INFRA"
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-REDIS-INFISICAL-CACHE-",
+      "status": null,
+      "version": "7-alpine",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "INFRA"
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-TRAEFIK",
+      "status": null,
+      "version": "3.7.8",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "INFRA"
+    },
+    {
+      "spec_id": "SPEC-TECH-MIMIR-CAFFEINE",
+      "status": null,
+      "version": "3.2.4",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "MIMIR"
+    },
+    {
+      "spec_id": "SPEC-TECH-MIMIR-JAVA",
+      "status": null,
+      "version": "21",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "MIMIR"
+    },
+    {
+      "spec_id": "SPEC-TECH-MIMIR-LANGCHAIN4J-QUARKUS-LANGCHAIN4J-",
+      "status": null,
+      "version": "1.11.2",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "MIMIR"
+    },
+    {
+      "spec_id": "SPEC-TECH-MIMIR-QUARKUS",
+      "status": null,
+      "version": "3.36.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "MIMIR"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK--MODELCONTEXTPROTOCOL-SDK",
+      "status": null,
+      "version": "1.18.0",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_LINK"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-NODE-JS",
+      "status": null,
+      "version": "24",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_LINK"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-TYPESCRIPT",
+      "status": null,
+      "version": "6.0.3",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_LINK"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-VITEST",
+      "status": null,
+      "version": "4.1",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_LINK"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-WS",
+      "status": null,
+      "version": "не закреплена (ADR-MINILORE-002 версии не называет; закрепляется в LN-3)",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_LINK"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-ZOD",
+      "status": null,
+      "version": "4.4.3",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_LINK"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-ARCADEDB",
+      "status": null,
+      "version": "26.11.1",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-CAFFEINE",
+      "status": null,
+      "version": "3.2.4",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-ECLIPSE-TEMURIN-",
+      "status": null,
+      "version": "21-jre",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-GRADLE",
+      "status": null,
+      "version": "9.6.1",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-INFISICAL",
+      "status": null,
+      "version": "v0.162.2",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-JAVA",
+      "status": null,
+      "version": "21",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-KEYCLOAK",
+      "status": null,
+      "version": "26.6.3",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-MINIO",
+      "status": null,
+      "version": "RELEASE.2025-09-07T16-13-09Z",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS",
+      "status": null,
+      "version": "3.36.1",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-MICROMETER",
+      "status": null,
+      "version": "3.36.1 (в составе Quarkus BOM)",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-OIDC",
+      "status": null,
+      "version": "3.36.1 (в составе Quarkus BOM)",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-REST",
+      "status": null,
+      "version": "3.36.1 (в составе Quarkus BOM)",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-REST-CLIENT-JACKSON",
+      "status": null,
+      "version": "3.36.1 (в составе Quarkus BOM)",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-REST-JACKSON",
+      "status": null,
+      "version": "3.36.1 (в составе Quarkus BOM)",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-SMALLRYE-FAULT-TOLERANCE",
+      "status": null,
+      "version": "3.36.1 (в составе Quarkus BOM)",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-SMALLRYE-HEALTH",
+      "status": null,
+      "version": "3.36.1 (в составе Quarkus BOM)",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-WEBSOCKETS-NEXT",
+      "status": null,
+      "version": "3.36.1 (в составе Quarkus BOM)",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-TRAEFIK",
+      "status": null,
+      "version": "3.7.8",
+      "projects": [
+        "AIDA/miniLORE"
+      ],
+      "component_id": "MINILORE_SRV"
+    },
+    {
+      "spec_id": "SPEC-TECH-MUNINN--XYFLOW-REACT",
+      "status": null,
+      "version": "12.11.2",
+      "projects": [
+        "NooriUta/ODIN"
+      ],
+      "component_id": "MUNINN"
+    },
+    {
+      "spec_id": "SPEC-TECH-MUNINN-LUCIDE-REACT",
+      "status": null,
+      "version": "1.21.0",
+      "projects": [
+        "NooriUta/ODIN"
+      ],
+      "component_id": "MUNINN"
+    },
+    {
+      "spec_id": "SPEC-TECH-OBS-JAVA",
+      "status": null,
+      "version": "21",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "OBS"
+    },
+    {
+      "spec_id": "SPEC-TECH-OBS-QUARKUS-MICROMETER-QUARKUS-SCHEDULER",
+      "status": null,
+      "version": "3.36.1 (Quarkus BOM)",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "OBS"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE--FONTSOURCE-MANROPE-IBM-PLEX-MONO-",
+      "status": null,
+      "version": "5.3.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE--ICONIFY-REACT-GAME-ICONS",
+      "status": null,
+      "version": "6.0.2",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE--VITEJS-PLUGIN-REACT",
+      "status": null,
+      "version": "6.0.3",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-ARCADEDB",
+      "status": null,
+      "version": "26.11.1 · JMX открыт без пароля, фикс уточнён 06.11",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-BPMN-JS",
+      "status": null,
+      "version": "18.22.1",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-DAYJS",
+      "status": null,
+      "version": "1.11.21",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-DOMPURIFY",
+      "status": null,
+      "version": "3.4.11",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-ESLINT",
+      "status": null,
+      "version": "10.7.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-I18NEXT",
+      "status": null,
+      "version": "26.3.6",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-JAVA",
+      "status": null,
+      "version": "21",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-JRE",
+      "status": null,
+      "version": "Temurin 25.0.3+9 LTS",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-MANTINE",
+      "status": null,
+      "version": "9.4.2",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-MERMAID-ELK-LAYOUT",
+      "status": null,
+      "version": "11.16.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-OIDC-CLIENT-TS",
+      "status": null,
+      "version": "3.5.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-POSTCSS",
+      "status": null,
+      "version": "8.5.22",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-QUARKUS",
+      "status": null,
+      "version": "3.36.1",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-REACT",
+      "status": null,
+      "version": "19.2.7",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-REACT-I18NEXT",
+      "status": null,
+      "version": "17.0.9",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-REACT-ROUTER-DOM",
+      "status": null,
+      "version": "6.28.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-REACT-VIRTUOSO",
+      "status": null,
+      "version": "4.18.7",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-TYPESCRIPT",
+      "status": null,
+      "version": "6.0.3",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-VITE",
+      "status": null,
+      "version": "8.1.5",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-VITEST",
+      "status": null,
+      "version": "4.1.10",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SPEC-TECH-QG-ARCADEDB",
+      "status": null,
+      "version": "26.11.1",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "QG"
+    },
+    {
+      "spec_id": "SPEC-TECH-QG-JAVA",
+      "status": null,
+      "version": "21",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "QG"
+    },
+    {
+      "spec_id": "SPEC-TECH-QG-QUARKUS",
+      "status": null,
+      "version": "3.36.1",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "QG"
+    },
+    {
+      "spec_id": "SPEC-TECH-SECURITY-FASTIFY-CHUR-GATEWAY-",
+      "status": null,
+      "version": "5.10.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "SPEC-TECH-SECURITY-INFISICAL",
+      "status": null,
+      "version": "v0.162.2",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "SPEC-TECH-SECURITY-JAVA",
+      "status": null,
+      "version": "21",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "SPEC-TECH-SECURITY-JOSE",
+      "status": null,
+      "version": "6.2.3",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "SPEC-TECH-SECURITY-KEYCLOAK",
+      "status": null,
+      "version": "26.6.3",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "SPEC-TECH-SECURITY-QUARKUS",
+      "status": null,
+      "version": "3.36.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "SPEC-TECH-SHT-JAVA",
+      "status": null,
+      "version": "21",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SHT"
+    },
+    {
+      "spec_id": "SPEC-TECH-SHT-QUARKUS",
+      "status": null,
+      "version": "3.36.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SHT"
+    },
+    {
+      "spec_id": "SPEC-TECH-SHT-QUARKUS-SMALLRYE-GRAPHQL",
+      "status": null,
+      "version": "3.36.1 (Quarkus BOM)",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SHT"
+    },
+    {
+      "spec_id": "SPEC-TECH-TYR--AXE-CORE-PLAYWRIGHT",
+      "status": null,
+      "version": "4.11.3",
+      "projects": [
+        "NooriUta/AIDA-TestPlayGround"
+      ],
+      "component_id": "TYR"
+    },
+    {
+      "spec_id": "SPEC-TECH-TYR--MONACO-EDITOR-REACT",
+      "status": null,
+      "version": "4.7.0",
+      "projects": [
+        "NooriUta/AIDA-TestPlayGround"
+      ],
+      "component_id": "TYR"
+    },
+    {
+      "spec_id": "SPEC-TECH-TYR-ALLURE-PLAYWRIGHT",
+      "status": null,
+      "version": "3.10.0",
+      "projects": [
+        "NooriUta/AIDA-TestPlayGround"
+      ],
+      "component_id": "TYR"
+    },
+    {
+      "spec_id": "SPEC-TECH-TYR-FASTIFY",
+      "status": null,
+      "version": "5.8.5",
+      "projects": [
+        "NooriUta/AIDA-TestPlayGround"
+      ],
+      "component_id": "TYR"
+    },
+    {
+      "spec_id": "SPEC-TECH-TYR-NODE-JS",
+      "status": null,
+      "version": "26 (по @types/node ^26.0.0)",
+      "projects": [
+        "NooriUta/AIDA-TestPlayGround"
+      ],
+      "component_id": "TYR"
+    },
+    {
+      "spec_id": "SPEC-TECH-TYR-PLAYWRIGHT",
+      "status": null,
+      "version": "1.61.0",
+      "projects": [
+        "NooriUta/AIDA-TestPlayGround"
+      ],
+      "component_id": "TYR"
+    },
+    {
+      "spec_id": "SPEC-TECH-TYR-TYPESCRIPT",
+      "status": null,
+      "version": "6.0.3",
+      "projects": [
+        "NooriUta/AIDA-TestPlayGround"
+      ],
+      "component_id": "TYR"
+    },
+    {
+      "spec_id": "SPEC-TECH-TYR-VITEST",
+      "status": null,
+      "version": "4.1.9",
+      "projects": [
+        "NooriUta/AIDA-TestPlayGround"
+      ],
+      "component_id": "TYR"
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI--XYFLOW-REACT",
+      "status": null,
+      "version": "12.11.2",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-I18NEXT",
+      "status": null,
+      "version": "26.3.4",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-PLAYWRIGHT",
+      "status": null,
+      "version": "1.61.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-REACT",
+      "status": null,
+      "version": "19.2.7",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-REACT-ROUTER-DOM",
+      "status": null,
+      "version": "7.18.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-TAILWIND-CSS",
+      "status": null,
+      "version": "4.3.2",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-TANSTACK-QUERY-GRAPHQL-CLIENT",
+      "status": null,
+      "version": "5.101.2",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-TYPESCRIPT",
+      "status": null,
+      "version": "6.0.3",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-VITE",
+      "status": null,
+      "version": "8.1.3",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-VITEST",
+      "status": null,
+      "version": "4.1.8",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-ZUSTAND",
+      "status": null,
+      "version": "5.0.14",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "SPEC-TECH-VOLVA-JVM",
+      "status": null,
+      "version": "в коде Temurin 25-jre-alpine; живьём Temurin 21.0.13+9 LTS",
+      "projects": [
+        "NooriUta/volva"
+      ],
+      "component_id": "VOLVA"
+    },
+    {
+      "spec_id": "SPEC-TECH-VOLVA-METABASE",
+      "status": null,
+      "version": "0.65.2.5",
+      "projects": [
+        "NooriUta/volva"
+      ],
+      "component_id": "VOLVA"
+    },
+    {
+      "spec_id": "SPEC-TECH-VOLVA_DRIVER-PGJDBC",
+      "status": null,
+      "version": "42.7.5",
+      "projects": [
+        "NooriUta/volva"
+      ],
+      "component_id": "VOLVA_DRIVER"
+    },
+    {
+      "spec_id": "SPEC-TECH-YGG-ARCADEDB",
+      "status": null,
+      "version": "26.11.1 (живой odal подтверждён 05.11.2026) · плагины через ARCADEDB_SETTINGS · JMX открыт, см. ниже",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "YGG"
+    },
+    {
+      "spec_id": "SPEC-TUNGA-001",
+      "status": null,
+      "version": "0.1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "TUNGA"
+    },
+    {
+      "spec_id": "SPEC-VOLVA-DATASTORY",
+      "status": "proposed",
+      "version": "0.2.0",
+      "projects": [
+        "NooriUta/volva"
+      ],
+      "component_id": "VOLVA_FE"
+    },
+    {
+      "spec_id": "SPEC-YGG-ARCADEDB-PLUGINS",
+      "status": null,
+      "version": "1.0.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "YGG"
+    },
+    {
+      "spec_id": "SPEC-YGG-SCHEMA-REFERENCE",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "SYSTEM_AIDA_LORE_SPEC",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "component_id": "OMILORE"
+    },
+    {
+      "spec_id": "TENANT_NAMING_CONVENTION",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "CHUR"
+    },
+    {
+      "spec_id": "USER_ATTRIBUTES_KC_VS_FRIGG",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HEIMDALL_BE"
+    },
+    {
+      "spec_id": "USER_EDITING_UI_MODEL",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HEIMDALL_FE"
+    },
+    {
+      "spec_id": "VERDANDI_ARCHITECTURE",
+      "status": null,
+      "version": "2.0.1",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "VERDANDI"
+    },
+    {
+      "spec_id": "VOLVA_HOUND_PARSER_CONTRACT",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/volva"
+      ],
+      "component_id": "VOLVA"
+    },
+    {
+      "spec_id": "VOLVA_IFRAME_EMBED_SPEC",
+      "status": null,
+      "version": "1.2.0",
+      "projects": [
+        "NooriUta/volva"
+      ],
+      "component_id": "VOLVA_EMBED"
+    },
+    {
+      "spec_id": "VOLVA_LOCKIN_REGISTER",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/volva"
+      ],
+      "component_id": "VOLVA"
+    },
+    {
+      "spec_id": "VOLVA_MBQL_REFERENCE",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/volva"
+      ],
+      "component_id": "VOLVA_META"
+    },
+    {
+      "spec_id": "VOLVA_MODULES",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/volva"
+      ],
+      "component_id": "VOLVA"
+    },
+    {
+      "spec_id": "VOLVA_PREMIUM_FEATURES",
+      "status": null,
+      "version": "1.0",
+      "projects": [
+        "NooriUta/volva"
+      ],
+      "component_id": "VOLVA"
+    },
+    {
+      "spec_id": "atom-facts",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "HND"
+    },
+    {
+      "spec_id": "security_INDEX",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "SECURITY"
+    },
+    {
+      "spec_id": "specs_INDEX",
+      "status": null,
+      "version": "1.6",
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "AIDA"
+    },
+    {
+      "spec_id": "v1513_baseline",
+      "status": null,
+      "version": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ],
+      "component_id": "OBS"
+    }
+  ],
+  "_page": {
+    "limit": 1000,
+    "offset": 0,
+    "total": 447,
+    "has_more": false,
+    "fields": [
+      "spec_id",
+      "status",
+      "version",
+      "projects",
+      "component_id"
+    ],
+    "fields_checked": true
+  }
+}

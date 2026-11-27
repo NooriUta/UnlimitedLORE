@@ -33,7 +33,7 @@ import { PersonStats } from './PersonStats';
 import { AgentHeadLine } from './AgentHeadLine';
 import { PersonCharts } from '../charts/UserCharts';
 import { useAppT } from '../i18n';
-import { type PassportType } from './passportAdapters';
+import { type AnyPassportType } from './passportAdapters';
 import { fromLoreRecord, optionsFromSlice, withFieldOptions, type OptionState } from './loreRecordContract';
 import { toDictItems, type DictApiRow } from '../sprint/taskDicts';
 import { loadRecordContract } from './recordSource';
@@ -82,7 +82,7 @@ function blocksFor(type: string, id: string, lang: KitLang): LiveBlocks {
 export const mdFor = (type: string, id: string) => (s: string) => <ProseWithPeek text={s} type={type} id={id} />;
 
 export interface ListPassportProps {
-  type: PassportType;
+  type: AnyPassportType;
   id: string;
   placement: RecordPlacement;
   fetchImpl?: typeof fetch;
@@ -493,7 +493,7 @@ export default function ListPassport({ type, id, placement, fetchImpl, backLabel
       {/* AP-PEOPLE-PAGE: карточка агента вне админки — значок harness, профиль, машина и «чей он» ссылкой на владельца. */}
       {type === 'agent' && contract && <AgentHeadLine values={contract.values} links={contract.links} {...(fetchImpl ? { fetchImpl } : {})} />}
       {/* 3а (решение владельца 25.11.2026): цифры шапки — в работе, на приёмке, закрыто за 30 дней, медиана цикла. */}
-      {(type === 'user' || type === 'agent') && <PersonStats subject={{ kind: type, id: view.record.id }} {...(fetchImpl ? { fetchImpl } : {})} />}
+      {(type === 'user' || type === 'agent') && <PersonStats subject={{ kind: type as 'user' | 'agent', id: view.record.id }} {...(fetchImpl ? { fetchImpl } : {})} />}
       {type === 'project' && <ProjectExportButton slug={view.record.id} {...(fetchImpl ? { fetchImpl } : {})} />}
       {type === 'milestone' && (
         <MilestoneBurnLine

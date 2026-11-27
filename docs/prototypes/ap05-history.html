@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>История изменений v2</title>
+<!--
+  SPRINT_LORE_ADMIN_POLISH/AP-05, вторая пачка. Экран: «История» (общая эволюция) — в v1 LoreEvolutionView.tsx:
+  выбрать спринт/ADR/задачу → её SCD2-версии с диффом полей (history_sprint / adr_history / history_task).
+  В v2 есть только вкладка «История» в паспорте записи. Данные — живой снимок LORE 25.11.2026 через MCP (только чтение):
+  closed_tasks / open_tasks {project, changed_from=2026-11-24, sort=changed_at:desc}, decisions {changed_from=2026-11-20},
+  history_sprint {id=SPRINT_UXR_S8_SWITCH}. Режим — ?htab=journal|entity.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#14120e;--bg2:#1c1913;--bg3:#25211a;--bd:#3a3326;--bdh:#56492f;
+  --t1:#efe6d2;--t2:#b8ab90;--t3:#8f826a;
+  --acc:#d9a441;--suc:#8fb85f;--wrn:#e0913a;--dng:#d0644f;--inf:#6fa3c4;
+  --fs-2xs:10px;--fs-xs:11px;--fs-sm:12px;--fs-md:13px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;--head:'Unbounded',Manrope,sans-serif;--r:6px;
+}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
+  --bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--bdh:#b3a17c;--t1:#2a241a;--t2:#5d523f;--t3:#7a6d55;
+  --acc:#a8741a;--suc:#4f7a2a;--wrn:#b0601a;--dng:#b0412d;--inf:#2f6d93;}}
+:root[data-theme="light"]{--bg:#f7f2e7;--bg2:#efe7d6;--bg3:#e6dcc6;--bd:#cfc2a6;--bdh:#b3a17c;--t1:#2a241a;--t2:#5d523f;--t3:#7a6d55;
+  --acc:#a8741a;--suc:#4f7a2a;--wrn:#b0601a;--dng:#b0412d;--inf:#2f6d93;}
+*{box-sizing:border-box}
+html,body{overflow-x:clip}
+body{margin:0;background:var(--bg);color:var(--t1);font:400 var(--fs-sm)/1.5 Manrope,system-ui,sans-serif}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+h1,h2{font-family:var(--head);font-weight:800;margin:0}
+h1{font-size:var(--fs-lg);letter-spacing:.02em}
+h2{font-size:var(--fs-md);margin:0 0 6px}
+h3{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t2);margin:0 0 6px;font-weight:800}
+p{margin:0 0 6px}
+a{color:var(--acc)}
+.mono{font-family:var(--mono)}
+.muted{color:var(--t3)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+/* шапка */
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid var(--bd);background:var(--bg2);position:sticky;top:0;z-index:10}
+.top .sp{flex:1}
+.proto{font-size:var(--fs-2xs);font-weight:800;color:var(--wrn);border:1px dashed var(--wrn);border-radius:999px;padding:1px 8px;text-transform:uppercase;letter-spacing:.06em}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;border:1px solid var(--bd);font-size:var(--fs-xs);white-space:nowrap;color:var(--t2);max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.chip.ok{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 50%,var(--bd))}
+.chip.w{color:var(--wrn);border-color:color-mix(in srgb,var(--wrn) 50%,var(--bd))}
+.chip.d{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 50%,var(--bd))}
+.chip.i{color:var(--inf);border-color:color-mix(in srgb,var(--inf) 50%,var(--bd))}
+.chip.a{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 50%,var(--bd))}
+.chip.new{color:var(--acc);border-style:dashed;border-color:var(--acc);font-weight:800}
+.chip.has{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 40%,var(--bd))}
+/* оболочка v2 */
+.wrap{display:grid;grid-template-columns:200px minmax(0,1fr)}
+nav.side{border-right:1px solid var(--bd);padding:10px 8px;background:var(--bg2);position:sticky;top:41px;align-self:start;max-height:calc(100vh - 41px);overflow:auto}
+.ng{margin-bottom:10px}
+.ng .gh{padding:2px 8px;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:800}
+.ng a{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:var(--r);color:var(--t2);text-decoration:none;font-size:var(--fs-sm)}
+.ng a.on{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);font-weight:700}
+.ng a .chip{margin-left:auto;padding:0 5px;font-size:var(--fs-2xs)}
+main{padding:12px 16px 60px;min-width:0}
+.crumbs{font-size:var(--fs-xs);color:var(--t3);margin-bottom:4px}
+.phone-nav{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:minmax(0,1fr)}
+  nav.side{display:none}
+  .phone-nav{display:flex;gap:6px;overflow-x:auto;padding:6px 16px;border-bottom:1px solid var(--bd);background:var(--bg2);scrollbar-width:none}
+  .phone-nav a{flex:none}
+}
+/* карточки */
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-bottom:12px;min-width:0}
+.why{border-left:3px solid var(--acc)}
+.why p{color:var(--t2);font-size:var(--fs-md)}
+.why p b{color:var(--t1)}
+.state{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:6px;margin-top:6px}
+.state div{background:var(--bg3);border-radius:var(--r);padding:6px 8px;font-size:var(--fs-xs);color:var(--t2)}
+.state b{display:block;color:var(--t1);font-size:var(--fs-sm)}
+.sec-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 8px}
+.sec-h .sp{flex:1}
+/* вкладки и сегменты */
+.tabs{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--bd);margin-bottom:10px}
+.tabs button{padding:5px 10px;font-size:var(--fs-sm);color:var(--t2);border-bottom:2px solid transparent;display:inline-flex;gap:4px;align-items:center}
+.tabs button[aria-selected="true"]{color:var(--acc);border-bottom-color:var(--acc);font-weight:700}
+.tabs button .dot{width:6px;height:6px;border-radius:50%;background:var(--acc)}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden;flex-wrap:wrap}
+.seg button{padding:2px 10px;font-size:var(--fs-xs);color:var(--t2)}
+.seg button[aria-pressed="true"]{background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc);font-weight:700}
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;min-width:0}
+.kpi b{display:block;font:800 var(--fs-xl)/1.15 var(--head)}
+.kpi span{font-size:var(--fs-xs);color:var(--t3)}
+.kpi small{display:block;font-size:var(--fs-2xs);color:var(--t2)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media (min-width:900px){.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* таблица */
+.tbl{width:100%;border-collapse:collapse;font-size:var(--fs-xs)}
+.tbl th{text-align:left;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);font-weight:800;padding:4px 6px;border-bottom:1px solid var(--bd)}
+.tbl td{padding:4px 6px;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);vertical-align:top;overflow-wrap:anywhere}
+.tbl td.n{text-align:right;font-family:var(--mono);white-space:nowrap}
+@media (max-width:600px){.tbl .hide-s{display:none}}
+/* строки-список */
+.rows{display:flex;flex-direction:column;gap:4px}
+.row{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border:1px solid var(--bd);border-radius:var(--r);background:var(--bg2);min-width:0}
+.row .main{flex:1;min-width:0}
+.row .id{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--acc);overflow-wrap:anywhere}
+.row .t{font-size:var(--fs-sm);overflow-wrap:anywhere}
+.row .m{font-size:var(--fs-2xs);color:var(--t3)}
+/* полосы */
+.bar{height:8px;border-radius:999px;background:var(--bg3);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:var(--fs-2xs);color:var(--t2);margin-top:4px}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{fill:var(--t3);font:var(--fs-2xs) var(--mono)}
+/* развилки */
+.forks{display:flex;flex-direction:column;gap:10px}
+.fork{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;padding:10px 12px}
+.fork h2{font-size:var(--fs-sm)}
+.fork .ctx{color:var(--t2);font-size:var(--fs-xs);margin-bottom:8px}
+.ab{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (max-width:420px){.ab{grid-template-columns:minmax(0,1fr)}}
+.opt{border:2px solid var(--bd);border-radius:8px;padding:8px;background:var(--bg);text-align:left;min-width:0;display:flex;flex-direction:column;gap:4px}
+.opt[aria-pressed="true"]{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,var(--bg))}
+.opt .lbl{font-weight:800;font-size:var(--fs-sm)}
+.opt .cost{font-size:var(--fs-2xs);color:var(--t2)}
+.opt .rec{font-size:var(--fs-2xs);font-weight:800;color:var(--suc)}
+.choice{margin-top:10px;font-size:var(--fs-sm);background:var(--bg3);border-radius:var(--r);padding:8px 10px;overflow-wrap:anywhere}
+.choice b{color:var(--acc)}
+.note{font-size:var(--fs-xs);color:var(--t2);background:var(--bg3);border-radius:var(--r);padding:6px 8px;margin:6px 0}
+.note.w{border-left:3px solid var(--wrn)}
+.note.d{border-left:3px solid var(--dng)}
+.honest{font-size:var(--fs-xs);color:var(--wrn);border:1px dashed color-mix(in srgb,var(--wrn) 60%,var(--bd));border-radius:var(--r);padding:6px 8px;margin:6px 0}
+[hidden]{display:none!important}
+footer.src{font-size:var(--fs-2xs);color:var(--t3);margin-top:16px;overflow-wrap:anywhere}
+
+.day{font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);font-weight:800;margin:10px 0 4px}
+.tr{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:var(--fs-2xs)}
+.tr .arr{color:var(--t3)}
+.time{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--t3);min-width:38px}
+.vers{position:relative;padding-left:14px}
+.vers::before{content:'';position:absolute;left:4px;top:4px;bottom:4px;width:2px;background:var(--bd)}
+.ver{position:relative;margin-bottom:6px}
+.ver::before{content:'';position:absolute;left:-14px;top:9px;width:10px;height:10px;border-radius:50%;background:var(--acc)}
+.ver.tech::before{background:var(--bd)}
+.ver.tech .row{opacity:.6}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+</style>
+</head>
+<body>
+<header class="top"><h1>LORE</h1><span class="proto">Прототип · кода нет</span><span class="sp"></span><span class="chip">NooriUta/UnlimitedLORE</span><span class="chip">снимок 25.11.2026</span></header>
+<div class="phone-nav"></div>
+<div class="wrap"><nav class="side"></nav>
+<main>
+  <div class="crumbs">Контроль › История</div>
+  <div class="sec-h"><h1>История</h1><span class="chip new">новое</span></div>
+
+  <section class="card why">
+    <h2>Что это и зачем</h2>
+    <p>«Новости» отвечают на вопрос <b>что произошло</b> (создано, закрыто, выпущено). История отвечает на <b>что именно поменялось</b>: статус «был → стал», какие поля правили, сколько раз запись переписывали. Это нужно, чтобы разбирать «почему спринт так долго висел» и ловить молчаливые перезаписи.</p>
+    <p>Сейчас в v2 это видно только по одной записи — вкладкой «История» в паспорте. Общего журнала по проекту нет.</p>
+    <div class="state">
+      <div><b>v1</b>выбор записи (спринт / ADR / задача) → версии с диффом полей</div>
+      <div><b>v2 сейчас</b>вкладка «История» в паспорте любой записи</div>
+      <div><b>Предлагается</b>журнал переходов по проекту + та же лента версий у записи</div>
+    </div>
+  </section>
+
+  <div class="tabs" data-tabs="htab"><button data-tab="journal"><span class="dot"></span>Журнал переходов</button><button data-tab="entity">Версии одной записи</button></div>
+
+  <section data-pane="htab:journal">
+    <div class="filters"><div class="seg"><button aria-pressed="true">Все типы</button><button>Задачи</button><button>Спринты</button><button>Решения</button><button>ADR</button></div>
+      <div class="seg"><button>Сегодня</button><button aria-pressed="true">2 дня</button><button>Неделя</button></div>
+      <span class="chip">только смена статуса</span></div>
+    <div id="journal"></div>
+    <p class="note">Каждая строка — переход статуса из SCD2-истории (task_status_versions, decision_status_versions, history_sprint). Клик — паспорт на вкладке «История». Правки текста без смены статуса — значком «изменено», без диффа тела.</p>
+  </section>
+
+  <section data-pane="htab:entity">
+    <div class="sec-h"><span class="mono" style="color:var(--acc)">SPRINT_UXR_S8_SWITCH</span><span class="chip ok">закрыт</span></div>
+    <h2>Переключение на v2 — версии записи</h2>
+    <div class="kpis"><div class="kpi"><b>6</b><span>версий</span><small>history_sprint</small></div><div class="kpi"><b>16 дн</b><span>в работе</span><small>09.11 → 25.11</small></div><div class="kpi"><b>3</b><span>технические</span><small>статус не менялся</small></div></div>
+    <div class="vers" id="vers"></div>
+  </section>
+
+  <h2 style="margin-top:18px">Развилки для владельца</h2>
+  <div class="forks">
+    <div class="fork" data-fork="H1"><h2>H1 · Нужен ли общий раздел</h2><p class="ctx">Функцию v1 (версии одной записи) уже закрывает вкладка «История» паспорта.</p>
+      <div class="ab"><button class="opt" data-opt="а"><span class="lbl">а) Раздел «История» — журнал переходов по проекту</span><span class="cost">Видно движение всего проекта за период. Цена: новый экран и срез «переходы за период» (сейчас task_status_versions не фильтруется по дате — 6438 строк целиком).</span></button>
+      <button class="opt" data-opt="б"><span class="lbl">б) Не раздел, а фильтр «Переходы статуса» в «Новостях»</span><span class="cost">Без нового пункта меню, тот же поток событий. Цена: в «Новостях» смешаются события и переходы; нужна та же доработка среза.</span><span class="rec">рекомендую</span></button></div></div>
+    <div class="fork" data-fork="H2"><h2>H2 · Технические версии</h2><p class="ctx">У S8 из 6 версий 3 — без смены статуса (перезапись через секунду).</p>
+      <div class="ab"><button class="opt" data-opt="а"><span class="lbl">а) Свернуть: «ещё 3 технические версии»</span><span class="cost">Читается история, а не шум. Цена: правка «по тихому» видна только по клику.</span><span class="rec">рекомендую</span></button>
+      <button class="opt" data-opt="б"><span class="lbl">б) Показывать все версии</span><span class="cost">Полная правда. Цена: на долгих записях лента в разы длиннее, смысл теряется.</span></button></div></div>
+  </div>
+  <div class="choice" id="choice"></div>
+  <footer class="src">Источник: прод LORE, MCP query_slice 25.11.2026 — closed_tasks 4 / open_tasks 57 (project, changed_from 24.11); decisions 43 с 20.11; history_sprint SPRINT_UXR_S8_SWITCH 6 версий.</footer>
+</main></div>
+<script>
+// Общая обвязка прототипов AP-05 (вторая пачка): меню v2, вкладки в адресе, развилки «а | б».
+const NAV = [
+  ['Лента', [['news', 'Новости'], ['analytics', 'Аналитика']]],
+  ['Работа', [['sprint', 'Спринты'], ['task', 'Задачи'], ['milestone', 'Вехи'], ['release', 'Релизы'], ['pr', 'PR'], ['quality_gate', 'Гейты качества']]],
+  ['Знание', [['adr', 'ADR'], ['decision', 'Решения'], ['spec', 'Спеки'], ['doc', 'Документы'], ['question', 'Вопросы']]],
+  ['Продукт', [['product', 'Продукты'], ['feature', 'Фичи'], ['actor', 'Роли'], ['pain', 'Боли'], ['gain', 'Выгоды'], ['job', 'Работы']]],
+  ['Устройство', [['project', 'Проекты'], ['component', 'Компоненты'], ['tech', 'Технологии']]],
+];
+function renderNav(current, marks, extra) {
+  const nav = NAV.map(([g, items]) => [g, items.slice()]);
+  (extra || []).forEach(([grp, id, label]) => { const g = nav.find(x => x[0] === grp); if (g) g[1].push([id, label]); else nav.push([grp, [[id, label]]]); });
+  const side = document.querySelector('nav.side');
+  const phone = document.querySelector('.phone-nav');
+  const chip = id => marks[id] ? `<span class="chip ${marks[id][0]}">${marks[id][1]}</span>` : '';
+  if (side) side.innerHTML = nav.map(([g, items]) => `<div class="ng"><div class="gh">${g}</div>${items.map(([id, l]) =>
+    `<a href="#" class="${id === current ? 'on' : ''}" onclick="return false">${l}${chip(id)}</a>`).join('')}</div>`).join('');
+  if (phone) phone.innerHTML = nav.flatMap(([, items]) => items).filter(([id]) => id === current || marks[id]).map(([id, l]) =>
+    `<a href="#" class="chip ${id === current ? 'a' : ''}" onclick="return false">${l}${marks[id] ? ' · ' + marks[id][1] : ''}</a>`).join('');
+}
+function urlParam(k) { try { return new URL(location.href).searchParams.get(k); } catch { return null; } }
+function setUrlParam(k, v) { try { const u = new URL(location.href); u.searchParams.set(k, v); history.replaceState(null, '', u); } catch {} }
+// Вкладки: <div class="tabs" data-tabs="atab"><button data-tab="x">…</button></div> + <section data-pane="atab:x">
+function initTabs(onChange) {
+  document.querySelectorAll('.tabs[data-tabs]').forEach(bar => {
+    const key = bar.dataset.tabs;
+    const btns = [...bar.querySelectorAll('button[data-tab]')];
+    const show = id => {
+      btns.forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === id)));
+      document.querySelectorAll(`[data-pane^="${key}:"]`).forEach(p => { p.hidden = p.dataset.pane !== `${key}:${id}`; });
+      onChange && onChange(key, id);
+    };
+    btns.forEach(b => { b.setAttribute('role', 'tab'); b.addEventListener('click', () => { setUrlParam(key, b.dataset.tab); show(b.dataset.tab); }); });
+    const start = urlParam(key);
+    show(btns.some(b => b.dataset.tab === start) ? start : btns[0].dataset.tab);
+  });
+}
+// Развилки: <div class="fork" data-fork="A1"><button class="opt" data-opt="а">…
+function initForks() {
+  const out = document.getElementById('choice');
+  const upd = () => {
+    if (!out) return;
+    const picked = [...document.querySelectorAll('.fork[data-fork]')].map(f => {
+      const on = f.querySelector('.opt[aria-pressed="true"]');
+      return on ? `${f.dataset.fork}${on.dataset.opt}` : null;
+    }).filter(Boolean);
+    out.innerHTML = picked.length ? `Ваш выбор одной строкой: <b>${picked.join(', ')}</b> — так и ответьте в канал.` : 'Выберите вариант в каждой карточке — здесь соберётся строка для ответа.';
+  };
+  document.querySelectorAll('.fork[data-fork]').forEach(f => {
+    const opts = [...f.querySelectorAll('.opt')];
+    opts.forEach(o => { o.setAttribute('aria-pressed', 'false'); o.addEventListener('click', () => { opts.forEach(x => x.setAttribute('aria-pressed', String(x === o))); upd(); }); });
+  });
+  upd();
+}
+// Горизонтальные столбцы: [{label, value, color?}] → SVG шириной 100%.
+function hbars(rows, opts = {}) {
+  const max = Math.max(1, ...rows.map(r => r.value));
+  const h = 18, lw = opts.labelW || 120, W = 400;
+  const body = rows.map((r, i) => {
+    const w = Math.max(2, (W - lw - 40) * r.value / max);
+    return `<text x="0" y="${i * h + 12}">${r.label}</text><rect x="${lw}" y="${i * h + 3}" width="${w}" height="11" rx="3" fill="${r.color || 'var(--acc)'}"/><text x="${lw + w + 4}" y="${i * h + 12}">${r.value}</text>`;
+  }).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${rows.length * h + 4}" role="img" aria-label="${opts.aria || ''}">${body}</svg>`;
+}
+// Вертикальные столбцы по неделям: [{label, value}].
+function vbars(rows, opts = {}) {
+  const max = Math.max(1, ...rows.map(r => r.value));
+  const W = 400, H = opts.h || 110, bw = W / rows.length;
+  const body = rows.map((r, i) => {
+    const hh = Math.max(1, (H - 22) * r.value / max);
+    return `<rect x="${i * bw + 3}" y="${H - 14 - hh}" width="${bw - 6}" height="${hh}" rx="2" fill="${r.color || 'var(--acc)'}"/><text x="${i * bw + bw / 2}" y="${H - 3}" text-anchor="middle">${r.label}</text>${r.value ? `<text x="${i * bw + bw / 2}" y="${H - 17 - hh}" text-anchor="middle">${r.value}</text>` : ''}`;
+  }).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${opts.aria || ''}">${body}</svg>`;
+}
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const short = id => String(id).replace(/^SPRINT_/, '');
+
+renderNav('history', { analytics: ['has', 'есть'], history: ['new', 'новое'] }, [['Контроль', 'history', 'История']]);
+const ST = { done: ['закрыта', 'ok'], rfd: ['к выкатке', 'i'], ip: ['в работе', 'a'], acc: ['принято', 'ok'], prop: ['предложено', ''], pl: ['план', ''] };
+const st = k => `<span class="chip ${ST[k][1]}">${ST[k][0]}</span>`;
+// [время UTC, тип, id, заголовок, было, стало]; «было» — предыдущая версия; где её не читали — «?»
+const J = [
+  ['25.11', [
+    ['18:52', 'задача', 'SPRINT_QG_REBUILD/QG-07', 'Честный baseline: метрика со сменившимся знаменателем не сравнивается со старой', '?', 'ip'],
+    ['18:51', 'задача', 'SPRINT_LORE_KNOW_REGISTRY/KREG-01', 'Миграция схемы: KnowKind + KnowKindHist (SCD2)', '?', 'rfd'],
+    ['17:52', 'задача', 'SPRINT_LORE_EXT_ISSUES_W2/ISS-04-MCP-HTTP', '#4: MCP по HTTP — bearer-токен, CORS, /health', '?', 'ip'],
+    ['17:48', 'решение', 'D-2026-QUERY-LANG-PUSHDOWN-AND-ERROR-COUNT', 'Язык запросов: фильтры по индексу — внутрь SQL среза', '?', 'acc'],
+    ['17:47', 'решение', 'D-2026-LORE-MCP-LINK-NOOP-IS-ERROR', 'MCP: CUD с outcome=noop отдаётся агенту как isError', '?', 'acc'],
+    ['17:13', 'задача', 'SPRINT_LORE_EXT_AUDIT_1190/AUD-DOCS', 'Документация установки отстала от кода', '?', 'rfd'],
+    ['16:47', 'решение', 'D-2026-QUERY-LANG-LIMITS-GROUPING', 'Язык запросов: limit+page с потолком 3000', '?', 'acc'],
+    ['12:45', 'задача', 'SPRINT_LORE_MD_ARCHIVE/MDA-01', 'Состав и раскладка архива — на согласование', '?', 'done'],
+    ['12:35', 'спринт', 'SPRINT_UXR_S8_SWITCH', 'Переключение на v2', 'ip', 'done'],
+    ['12:35', 'задача', 'SPRINT_UXR_S8_SWITCH/S8-01', 'Чек-лист готовности: e2e, контракты, проба :4400', '?', 'done'],
+  ]],
+  ['24.11', [
+    ['16:57', 'решение', 'ADR-LORE-057-R1 … R4', '4 решения-потомка ADR-LORE-057 (реестр видов)', '—', 'prop'],
+    ['16:40', 'задача', 'SPRINT_LORE_MODEL_DOCS_TIDY/MD-05', 'Модель PR и мост Forgejo', '?', 'done'],
+    ['16:40', 'задача', 'SPRINT_LORE_MODEL_DOCS_TIDY/MIG-04', 'Универсальный установщик LORE', '?', 'done'],
+  ]],
+];
+document.getElementById('journal').innerHTML = J.map(([d, rows]) => `<div class="day">${d}</div><div class="rows">${rows.map(([t, k, id, title, from, to]) => `<div class="row"><span class="time">${t}</span><div class="main"><div class="id">${k} · ${id}</div><div class="t">${title}</div><div class="tr">${from === '?' ? '<span class="chip" title="предыдущая версия в этом снимке не читалась">…</span>' : from === '—' ? '<span class="chip">новое</span>' : st(from)}<span class="arr">→</span>${st(to)}</div></div></div>`).join('')}</div>`).join('');
+const V = [
+  ['07.11 13:10', 'pl', 'создан', false], ['07.11 13:10', 'pl', 'через 10 с — статус тот же', true], ['07.11 13:33', 'pl', 'через 23 мин — статус тот же', true],
+  ['09.11 03:37', 'ip', 'план → в работе', false], ['25.11 12:35', 'done', 'в работе → закрыт · 16 дней', false], ['25.11 12:35', 'done', 'через 1 с — статус тот же', true],
+];
+document.getElementById('vers').innerHTML = V.map(([t, s, d, tech]) => `<div class="ver ${tech ? 'tech' : ''}"><div class="row"><span class="time">${t}</span><div class="main"><div class="tr">${st(s)}<span class="muted">${d}</span></div>${tech ? '<div class="m">техническая версия: изменились другие поля или перезапись тем же значением</div>' : ''}</div></div></div>`).join('');
+initTabs();
+initForks();
+</script>
+</body>
+</html>

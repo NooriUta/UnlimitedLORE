@@ -419,7 +419,7 @@ class LoreFindEmbeddedTest {
         assertThrows(LoreGraphBuilder.GraphException.class,
             () -> find(req("type", "task", "links_to", req("id", "component:COMP1", "rels", List.of("drop table")))));
         LoreGraphBuilder.GraphException later = assertThrows(LoreGraphBuilder.GraphException.class,
-            () -> find(req("type", "task", "neighbors", List.of(Map.of("as", "x")))));
+            () -> find(req("type", "task", "edge_fields", List.of("role"))));
         assertEquals("NOT_IMPLEMENTED", later.code());
         LoreGraphBuilder.GraphException missing = assertThrows(LoreGraphBuilder.GraphException.class,
             () -> find(req("type", "task", "links_to", req("id", "component:NOPE"))));
@@ -504,5 +504,145 @@ class LoreFindEmbeddedTest {
         assertThrows(LoreGraphBuilder.GraphException.class, () -> LoreGraphResource.runPath(new LoreGraphResource.DbSource(sql),
             LoreGraphResource.RecordRef.parse("from", "task:SP_A/A-4"), LoreGraphResource.RecordRef.parse("to", "task:NOPE"),
             Set.of(), Set.of(), "both", false, 4, 1, null));
+    }
+
+    // Находка соседней сессии (Mobilepoc, 26.11.2026): SPRINT_MINILORE_LINK_PIPE/LP-21 ушла из waiting в uat,
+    // а find по-прежнему отдавал старый waiting_for «владелица: Р3…» — телефон показывал «ждёт ответа».
+    // Причина: scd2() брал поле из открытой версии, иначе из ЛЮБОЙ прежней. Адресат ожидания принадлежит
+    // своему статусу (то же правило, что у записи: StatusHistoryService не переносит waiting_for из waiting).
+    @SuppressWarnings("unchecked")
+    @Test
+    void waitingForOfAPastWaitingVersionIsNotReadIntoTheOpenOne() {
+        String uid = "SP_A/W-1";
+        db.transaction(() -> {
+        db.command("sql", "INSERT INTO KnowTask SET task_uid = ?, task_id = ?, title = ?, work_class = 'feature'", uid, "W-1", "ждала ответа");
+        db.command("sql", "INSERT INTO KnowTaskHist SET task_uid = ?, state_uid = 'w1-old', status_raw = 'WAITING', "
+            + "waiting_for = 'владелица: Р3', effort_days = 2.0, valid_from = '2026-11-18T10:00:00Z', valid_to = '2026-11-19T10:00:00Z'", uid);
+        db.command("sql", "INSERT INTO KnowTaskHist SET task_uid = ?, state_uid = 'w1-new', status_raw = 'UAT', "
+            + "valid_from = '2026-11-19T10:00:00Z'", uid);
+        db.command("sql", "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = ?) TO (SELECT FROM KnowTaskHist WHERE state_uid = 'w1-old')", uid);
+        db.command("sql", "CREATE EDGE HAS_STATE FROM (SELECT FROM KnowTask WHERE task_uid = ?) TO (SELECT FROM KnowTaskHist WHERE state_uid = 'w1-new')", uid);
+        edge("PART_OF", "KnowTask", "task_uid", uid, "KnowSprint", "sprint_id", "SP_A");
+        });
+
+        Map<String, Object> res = find(req("type", "task", "id_in", List.of(uid), "fields", List.of("waiting_for", "effort_days", "status_raw")));
+        Map<String, Object> row = ((List<Map<String, Object>>) res.get("rows")).get(0);
+        assertEquals("UAT", row.get("status_raw"), "статус — открытой версии");
+        assertNull(row.get("waiting_for"), "адресат ожидания прошлого waiting не тянется в uat");
+        // Положительный контроль: поля без привязки к статусу по-прежнему берутся из последней версии, где заданы.
+        assertEquals(2.0, ((Number) row.get("effort_days")).doubleValue(), 1e-9, "оценка тянется из истории, как раньше");
+    }
+
+    // ── neighbors: соседи найденных записей одним вызовом (GC-05, SPEC §6.1) ─────────────────────
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Map<String, Object>> rowsById(Map<String, Object> res) {
+        Map<String, Map<String, Object>> out = new LinkedHashMap<>();
+        for (Map<String, Object> r : (List<Map<String, Object>>) res.get("rows")) out.put(String.valueOf(r.get("id")), r);
+        return out;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> nIds(Map<String, Object> row, String as) {
+        Object v = row.get(as);
+        assertNotNull(v, "у строки " + row.get("id") + " нет поля соседей «" + as + "»: " + row);
+        return ((List<Map<String, Object>>) v).stream().map(n -> n.get("type") + ":" + n.get("id")).toList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> nMeta(Map<String, Object> res, int i) {
+        return ((List<Map<String, Object>>) meta(res).get("neighbors")).get(i);
+    }
+
+    @Test
+    void neighborsByRelAndDirection() {
+        Map<String, Object> out = find(req("type", "task", "id_in", List.of("SP_A/A-1", "SP_A/A-4"),
+            "neighbors", req("rels", List.of("DEPENDS_ON"), "dir", "out")));
+        Map<String, Map<String, Object>> rows = rowsById(out);
+        assertEquals(List.of("task:SP_A/A-1"), nIds(rows.get("SP_A/A-4"), "neighbors"), "A-4 зависит от A-1");
+        assertEquals(List.of(), nIds(rows.get("SP_A/A-1"), "neighbors"), "у A-1 исходящих DEPENDS_ON нет — пустой список, не null");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> n = ((List<Map<String, Object>>) rows.get("SP_A/A-4").get("neighbors")).get(0);
+        assertEquals("DEPENDS_ON", n.get("rel"));
+        assertEquals("out", n.get("dir"));
+        assertEquals("граф поиск окрестность", n.get("title"));
+        assertEquals("in_progress", n.get("status_category"));
+
+        Map<String, Object> in = find(req("type", "task", "id_in", List.of("SP_A/A-1", "SP_A/A-4"),
+            "neighbors", req("rels", List.of("DEPENDS_ON"), "dir", "in")));
+        assertEquals(List.of("task:SP_A/A-4"), nIds(rowsById(in).get("SP_A/A-1"), "neighbors"), "влияние: от A-1 зависит A-4");
+        assertEquals(List.of(), nIds(rowsById(in).get("SP_A/A-4"), "neighbors"));
+
+        Map<String, Object> both = find(req("type", "task", "id_in", List.of("SP_A/A-1"),
+            "neighbors", req("rels", List.of("DEPENDS_ON"))));
+        assertEquals(List.of("task:SP_A/A-4"), nIds(rowsById(both).get("SP_A/A-1"), "neighbors"), "по умолчанию dir=both");
+    }
+
+    @Test
+    void severalNeighborSetsWithNamesAndTypes() {
+        Map<String, Object> out = find(req("type", "task", "id_in", List.of("SP_A/A-1"),
+            "neighbors", List.of(
+                req("as", "components", "rels", List.of("TAGGED_WITH"), "dir", "out"),
+                req("as", "sprint", "rels", List.of("PART_OF", "TAGGED_WITH"), "dir", "out", "types", List.of("sprint")))));
+        Map<String, Object> row = rowsById(out).get("SP_A/A-1");
+        assertEquals(List.of("component:COMP1"), nIds(row, "components"));
+        assertEquals(List.of("sprint:SP_A"), nIds(row, "sprint"), "types отбирает соседей по типу: компонент отброшен");
+        assertEquals("components", nMeta(out, 0).get("as"));
+        assertEquals("sprint", nMeta(out, 1).get("as"));
+    }
+
+    @Test
+    void neighborsOutsideScopeAreHiddenAndCounted() {
+        // C-1 (проект o/p2) зависит от A-1 (o/p1); вызывающему виден только o/p1.
+        db.transaction(() -> edge("DEPENDS_ON", "KnowTask", "task_uid", "SP_C/C-1", "KnowTask", "task_uid", "SP_A/A-1"));
+        Map<String, Object> out = find(req("type", "task", "id_in", List.of("SP_A/A-1"),
+            "neighbors", req("rels", List.of("DEPENDS_ON"), "dir", "in")), Set.of("o/p1"));
+        assertEquals(List.of("task:SP_A/A-4"), nIds(rowsById(out).get("SP_A/A-1"), "neighbors"), "чужая задача не показана");
+        assertEquals(1, ((Number) nMeta(out, 0).get("hidden_by_scope")).intValue(), "но сосчитана — «скрыто», а не «нет»");
+
+        Map<String, Object> all = find(req("type", "task", "id_in", List.of("SP_A/A-1"),
+            "neighbors", req("rels", List.of("DEPENDS_ON"), "dir", "in")));
+        assertEquals(List.of("task:SP_A/A-4", "task:SP_C/C-1"), nIds(rowsById(all).get("SP_A/A-1"), "neighbors"),
+            "положительный контроль: без скоупа сосед виден");
+        assertEquals(0, ((Number) nMeta(all, 0).get("hidden_by_scope")).intValue());
+    }
+
+    @Test
+    void closedHistoricEdgeIsNotANeighbor() {
+        historicEdges();
+        db.transaction(() -> {
+            cmd("INSERT INTO KnowMilestone SET milestone_id = 'M-NEW', label = 'новая веха'");
+            db.command("sql", "CREATE EDGE TARGETS_MILESTONE FROM (SELECT FROM KnowSprint WHERE sprint_id = 'SP_A') TO "
+                + "(SELECT FROM KnowMilestone WHERE milestone_id = 'M-NEW') SET valid_from = '2026-11-05'");
+        });
+        Map<String, Object> out = find(req("type", "sprint", "id_in", List.of("SP_A"),
+            "neighbors", req("rels", List.of("TARGETS_MILESTONE"), "dir", "out")));
+        assertEquals(List.of("milestone:M-NEW"), nIds(rowsById(out).get("SP_A"), "neighbors"), "снятая веха M-OLD — не сосед");
+    }
+
+    @Test
+    void neighborCapPerRowIsHonest() {
+        Map<String, Object> out = find(req("type", "sprint", "id_in", List.of("SP_A"),
+            "neighbors", req("rels", List.of("PART_OF"), "dir", "in", "limit", 2)));
+        assertEquals(List.of("task:SP_A/A-1", "task:SP_A/A-2"), nIds(rowsById(out).get("SP_A"), "neighbors"));
+        assertEquals(List.of("SP_A"), nMeta(out, 0).get("truncated_ids"), "обрезка названа: у какой строки соседей больше");
+        assertEquals(2, ((Number) nMeta(out, 0).get("limit")).intValue());
+    }
+
+    @Test
+    void neighborsRequestIsValidated() {
+        for (Map<String, Object> bad : List.of(
+                req("type", "task", "neighbors", req("as", "x")),                                          // нет rels
+                req("type", "task", "neighbors", req("rels", List.of("drop table"))),                      // не имя ребра
+                req("type", "task", "neighbors", req("rels", List.of("PART_OF"), "types", List.of("nope"))),
+                req("type", "task", "neighbors", req("rels", List.of("PART_OF"), "dir", "up")),
+                req("type", "task", "neighbors", req("rels", List.of("PART_OF"), "limit", 0)),
+                req("type", "task", "neighbors", req("rels", List.of("PART_OF"), "oops", 1)),              // чужой ключ
+                req("type", "task", "neighbors", req("rels", List.of("PART_OF"), "as", "title")),          // занятое имя
+                req("type", "task", "neighbors", List.of(req("rels", List.of("PART_OF")), req("rels", List.of("TAGGED_WITH")))))) {
+            LoreGraphBuilder.GraphException e = assertThrows(LoreGraphBuilder.GraphException.class, () -> find(bad), bad.toString());
+            assertEquals(400, e.status(), bad + " → " + e.getMessage());
+            assertEquals("BAD_PARAMS", e.code(), bad.toString());
+        }
     }
 }
