@@ -1,0 +1,4010 @@
+{
+  "rows": [
+    {
+      "ts": "2026-11-07T17:32:16.554Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-19",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:32:08.394Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-16",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:32:07.057Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-16",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:32:03.881Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:31:08.667Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-25",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:30:32.395Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:28:46.904Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-NEWS-ALGORITHMS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:28:19.450Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:28:06.875Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:28:01.187Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr/857/merge",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:27:54.582Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:27:42.370Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:27:28.942Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr/854/merge",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:27:03.576Z",
+      "family": "status",
+      "entity_id": "/lore/status/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:26:52.809Z",
+      "family": "task",
+      "entity_id": "/lore/task/edit/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:26:31.502Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:25:53.501Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr/856/merge",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:25:26.620Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-17",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:25:25.828Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-15",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:25:25.237Z",
+      "family": "task",
+      "entity_id": "/lore/task/edit/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:22:03.369Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr/855/merge",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:20:41.312Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:19:18.350Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-16",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:16:50.685Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-17",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:16:02.271Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:15:49.228Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:15:35.660Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T17:12:56.491Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-25",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:12:44.364Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-25",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:12:43.818Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-25",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:11:16.611Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-15",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:11:15.977Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-14",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:11:15.260Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-14",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:11:12.496Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S5_RECORD_TASKS/S5-13",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:11:07.299Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_POLISH/PHASE_A",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:11:07.267Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_POLISH",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:11:07.232Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-14",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:11:07.211Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S5_RECORD_TASKS/S5-13",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:10:56.208Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-NEWS-ALGORITHMS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:10:05.471Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S1_HONEST_API/S1-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:10:04.870Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S1_HONEST_API/S1-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:10:04.039Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S1_HONEST_API/S1-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:10:03.218Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S1_HONEST_API/S1-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:10:02.484Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S1_HONEST_API/S1-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:10:01.671Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S1_HONEST_API/S1-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:10:00.923Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S1_HONEST_API/S1-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:10:00.184Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S1_HONEST_API/S1-02",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:09:59.591Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S1_HONEST_API/S1-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:09:57.014Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-NEWS-ALGORITHMS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:09:55.588Z",
+      "family": "task",
+      "entity_id": "/lore/task/edit/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:09:19.965Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr/852/merge",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:06:59.451Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_CONTENT_PACKS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:06:58.591Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_METHOD",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:06:57.409Z",
+      "family": "status",
+      "entity_id": "/lore/status/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:06:56.611Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_METHOD/ME-8",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:06:32.047Z",
+      "family": "status",
+      "entity_id": "/lore/status/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:05:50.888Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-NEWS-ALGORITHMS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:05:01.647Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-NEWS-ALGORITHMS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:05:01.584Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-NEWS-ALGORITHMS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:02:11.772Z",
+      "family": "decision",
+      "entity_id": "D-2026-UXR-NEWS-V2-RULES",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:00:27.172Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_CONTENT_PACKS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:00:25.746Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_METHOD",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:00:24.621Z",
+      "family": "status",
+      "entity_id": "/lore/status/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:00:23.764Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_METHOD/ME-8",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T17:00:08.151Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:59:52.995Z",
+      "family": "status",
+      "entity_id": "/lore/status/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:59:49.178Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-NEWS-PARITY",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:59:49.122Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-NEWS-PARITY",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:59:30.053Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:59:29.345Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:57:52.134Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:57:20.298Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:56:16.875Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-S2-CONTRACTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:56:16.817Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-S2-CONTRACTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:49:06.743Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_MINILORE_POLISH",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:57.449Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-24",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:56.730Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-23",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:55.896Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-22",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:55.093Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-21",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:54.286Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-20",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:53.469Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-19",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:52.601Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-18",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:51.954Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-17",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:50.924Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-16",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:50.041Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-15",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:49.239Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-14",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:48.904Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-13",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:41.641Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-13",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:41.064Z",
+      "family": "release",
+      "entity_id": "v1.11.198",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:40.076Z",
+      "family": "release",
+      "entity_id": "v1.11.198",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:34.680Z",
+      "family": "release",
+      "entity_id": "v1.11.198",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:32.561Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-13",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:31.067Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S2_GRAPH_MEMORY",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:28.758Z",
+      "family": "task",
+      "entity_id": "/lore/task/edit/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:10.020Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-11",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:09.130Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-3",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:08.216Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:07.290Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-12",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:06.367Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-9",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:05.368Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-8",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:04.453Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-4",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:03.503Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-7",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:02.548Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:01.585Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-6",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:48:00.704Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-5",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:47:59.880Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-2",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:47:55.210Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-24",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:47:48.290Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-23",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:47:41.569Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-22",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:47:34.781Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-21",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:47:27.009Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-20",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:47:14.806Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-19",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:47:10.603Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-18",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:47:05.117Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-17",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:47:00.796Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-16",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:46:55.884Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-15",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:46:51.544Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-14",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:46:45.977Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-13",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:46:30.900Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T16:46:26.421Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T16:46:20.261Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T16:46:15.518Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T16:46:10.348Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:46:10.164Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T16:46:05.186Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T16:45:58.322Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T16:45:47.921Z",
+      "family": "phase",
+      "entity_id": "SPRINT_MINILORE_POLISH/PHASE_E",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:45:47.092Z",
+      "family": "phase",
+      "entity_id": "SPRINT_MINILORE_POLISH/PHASE_D",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:45:46.257Z",
+      "family": "phase",
+      "entity_id": "SPRINT_MINILORE_POLISH/PHASE_C",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:45:44.996Z",
+      "family": "phase",
+      "entity_id": "SPRINT_MINILORE_POLISH/PHASE_B",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:45:44.447Z",
+      "family": "phase",
+      "entity_id": "SPRINT_MINILORE_POLISH/PHASE_A",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:43:24.708Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S8_SWITCH/S8-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:42:54.204Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S8_SWITCH/S8-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:38:28.660Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:37:03.261Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:36:55.153Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 404
+    },
+    {
+      "ts": "2026-11-07T16:34:07.605Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:34:06.953Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:33:26.702Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr/851/merge",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:31:49.425Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:31:48.805Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:31:47.979Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:31:47.302Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:31:46.442Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:31:45.906Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-02",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:31:44.531Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:31:44.082Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:31:41.001Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:31:39.075Z",
+      "family": "task",
+      "entity_id": "/lore/task/edit/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:31:32.879Z",
+      "family": "task",
+      "entity_id": "/lore/task/edit/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:30:53.855Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr/853/merge",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:30:31.445Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr/850/merge",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:06:55.372Z",
+      "family": "adr",
+      "entity_id": "ADR-DWL-008",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:06:55.328Z",
+      "family": "adr",
+      "entity_id": "ADR-DWL-008",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:06:36.531Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_CONTENT_PACKS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:06:35.152Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_CONTENT_PACKS/CP-4",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:00:18.719Z",
+      "family": "sprint",
+      "entity_id": "/lore/sprint/dep",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:00:17.116Z",
+      "family": "sprint",
+      "entity_id": "/lore/sprint/dep",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:00:15.609Z",
+      "family": "sprint",
+      "entity_id": "/lore/sprint/dep",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:00:14.208Z",
+      "family": "sprint",
+      "entity_id": "/lore/sprint/dep",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:00:12.737Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_CONTENT_PACKS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:00:09.932Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_CONTENT_PACKS/CP-6",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:00:06.290Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_CONTENT_PACKS/CP-5",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T16:00:02.824Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_CONTENT_PACKS/CP-4",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:58.929Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_CONTENT_PACKS/CP-3",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:55.087Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_CONTENT_PACKS/CP-2",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:50.766Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_CONTENT_PACKS/CP-1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:41.576Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_CONTENT_PACKS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:34.990Z",
+      "family": "status",
+      "entity_id": "/lore/status/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:34.680Z",
+      "family": "status",
+      "entity_id": "/lore/status/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:30.367Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_METHOD/ME-9",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:26.837Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_METHOD/ME-8",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:22.777Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_METHOD/ME-7",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:18.941Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_METHOD/ME-6",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:15.125Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_METHOD/ME-5",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:10.746Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_METHOD/ME-4",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:59:06.878Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_METHOD/ME-3",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:58:59.089Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_METHOD/ME-2",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:58:55.188Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_METHOD/ME-1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:58:44.072Z",
+      "family": "status",
+      "entity_id": "/lore/status/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:58:43.635Z",
+      "family": "status",
+      "entity_id": "/lore/status/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:58:42.624Z",
+      "family": "task",
+      "entity_id": "/lore/task/edit/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:58:20.558Z",
+      "family": "sprint",
+      "entity_id": "/lore/sprint/dep",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:58:19.652Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_METHOD",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:58:08.462Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_METHOD",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:57:46.266Z",
+      "family": "status",
+      "entity_id": "/lore/status/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:57:44.938Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_WILD_LANDS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:57:43.829Z",
+      "family": "milestone",
+      "entity_id": "SPRINT_DWL_WILD_LANDS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:57:43.029Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_WILD_LANDS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:57:39.052Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_WILD_LANDS/WL-5",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:57:34.870Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_WILD_LANDS/WL-4",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:57:31.010Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_WILD_LANDS/WL-3",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:57:28.052Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_WILD_LANDS/WL-2",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:57:25.081Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_WILD_LANDS/WL-1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:57:14.924Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T15:57:10.691Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T15:57:06.585Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T15:57:03.684Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T15:57:01.080Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T15:56:53.143Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_WILD_LANDS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:56:39.713Z",
+      "family": "doc",
+      "entity_id": "lore_ux_principles_minilore_addendum",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:56:39.662Z",
+      "family": "doc",
+      "entity_id": "lore_ux_principles_minilore_addendum",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:56:34.764Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_SETTINGS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:56:34.747Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_SETTINGS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:56:32.735Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_QUALITY",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:56:32.687Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_QUALITY",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:56:26.968Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_LORE_AREAS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:56:26.904Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_DWL_LORE_AREAS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:56:23.544Z",
+      "family": "status",
+      "entity_id": "/lore/status/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:56:19.377Z",
+      "family": "status",
+      "entity_id": "/lore/status/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:56:09.392Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S2_GRAPH_MEMORY/S2-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:56:04.584Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S2_GRAPH_MEMORY/S2-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:55:56.313Z",
+      "family": "doc",
+      "entity_id": "lore_ux_principles_minilore_addendum",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:54:39.586Z",
+      "family": "doc",
+      "entity_id": "lore_ux_principles_minilore_addendum",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:54:39.545Z",
+      "family": "doc",
+      "entity_id": "lore_ux_principles_minilore_addendum",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:50:46.142Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:50:15.479Z",
+      "family": "decision",
+      "entity_id": "D-2026-UXR-KIT-FOUNDATION",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:50:12.486Z",
+      "family": "decision",
+      "entity_id": "D-2026-UXR-KIT-REACT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:47:29.642Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:46:30.392Z",
+      "family": "decision",
+      "entity_id": "D-2026-UXR-KIT-FOUNDATION",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:45:22.177Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:45:05.333Z",
+      "family": "runbook",
+      "entity_id": "ADR-LORE-045",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:45:02.648Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:45:02.272Z",
+      "family": "runbook",
+      "entity_id": "RUNBOOK-LORE-TWO-APPS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:45:02.222Z",
+      "family": "runbook",
+      "entity_id": "RUNBOOK-LORE-TWO-APPS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:44:54.581Z",
+      "family": "sprint",
+      "entity_id": "/lore/sprint/dep",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:44:46.852Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:44:46.054Z",
+      "family": "sprint",
+      "entity_id": "/lore/sprint/dep",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:44:00.543Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:43:30.891Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:43:27.378Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:43:12.515Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr/849/merge",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:39:30.312Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:39:29.724Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-13",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:39:29.019Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-12",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:39:27.983Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-11",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:39:27.077Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:39:26.267Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:38:53.666Z",
+      "family": "adr",
+      "entity_id": "ADR-DWL-008",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:38:53.615Z",
+      "family": "adr",
+      "entity_id": "ADR-DWL-008",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:38:43.637Z",
+      "family": "adr",
+      "entity_id": "ADR-DWL-008",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:38:43.589Z",
+      "family": "adr",
+      "entity_id": "ADR-DWL-008",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:36:46.026Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:36:19.214Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-13",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:36:12.746Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-12",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:36:05.845Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-11",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:36:00.123Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:35:54.139Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:35:42.164Z",
+      "family": "phase",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/PHASE_B",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:35:41.149Z",
+      "family": "phase",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/PHASE_A",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:29:49.980Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:29:25.238Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:29:20.903Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:28:41.377Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr/848/merge",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:25:30.055Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:24:07.808Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:27.145Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:26.553Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00f",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:25.652Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00e",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:24.755Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:23.899Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:23.046Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:22.190Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:21.352Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:20.515Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:19.648Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-02",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:18.794Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:17.632Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-S1-CONTRACTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:12.562Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00f",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:07.855Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00e",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:22:01.848Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:21:56.620Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:21:52.916Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:21:48.269Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:21:43.499Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:21:39.070Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:21:34.392Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-02",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:21:30.133Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT/K-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:21:14.686Z",
+      "family": "sprint",
+      "entity_id": "/lore/sprint/dep",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:21:13.242Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:21:12.582Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:21:05.918Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S10_SEIDR_KIT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:13:53.007Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:06:58.663Z",
+      "family": "bragi",
+      "entity_id": "lore-ui-v1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:06:56.730Z",
+      "family": "bragi",
+      "entity_id": "lore-ui-v1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:06:55.036Z",
+      "family": "bragi",
+      "entity_id": "lore-ui-v1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:06:53.142Z",
+      "family": "bragi",
+      "entity_id": "lore-ui-v1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:06:51.640Z",
+      "family": "bragi",
+      "entity_id": "lore-ui-v1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:06:50.287Z",
+      "family": "bragi",
+      "entity_id": "lore-ui-v1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:06:48.920Z",
+      "family": "bragi",
+      "entity_id": "lore-ui-v1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:04:53.620Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00d",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:04:53.002Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00c",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:04:51.996Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00b",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:04:51.332Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00a",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:04:47.320Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00d",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:04:42.221Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00c",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:04:35.257Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00b",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:04:28.382Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00a",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:04:17.767Z",
+      "family": "phase",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS/PHASE_A",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:03:37.697Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:03:11.483Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:03:05.361Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:02:58.437Z",
+      "family": "decision",
+      "entity_id": "D-2026-UXR-V2-FOLDER-V1-FROZEN",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:02:44.177Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-S1-CONTRACTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:02:44.125Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-S1-CONTRACTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T15:01:16.767Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:58:26.572Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S1_HONEST_API",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:56:20.746Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:56:20.211Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:51:59.652Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:51:40.542Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-02",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:51:39.969Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-02",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:51:29.156Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr/847/merge",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:17:18.891Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:16:57.101Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:16:56.384Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S0_SAFETY/S0-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:16:43.758Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr/846/merge",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:04:11.819Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_DEEP_ARCHIVE/DA-7",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:04:05.115Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_DEEP_ARCHIVE",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:03:59.691Z",
+      "family": "task",
+      "entity_id": "/lore/task",
+      "caller": "full",
+      "axis": "agent",
+      "status": 400
+    },
+    {
+      "ts": "2026-11-07T14:03:38.415Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:03:37.771Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:03:37.158Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T14:03:34.026Z",
+      "family": "task",
+      "entity_id": "/lore/task/edit/batch",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:59:51.907Z",
+      "family": "spec",
+      "entity_id": "SPEC-DWL-RUNE-DREAMS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:59:04.365Z",
+      "family": "spec",
+      "entity_id": "SPEC-DWL-RUNE-DREAMS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:58:22.162Z",
+      "family": "task",
+      "entity_id": "SPRINT_DWL_LORE_AREAS/LA-3",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:56:48.449Z",
+      "family": "forgejo",
+      "entity_id": "/lore/forgejo/pr",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:34:29.910Z",
+      "family": "doc",
+      "entity_id": "minilore_mobile_images_diagrams_research_2026_11_07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:34:29.867Z",
+      "family": "doc",
+      "entity_id": "minilore_mobile_images_diagrams_research_2026_11_07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:34:15.514Z",
+      "family": "status",
+      "entity_id": "SPRINT_UXR_S0_SAFETY",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:33:20.268Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:33:19.497Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S8_SWITCH",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:33:18.594Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S7C_WHY_CANVAS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:33:17.697Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S6_VOLVA_IN_LORE",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:33:16.757Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:33:15.832Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S7A_NEWS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:33:14.993Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S5_RECORD_TASKS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:33:14.074Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:33:13.141Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:33:12.266Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S2_GRAPH_MEMORY",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:33:11.290Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S1_HONEST_API",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:33:10.595Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S0_SAFETY",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:29:30.145Z",
+      "family": "status",
+      "entity_id": "SPRINT_MINILORE_TG_LOOK/TG-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:29:29.635Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_TG_LOOK/TG-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:26:36.281Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S7A_NEWS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:26:24.717Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:26:20.316Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:25:41.735Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S7A_NEWS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:25:29.743Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:25:26.644Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S8_SWITCH",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:25:24.120Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S7C_WHY_CANVAS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:25:19.957Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:25:16.736Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S7A_NEWS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:25:13.043Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S6_VOLVA_IN_LORE",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:25:09.524Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S5_RECORD_TASKS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:25:03.851Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S4_UI_SHELL_LISTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:24:58.644Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:24:55.548Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S2_GRAPH_MEMORY",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:24:54.683Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S7A_NEWS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:24:51.685Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S1_HONEST_API",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:24:47.487Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S0_SAFETY",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:24:42.437Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:24:39.427Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:23:21.745Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-SPRINT-CHAIN",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:23:21.697Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-SPRINT-CHAIN",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:23:10.039Z",
+      "family": "actor",
+      "entity_id": "698f34c4-e16d-4057-98e2-127ba76a2cb5",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:23:01.145Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-PROTO-NEWS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:23:01.078Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-PROTO-NEWS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:54.825Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-PROTO-WHY",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:54.795Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-PROTO-WHY",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:53.336Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-COMPOSITE-OBJECTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:53.286Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-COMPOSITE-OBJECTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:48.177Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-PROTO-ADMIN",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:48.145Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-PROTO-ADMIN",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:45.958Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-SPRINT-CHAIN",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:45.884Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-SPRINT-CHAIN",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:41.422Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-PROTOTYPES",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:41.356Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-PROTOTYPES",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:35.852Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-EMBED-BLOCKS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:35.817Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-EMBED-BLOCKS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:32.845Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-WHY-CANVAS-TECH",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:32.809Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-WHY-CANVAS-TECH",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:29.406Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-CRITIQUE-R3-SCALE",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:29.346Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-CRITIQUE-R3-SCALE",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:24.613Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-WHY-PROPOSAL",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:24.577Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-WHY-PROPOSAL",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:22.370Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-CRITIQUE-R2",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:22.305Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-CRITIQUE-R2",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:16.912Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-ADMIN-REVIEW",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:16.852Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-ADMIN-REVIEW",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:12.159Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-CRITIQUE-R1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:12.115Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-CRITIQUE-R1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:09.508Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-V2-PARALLEL",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:09.444Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-V2-PARALLEL",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:04.872Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-VS-CHAMPIONS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:04.721Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-VS-CHAMPIONS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:00.472Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-NEWS-FEEDS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:22:00.418Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-NEWS-FEEDS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:21:58.709Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-CHAMPION-INSIGHTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:21:58.658Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-CHAMPION-INSIGHTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:21:53.692Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-NEWS-OBJECTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:21:53.660Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-NEWS-OBJECTS",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:21:52.162Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-RESEARCH-PASS2",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:21:52.097Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-RESEARCH-PASS2",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:21:44.054Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-RESEARCH-PASS1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:21:44.005Z",
+      "family": "spec",
+      "entity_id": "SPEC-LORE-UXR-RESEARCH-PASS1",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:46.231Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-14",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:45.526Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-13",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:44.643Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-12",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:43.784Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-11",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:42.954Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:42.081Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:41.235Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:40.385Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:39.525Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:38.685Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:37.835Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:36.982Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:36.124Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-02",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:35.277Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:32.352Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-14",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:27.882Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-13",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:23.494Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-12",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:19.464Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-11",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:15.286Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:10.884Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:20:06.366Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:59.715Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:57.438Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-14",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:56.734Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-13",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:55.889Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-12",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:55.485Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:55.042Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-11",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:54.188Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:53.341Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:51.290Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:50.443Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-14",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:47.064Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:46.333Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-13",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:41.873Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:41.340Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-12",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:37.444Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-02",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:36.072Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-11",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:33.075Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT/S9-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:31.090Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:25.515Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:24.128Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:23.378Z",
+      "family": "sprint",
+      "entity_id": "/lore/sprint/dep",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:22.135Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:21.342Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:20.540Z",
+      "family": "sprint",
+      "entity_id": "SPRINT_UXR_S9_SCALE_OPT",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:10.206Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-12",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:02.121Z",
+      "family": "doc",
+      "entity_id": "minilore_mobile_markdown_best_practices_2026_11_07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:19:02.061Z",
+      "family": "doc",
+      "entity_id": "minilore_mobile_markdown_best_practices_2026_11_07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:18:41.752Z",
+      "family": "decision",
+      "entity_id": "D-2026-UXR-SCALE-LATER",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:17:39.013Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-11",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:17:38.961Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-10",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:17:38.906Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-9",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:17:38.833Z",
+      "family": "task",
+      "entity_id": "SPRINT_MINILORE_POLISH/PL-8",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:16.010Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:15.314Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:14.486Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:13.635Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:12.767Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:11.950Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:11.079Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:10.218Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-02",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:09.973Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:09.383Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:09.294Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:08.557Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:08.438Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:07.869Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:07.579Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:07.018Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:06.738Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:06.236Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:06.217Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-09",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:05.891Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:05.361Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:05.038Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-02",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:04.523Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-02",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:04.199Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:03.685Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-01",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:03.026Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:01.440Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-08",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:14:00.809Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:13:59.624Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:13:58.777Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-07",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:13:57.336Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:13:56.529Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:13:55.372Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-06",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:13:53.586Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:13:53.126Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:13:52.069Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-05",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:13:49.990Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7A_NEWS/S7A-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:13:49.729Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:13:48.673Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S7B_ADMIN/S7B-04",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    },
+    {
+      "ts": "2026-11-07T13:13:46.420Z",
+      "family": "task",
+      "entity_id": "SPRINT_UXR_S3_V2_INFRA/S3-03",
+      "caller": "full",
+      "axis": "agent",
+      "status": 200
+    }
+  ],
+  "_page": {
+    "limit": 1000,
+    "offset": 0,
+    "total": 500,
+    "has_more": false
+  }
+}

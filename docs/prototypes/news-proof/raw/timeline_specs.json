@@ -1,0 +1,3613 @@
+{
+  "rows": [
+    {
+      "spec_id": "SPEC-DWL-LORE-DB",
+      "title": "База лора ordo_lore: схема, загрузка, инварианты",
+      "date_created": "2026-11-01T09:11:26.835Z",
+      "component": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-EXPORT",
+      "title": "Контракт выгрузок лора для Unity (quests/)",
+      "date_created": "2026-11-07T10:04:09.622Z",
+      "component": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-RUNE-DREAMS",
+      "title": "Руны по снам, перегоны и тропы между снами (предложение)",
+      "date_created": "2026-11-07T10:03:45.710Z",
+      "component": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-SERVER",
+      "title": "Игровой сервер dw-server: эндпоинты, конфиг, миграции, развёртывание",
+      "date_created": "2026-11-01T09:09:01.527Z",
+      "component": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-LOADTEST",
+      "title": "Нагрузочные замеры dw-server: состояние стенда перед прогоном и сравнимость серий",
+      "date_created": "2026-11-06T05:42:37.657Z",
+      "component": "DW_SRV",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWU-LORE-READ",
+      "title": "Дата-странники (Unity): как клиент читает выгрузку лора unity_db",
+      "date_created": "2026-10-28T05:17:02.966Z",
+      "component": null,
+      "projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DW-HY3D-UNITS",
+      "title": "Конвейер 3D-юнитов учёных: картинка → Hunyuan3D → X-Part → покраска → лёгкие части → скелет/анимации → FBX для Unity",
+      "date_created": "2026-10-28T20:51:20.223Z",
+      "component": null,
+      "projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DW-UNIT-GAIT",
+      "title": "Шаг, бег, покой и поза 3D-юнитов: правила алгоритма и проверки (UnitGait, риг, Блендер)",
+      "date_created": "2026-11-07T10:05:39.404Z",
+      "component": null,
+      "projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-ARCHIVE",
+      "title": "miniLORE: архивная база сервера — что переносится, порядок, инварианты",
+      "date_created": "2026-11-06T22:23:01.992Z",
+      "component": "MINILORE",
+      "projects": [
+        "AIDA/miniLore_serverside"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-JAVA",
+      "title": "Java",
+      "date_created": "2026-08-15T05:20:57.386Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-ECLIPSE-TEMURIN-",
+      "title": "eclipse-temurin (базовый образ)",
+      "date_created": "2026-08-15T05:20:59.435Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS",
+      "title": "Quarkus",
+      "date_created": "2026-08-15T05:21:02.082Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-REST",
+      "title": "quarkus-rest",
+      "date_created": "2026-08-15T05:21:04.216Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-REST-JACKSON",
+      "title": "quarkus-rest-jackson",
+      "date_created": "2026-08-15T05:21:06.444Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-WEBSOCKETS-NEXT",
+      "title": "quarkus-websockets-next",
+      "date_created": "2026-08-15T05:21:08.440Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-NODE-JS",
+      "title": "Node.js",
+      "date_created": "2026-08-15T05:21:12.290Z",
+      "component": "MINILORE_LINK",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-TYPESCRIPT",
+      "title": "TypeScript",
+      "date_created": "2026-08-15T05:21:15.069Z",
+      "component": "MINILORE_LINK",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-REST-CLIENT-JACKSON",
+      "title": "quarkus-rest-client-jackson",
+      "date_created": "2026-08-15T05:21:15.610Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-WS",
+      "title": "ws",
+      "date_created": "2026-08-15T05:21:18.349Z",
+      "component": "MINILORE_LINK",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-OIDC",
+      "title": "quarkus-oidc",
+      "date_created": "2026-08-15T05:21:19.126Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-ARCADEDB",
+      "title": "ArcadeDB",
+      "date_created": "2026-08-15T05:21:22.001Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-CAFFEINE",
+      "title": "Caffeine",
+      "date_created": "2026-08-15T05:21:27.044Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-MINIO",
+      "title": "MinIO",
+      "date_created": "2026-08-15T05:21:29.270Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK--MODELCONTEXTPROTOCOL-SDK",
+      "title": "@modelcontextprotocol/sdk",
+      "date_created": "2026-08-15T05:21:34.340Z",
+      "component": "MINILORE_LINK",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-INFISICAL",
+      "title": "Infisical",
+      "date_created": "2026-08-15T05:21:35.104Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-SMALLRYE-HEALTH",
+      "title": "quarkus-smallrye-health",
+      "date_created": "2026-08-15T05:21:37.195Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-ZOD",
+      "title": "zod",
+      "date_created": "2026-08-15T05:21:37.262Z",
+      "component": "MINILORE_LINK",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-MICROMETER",
+      "title": "quarkus-micrometer",
+      "date_created": "2026-08-15T05:21:39.460Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-VITEST",
+      "title": "Vitest",
+      "date_created": "2026-08-15T05:21:39.961Z",
+      "component": "MINILORE_LINK",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-SMALLRYE-FAULT-TOLERANCE",
+      "title": "quarkus-smallrye-fault-tolerance",
+      "date_created": "2026-08-15T05:21:41.377Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-GRADLE",
+      "title": "Gradle",
+      "date_created": "2026-08-15T05:21:43.543Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-KEYCLOAK",
+      "title": "Keycloak",
+      "date_created": "2026-08-15T05:21:46.374Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-TRAEFIK",
+      "title": "Traefik",
+      "date_created": "2026-08-15T05:21:48.047Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-FRAMES",
+      "title": "Договор кадров между machine-клиентом и сервером miniLORE",
+      "date_created": "2026-08-17T09:10:03.240Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-PHONE-API",
+      "title": "API сервера miniLORE для мобильного приложения",
+      "date_created": "2026-08-23T07:36:02.600Z",
+      "component": "MINILORE_SRV",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE_LINK-CHANNELS-001",
+      "title": "Канал сессии: что доставляет, а что только выглядит доставкой",
+      "date_created": "2026-08-18T09:45:16.297Z",
+      "component": "MINILORE_LINK",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE_LINK-002",
+      "title": "Нюансы связи minilore-link: что молчит, когда ломается",
+      "date_created": "2026-08-18T10:06:06.668Z",
+      "component": "MINILORE_LINK",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-LINK-DAEMON",
+      "title": "Демон машины link: что он делает и каким словарём о нём говорить",
+      "date_created": "2026-10-19T09:49:54.737Z",
+      "component": "MINILORE",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-APP-DESIGN",
+      "title": "miniLORE (приложение): принципы и мерки интерфейса",
+      "date_created": "2026-11-07T10:32:58.017Z",
+      "component": null,
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MATTER-001",
+      "title": "MIDGARD — Сертификация и Matter: что покупаем готовым, что делаем сами, какие требования исполняем без сертификата",
+      "date_created": "2026-08-23T12:33:37.014Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PANEL-001",
+      "title": "MIDGARD — Панель и интерфейс: что берём у лучших производителей и по каким правилам рисуем",
+      "date_created": "2026-08-29T20:26:57.115Z",
+      "component": "SJON",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-WEATHER-001",
+      "title": "MIDGARD / GLADSHEIM — Прогноз погоды: два источника, приватность координат и поведение при отказе",
+      "date_created": "2026-09-10T20:58:45.241Z",
+      "component": "GLADSHEIM",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-CONSUMPTION",
+      "title": "MIDGARD / GJALLARHORN — Потребление ресурсов голосовым контуром и дворецким: методика замера и сценарии",
+      "date_created": "2026-08-30T10:45:18.023Z",
+      "component": "GJALLARHORN",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-DEVICES-001",
+      "title": "MIDGARD — Комната, узел, светильник, лампа: чем управляет человек и что знает система",
+      "date_created": "2026-08-23T23:04:58.343Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MODEL-001",
+      "title": "MIDGARD — Модель предметной области: сущности, их вложенность и что от кого наследуется",
+      "date_created": "2026-08-23T23:26:07.460Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLAN-IMPORT-001",
+      "title": "MIDGARD — Импорт плана застройщика: что читаем с листа, как переводим единицы и чем проверяем результат",
+      "date_created": "2026-08-24T00:51:16.998Z",
+      "component": "TEIKN",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-RASTER-VECTOR-001",
+      "title": "MIDGARD — Распознавание и перевод в вектор: ландшафт технологий, не только для планов",
+      "date_created": "2026-08-24T06:31:45.426Z",
+      "component": "TEIKN",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MODEL-TRAINING-001",
+      "title": "MIDGARD — Обучение своей модели: железо, данные, порядок",
+      "date_created": "2026-08-24T08:25:33.903Z",
+      "component": "TEIKN",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-SONG-ID-001",
+      "title": "Распознавание композиции и снятие текста (локально, на GPU)",
+      "date_created": "2026-08-25T13:17:27.550Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLAN-WALL-MODEL-001",
+      "title": "Модель разбора планов: стены и углы по растровому листу",
+      "date_created": "2026-08-24T17:45:33.253Z",
+      "component": "TEIKN",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-NAMING-001",
+      "title": "MIDGARD — Стандарт именования в коде разбора планов: единицы в имени, тип в имени, ноль версионных цифр",
+      "date_created": "2026-08-27T11:32:23.338Z",
+      "component": "TEIKN",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MARKET-MATRIX",
+      "title": "MIDGARD — Рынки умного дома: боли, ожидания и находки по регионам",
+      "date_created": "2026-08-29T17:29:31.420Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-ALGO",
+      "title": "MIDGARD / GLADSHEIM — Разбор планировок: классы алгоритмов и матрица «используем или нет»",
+      "date_created": "2026-08-26T07:59:17.789Z",
+      "component": "GLADSHEIM",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-OUTAGE-CASES",
+      "title": "MIDGARD — Реестр кейсов отказа умных домов: даты, причины, пруфы, скоринг",
+      "date_created": "2026-09-15T19:15:28.897Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-FINDINGS-BY-COMPONENT",
+      "title": "MIDGARD — Находки рынка, разложенные по компонентам: требования и пробелы",
+      "date_created": "2026-08-29T23:28:05.298Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITOR-CARDS",
+      "title": "MIDGARD — Конкуренты по четырём кругам: карточки, популярность, цены, каналы",
+      "date_created": "2026-09-15T18:26:40.415Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "title": "MIDGARD — Позиционирование: карты, SWOT, угрозы и точки дифференциации",
+      "date_created": "2026-09-14T21:24:26.103Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PROFILES-001",
+      "title": "MIDGARD — Профили людей: привычки, присутствие и медиация конфликтов в общих комнатах",
+      "date_created": "2026-08-29T19:50:08.963Z",
+      "component": "KVASIR",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITORS-FULL",
+      "title": "MIDGARD — Полный разбор конкурентов по регионам: кто, где, за сколько и чем удерживает",
+      "date_created": "2026-08-29T23:23:37.941Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "title": "MIDGARD — Состав и цена по типам жилья: дворецкий, мультисенсоры, звук и чужая силовая часть",
+      "date_created": "2026-09-11T06:38:40.693Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-HUB-CLASSES",
+      "title": "MIDGARD — Хаб-роутер против хаба данных: функции хабов и сценарные движки",
+      "date_created": "2026-08-29T22:58:51.658Z",
+      "component": "GLADSHEIM",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-METRICS",
+      "title": "Меры качества разбора планов: что считается полнотой и точностью",
+      "date_created": "2026-08-30T07:29:27.309Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-UC-PRIORITY",
+      "title": "MIDGARD — Важность сценариев: обязательное, ожидаемое и восхищающее",
+      "date_created": "2026-08-30T19:10:59.827Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VENDOR-TRENDS",
+      "title": "MIDGARD — Тренды рынка: что производители объявляют будущим, что делают четыре продвинутых рынка и где это расходится с людьми",
+      "date_created": "2026-08-30T18:50:56.499Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-SPATIAL-ANALYTICS",
+      "title": "MIDGARD — Умное пространство: кейсы рынка и три этажа аналитики",
+      "date_created": "2026-08-30T20:48:18.272Z",
+      "component": "VOG",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-XMOS-DFU-I2C",
+      "title": "MIDGARD: заливка прошивки XMOS XU316 по I2C со стороны контроллера",
+      "date_created": "2026-08-31T17:20:57.040Z",
+      "component": "GJALLARHORN",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-I2S-LINK",
+      "title": "MIDGARD / GJALLARHORN — Тракт I2S голосовой точки: роли, формат, ведомый режим, метрики",
+      "date_created": "2026-08-31T18:34:29.619Z",
+      "component": "GJALLARHORN",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-AUDIO-FRONTEND",
+      "title": "MIDGARD / GJALLARHORN — Аудиотракт голосовой точки: развилка XMOS против ESP+ES7210, себестоимость и путь к серии",
+      "date_created": "2026-09-08T06:31:00.519Z",
+      "component": "GJALLARHORN",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-S31-WATCH",
+      "title": "MIDGARD / EITRI — ESP32-S31 как преемник C6 в узле: досье, доводы, блокеры и программа прототипа",
+      "date_created": "2026-09-01T09:44:18.791Z",
+      "component": "EITRI",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-NODE-FIRMWARE",
+      "title": "MIDGARD / GJALLARHORN — Прошивка голосового узла: из каких модулей собрана и что каждый умеет",
+      "date_created": "2026-09-01T13:39:31.679Z",
+      "component": "GJALLARHORN",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-P4C5-WATCH",
+      "title": "MIDGARD / EITRI — Связка ESP32-P4 + ESP32-C5: проверка «прошивки из одной точки», состав модулей и программа прототипа",
+      "date_created": "2026-09-01T16:40:41.506Z",
+      "component": "EITRI",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-ENSEMBLE-001",
+      "title": "MIDGARD — Ансамбль разбора планов: архитектура, алгоритмы и методы",
+      "date_created": "2026-09-02T05:06:02.885Z",
+      "component": "TEIKN",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PANEL-HW-001",
+      "title": "MIDGARD / SJON — Панель Waveshare ESP32-S3-Touch-LCD-7: карта железа для прошивки на esp-hal",
+      "date_created": "2026-09-11T18:24:02.248Z",
+      "component": "SJON",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-NODE-PROTOCOL",
+      "title": "MIDGARD / VORD ↔ GLADSHEIM — протокол узла: очередь команд, подтверждения, телеметрия, поток голоса",
+      "date_created": "2026-09-23T19:14:15.180Z",
+      "component": "GLADSHEIM",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-LLM-001",
+      "title": "MIDGARD / GLADSHEIM — Общение с языковой моделью: где модель зовётся, что ей дают, что приложение делает с ответом",
+      "date_created": "2026-10-06T11:39:01.572Z",
+      "component": "GLADSHEIM",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-TRUST-LEVELS",
+      "title": "MIDGARD / VÉBAND — уровни доверия: способы опознания, что заверяет устройство, пороги действий, повышение уровня",
+      "date_created": "2026-09-11T17:59:53.957Z",
+      "component": "VEBAND",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-ZIGBEE-CRATE-BOUNDARIES",
+      "title": "MIDGARD Zigbee: границы крейта, слои стека (своё/чужое/лицензия/ревизия), трейт ZigbeeBackend",
+      "date_created": "2026-09-21T05:08:35.173Z",
+      "component": "GLADSHEIM",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BOM",
+      "title": "MIDGARD — Состав и закупка изделий с подтверждением каждой цены",
+      "date_created": "2026-09-21T05:28:57.848Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-HW-OPTIONS",
+      "title": "MIDGARD — Голосовой тракт: варианты от дешёвых к дорогим (свои компоненты, готовые модули, отладочные платы)",
+      "date_created": "2026-10-07T19:57:00.591Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BEHAVIOR-001",
+      "title": "MIDGARD — Поведение дома: режим, состояние комнаты, сценарий (хозяин × комната × фразы), триггер, предложение, массив приоритетов исполнителя, инцидент, трасса «почему», владельцы сущностей",
+      "date_created": "2026-09-21T17:43:39.154Z",
+      "component": "THING",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MULTISENSOR-PINOUT",
+      "title": "MIDGARD / мультисенсор / board-sensor — распиновка на трёх платах: XIAO ESP32C6, XIAO ESP32S3, ESP32-C3 SuperMini",
+      "date_created": "2026-11-04T14:39:58.755Z",
+      "component": "MIDGARD",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-GLADSHEIM-VOICE-ACT-RULE",
+      "title": "GLADSHEIM / голос — правило «действовать ли дому по фразе»: порядок сторожей живого пути /voice, как есть на 2ed1fd1",
+      "date_created": "2026-09-22T15:51:57.792Z",
+      "component": "GLADSHEIM",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-GLADSHEIM-ARCADEDB",
+      "title": "ArcadeDB",
+      "date_created": "2026-11-05T09:32:28.279Z",
+      "component": "GLADSHEIM",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-GLADSHEIM-QUARKUS",
+      "title": "Quarkus",
+      "date_created": "2026-11-05T13:37:19.678Z",
+      "component": "GLADSHEIM",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-GLADSHEIM-JAVA",
+      "title": "Java",
+      "date_created": "2026-11-05T13:37:28.950Z",
+      "component": "GLADSHEIM",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "spec_id": "SPEC-SITE-RELEASE-NOTES",
+      "title": "Описание релиза сайта: содержание, карточка фичи, публикация и оповещение",
+      "date_created": "2026-11-06T06:14:53.959Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "spec_id": "VOLVA_LOCKIN_REGISTER",
+      "title": "Völva — Fork Lock-in Register (deep-search)",
+      "date_created": "2026-07-16T11:03:06.941Z",
+      "component": "VOLVA",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "VOLVA_PREMIUM_FEATURES",
+      "title": "Völva — EE/платные опции Metabase: инвентаризация и разгейт",
+      "date_created": "2026-07-16T12:22:41.562Z",
+      "component": "VOLVA",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "VOLVA_MBQL_REFERENCE",
+      "title": "Völva — MBQL reference (для extractor content→data)",
+      "date_created": "2026-07-16T13:10:06.764Z",
+      "component": "VOLVA_META",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "VOLVA_HOUND_PARSER_CONTRACT",
+      "title": "Контракт парсера native-запросов (Metabase ⟷ HOUND)",
+      "date_created": "2026-07-16T14:23:47.625Z",
+      "component": "VOLVA",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "VOLVA_MODULES",
+      "title": "VOLVA_MODULES",
+      "date_created": "2026-07-16T18:19:57.985Z",
+      "component": "VOLVA",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "VOLVA_IFRAME_EMBED_SPEC",
+      "title": "Völva iframe-встраивание: контракт и живая проверка на React-19 сборке",
+      "date_created": "2026-07-17T06:38:20.572Z",
+      "component": "VOLVA_EMBED",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "SEMANTIC_LAYER_SPEC",
+      "title": "Семантическое измерение метаданных AIDA — спецификация",
+      "date_created": "2026-08-01T08:32:26.085Z",
+      "component": "DALI",
+      "projects": [
+        "NooriUta/volva",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-VOLVA-DATASTORY",
+      "title": "Völva: повествовательный слой — документы с живыми карточками",
+      "date_created": "2026-11-04T06:38:21.543Z",
+      "component": "VOLVA_FE",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VOLVA-METABASE",
+      "title": "Metabase",
+      "date_created": "2026-11-05T13:36:10.208Z",
+      "component": "VOLVA",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VOLVA-JVM",
+      "title": "JVM",
+      "date_created": "2026-11-05T13:36:52.725Z",
+      "component": "VOLVA",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VOLVA_DRIVER-PGJDBC",
+      "title": "pgjdbc",
+      "date_created": "2026-11-05T13:37:08.525Z",
+      "component": "VOLVA_DRIVER",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-RELEASE-NOTES",
+      "title": "Описание релиза (все проекты AIDA: LORE, AIDA, Völva…): содержание, форма карточки фичи и HTML для Telegram",
+      "date_created": "2026-11-06T13:32:37.283Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/volva",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-ODIN-VEC-001",
+      "title": "ODIN Case 1: Type-4 clone-candidates над canonical_sql (BM25-плечо, default)",
+      "date_created": "2026-07-06T09:08:48.782Z",
+      "component": "ODIN",
+      "projects": [
+        "NooriUta/ODIN"
+      ]
+    },
+    {
+      "spec_id": "SPEC-ODIN-VEC-002",
+      "title": "ODIN Case 2: gap-filling гранулярности — блокер снят, метод зафиксирован (BM25/sparse), recall — после LLM",
+      "date_created": "2026-07-06T09:09:15.914Z",
+      "component": "ODIN",
+      "projects": [
+        "NooriUta/ODIN"
+      ]
+    },
+    {
+      "spec_id": "SPEC-ODIN-VEC-003",
+      "title": "ODIN Case 3: native vector.fuse() RRF — BM25-плечо живое, композиция и 0.867-сверка после LLM",
+      "date_created": "2026-07-06T09:09:41.184Z",
+      "component": "ODIN",
+      "projects": [
+        "NooriUta/ODIN"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MUNINN--XYFLOW-REACT",
+      "title": "@xyflow/react",
+      "date_created": "2026-07-10T19:52:29.496Z",
+      "component": "MUNINN",
+      "projects": [
+        "NooriUta/ODIN"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MUNINN-LUCIDE-REACT",
+      "title": "lucide-react",
+      "date_created": "2026-07-10T19:52:32.874Z",
+      "component": "MUNINN",
+      "projects": [
+        "NooriUta/ODIN"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-BRAGI-TIPTAP",
+      "title": "TipTap",
+      "date_created": "2026-07-03T00:23:11.699Z",
+      "component": "BRAGI",
+      "projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-BRAGI-MARKED",
+      "title": "marked",
+      "date_created": "2026-07-03T00:23:13.559Z",
+      "component": "BRAGI",
+      "projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-BRAGI-MINIO",
+      "title": "MinIO",
+      "date_created": "2026-07-03T00:23:19.820Z",
+      "component": "BRAGI",
+      "projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-BRAGI-TIPTAP-MARKDOWN",
+      "title": "tiptap-markdown",
+      "date_created": "2026-07-10T19:52:23.760Z",
+      "component": "BRAGI",
+      "projects": [
+        "NooriUta/BRAGI"
+      ]
+    },
+    {
+      "spec_id": "AIDA_DB_TOPOLOGY",
+      "title": "AIDA — Database Topology & Multi-Tenant Architecture",
+      "date_created": "2026-10-20T18:42:33.981Z",
+      "component": "FRIGG",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "ARCADEDB_KNOWN_ISSUES",
+      "title": "ARCADEDB_KNOWN_ISSUES — known bugs & workarounds",
+      "date_created": "2026-07-22T04:02:26.661Z",
+      "component": "YGG",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "BACKEND_ARCHITECTURE",
+      "title": "SEER Studio — Backend Architecture",
+      "date_created": "2026-10-20T18:44:36.970Z",
+      "component": "AIDA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "DATA_RETENTION_POLICY",
+      "title": "Data Retention Policy — AIDA Studio",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "AIDA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "FRONTEND_ARCHITECTURE",
+      "title": "SEER Studio — Frontend Architecture",
+      "date_created": "2026-10-20T18:53:03.055Z",
+      "component": "SEIDR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_DATAFLOW_FORMATION_SPEC",
+      "title": "HOUND — алгоритм формирования DATA_FLOW (column-level lineage)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_PREDICATE_FLOW_SPEC",
+      "title": "HOUND — FILTER_FLOW + CONTROL_FLOW: predicate / join lineage (спецификация на разработку)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "specs_INDEX",
+      "title": "AIDA Specs Index",
+      "date_created": "2026-10-20T18:43:19.957Z",
+      "component": "AIDA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "INTEGRATIONS_MATRIX",
+      "title": "AIDA — Матрица интеграций (Integration Matrix)",
+      "date_created": "2026-10-20T18:43:51.899Z",
+      "component": "AIDA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MODULES_TECH_STACK",
+      "title": "AIDA — Карта модулей и технологического стека",
+      "date_created": "2026-10-20T19:01:12.032Z",
+      "component": "AIDA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SECRETS_MANAGEMENT",
+      "title": "Secrets Management — AIDA Studio",
+      "date_created": "2026-11-05T08:41:53.367Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "ANVIL_SERVICE",
+      "title": "ANVIL — Service Documentation",
+      "date_created": "2026-10-20T18:47:55.838Z",
+      "component": "ANVIL",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "ANVIL_SPEC",
+      "title": "ANVIL — Service Specification",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "ANVIL",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "AUTH_FLOW",
+      "title": "AIDA Authentication Flow — v2.0 (Auth Code + PKCE)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MULTI_APP_TOPOLOGY",
+      "title": "AIDA Multi-App Auth Topology",
+      "date_created": "2026-10-20T18:50:08.792Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "RBAC_MULTITENANT",
+      "title": "AIDA — RBAC & Multi-Tenant Architecture",
+      "date_created": "2026-10-20T18:47:11.352Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SERVER_SIDE_RBAC",
+      "title": "AIDA — Server-Side RBAC for Service Accounts",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_SVC_D4_SIZING_2026-06-11",
+      "title": "HOUND-as-a-Service — Sizing & Capacity (D4-step-3 live soak)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "OBS",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "v1513_baseline",
+      "title": "Prod Capacity Baseline (BH-10)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "OBS",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "CHUR_SERVICE",
+      "title": "CHUR — Backend-for-Frontend (BFF) Service Overview",
+      "date_created": "2026-10-20T18:52:54.161Z",
+      "component": "CHUR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "CHUR_TENANT_API",
+      "title": "CHUR_TENANT_API — Admin tenant provisioning API",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "CHUR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "DALI_DYNAMIC_SQL_PIPELINE_SPEC",
+      "title": "Спецификация Dynamic SQL Pipeline",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "DALI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "DALI_OVERVIEW",
+      "title": "Dali — Architecture Overview",
+      "date_created": "2026-10-20T18:51:39.037Z",
+      "component": "DALI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "DALI_PARSE_INGESTION_SPEC",
+      "title": "DALI — Parse Ingestion & Online Invocation",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "DALI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "DALI_SPEC",
+      "title": "DALI — Техническая спецификация",
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "DALI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "DALI_SQL_AST_NORMALIZER_SPEC",
+      "title": "Спецификация SqlAstNormalizer (L0 + L2)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "DALI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "FRIGG_TENANT_SCHEMA",
+      "title": "FRIGG_TENANT_SCHEMA — DaliTenantConfig schema",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "FRIGG",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "EVENTS_REFERENCE",
+      "title": "HEIMDALL Events Reference",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HEIMDALL_BE",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HEIMDALL_DALI_API",
+      "title": "HEIMDALL ↔ Dali — API Reference",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HEIMDALL_BE",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HEIMDALL_SOURCES_UI",
+      "title": "HEIMDALL — Sources Page (UI Guide)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HEIMDALL_FE",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "PROTO_HEIMDALL_ANALYTICS_IMPROVEMENTS",
+      "title": "PROTO_HEIMDALL_ANALYTICS — план улучшений прототипа",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HEIMDALL_FE",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "USER_ATTRIBUTES_KC_VS_FRIGG",
+      "title": "Spec: User Attributes — Keycloak vs FRIGG Split",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HEIMDALL_BE",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "USER_EDITING_UI_MODEL",
+      "title": "User editing UI — combined KC + FRIGG view",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HEIMDALL_FE",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "atom-facts",
+      "title": "DaliAtom — Реестр фактов",
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "CLICKHOUSE_GRAMMAR_MAPPING",
+      "title": "Grammar Rule Mapping: PL/SQL → ClickHouse",
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "EDGE_TAXONOMY_ANALYSIS",
+      "title": "Edge Taxonomy Analysis — Оптимизация и классификация всех рёбер ArcadeDB",
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_API_DESIGN",
+      "title": "Hound — Public API Design (com.hound.api)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_AS_SERVICE_SPEC",
+      "title": "HOUND_AS_SERVICE — архитектурная спека (горизонтально масштабируемый парсер)",
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_ATOM_LINEAGE_SPEC",
+      "title": "Hound — DaliAtom Lineage Architecture Spec",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_BULK_COLLECT_SCALAR_BRIDGE",
+      "title": "HOUND FORALL Scalar-Array Lineage — Алгоритм и анализ совместимости",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_CLICKHOUSE_DIALECT",
+      "title": "Hound — ClickHouse Semantic Listener: Architecture & Algorithm",
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_CREATE_TABLE_ALGORITHM",
+      "title": "Hound — Алгоритм обработки CREATE TABLE",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_GEOID_DBROOT_IMPL",
+      "title": "HOUND_GEOID_DBROOT_IMPL — db-rooting + UPSERT implementation guide",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_GEOID_SPEC",
+      "title": "Hound Geoid Specification",
+      "date_created": "2026-10-20T21:50:52.143Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_INDEX",
+      "title": "Hound — индекс документации сервиса",
+      "date_created": "2026-10-20T18:51:03.958Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_PLSQL_GRAMMAR_GAPS_CORPUS_RULES",
+      "title": "HOUND — PL/SQL Grammar Gaps + Corpus Preparation Rules",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_PLSQL_LINEAGE_GAPS_S3",
+      "title": "PL/SQL Lineage Gaps — Sprint 3 Spec",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_POSTGRESQL_DIALECT",
+      "title": "Hound — PostgreSQL Semantic Listener: Architecture & Algorithm",
+      "date_created": "2026-10-20T21:48:50.365Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "OL_IDENTIFIER_MAPPING_SPEC",
+      "title": "Спецификация маппинга идентификаторов OL",
+      "date_created": "2026-10-20T21:43:35.525Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "PGSQL_GRAMMAR_MAPPING",
+      "title": "Grammar Rule Mapping: PL/SQL → PostgreSQL",
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "REMOTE_BATCH_WRITE_FLOW",
+      "title": "REMOTE_BATCH Write Flow",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SCD_HISTORIZATION_SPEC",
+      "title": "Спецификация историзации SCD Type 2",
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SNIPPET_STORAGE_AUDIT_2026-06-10",
+      "title": "Аудит хранения SQL-текста (сниппеты и исходники) — код vs документация",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "INSPECTOR_KNOT_SPEC",
+      "title": "Спецификация: Inspector Panel + KNOT View",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "LOOM_L2_EDGE_SEMANTICS",
+      "title": "LOOM L2 — Data-flow edge semantics",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "LOOM_PERFORMANCE_ANALYSIS",
+      "title": "LOOM L2/L3 — Анализ быстродействия и узкие места",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MIMIR_DEEPSEEK_VALIDATION_REPORT",
+      "title": "MIMIR DeepSeek Validation Report",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "MIMIR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MIMIR_LLM_TOPOLOGY",
+      "title": "MIMIR — LLM Deployment Topology",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "MIMIR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MIMIR_LOCAL_DEV",
+      "title": "MIMIR Local Development Guide",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "MIMIR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MIMIR_OPEN_QUESTIONS",
+      "title": "MIMIR — Открытые вопросы для решения",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "MIMIR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MIMIR_SDK_COMPARISON",
+      "title": "MIMIR — SDK и фреймворки: сравнение для Q-M1",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "MIMIR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MIMIR_SPEC",
+      "title": "MIMIR — Service Specification v4.0",
+      "date_created": "2026-10-20T18:52:47.257Z",
+      "component": "MIMIR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MIMIR_TENANT_CONTRACT",
+      "title": "MIMIR Tenant Contract — MTN-08",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "MIMIR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "OTEL_PLATFORM_SPEC",
+      "title": "OpenTelemetry Platform Spec (C3 target architecture)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "OBS",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "OL_ALGORITHMS_SPEC",
+      "title": "Спецификация алгоритмов OpenLineage в AIDA",
+      "date_created": "2026-10-20T21:47:16.857Z",
+      "component": "OL",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "OL_CONNECTION_MAPPING_SPEC",
+      "title": "Спецификация маппинга подключений OL",
+      "date_created": "2026-10-20T21:45:23.014Z",
+      "component": "OL",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "security_INDEX",
+      "title": "MTN Security & Multi-Tenant Backlog — Cyclic Verification Index",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-01",
+      "title": "MTN-01 — FriggYggLineageRegistry production lookup",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-02",
+      "title": "MTN-02 — Cypher/query tenant-filter guarantee",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-04",
+      "title": "MTN-04 — JobRunr tenant dispatch hardening",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-05",
+      "title": "MTN-05 — EventStream tenant-filter end-to-end",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-06",
+      "title": "MTN-06 — Anvil TenantContextFilter",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-07",
+      "title": "MTN-07 — Verdandi/LOOM explicit tenant context",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-08",
+      "title": "MTN-08 — Mimir tenant-awareness (при scaffold)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-09",
+      "title": "MTN-09 — Quota enforcement",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-11",
+      "title": "MTN-11 — Subscription multi-tenant isolation tests",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-12",
+      "title": "MTN-12 — Per-tenant feature flags activation",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-13",
+      "title": "MTN-13 — Multi-org user active-tenant switch (Q-USER-1)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-15",
+      "title": "MTN-15 — Periodic restore validation (Q-BACKUP-1)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-17",
+      "title": "MTN-17 — Tenant eviction semantics",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-18",
+      "title": "MTN-18 — Migration hound → hound_default",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-19",
+      "title": "MTN-19 — Anti-spoofing upgrade (Q-SEC-1)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-20",
+      "title": "MTN-20 — Secret store integration",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-21",
+      "title": "MTN-21 — SIEM export audit (Q-AUDIT)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-22",
+      "title": "MTN-22 — уже учтён в Q-MT6-b (cross-tenant cowork edges) выше",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-23",
+      "title": "MTN-23 — Data retention per-policy enforcement",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-24",
+      "title": "MTN-24 — Billing model decision (Q-MT4)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-25",
+      "title": "MTN-25 — Provisioning failure rollback / saga",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-26",
+      "title": "MTN-26 — Keycloak ↔ FRIGG org drift reconciliation",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-27",
+      "title": "MTN-27 —",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-28",
+      "title": "MTN-28 — Tenant MDC в structured logging",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-29",
+      "title": "MTN-29 — OpenTelemetry baggage с tenantAlias",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-30",
+      "title": "MTN-30 — Anvil cache key tenantAlias prefix",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-31",
+      "title": "MTN-31 — JobRunr dashboard tenant gating",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-32",
+      "title": "MTN-32 — GDPR export / erasure endpoints",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-33",
+      "title": "MTN-33 — Per-tenant schema migration coordinator",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-34",
+      "title": "MTN-34 — Service account / API key per tenant",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-35",
+      "title": "MTN-35 — harvestCron timezone disambiguation",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-36",
+      "title": "MTN-36 — WebSocket force-disconnect на suspend",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-37",
+      "title": "MTN-37 — Audit log tamper-proofing",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-38",
+      "title": "MTN-38 — Per-tenant SLO / error budget",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-39",
+      "title": "MTN-39 — JWT role refresh при изменении org membership",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-40",
+      "title": "MTN-40 — Tenant-existence oracle (timing side-channel)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-41",
+      "title": "MTN-41 — Audit log injection через tenant-controlled fields",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-42",
+      "title": "MTN-42 — Retention downgrade → purge attack (legal hold bypass)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-43",
+      "title": "MTN-43 — Harvest source SSRF",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-44",
+      "title": "MTN-44 —",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-45",
+      "title": "MTN-45 — Service-to-service auth (mTLS / JWT propagation)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-46",
+      "title": "MTN-46 — Audit log flood DoS (cross-tenant noise)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-47",
+      "title": "MTN-47 — Secrets at rest encryption в FRIGG / DaliSource",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-48",
+      "title": "MTN-48 — Capacity model для per-tenant pools",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-49",
+      "title": "MTN-49 — ArcadeDB sharding strategy (ADR-MT-003)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-50",
+      "title": "MTN-50 — Leader election correctness",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-51",
+      "title": "MTN-51 — Event delivery guarantees (control-plane events)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-52",
+      "title": "MTN-52 — Event schema evolution policy",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-53",
+      "title": "MTN-53 — Noisy-neighbor на ArcadeDB I/O",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-54",
+      "title": "MTN-54 — High-cardinality observability (tenantAlias label)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-55",
+      "title": "MTN-55 — Tenant hibernation / cost optimization",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-56",
+      "title": "MTN-56 — Load shedding / tenant priority tiers",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-57",
+      "title": "MTN-57 — Runbook gaps (операционные сценарии)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-58",
+      "title": "MTN-58 — Quota model decommission (tenant-only SoT)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-59",
+      "title": "MTN-59 — Session tokens envelope encryption",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-60",
+      "title": "MTN-60 — KC admin-events → Heimdall audit stream",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-61",
+      "title": "MTN-61 — User soft-delete + retention + legal hold",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-62",
+      "title": "MTN-62 — Email/identity drift propagation",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-63",
+      "title": "MTN-63 — UserProfile / UserPreferences / UserConsents API + UI",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-64",
+      "title": "MTN-64 — Per-session activity log (UserSessionEvents)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-65",
+      "title": "MTN-65 — frigg-users DB + 8 vertex types bootstrap",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-66",
+      "title": "MTN-66 — Direct batch migration KC attributes{} → FRIGG",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MTN-67",
+      "title": "MTN-67 — KC attributes{} cleanup",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SHUTTLE_ADMIN_MUTATIONS_SPEC",
+      "title": "Спецификация админских GraphQL мутаций Shuttle",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SHT",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SHUTTLE_SERVICE",
+      "title": "SHUTTLE — Service Documentation",
+      "date_created": "2026-10-20T18:47:07.514Z",
+      "component": "SHT",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SHUTTLE_TENANT_ISOLATION",
+      "title": "SHUTTLE_TENANT_ISOLATION — Tenant isolation contract",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SHT",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SKADI_SOURCE_SPEC",
+      "title": "SKADI — Source Specification (Grants + Schema Exclusions)",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SKADI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SKADI_SPEC",
+      "title": "SKADI — SQL Source Extraction Library",
+      "date_created": "2026-10-20T18:54:05.036Z",
+      "component": "SKADI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SKULD_SPEC",
+      "title": "SKULD — AI-Assisted Design Workspace",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "SKULD",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "KNOT_INSPECTOR",
+      "title": "KNOT Inspector — InspectorTable",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "LOOM_LAYOUT_PERF",
+      "title": "LOOM Layout Performance",
+      "date_created": "2026-06-11T15:29:17.000Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "VERDANDI_ARCHITECTURE",
+      "title": "VERDANDI — Frontend Architecture Overview",
+      "date_created": "2026-10-20T18:50:23.252Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_MARIADB_DIALECT",
+      "title": null,
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_MYSQL_DIALECT",
+      "title": null,
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_TRINO_DIALECT",
+      "title": null,
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MYSQL_MARIADB_GEOID",
+      "title": null,
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MYSQL_MARIADB_GRAMMAR_MAPPING",
+      "title": null,
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MYSQL_SEMANTIC_LISTENER_IMPL_SPEC",
+      "title": null,
+      "date_created": "2026-06-14T23:27:07.000Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_DIALECT_SCHEMA_HIERARCHY",
+      "title": "HOUND — иерархия СУБД и слой Schema по диалектам",
+      "date_created": "2026-08-02T21:14:23.538Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-YGG-ARCADEDB",
+      "title": "ArcadeDB",
+      "date_created": "2026-07-02T21:41:00.594Z",
+      "component": "YGG",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-SECURITY-INFISICAL",
+      "title": "Infisical",
+      "date_created": "2026-07-02T21:41:48.017Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OBS-JAVA",
+      "title": "Java",
+      "date_created": "2026-07-03T00:04:51.166Z",
+      "component": "OBS",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-SECURITY-KEYCLOAK",
+      "title": "Keycloak",
+      "date_created": "2026-07-03T00:04:57.819Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-SECURITY-QUARKUS",
+      "title": "Quarkus",
+      "date_created": "2026-07-03T00:05:00.129Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-SECURITY-JAVA",
+      "title": "Java",
+      "date_created": "2026-07-03T00:05:06.704Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-NGINX",
+      "title": "nginx",
+      "date_created": "2026-07-03T00:05:10.959Z",
+      "component": "INFRA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-DOCKER",
+      "title": "Docker",
+      "date_created": "2026-07-03T00:05:12.544Z",
+      "component": "INFRA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HND-ANTLR",
+      "title": "ANTLR",
+      "date_created": "2026-07-03T00:05:14.810Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HND-ARCADEDB",
+      "title": "ArcadeDB",
+      "date_created": "2026-07-03T00:05:17.348Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HND-JAVA",
+      "title": "Java",
+      "date_created": "2026-07-03T00:05:19.806Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MIMIR-QUARKUS",
+      "title": "Quarkus",
+      "date_created": "2026-07-03T00:05:29.057Z",
+      "component": "MIMIR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MIMIR-JAVA",
+      "title": "Java",
+      "date_created": "2026-07-03T00:05:32.189Z",
+      "component": "MIMIR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-SHT-QUARKUS",
+      "title": "Quarkus",
+      "date_created": "2026-07-03T00:05:34.166Z",
+      "component": "SHT",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-SHT-JAVA",
+      "title": "Java",
+      "date_created": "2026-07-03T00:05:36.046Z",
+      "component": "SHT",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-REACT",
+      "title": "React",
+      "date_created": "2026-07-03T00:05:38.047Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-TYPESCRIPT",
+      "title": "TypeScript",
+      "date_created": "2026-07-03T00:05:40.155Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-VITE",
+      "title": "Vite",
+      "date_created": "2026-07-03T00:05:42.200Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HEIMDALL_BE-JAVA",
+      "title": "Java",
+      "date_created": "2026-07-03T00:05:44.667Z",
+      "component": "HEIMDALL_BE",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HEIMDALL_BE-QUARKUS",
+      "title": "Quarkus",
+      "date_created": "2026-07-03T00:05:46.413Z",
+      "component": "HEIMDALL_BE",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-FRIGG-ARCADEDB",
+      "title": "ArcadeDB",
+      "date_created": "2026-07-03T00:34:26.287Z",
+      "component": "FRIGG",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "LOOM_NAVIGATION",
+      "title": "LOOM — Navigation Architecture (Welcome / DataFlow / Explanation)",
+      "date_created": "2026-07-07T18:00:44.614Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-YGG-ARCADEDB-PLUGINS",
+      "title": "ArcadeDB плагины (YGG/FRIGG) — полный список, observability, конфиг",
+      "date_created": "2026-07-10T13:28:59.490Z",
+      "component": "YGG",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MIMIR-LANGCHAIN4J-QUARKUS-LANGCHAIN4J-",
+      "title": "LangChain4j (quarkus-langchain4j-*)",
+      "date_created": "2026-07-10T20:01:11.789Z",
+      "component": "MIMIR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MIMIR-CAFFEINE",
+      "title": "Caffeine",
+      "date_created": "2026-07-10T20:01:36.716Z",
+      "component": "MIMIR",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-SHT-QUARKUS-SMALLRYE-GRAPHQL",
+      "title": "quarkus-smallrye-graphql",
+      "date_created": "2026-07-10T20:02:01.628Z",
+      "component": "SHT",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-SECURITY-FASTIFY-CHUR-GATEWAY-",
+      "title": "Fastify (CHUR gateway)",
+      "date_created": "2026-07-10T20:02:07.042Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-SECURITY-JOSE",
+      "title": "jose",
+      "date_created": "2026-07-10T20:02:19.726Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OBS-QUARKUS-MICROMETER-QUARKUS-SCHEDULER",
+      "title": "quarkus-micrometer + quarkus-scheduler",
+      "date_created": "2026-07-10T20:02:33.196Z",
+      "component": "OBS",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-POSTGRESQL-INFISICAL-DB-",
+      "title": "PostgreSQL (Infisical DB)",
+      "date_created": "2026-07-10T20:02:42.027Z",
+      "component": "INFRA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-REDIS-INFISICAL-CACHE-",
+      "title": "Redis (Infisical cache)",
+      "date_created": "2026-07-10T20:03:00.936Z",
+      "component": "INFRA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HEIMDALL_BE-JOBRUNR",
+      "title": "JobRunr",
+      "date_created": "2026-07-10T20:03:19.025Z",
+      "component": "HEIMDALL_BE",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI--XYFLOW-REACT",
+      "title": "@xyflow/react",
+      "date_created": "2026-07-10T20:04:11.840Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-ZUSTAND",
+      "title": "zustand",
+      "date_created": "2026-07-10T20:04:35.980Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-TANSTACK-QUERY-GRAPHQL-CLIENT",
+      "title": "TanStack Query + GraphQL client",
+      "date_created": "2026-07-10T20:04:45.887Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-TAILWIND-CSS",
+      "title": "Tailwind CSS",
+      "date_created": "2026-07-10T20:05:06.515Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-I18NEXT",
+      "title": "i18next",
+      "date_created": "2026-07-10T20:05:28.036Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-REACT-ROUTER-DOM",
+      "title": "react-router-dom",
+      "date_created": "2026-07-10T20:05:43.946Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-PLAYWRIGHT",
+      "title": "Playwright",
+      "date_created": "2026-07-10T20:05:53.212Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_MPP_DIALECTS",
+      "title": "HOUND — включение MPP-диалектов StarRocks и Apache Doris",
+      "date_created": "2026-07-17T12:42:24.406Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_DIALECT_DORIS",
+      "title": "HOUND: диалект Apache Doris — классификаторы, контекстные правила, план листенера",
+      "date_created": "2026-08-02T21:24:32.547Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-INFRA-ODAL-DNS",
+      "title": "DNS/Traefik architecture: odal.seidrstudio.pro preprod realm",
+      "date_created": "2026-11-05T08:42:34.713Z",
+      "component": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-FJMCP-001",
+      "title": "Контракт идентичности вызывающей стороны в forgejo-mcp",
+      "date_created": "2026-07-18T20:38:59.933Z",
+      "component": "FORGEJO",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-FJMCP-002",
+      "title": "forgejo-mcp: развёртывание, права токена и CI/CD",
+      "date_created": "2026-07-18T20:39:30.747Z",
+      "component": "FORGEJO",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-INFRA-NET-001",
+      "title": "Сетевая топология контуров: машины, домены, маршрутизация, порты и разъезд компонентов",
+      "date_created": "2026-11-05T08:43:52.640Z",
+      "component": "INFRA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-HEIMDALL-TOPOLOGY-001",
+      "title": "Heimdall Services: contour-aware топология + управляемые операции",
+      "date_created": "2026-07-30T05:36:55.004Z",
+      "component": "HEIMDALL",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-ANVIL-QUARKUS",
+      "title": "Quarkus",
+      "date_created": "2026-08-01T11:34:21.343Z",
+      "component": "ANVIL",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-DALI-QUARKUS",
+      "title": "Quarkus",
+      "date_created": "2026-08-01T11:34:03.885Z",
+      "component": "DALI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-DALI-JAVA",
+      "title": "Java",
+      "date_created": "2026-08-01T11:34:06.831Z",
+      "component": "DALI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-DALI-JOBRUNR",
+      "title": "JobRunr",
+      "date_created": "2026-08-01T11:34:18.880Z",
+      "component": "DALI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-ANVIL-JAVA",
+      "title": "Java",
+      "date_created": "2026-08-01T11:34:34.207Z",
+      "component": "ANVIL",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-GRADLE",
+      "title": "Gradle",
+      "date_created": "2026-08-01T11:34:43.718Z",
+      "component": "INFRA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-NODE-JS",
+      "title": "Node.js",
+      "date_created": "2026-08-01T11:34:53.494Z",
+      "component": "INFRA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-FORGEJO",
+      "title": "Forgejo",
+      "date_created": "2026-08-01T11:34:56.994Z",
+      "component": "INFRA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VERDANDI-VITEST",
+      "title": "Vitest",
+      "date_created": "2026-08-01T11:35:10.715Z",
+      "component": "VERDANDI",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-REACT",
+      "title": "React",
+      "date_created": "2026-08-01T12:40:38.909Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-TYPESCRIPT",
+      "title": "TypeScript",
+      "date_created": "2026-08-01T12:40:43.507Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-VITE",
+      "title": "Vite",
+      "date_created": "2026-08-01T12:40:46.103Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-REACT-ROUTER",
+      "title": "React Router",
+      "date_created": "2026-08-01T12:40:49.822Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-TAILWIND-CSS",
+      "title": "Tailwind CSS",
+      "date_created": "2026-08-01T12:40:56.679Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-I18NEXT",
+      "title": "i18next",
+      "date_created": "2026-08-01T12:40:58.535Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-PUPPETEER-CORE",
+      "title": "puppeteer-core",
+      "date_created": "2026-08-01T12:41:01.147Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-ZUSTAND",
+      "title": "Zustand",
+      "date_created": "2026-08-01T12:41:03.076Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-NODE-JS",
+      "title": "Node.js",
+      "date_created": "2026-08-01T12:41:21.292Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-NGINX",
+      "title": "nginx",
+      "date_created": "2026-08-01T12:41:24.711Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-CHROMIUM",
+      "title": "Chromium",
+      "date_created": "2026-08-01T12:41:28.575Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-ESLINT",
+      "title": "ESLint",
+      "date_created": "2026-08-01T12:41:31.180Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-MERMAID",
+      "title": "Mermaid",
+      "date_created": "2026-08-01T12:41:33.455Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-REACT-MARKDOWN",
+      "title": "react-markdown",
+      "date_created": "2026-08-01T12:41:36.158Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-LUCIDE-REACT",
+      "title": "lucide-react",
+      "date_created": "2026-08-01T12:41:38.167Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-GEIST-",
+      "title": "Geist (шрифты)",
+      "date_created": "2026-08-01T12:41:40.739Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-HARPA-TYPESCRIPT-TYPES-",
+      "title": "TypeScript-типы (@types)",
+      "date_created": "2026-08-01T12:42:31.949Z",
+      "component": "HARPA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-TRAEFIK",
+      "title": "Traefik",
+      "date_created": "2026-08-01T12:42:36.894Z",
+      "component": "INFRA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-INFRA-FORGEJO-RUNNER",
+      "title": "forgejo-runner",
+      "date_created": "2026-08-01T12:42:41.079Z",
+      "component": "INFRA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_DIALECT_STARROCKS",
+      "title": "HOUND: спецификация диалекта StarRocks",
+      "date_created": "2026-08-03T11:02:22.586Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_PLPGSQL_LEXER_CONTRACT",
+      "title": "PL/pgSQL: контракт лексера — что обещает лексер, что резолвит листенер",
+      "date_created": "2026-08-15T21:22:57.001Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DIALECT-IDENT-001",
+      "title": "Определение SQL-диалекта по фрагментам: классификации из грамматик HOUND → дерево весов",
+      "date_created": "2026-10-20T18:35:34.371Z",
+      "component": "TUNGA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DIALECT-IDENT-METRICS-001",
+      "title": "Методика метрик распознавания SQL-диалекта",
+      "date_created": "2026-10-20T18:35:04.552Z",
+      "component": "TUNGA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TUNGA-001",
+      "title": "TUNGA — распознавание SQL-диалекта: контракт, конвейер, ресурсы, детерминизм, регрессия",
+      "date_created": "2026-10-20T18:27:14.766Z",
+      "component": "TUNGA",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-HOUND-DIALECT-ONBOARDING-001",
+      "title": "Новый SQL-диалект в HOUND: методика тестирования, гейты «готово» и протокол спорных точек",
+      "date_created": "2026-10-20T20:04:19.440Z",
+      "component": "HND",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "LORE_DB_SPEC",
+      "title": "LORE_DB_SPEC — граф знаний проекта (read+write), ревизия v1.0.58",
+      "date_created": "2026-07-21T16:49:29.073Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "LORE_DB_SCHEMA_MERMAID",
+      "title": "system_aida_lore — Database Schema (Mermaid + DDL) v1.2",
+      "date_created": "2026-11-05T16:02:50.234Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "LORE_STORAGE_GOAL_KAOS_TRIZ_TOC",
+      "title": "LORE storage — GOAL/KAOS + TRIZ + TOC анализ структуры хранения",
+      "date_created": "2026-07-02T07:57:17.104Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-JAVA",
+      "title": "Java",
+      "date_created": "2026-07-03T00:22:14.180Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-QUARKUS",
+      "title": "Quarkus",
+      "date_created": "2026-07-03T00:22:16.003Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-ARCADEDB",
+      "title": "ArcadeDB",
+      "date_created": "2026-07-03T00:22:19.578Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-REACT",
+      "title": "React",
+      "date_created": "2026-07-03T00:22:21.903Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-TYPESCRIPT",
+      "title": "TypeScript",
+      "date_created": "2026-07-03T00:22:23.651Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-VITE",
+      "title": "Vite",
+      "date_created": "2026-07-03T00:22:25.447Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI-VIS-TIMELINE",
+      "title": "vis-timeline",
+      "date_created": "2026-07-03T00:22:35.263Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI-REACT",
+      "title": "React",
+      "date_created": "2026-07-03T00:22:37.466Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI-TYPESCRIPT",
+      "title": "TypeScript",
+      "date_created": "2026-07-03T00:22:39.215Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI-VITE",
+      "title": "Vite",
+      "date_created": "2026-07-03T00:22:59.229Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI_MCP-MCP-SDK-MODELCONTEXTPROTOCOL-SDK-",
+      "title": "MCP SDK (@modelcontextprotocol/sdk)",
+      "date_created": "2026-07-03T00:23:01.899Z",
+      "component": "FORSETI_MCP",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI_MCP-ZOD",
+      "title": "zod",
+      "date_created": "2026-07-03T00:23:04.507Z",
+      "component": "FORSETI_MCP",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI_MCP-TYPESCRIPT",
+      "title": "TypeScript",
+      "date_created": "2026-07-03T00:23:06.739Z",
+      "component": "FORSETI_MCP",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI_MCP-NODE-JS",
+      "title": "Node.js",
+      "date_created": "2026-07-03T00:23:09.217Z",
+      "component": "FORSETI_MCP",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-QG-JAVA",
+      "title": "Java",
+      "date_created": "2026-07-03T00:23:23.389Z",
+      "component": "QG",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-QG-QUARKUS",
+      "title": "Quarkus",
+      "date_created": "2026-07-03T00:23:26.539Z",
+      "component": "QG",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-QG-ARCADEDB",
+      "title": "ArcadeDB",
+      "date_created": "2026-07-03T00:23:31.800Z",
+      "component": "QG",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-YGG-SCHEMA-REFERENCE",
+      "title": "YGG Schema Reference",
+      "date_created": "2026-07-05T14:34:31.025Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-SITEDOCS-HANDOVER",
+      "title": "Site Docs Handover",
+      "date_created": "2026-07-05T14:34:36.701Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-I18NEXT",
+      "title": "i18next",
+      "date_created": "2026-07-10T19:51:13.748Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-REACT-I18NEXT",
+      "title": "react-i18next",
+      "date_created": "2026-07-10T19:51:18.536Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-REACT-ROUTER-DOM",
+      "title": "react-router-dom",
+      "date_created": "2026-07-10T19:51:22.661Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-REACT-VIRTUOSO",
+      "title": "react-virtuoso",
+      "date_created": "2026-07-10T19:51:27.135Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE--ICONIFY-REACT-GAME-ICONS",
+      "title": "@iconify/react + game-icons",
+      "date_created": "2026-07-10T19:51:44.888Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-MERMAID-ELK-LAYOUT",
+      "title": "mermaid + ELK layout",
+      "date_created": "2026-07-10T19:52:14.001Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-DOMPURIFY",
+      "title": "DOMPurify",
+      "date_created": "2026-07-10T19:52:19.896Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-OIDC-CLIENT-TS",
+      "title": "oidc-client-ts",
+      "date_created": "2026-07-10T19:52:52.189Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-RBAC-OMILORE-AGENTS",
+      "title": "RBAC-спецификация OMILORE: две раздельные оси — роли людей и роли AI-агентов (realm omilore)",
+      "date_created": "2026-07-31T21:58:39.519Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-ADMIN-LORE-UC",
+      "title": "Admin LORE: назначение и сценарии использования (UC-каталог)",
+      "date_created": "2026-07-16T20:34:43.634Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MCP-SERVERS-001",
+      "title": "MCP-серверы AIDA: топология, конфигурация, диагностика",
+      "date_created": "2026-07-18T20:34:16.939Z",
+      "component": "FORSETI_MCP",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-MANTINE",
+      "title": "Mantine",
+      "date_created": "2026-08-01T11:16:47.881Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-ESLINT",
+      "title": "ESLint",
+      "date_created": "2026-08-01T11:17:04.436Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-VITEST",
+      "title": "Vitest",
+      "date_created": "2026-08-01T11:17:33.558Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-POSTCSS",
+      "title": "PostCSS",
+      "date_created": "2026-08-01T11:19:14.682Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE--FONTSOURCE-MANROPE-IBM-PLEX-MONO-",
+      "title": "@fontsource (Manrope + IBM Plex Mono)",
+      "date_created": "2026-08-01T11:19:26.162Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI-VIS-DATA",
+      "title": "vis-data",
+      "date_created": "2026-08-01T11:19:39.579Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE--VITEJS-PLUGIN-REACT",
+      "title": "@vitejs/plugin-react",
+      "date_created": "2026-08-01T11:19:53.335Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-DAYJS",
+      "title": "dayjs",
+      "date_created": "2026-08-01T11:20:09.144Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI_MCP-VITEST",
+      "title": "Vitest",
+      "date_created": "2026-08-01T11:24:25.004Z",
+      "component": "FORSETI_MCP",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-FORSETI_MCP-TSX",
+      "title": "tsx",
+      "date_created": "2026-08-01T11:24:38.522Z",
+      "component": "FORSETI_MCP",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-BPMN-JS",
+      "title": "bpmn-js",
+      "date_created": "2026-08-11T16:39:03.815Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-QG-ARCHITECTURE",
+      "title": "Архитектура гейтов качества для корпуса Claude-проектов — предложение",
+      "date_created": "2026-08-27T11:27:03.568Z",
+      "component": "QG",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-PRODUCT-LAYER-FOR-GATEWAY",
+      "title": "Продуктовый слой LORE для внешнего шлюза: что это за сущности и как их не спутать",
+      "date_created": "2026-08-30T10:46:25.651Z",
+      "component": "LORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-FIELD-LABELS",
+      "title": "Подписи полей: поле вершины ArcadeDB → ключ локализации → ru/en",
+      "date_created": "2026-08-30T11:11:57.046Z",
+      "component": "LORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-PLAN-MODEL",
+      "title": "Модель плана: продукт, веха, спринт — кто чему принадлежит и где правда",
+      "date_created": "2026-10-20T12:03:27.195Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-QG-JOB-CONTRACT",
+      "title": "Контракт джоба рутины QG на сервере: где текст, кто запускает, что пишется при каждом исходе, как ограничен расход",
+      "date_created": "2026-10-20T12:06:07.674Z",
+      "component": "QG",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-JRE",
+      "title": "JRE",
+      "date_created": "2026-11-05T13:52:07.834Z",
+      "component": "OMILORE",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-SECRETS-001",
+      "title": "Секреты и токены: правила дома, общие для всех проектов",
+      "date_created": "2026-11-05T15:37:14.226Z",
+      "component": "SECURITY",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-KC-001",
+      "title": "Keycloak в доме: адрес, realm и клиент — три отдельные настройки",
+      "date_created": "2026-11-05T17:53:40.676Z",
+      "component": "KC",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-WORK-ANY-KIND",
+      "title": "Работа любого типа в LORE: единый workflow, стадии, доказательства, сервисные продукты и правила вех",
+      "date_created": "2026-11-06T09:33:31.936Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UX-GRAPH-VIEWS",
+      "title": "Графовые виды: галерея референсов и чек-лист хорошего графа (UX LORE)",
+      "date_created": "2026-11-07T10:39:50.269Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-RESEARCH-PASS1",
+      "title": "Юзабилити LORE — заход 1: находки и 34 предложения",
+      "date_created": "2026-11-07T13:21:43.999Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-RESEARCH-PASS2",
+      "title": "Юзабилити LORE — заход 2: финалисты вглубь, 9 багов, слои визуал/фронт/бэк/хранение",
+      "date_created": "2026-11-07T13:21:52.087Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-OBJECTS",
+      "title": "Новости и аналитика как отдельные объекты — у референсов",
+      "date_created": "2026-11-07T13:21:53.651Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-CHAMPION-INSIGHTS",
+      "title": "Инсайты от референсов и длинное чтение",
+      "date_created": "2026-11-07T13:21:58.650Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-FEEDS",
+      "title": "Лента новостей и сводка метрик изменений: как делают, куда встраивают",
+      "date_created": "2026-11-07T13:22:00.402Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-VS-CHAMPIONS",
+      "title": "Наши принципы и прототип против референсов",
+      "date_created": "2026-11-07T13:22:04.713Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-V2-PARALLEL",
+      "title": "Два приложения LORE (v1 + v2) над одним бэкендом",
+      "date_created": "2026-11-07T13:22:09.436Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-CRITIQUE-R1",
+      "title": "Критика 4 агентов, раунд 1",
+      "date_created": "2026-11-07T13:22:12.107Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-ADMIN-REVIEW",
+      "title": "Разбор текущей админки и инвентаризация",
+      "date_created": "2026-11-07T13:22:16.831Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-CRITIQUE-R2",
+      "title": "Критика, раунд 2: прототип v3",
+      "date_created": "2026-11-07T13:22:22.297Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-WHY-PROPOSAL",
+      "title": "Предложение по экранам «Зачем»",
+      "date_created": "2026-11-07T13:22:24.561Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-CRITIQUE-R3-SCALE",
+      "title": "Критика, раунд 3: когда много",
+      "date_created": "2026-11-07T13:22:29.337Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-WHY-CANVAS-TECH",
+      "title": "Холст как Miro со стикерами, привязанными к сущностям: техника",
+      "date_created": "2026-11-07T13:22:32.801Z",
+      "component": "FORSETI",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    }
+  ],
+  "_page": {
+    "limit": 1000,
+    "offset": 0,
+    "total": 400,
+    "has_more": false
+  }
+}
