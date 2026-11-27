@@ -31,6 +31,15 @@ describe('web-next ← @seidr/kit', () => {
     expect(rc).not.toMatch(/_authToken|_auth\s*=|_password/);
   });
 
+  // 27.11 (владелица: «cicdgithub попроси в kkrepo»): сборка образа висела 40+ мин на npm ci из публичного
+  // npmjs. Все пакеты — через группу npm-ha kkRepo (npm-proxy + запасной upstream). @seidr — ТОЛЬКО свой
+  // прокси, в общую группу не входит: иначе пакет с тем же именем на npmjs подменил бы наш (dependency confusion).
+  it('общие пакеты — через группу npm-ha kkRepo, @seidr — только свой прокси', () => {
+    const rc = read('.npmrc').split(/\r?\n/).filter(l => !/^\s*[#;]/.test(l)).join('\n');
+    expect(rc).toMatch(/^registry=http:\/\/192\.168\.3\.131:8081\/repository\/npm-ha\/$/m);
+    expect(rc).not.toMatch(/^@seidr:registry=.*npm-ha/m);
+  });
+
   it('lock берёт kit из реестра, а не из соседней папки', () => {
     const lock = JSON.parse(read('package-lock.json'));
     const entry = lock.packages['node_modules/@seidr/kit'];

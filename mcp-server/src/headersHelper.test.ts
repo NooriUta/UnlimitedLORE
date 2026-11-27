@@ -73,6 +73,9 @@ const base = () => ({
   LORE_MCP_CLIENT_SECRET: SECRET,
   LORE_MCP_TOKEN_CACHE: join(dir, 'token.json'),
   CLAUDE_CODE_SESSION_ID: 'b2c27515-7345-4386-b9e0-9c824bc96050',
+  // Каталог сессий — пустой временный, без ожидания: иначе помощник нашёл бы claude, под которым идут тесты.
+  LORE_SESSION_DIR: join(dir, 'no-sessions'),
+  LORE_SESSION_WAIT_MS: '0',
 });
 
 describe('scripts/lore-mcp-headers.mjs', () => {
@@ -153,5 +156,79 @@ describe('scripts/lore-mcp-headers.mjs', () => {
     expect(r.stderr).toMatch(/LORE_MCP_CLIENT_ID/);
     expect(r.stderr).toMatch(/LORE_MCP_CLIENT_SECRET/);
     expect(existsSync(join(dir, 'none.json'))).toBe(false);
+  });
+});
+
+// AO-SESSION-DOOR, вариант «б» (владелица 27.11.2026, «ок»): номер сессии Claude Code в headersHelper не
+// приходит, но хук SessionStart его получает (stdin, session_id). Проба 27.11 на двух параллельных сессиях:
+// хук и headersHelper запускает ОДИН процесс claude своей сессии. Поэтому тот же файл помощника работает и
+// хуком: `lore-mcp-headers.mjs --session-start` пишет session_id в <каталог сессий>/<pid claude>.json, а
+// помощник по pid своего claude читает его и ставит X-Lore-Session-Id. Унаследованный CLAUDE_CODE_SESSION_ID
+// не читается (KDP-40: из живой сессии он родительский). Нет файла за время ожидания — заголовка нет.
+function runWith(args: string[], env: Record<string, string | undefined>, stdin = ''): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  const clean: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (v !== undefined && !k.startsWith('LORE_') && k !== 'CLAUDE_CODE_SESSION_ID') clean[k] = v;
+  }
+  for (const [k, v] of Object.entries(env)) if (v !== undefined) clean[k] = v;
+  return new Promise((done) => {
+    const p = spawn(process.execPath, [SCRIPT, ...args], { env: clean });
+    let stdout = '';
+    let stderr = '';
+    p.stdout.on('data', (c) => (stdout += c));
+    p.stderr.on('data', (c) => (stderr += c));
+    p.on('close', (status) => done({ status, stdout, stderr }));
+    p.stdin.end(stdin);
+  });
+}
+
+describe('сессия из хука SessionStart (--session-start) → X-Lore-Session-Id', () => {
+  const SID = '6be1e61d-6cfb-4f31-88d9-8164f3645639';
+  const sessEnv = (sub: string) => ({ LORE_SESSION_DIR: join(dir, sub), LORE_CLAUDE_PID: '4242', LORE_SESSION_WAIT_MS: '300' });
+
+  it('хук пишет session_id в файл по pid claude; помощник ставит заголовок', async () => {
+    const m = await runWith(['--session-start'], sessEnv('s1'), JSON.stringify({ session_id: SID, hook_event_name: 'SessionStart' }));
+    expect(m.status, m.stderr).toBe(0);
+    expect(m.stdout).toBe('');
+    expect(JSON.parse(readFileSync(join(dir, 's1', '4242.json'), 'utf8')).session_id).toBe(SID);
+    const r = await runWith([], { ...base(), ...sessEnv('s1') });
+    expect(r.status, r.stderr).toBe(0);
+    expect(JSON.parse(r.stdout)['X-Lore-Session-Id']).toBe(SID);
+  });
+
+  it('хук сработал чуть позже помощника — помощник дожидается файла', async () => {
+    const p = runWith([], { ...base(), ...sessEnv('s2'), LORE_SESSION_WAIT_MS: '3000' });
+    await new Promise((r) => setTimeout(r, 400));
+    await runWith(['--session-start'], sessEnv('s2'), JSON.stringify({ session_id: SID }));
+    const r = await p;
+    expect(r.status, r.stderr).toBe(0);
+    expect(JSON.parse(r.stdout)['X-Lore-Session-Id']).toBe(SID);
+  });
+
+  it('файла нет — заголовка нет; унаследованный CLAUDE_CODE_SESSION_ID не берётся', async () => {
+    const r = await runWith([], { ...base(), ...sessEnv('s3') });
+    expect(r.status, r.stderr).toBe(0);
+    expect(JSON.parse(r.stdout)).not.toHaveProperty('X-Lore-Session-Id');
+  });
+
+  it('чужой pid claude — чужую сессию не берёт', async () => {
+    await runWith(['--session-start'], sessEnv('s4'), JSON.stringify({ session_id: SID }));
+    const r = await runWith([], { ...base(), ...sessEnv('s4'), LORE_CLAUDE_PID: '9999' });
+    expect(JSON.parse(r.stdout)).not.toHaveProperty('X-Lore-Session-Id');
+  });
+
+  it('хук без session_id или с мусором — код 0, файла нет (хук не роняет старт сессии)', async () => {
+    const m = await runWith(['--session-start'], sessEnv('s5'), 'не json');
+    expect(m.status).toBe(0);
+    expect(existsSync(join(dir, 's5', '4242.json'))).toBe(false);
+    const bad = await runWith(['--session-start'], sessEnv('s5'), JSON.stringify({ session_id: '../../etc' }));
+    expect(bad.status).toBe(0);
+    expect(existsSync(join(dir, 's5', '4242.json'))).toBe(false);
+  });
+
+  it('хуку не нужны переменные токена (их у хука может не быть)', async () => {
+    const m = await runWith(['--session-start'], sessEnv('s6'), JSON.stringify({ session_id: SID }));
+    expect(m.status, m.stderr).toBe(0);
+    expect(existsSync(join(dir, 's6', '4242.json'))).toBe(true);
   });
 });
