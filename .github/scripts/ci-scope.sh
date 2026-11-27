@@ -78,6 +78,18 @@ changed_files() {
       git cat-file -e "$BEFORE^{commit}" 2>/dev/null \
         || git fetch --no-tags -q origin "$BEFORE" >/dev/null 2>&1
       range="$BEFORE...HEAD"
+      # CD: база — коммит, который РЕАЛЬНО работает на стенде (тег образа, DEPLOYED_BASE), а не прошлый
+      # пуш. 27.11.2026: выкатка #1912 собрала бэкенд и повисла до подмены контейнера; пуш #1915 сравнил
+      # с головой #1912, бэкенда в диапазоне не нашёл — стенд остался на старом бэкенде при зелёном CD.
+      if [ "$MODE" = cd ] && [ -n "${DEPLOYED_BASE:-}" ]; then
+        local dep
+        if dep=$(git rev-parse -q --verify "${DEPLOYED_BASE}^{commit}" 2>/dev/null); then
+          range="$dep...HEAD"
+          echo "ci-scope: база сравнения — выкаченный коммит ${DEPLOYED_BASE} (а не прошлый пуш)" >&2
+        else
+          FILES_OK=0; FILES_WHY="выкаченный коммит ${DEPLOYED_BASE} не найден в истории — от прошлого пуша сужать нельзя"; return
+        fi
+      fi
       ;;
     *)
       FILES_OK=0; FILES_WHY="событие '${EVENT_NAME:-}' не сравнивается по путям"; return

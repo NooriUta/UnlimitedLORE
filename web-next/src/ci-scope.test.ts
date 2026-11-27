@@ -566,3 +566,64 @@ describe.skipIf(!bashBin)('v1-freeze.sh: образ lore-app закреплён'
     expect(readFileSync(log, 'utf8')).toContain(`tag ${A} x/y:z`);
   });
 });
+
+// 27.11.2026: промо #1912 собрало бэкенд, но выкатка повисла на сборке v2 и не дошла до подмены
+// контейнера. Следующий пуш (#1915) сравнивал с предыдущей головой preprod (github.event.before) —
+// бэкенд в этом диапазоне не менялся, и стенд остался на старом бэкенде при зелёном CD.
+// Правило: база сравнения — коммит, который РЕАЛЬНО работает на стенде (тег образа), а не прошлый пуш.
+describe.skipIf(!bashBin)('ci-scope.sh cd: база — то, что выкачено, а не прошлый пуш', () => {
+  const gitDir = mkdtempSync(join(tmpdir(), 'lore-scope-git-'));
+  afterAll(() => rmSync(gitDir, { recursive: true, force: true }));
+  const git = (...a: string[]) => {
+    const r = spawnSync('git', a, { cwd: gitDir, encoding: 'utf8',
+      env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' } });
+    if (r.status !== 0) throw new Error(`git ${a.join(' ')}: ${r.stderr}`);
+    return r.stdout.trim();
+  };
+  const commit = (path: string) => {
+    const f = join(gitDir, path);
+    spawnSync('mkdir', ['-p', dirname(f)]);
+    writeFileSync(f, String(Math.random()));
+    git('add', '-A');
+    git('commit', '-q', '-m', path);
+    return git('rev-parse', 'HEAD');
+  };
+  git('init', '-q');
+  const deployed = commit('README.md');          // на стенде работает этот коммит
+  const before = commit('backend/X.java');       // промо с бэкендом — выкатка не дошла
+  commit('web-next/src/App.tsx');                // новый пуш: только v2
+  const cdHere = (env: Record<string, string>) =>
+    run('.github/scripts/ci-scope.sh', ['cd'], { EVENT_NAME: 'push', BEFORE: before, ...env }, gitDir).kv;
+
+  it('без сведений о выкаченном — как раньше, от прошлого пуша (бэкенд не трогается)', () => {
+    expect(cdHere({}).backend).toBe('false');
+  });
+
+  it('выкачен более старый коммит — бэкенд из пропущенной выкатки едет', () => {
+    const kv = cdHere({ DEPLOYED_BASE: deployed.slice(0, 8) });
+    expect(kv.backend).toBe('true');
+    expect(kv.frontend_next).toBe('true');
+  });
+
+  it('выкаченный коммит неизвестен репозиторию — громко и от прошлого пуша не сужаем: всё', () => {
+    const kv = cdHere({ DEPLOYED_BASE: 'deadbeef' });
+    expect(kv.backend).toBe('true');
+  });
+});
+
+describe('lore-cd.yml: база выкатки — работающий образ', () => {
+  const cdYml = read('.github/workflows/lore-cd.yml');
+  it('шаг deployed-base.sh стоит до выбора сервисов и только на пуше', () => {
+    const i = cdYml.indexOf('run: bash .github/scripts/deployed-base.sh');
+    expect(i).toBeGreaterThan(0);
+    expect(i).toBeLessThan(cdYml.indexOf('run: bash .github/scripts/ci-scope.sh cd'));
+    expect(cdYml.slice(cdYml.lastIndexOf('- name:', i), i)).toMatch(/if: github\.event_name == 'push'/);
+  });
+  it('скрипт берёт старший из образов бэкенда и v2 и пишет DEPLOYED_BASE в окружение', () => {
+    const s = read('.github/scripts/deployed-base.sh');
+    expect(s).toMatch(/sha_of lore-backend/);
+    expect(s).toMatch(/sha_of lore-app-next/);
+    expect(s).toMatch(/merge-base --is-ancestor/);
+    expect(s).toMatch(/DEPLOYED_BASE=\$base" >> "\$GITHUB_ENV"/);
+  });
+});
