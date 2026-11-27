@@ -268,6 +268,16 @@ describe('ошибки диспетчера: неизвестный type/rel →
     expect(text(res)).toContain('git_project');
   });
 
+  // 27.11.2026: выпуски сервера miniLORE — в проекте AIDA/miniLORE, а PR — в AIDA/miniLore_serverside.
+  it('release rel=pr с fields.pr_repo → pr_repo уходит в тело /lore/release/link и /unlink', async () => {
+    const add = await run('entity_link', { type: 'release', id: 'minilore-srv-v0.6.0', rel: 'pr', target_id: [209], fields: { git_project: 'AIDA/miniLORE', pr_repo: 'AIDA/miniLore_serverside' } });
+    expect(add[0].body).toEqual({ release_id: 'minilore-srv-v0.6.0', sprint_ids: [], pr_numbers: [209], git_project: 'AIDA/miniLORE', pr_repo: 'AIDA/miniLore_serverside' });
+    const rm = await run('entity_link', { type: 'release', id: 'v1', rel: 'pr', target_id: [3], action: 'remove', fields: { git_project: 'o/r', pr_repo: 'o/other' } });
+    expect(rm[0].body).toMatchObject({ pr_numbers: [3], pr_repo: 'o/other' });
+    const plain = await run('entity_link', { type: 'release', id: 'v1', rel: 'pr', target_id: [1], fields: { git_project: 'o/r' } });
+    expect(plain[0].body).not.toHaveProperty('pr_repo');
+  });
+
   it('task rel=file без fields.project → isError', async () => {
     const res = await byName['entity_link'].handler({ type: 'task', id: 'SP/T1', rel: 'file', target_id: 'a/b.ts' });
     expect(isErr(res)).toBe(true);
