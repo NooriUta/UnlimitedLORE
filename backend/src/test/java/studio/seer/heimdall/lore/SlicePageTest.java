@@ -159,4 +159,13 @@ class SlicePageTest {
         assertThrows(IllegalArgumentException.class,
             () -> SlicePage.extract(given("limit", String.valueOf(SlicePage.MAX_LIMIT + 1))));
     }
+
+    /** KREG-12 (ADR-LORE-061): страница среза — 1..3000, как у SliceQuery; 3001 — отказ (400). */
+    @Test
+    void pageLimitCeilingIs3000() {
+        assertEquals(3000, SlicePage.extract(given("limit", "3000")).limit());
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+            () -> SlicePage.extract(given("limit", "3001")));
+        assertTrue(e.getMessage().contains("1..3000"), e.getMessage());
+    }
 }

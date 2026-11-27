@@ -37,7 +37,13 @@ import java.util.regex.Pattern;
  * (найдено, но вне скоупа) или {@code no_match}. Скоуп fail-closed, как у графа: пустое множество — 403
  * SCOPE_EMPTY; проект в {@code links_to} вне скоупа — 403 OUTSIDE_SCOPE.
  *
- * <p><b>Не сделано в этой версии</b> (SPEC §6.1, шаг 6 — «find полный»): {@code neighbor}, {@code neighbors},
+ * <p><b>Соседи</b> ({@code neighbors}, 26.11.2026): к каждой ВОЗВРАЩЁННОЙ строке — список соседей по указанным
+ * рёбрам ({@code [{id, type, title, status_category, rel, dir, kind?}]}), один набор или несколько с именами
+ * {@code as}. Обход — тем же источником, что у {@code /lore/graph} ({@link LoreGraphResource.DbSource}): только
+ * открытые рёбра, только записи паспорта; сосед вне скоупа вызывающего не показывается, но считается
+ * ({@code meta.neighbors[].hidden_by_scope}); потолок на строку назван ({@code truncated_ids}).
+ *
+ * <p><b>Не сделано в этой версии</b> (SPEC §6.1, шаг 6 — «find полный»): {@code neighbor},
  * {@code edge_fields}, {@code view} — отвечают 400 NOT_IMPLEMENTED, а не молча игнорируются.
  */
 final class LoreFind {
@@ -52,7 +58,15 @@ final class LoreFind {
 
     private static final Pattern REL = Pattern.compile("[A-Z][A-Z_]{1,39}");
     private static final Set<String> OPS = Set.of("=", "!=", "set", "<", ">", "<=", ">=", "contains");
-    private static final Set<String> NOT_YET = Set.of("neighbor", "neighbors", "edge_fields", "view");
+    private static final Set<String> NOT_YET = Set.of("neighbor", "edge_fields", "view");
+    static final int MAX_NEIGHBOR_SETS = 5;
+    static final int DEFAULT_NEIGHBORS = 50;
+    static final int MAX_NEIGHBORS = 500;
+    private static final Pattern AS = Pattern.compile("[a-z][a-z0-9_]{0,39}");
+    private static final Set<String> NEIGHBOR_KEYS = Set.of("as", "rels", "dir", "types", "limit");
+
+    /** Набор соседей: имя поля в строке, рёбра, направление, типы соседей ({@code null} — любые), потолок на строку. */
+    record NeighborSpec(String as, List<String> rels, String dir, Set<String> types, int limit) {}
     private static final Set<String> KNOWN_KEYS = Set.of("type", "where", "links_to", "not_linked", "id_in",
         "changed_within_days", "fields", "sort", "limit", "neighbor", "neighbors", "edge_fields", "view",
         // GC-05, 21.11: один параметр проекта (project; scope_projects — прежнее имя, с _warning) и текст поиска.
@@ -76,6 +90,16 @@ final class LoreFind {
     /** SCD2: поле открытой версии, иначе последней, где оно задано. */
     private static String scd2(String f) {
         return "COALESCE(" + OPEN + "." + f + "[0], out('HAS_STATE')[" + f + " IS NOT NULL]." + f + "[0])";
+    }
+
+    /**
+     * Поле, принадлежащее своему статусу (адресат ожидания, причина), — только из ОТКРЫТОЙ версии, без отката к
+     * прежним. Иначе задача, вышедшая из waiting, показывала старое «ждёт владелицу…» (находка 26.11.2026,
+     * SPRINT_MINILORE_LINK_PIPE/LP-21). То же правило, что у записи: StatusHistoryService не переносит waiting_for
+     * и status_reason в версию другого статуса; и у среза задач (LoreSlices: waiting_for открытой версии).
+     */
+    private static String openOnly(String f) {
+        return OPEN + "." + f + "[0]";
     }
 
     /** Поле: SQL-выражения (несколько — сливаются в один список) и признак многозначности. */
@@ -104,7 +128,7 @@ final class LoreFind {
         task.put("work_class", Field.one("work_class"));
         task.put("status_raw", Field.one(scd2("status_raw")));
         task.put("effort_days", Field.one(scd2("effort_days")));
-        task.put("waiting_for", Field.one(scd2("waiting_for")));
+        task.put("waiting_for", Field.one(openOnly("waiting_for")));
         task.put("sprint_id", Field.one("out('PART_OF').sprint_id[0]"));
         task.put("phase_uid", Field.one("outE('IN_PHASE')[valid_to IS NULL].inV().phase_uid[0]"));
         task.put("component", Field.many("out('TAGGED_WITH').component_id"));
@@ -259,6 +283,8 @@ final class LoreFind {
             }
         }
 
+        List<NeighborSpec> neighborSpecs = neighborSpecs(req.get("neighbors"), known);
+
         Integer changedDays = null;
         if (req.get("changed_within_days") != null) {
             changedDays = intOr(req.get("changed_within_days"), 0, "changed_within_days");
@@ -316,6 +342,7 @@ final class LoreFind {
         }
 
         StringBuilder sb = new StringBuilder("SELECT ").append(def.idField()).append(" AS __id");
+        if (!neighborSpecs.isEmpty()) sb.append(", @rid AS __rid");
         for (Map.Entry<String, Field> en : def.fields().entrySet()) {
             List<String> sqls = en.getValue().sql();
             for (int i = 0; i < sqls.size(); i++) sb.append(", ").append(sqls.get(i)).append(" AS ").append(alias(en.getKey(), i));
@@ -364,6 +391,7 @@ final class LoreFind {
         int total = matched.size();
         boolean truncated = total > limit;
         List<Map<String, Object>> rows = new ArrayList<>();
+        List<String> rowRids = new ArrayList<>();
         for (Map<String, Object> r : matched.subList(0, Math.min(limit, total))) {
             Map<String, Object> out = new LinkedHashMap<>();
             out.put("id", r.get("id"));
@@ -371,7 +399,10 @@ final class LoreFind {
             out.put("title", r.get("title"));
             for (String f : fields) out.put(f, r.get(f));
             rows.add(out);
+            rowRids.add(r.get("__rid") == null ? null : String.valueOf(r.get("__rid")));
         }
+        List<Map<String, Object>> neighborMeta = neighborSpecs.isEmpty() ? null
+            : attachNeighbors(def, neighborSpecs, rows, rowRids, db, allowed);
 
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("type", def.type());
@@ -387,6 +418,7 @@ final class LoreFind {
         if (rows.isEmpty() && hidden > 0)
             meta.put("note", "подходящие записи есть (" + hidden + "), но все вне разрешённых вызывающему проектов");
         meta.put("sql_hash", sha(sql));
+        if (neighborMeta != null) meta.put("neighbors", neighborMeta);
         if (searchText != null) {
             Map<String, Object> s = new LinkedHashMap<>();
             s.put("text", searchText);
@@ -511,6 +543,136 @@ final class LoreFind {
         return d;
     }
 
+    // ── соседи ───────────────────────────────────────────────────────────────
+
+    /** Разбор {@code neighbors}: объект или список объектов; пустой список наборов — нет соседей. */
+    private static List<NeighborSpec> neighborSpecs(Object raw, Set<String> known) {
+        if (raw == null) return List.of();
+        List<Object> items = raw instanceof List<?> l ? new ArrayList<>(l) : List.of(raw);
+        if (items.size() > MAX_NEIGHBOR_SETS) throw bad("neighbors — не больше " + MAX_NEIGHBOR_SETS + " наборов");
+        List<NeighborSpec> out = new ArrayList<>();
+        Set<String> names = new LinkedHashSet<>();
+        for (Object o : items) {
+            Map<String, Object> m = asMap(o, "neighbors[]");
+            for (String k : m.keySet())
+                if (!NEIGHBOR_KEYS.contains(k)) throw bad("neighbors: неизвестный ключ «" + k + "»; допустимы " + new TreeSet<>(NEIGHBOR_KEYS));
+            String as = m.get("as") == null ? "neighbors" : str(m.get("as")).strip();
+            if (!AS.matcher(as).matches()) throw bad("neighbors.as — имя поля [a-z][a-z0-9_]*, до 40 символов; получено «" + as + "»");
+            if (known.contains(as) || "type".equals(as) || "title".equals(as))
+                throw bad("neighbors.as: «" + as + "» — уже поле строки; выберите другое имя");
+            if (!names.add(as))
+                throw bad("neighbors.as: имя «" + as + "» повторяется — у нескольких наборов имена задаются явно");
+            List<String> rels = rels(m.get("rels"), "neighbors.rels");
+            if (rels.isEmpty()) throw bad("neighbors.rels — хотя бы одно ребро (через что идти)");
+            String dir = dir(m.get("dir"), "both");
+            Set<String> types = null;
+            if (m.get("types") != null) {
+                types = new LinkedHashSet<>();
+                List<Object> tl = m.get("types") instanceof String s ? new ArrayList<>(List.of((Object[]) s.split(",")))
+                    : asList(m.get("types"), "neighbors.types");
+                List<String> ok = LoreGraphResource.graphTypes();
+                for (Object t : tl) {
+                    String ty = str(t).strip();
+                    if (ty.isEmpty()) continue;
+                    if (!ok.contains(ty)) throw bad("neighbors.types: тип «" + ty + "» в граф не входит; допустимы " + ok);
+                    types.add(ty);
+                }
+                if (types.isEmpty()) throw bad("neighbors.types — хотя бы один тип или без ключа");
+            }
+            int lim = intOr(m.get("limit"), DEFAULT_NEIGHBORS, "neighbors.limit");
+            if (lim < 1 || lim > MAX_NEIGHBORS) throw bad("neighbors.limit — от 1 до " + MAX_NEIGHBORS);
+            out.add(new NeighborSpec(as, rels, dir, types, lim));
+        }
+        return out;
+    }
+
+    /**
+     * Соседи возвращённых строк: один проход по рёбрам и один по узлам на все наборы. Сосед вне скоупа — не в
+     * строке, но в счёте {@code hidden_by_scope}; обрезка потолком — в {@code truncated_ids}.
+     */
+    private static List<Map<String, Object>> attachNeighbors(TypeDef def, List<NeighborSpec> specs,
+                                                             List<Map<String, Object>> rows, List<String> rowRids,
+                                                             LoreGraphResource.DbSource.Sql db, Set<String> allowed) {
+        LoreGraphResource.DbSource src = new LoreGraphResource.DbSource(db);
+        Set<String> keys = new LinkedHashSet<>();
+        for (String rid : rowRids) if (src.know(rid, def.vertexClass())) keys.add(rid);
+
+        Set<String> allRels = new LinkedHashSet<>();
+        for (NeighborSpec s : specs) allRels.addAll(s.rels());
+        List<LoreGraphBuilder.Edge> edges = new ArrayList<>();
+        if (!keys.isEmpty())
+            for (LoreGraphBuilder.Edge e : src.edges(keys, Set.of())) if (allRels.contains(e.rel())) edges.add(e);
+
+        Set<String> other = new LinkedHashSet<>();
+        for (LoreGraphBuilder.Edge e : edges) {
+            if (keys.contains(e.from())) other.add(e.to());
+            if (keys.contains(e.to())) other.add(e.from());
+        }
+        Map<String, LoreGraphBuilder.Node> nodes = other.isEmpty() ? Map.of() : src.nodes(other);
+
+        List<Map<String, Object>> metaOut = new ArrayList<>();
+        for (NeighborSpec s : specs) {
+            int hidden = 0;
+            List<String> truncated = new ArrayList<>();
+            for (int i = 0; i < rows.size(); i++) {
+                String rid = rowRids.get(i);
+                Map<String, Map<String, Object>> found = new LinkedHashMap<>();
+                if (rid != null) {
+                    for (LoreGraphBuilder.Edge e : edges) {
+                        if (!s.rels().contains(e.rel())) continue;
+                        if (rid.equals(e.from()) && !"in".equals(s.dir()))
+                            hidden += addNeighbor(found, nodes.get(e.to()), e, "out", rid, s, allowed);
+                        if (rid.equals(e.to()) && !"out".equals(s.dir()))
+                            hidden += addNeighbor(found, nodes.get(e.from()), e, "in", rid, s, allowed);
+                    }
+                }
+                List<Map<String, Object>> list = new ArrayList<>();
+                for (Map<String, Object> n : found.values()) if (n != null) list.add(n); // null — скрытый скоупом
+                list.sort(Comparator.<Map<String, Object>, String>comparing(n -> str(n.get("rel")))
+                    .thenComparing(n -> str(n.get("type"))).thenComparing(n -> str(n.get("id")))
+                    .thenComparing(n -> str(n.get("dir"))));
+                if (list.size() > s.limit()) {
+                    list = new ArrayList<>(list.subList(0, s.limit()));
+                    truncated.add(str(rows.get(i).get("id")));
+                }
+                rows.get(i).put(s.as(), list);
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("as", s.as());
+            m.put("rels", s.rels());
+            m.put("dir", s.dir());
+            m.put("types", s.types() == null ? null : new ArrayList<>(s.types()));
+            m.put("limit", s.limit());
+            m.put("hidden_by_scope", hidden);
+            m.put("truncated_ids", truncated);
+            metaOut.add(m);
+        }
+        return metaOut;
+    }
+
+    /** Сосед в набор строки; 1 — если он подошёл, но скрыт скоупом (для счёта), иначе 0. */
+    private static int addNeighbor(Map<String, Map<String, Object>> found, LoreGraphBuilder.Node n, LoreGraphBuilder.Edge e,
+                                   String dir, String selfRid, NeighborSpec s, Set<String> allowed) {
+        if (n == null || n.key().equals(selfRid)) return 0;
+        if (s.types() != null && !s.types().contains(n.type())) return 0;
+        String k = e.rel() + "|" + dir + "|" + n.key();
+        if (found.containsKey(k)) return 0;
+        if (allowed != null && n.scoped() && java.util.Collections.disjoint(n.projects(), allowed)) {
+            found.put(k, null);
+            return 1;
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", n.id());
+        m.put("type", n.type());
+        m.put("title", n.title());
+        m.put("status_category", n.statusCategory());
+        m.put("rel", e.rel());
+        m.put("dir", dir);
+        if (e.kind() != null) m.put("kind", e.kind());
+        found.put(k, m);
+        return 0;
+    }
+
     // ── строки ───────────────────────────────────────────────────────────────
 
     private static String alias(String field, int i) {
@@ -520,6 +682,7 @@ final class LoreFind {
     private static Map<String, Object> project(TypeDef def, Map<String, Object> r) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", LoreRecordValues.str(r.get("__id")));
+        if (r.get("__rid") != null) row.put("__rid", String.valueOf(r.get("__rid")));
         for (Map.Entry<String, Field> en : def.fields().entrySet()) {
             Field f = en.getValue();
             if (f.list()) {

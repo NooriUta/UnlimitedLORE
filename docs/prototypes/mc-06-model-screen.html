@@ -91,6 +91,46 @@ tr.changed td:first-child { box-shadow:inset 2px 0 0 var(--wrn); }
 .hide { display:none; }
 .legend { color:var(--t3); font-size:var(--fs-xs); margin-top:24px; border-top:1px dashed var(--bd); padding-top:8px; }
 .legend li { margin:2px 0; }
+/* Тексты на нескольких языках и экран правки поля (замечание владелицы 18.11.2026) */
+.i18n label, .fe label { display:block; font-size:var(--fs-xs); color:var(--t2); margin:6px 0; }
+.i18n input, .i18n textarea, .fe input, .fe textarea, .fe select { display:block; width:100%; margin-top:2px; background:var(--bg0); border:1px solid var(--bd); border-radius:var(--r-md); color:var(--t1); padding:4px 8px; font:var(--fs-sm) var(--font); }
+.langs { display:flex; gap:4px; margin:6px 0; }
+.langs button { border:1px solid var(--bd); border-radius:999px; background:var(--bg2); color:var(--t2); font:600 var(--fs-xs) var(--font); padding:2px 10px; cursor:pointer; }
+.langs button.on { border-color:var(--acc); color:var(--t1); }
+.langs .miss { color:var(--wrn); }
+.hint { color:var(--t3); font-size:var(--fs-2xs); }
+.order { margin:4px 0 8px 18px; font-size:var(--fs-sm); color:var(--t2); }
+.i18n-key { font-size:var(--fs-2xs); color:var(--t3); margin-top:4px; }
+.fe { background:var(--bg1); border:1px solid var(--bd); border-radius:var(--r-lg); padding:12px 16px; width:min(640px, calc(100vw - 24px)); max-height:90vh; overflow:auto; }
+.fe-head { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.fe-grid { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:0 12px; }
+.fe .actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+.btn-edit { min-height:22px; padding:0 8px; font-size:var(--fs-xs); }
+/* Телефон (владелица 18.11.2026: «без адаптации под телефон»). Шапка и полоса действий переносятся, вкладки
+   листаются вбок, список типов — над карточкой (свёрнутым списком), таблицы полей — карточками по строке. */
+@media (max-width: 720px) {
+  .top { flex-wrap: wrap; padding: 8px 16px; }
+  .top .note { flex-basis: 100%; overflow-wrap: anywhere; }
+  .top .note code { word-break: break-all; }
+  .frame { margin: 8px; min-height: 0; }
+  .bar { flex-wrap: wrap; position: static; }
+  .bar .grow { display: none; }
+  .bar .ver { flex-basis: 100%; overflow-wrap: anywhere; }
+  .tabs { overflow-x: auto; white-space: nowrap; padding: 0 8px; }
+  .tabs button { flex: 0 0 auto; }
+  .body { flex-direction: column; }
+  .side { width: auto; max-height: 40vh; border-right: 0; border-bottom: 1px solid var(--bd); }
+  .main { padding: 12px; overflow: visible; }
+  .main h1, .main h2 { overflow-wrap: anywhere; }
+  .kind { overflow-wrap: anywhere; }
+  table, thead, tbody, tr, td, th { display: block; width: 100%; }
+  thead { display: none; }
+  table tr { border: 1px solid var(--bd); border-radius: var(--r-md); padding: 6px 8px; margin-bottom: 8px; }
+  table td { border: 0; padding: 2px 0; }
+  table td input, table td select { width: 100%; }
+  .hist .row { grid-template-columns: 1fr; gap: 2px; }
+  .modal > * { max-width: calc(100vw - 24px); }
+}
 </style>
 </head>
 <body>
@@ -141,6 +181,59 @@ tr.changed td:first-child { box-shadow:inset 2px 0 0 var(--wrn); }
           <span class="pill inf">только чтение в v2</span>
           <span class="pill">аудитория: везде</span>
           <span class="pill wrn">1 поле не объявлено в схеме</span>
+        </div>
+
+        <!-- Замечание владелицы 18.11.2026: «не увидела куда для объектов вносится описание определение и для нескольких языков» -->
+        <div class="section i18n" id="typeText">
+          <h2>Описание типа</h2>
+          <p class="why">Тексты типа для паспорта, подсказок и MCP. Каждый — на каждом языке модели; пустой перевод показывается языком по умолчанию с пометкой «нет перевода».</p>
+          <div class="langs" data-for="typeText">
+            <button class="on" data-lang="ru">RU</button><button data-lang="en">EN <span class="miss" title="не все тексты переведены">•</span></button><button data-lang="pl">PL <span class="miss">•</span></button><button class="add">+ язык</button>
+          </div>
+          <div class="lang-pane" data-lang="ru">
+            <label>Название<input value="Продукт"></label>
+            <label>Краткое название<input value="Продукт"></label>
+            <label>Определение <span class="hint">одна фраза: что это</span><input value="Что мы делаем для клиента: продаваемая или используемая единица LORE"></label>
+            <label>Описание <span class="hint">Markdown, редактор TipTap</span><textarea rows="3">Продукт объединяет фичи, сценарии и компоненты. У продукта бывают подпродукты.</textarea></label>
+          </div>
+          <div class="lang-pane hide" data-lang="en">
+            <label>Название<input value="Product"></label>
+            <label>Краткое название<input value="Product"></label>
+            <label>Определение<input value="" placeholder="нет перевода — показывается RU"></label>
+            <label>Описание<textarea rows="3" placeholder="нет перевода — показывается RU"></textarea></label>
+          </div>
+          <div class="lang-pane hide" data-lang="pl">
+            <label>Название<input value="Produkt"></label>
+            <label>Краткое название<input value="Produkt"></label>
+            <label>Определение<input value="" placeholder="нет перевода — показывается RU"></label>
+            <label>Описание<textarea rows="3" placeholder="нет перевода — показывается RU"></textarea></label>
+          </div>
+          <div class="i18n-key">ключ локализации: <code>model.type.product.*</code></div>
+        </div>
+
+        <!-- Сверка с lore-model.json (владелица 18.11.2026: «посмотри какие еще параметры модели не отображаешь») -->
+        <div class="section i18n" id="typeCfg">
+          <h2>Настройки типа</h2>
+          <div class="fe-grid">
+            <label>Иконка <span class="hint">game-icons</span><input value="bullseye"></label>
+            <label>Цвет типа <span class="hint">type_color, токен</span><select><option selected>--acc</option><option>--inf</option><option>--suc</option><option>--wrn</option><option>без цвета</option></select></label>
+            <label>Только чтение в v2 <span class="hint">read_only</span><select><option selected>да</option><option>нет</option></select></label>
+            <label>Только дочерний <span class="hint">child_only: создаётся из родителя</span><select><option selected>нет</option><option>да</option></select></label>
+            <label>Создание <span class="hint">create: кто и где «+ Новая»</span><select><option>все с правом записи</option><option selected>admin</option><option>нельзя (только MCP)</option></select></label>
+            <label>Workflow статусов <span class="hint">workflow: справочник и переходы</span><select><option selected>без статусов</option><option>plan_status</option><option>adr_status</option><option>decision_status</option></select></label>
+            <label>Псевдонимы <span class="hint">aliases: старые имена типа</span><input value="product, KnowProduct"></label>
+            <label>Граф <span class="hint">graph: узел на графе связей</span><select><option selected>показывать</option><option>скрыть</option></select></label>
+          </div>
+          <h3>Раскладка паспорта</h3>
+          <p class="why">Порядок блоков: тело (body), свойства (props), части (parts), вкладки связей (linkTabs), дерево (tree). Перетаскиванием.</p>
+          <ol class="order">
+            <li>Тело: <code>body_md</code></li><li>Свойства: код, цвет, вид, активен, порядок</li><li>Части: подпродукты</li><li>Вкладки связей: фичи и сценарии, боли, выгоды, работы, роли, вехи</li><li>Дерево: родитель → подпродукты</li>
+          </ol>
+          <h3>Вычисляемые и время</h3>
+          <div class="fe-grid">
+            <label>Вычисляемые поля <span class="hint">computed</span><input value="число фич, число сценариев" disabled></label>
+            <label>Точность дат <span class="hint">precision / time</span><select><option selected>день</option><option>минута</option></select></label>
+          </div>
         </div>
 
         <table id="fields">
@@ -230,6 +323,52 @@ tr.changed td:first-child { box-shadow:inset 2px 0 0 var(--wrn); }
   </div>
 </div>
 
+<!-- Экран правки одного поля (замечание владелицы 18.11.2026: «нет экрана модификации и локализации описания»). -->
+<div class="modal" id="fieldEd">
+  <div class="fe">
+    <div class="fe-head"><span class="kind">поле · <code id="feKey">title</code> · тип <code>product</code></span><button class="btn" id="feClose">Закрыть</button></div>
+    <h2 id="feTitle">Название</h2>
+    <div class="fe-grid">
+      <label>Вид<select><option selected>text</option><option>md</option><option>number</option><option>bool</option><option>date</option><option>enum (справочник)</option><option>ref (ссылка)</option></select></label>
+      <label>Слой<select><option selected>стабильное (в схеме)</option><option>опциональное (только в модели)</option></select></label>
+      <label>История<select><option>историчное — живёт в версии</option><option selected>не историчное — на записи</option></select></label>
+      <label>Место в паспорте<select><option selected>шапка</option><option>свойства</option><option>тело</option></select></label>
+      <label>Аудитория<select><option selected>везде</option><option>в карточке</option><option>админка</option><option>скрыто</option></select></label>
+      <label>Обязательное<select><option selected>нет</option><option>да</option></select></label>
+      <label>Свойство схемы<input value="label_ru · STRING" disabled></label>
+      <label>Справочник значений <span class="hint">dict</span><input value="—" disabled></label>
+      <label>Правится <span class="hint">editable</span><select><option selected>да</option><option>нет</option></select></label>
+      <label>Дверь записи <span class="hint">write</span><input value="PUT /lore/record/product/{id}"></label>
+      <label>Много значений <span class="hint">multi</span><select><option selected>нет</option><option>да</option></select></label>
+      <label>Варианты <span class="hint">options — для enum без справочника</span><input value="" placeholder="через запятую"></label>
+      <label>Ссылка на тип <span class="hint">refType</span><select><option selected>—</option><option>product</option><option>component</option><option>project</option></select></label>
+      <label>Связь и направление <span class="hint">rel · dir</span><input value="—" disabled></label>
+    </div>
+    <h3>Тексты поля</h3>
+    <div class="langs"><button class="on" data-lang="ru">RU</button><button data-lang="en">EN</button><button data-lang="pl">PL <span class="miss">•</span></button><button class="add">+ язык</button></div>
+    <div class="lang-pane" data-lang="ru">
+      <label>Название<input value="Название"></label>
+      <label>Краткое название <span class="hint">для колонок и чипов</span><input value="Название"></label>
+      <label>Определение <span class="hint">одна фраза — подсказка у подписи</span><input value="Как продукт называют люди"></label>
+      <label>Описание <span class="hint">Markdown, TipTap</span><textarea rows="3">Видно в списках, паспорте и ссылках. Код продукта не меняется при смене названия.</textarea></label>
+    </div>
+    <div class="lang-pane hide" data-lang="en">
+      <label>Название<input value="Title"></label>
+      <label>Краткое название<input value="Title"></label>
+      <label>Определение<input value="" placeholder="нет перевода — показывается RU"></label>
+      <label>Описание<textarea rows="3" placeholder="нет перевода — показывается RU"></textarea></label>
+    </div>
+          <div class="lang-pane hide" data-lang="pl">
+            <label>Название<input value="Tytuł"></label>
+            <label>Краткое название<input value="Tytuł"></label>
+            <label>Определение<input value="" placeholder="нет перевода — показывается RU"></label>
+            <label>Описание<textarea rows="3" placeholder="нет перевода — показывается RU"></textarea></label>
+          </div>
+    <div class="i18n-key">ключ локализации: <code id="feI18n">model.field.product.title.*</code></div>
+    <div class="actions"><button class="btn" id="feCancel">Отменить</button><button class="btn btn--primary" id="feApply">В дифф</button></div>
+    <p class="why">«В дифф» добавляет правку в список изменений справа; запись — только через «Проверить» и «Применить…».</p>
+  </div>
+</div>
 <div class="modal" id="modal">
   <div class="box">
     <h3 id="mTitle">Применить модель?</h3>
@@ -262,6 +401,24 @@ $$('#fields tbody tr').forEach(tr => {
   const [label, group, aud] = [tr.cells[1].querySelector('input'), tr.cells[3].querySelector('select'), tr.cells[5].querySelector('select')];
   track(label, `types.product.${key}.label`); track(group, `types.product.${key}.group`); track(aud, `audience.product.${key}`);
 });
+// языки текстов: переключатель внутри своего блока
+document.addEventListener('click', e => {
+  const b = e.target.closest('.langs button[data-lang]'); if (!b) return;
+  const box = b.closest('.section, .fe');
+  box.querySelectorAll('.langs button[data-lang]').forEach(x => x.classList.toggle('on', x === b));
+  box.querySelectorAll('.lang-pane').forEach(p => p.classList.toggle('hide', p.dataset.lang !== b.dataset.lang));
+});
+// экран правки поля: кнопка «Изменить…» у каждой строки таблицы полей
+$$('#fields tbody tr').forEach(tr => {
+  const key = tr.cells[0].innerText.trim();
+  const btn = document.createElement('button'); btn.className = 'btn btn-edit'; btn.textContent = 'Изменить…';
+  btn.onclick = () => {
+    $('#feKey').textContent = key; $('#feTitle').textContent = tr.cells[1].querySelector('input').value;
+    $('#feI18n').textContent = `model.field.product.${key}.*`; $('#fieldEd').classList.add('open');
+  };
+  tr.cells[0].appendChild(document.createElement('br')); tr.cells[0].appendChild(btn);
+});
+['#feClose', '#feCancel', '#feApply'].forEach(s => $(s).onclick = () => $('#fieldEd').classList.remove('open'));
 let checked = false;
 function changes() { return [...orig].filter(([el, v]) => el.value !== v); }
 function update() {

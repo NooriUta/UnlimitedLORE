@@ -88,7 +88,9 @@ class KnowSkillSchemaTest {
 
     @Test
     void outsideModelMarksSkillTypes() {
-        for (String t : List.of("KnowSkill", "APPLIES_TO_ROLE", "SKILL_EXTENDS"))
-            assertTrue(ModelSchemaAdapter.OUTSIDE_MODEL.containsKey(t), t + " — вне модели 1.18 до релиза модели");
+        // KREG-13 (владелец 26.11.2026: «всё, что есть в базе, должно быть описано в контракте модели»): KnowSkill — тип skill модели.
+        assertFalse(ModelSchemaAdapter.OUTSIDE_MODEL.containsKey("KnowSkill"), "KnowSkill описан в модели — пометка «вне модели» снята");
+        for (String t : List.of("APPLIES_TO_ROLE", "SKILL_EXTENDS"))
+            assertTrue(ModelSchemaAdapter.OUTSIDE_MODEL.containsKey(t), t + " — рёбра скилла пока вне модели 1.18");
     }
 }

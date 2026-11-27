@@ -260,6 +260,28 @@ final class LoreRecordFrom {
     /** Переименование колонки: строка как есть. */
     private static Val s(String key, String column) { return v(key, Transform.STR, column); }
 
+    /**
+     * KREG-13 (владелец 26.11.2026: «LoreRecordFrom.java — это же не похоже на json по модели»): тип без ручной
+     * записи в {@link #VALUES} собирается из самой модели — поля и тело типа, колонка поля — {@code aliases}
+     * (нет псевдонима — одноимённая колонка); заголовок — первое непустое из заголовка и кода. Новые типы
+     * описываются только в lore-model.json, Java не трогается. {@code null} — типа нет в модели.
+     */
+    static List<Val> fromModel(String type) {
+        LoreModelFile.Content c = LoreModelFile.content();
+        LoreRecordRegistry.TypeDef d = c.typeDefs().get(type);
+        if (d == null) return null;
+        Map<String, String> al = c.aliases().getOrDefault(type, Map.of());
+        String codeCol = al.getOrDefault("code", "code");
+        List<Val> out = new java.util.ArrayList<>();
+        for (LoreRecordRegistry.Field f : d.fields()) {
+            String col = al.getOrDefault(f.key(), f.key());
+            out.add("title".equals(f.key()) ? v("title", Transform.FIRST_OF, col, codeCol) : s(f.key(), col));
+        }
+        if (d.body() != null)
+            for (LoreRecordRegistry.Body b : d.body()) out.add(s(b.key(), al.getOrDefault(b.key(), b.key())));
+        return out;
+    }
+
     /** Список строк без повтора; элементы-списки разворачиваются на один уровень. */
     static List<String> distinctFlat(Object v) {
         java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();

@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Оформление LORE</title>
+<!-- Прототип админки «Оформление» (владелец 25.11.2026: «стили тоже доезжают? сделай в админке опционально
+     догрузить свои стили, наши сделай обязательными, и страницу с выбором самостоятельно пары шрифтов и палитры»).
+     Токены и палитры — ЖИВЫЕ: подключён сам слой kit (kit/src/styles/seidr.css), как у прочих прототипов.
+     Блоки [data-theme]/[data-mode] в seidr.css написаны без :root, поэтому каждая карточка предпросмотра
+     несёт свою палитру и режим независимо от страницы. Шрифты в приложении грузит @fontsource; здесь — Google Fonts. -->
+<link rel="stylesheet" href="../../kit/src/styles/seidr.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+<style>
+html, body { height: auto; overflow-x: clip; }
+body { background: var(--bg0); color: var(--t1); font-family: var(--font); font-size: var(--fs-base); }
+.ap { max-width: 1280px; margin: 0 auto; padding: 0 16px 48px; }
+.ap-top { position: sticky; top: 0; z-index: 5; background: var(--bg0); border-bottom: 1px solid var(--bd); margin: 0 -16px; padding: 10px 16px 0; }
+.ap-crumb { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; letter-spacing: .08em; }
+.ap-h1 { font-family: var(--display); font-weight: 800; font-size: var(--fs-xl); margin: 2px 0 8px; letter-spacing: .01em; }
+.ap-tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.ap-tab { appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--t2); font: inherit; font-size: var(--fs-sm); font-weight: 700; padding: 8px 10px; white-space: nowrap; cursor: pointer; text-transform: uppercase; letter-spacing: .05em; }
+.ap-tab[aria-selected="true"] { color: var(--acc); border-bottom-color: var(--acc); }
+.ap-tab iconify-icon { vertical-align: -2px; margin-right: 4px; }
+.ap-page { display: none; padding-top: 14px; }
+.ap-page.is-on { display: block; }
+.ap-grid { display: grid; gap: 14px; }
+@media (min-width: 900px) { .ap-grid--2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } .ap-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .ap-sticky { position: sticky; top: 96px; } }
+.ap-card { background: var(--bg1); border: 1px solid var(--bd); border-radius: var(--r-lg); padding: 12px; min-width: 0; }
+.ap-h2 { font-family: var(--display); font-weight: 800; font-size: var(--fs-md); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ap-sub { color: var(--t2); font-size: var(--fs-sm); margin-bottom: 10px; }
+.ap-th { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; letter-spacing: .08em; margin: 10px 0 4px; }
+.ap-row { display: flex; align-items: center; gap: 8px; padding: 7px 4px; border-top: 1px solid var(--bd); min-width: 0; }
+.ap-row:first-of-type { border-top: 0; }
+.ap-row__main { flex: 1; min-width: 0; }
+.ap-row__name { font-weight: 700; overflow-wrap: anywhere; }
+.ap-row__meta { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); overflow-wrap: anywhere; }
+.ap-sw { width: 22px; height: 22px; border-radius: var(--r-pill); border: 1px solid var(--bdh); flex: none; }
+.ap-sw4 { display: inline-flex; flex: none; border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--bdh); }
+.ap-sw4 i { width: 9px; height: 22px; display: block; }
+.ap-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--bd); border-radius: var(--r-pill); padding: 0 8px; font-size: var(--fs-2xs); font-family: var(--mono); color: var(--t2); white-space: nowrap; line-height: 18px; }
+.ap-chip--acc { color: var(--acc); border-color: var(--acc); }
+.ap-chip--suc { color: var(--suc); border-color: var(--suc); }
+.ap-chip--wrn { color: var(--wrn); border-color: var(--wrn); }
+.ap-chip--dng { color: var(--dng); border-color: var(--dng); }
+.ap-chip--inf { color: var(--inf); border-color: var(--inf); }
+.ap-btn { appearance: none; background: var(--bg3); border: 1px solid var(--bd); color: var(--t1); border-radius: var(--r-pill); padding: 4px 12px; font: inherit; font-size: var(--fs-sm); font-weight: 700; cursor: pointer; white-space: nowrap; min-height: 28px; }
+.ap-btn:hover { border-color: var(--bdh); }
+.ap-btn--pri { background: var(--acc); border-color: var(--acc); color: var(--bg0); }
+.ap-btn--dng { color: var(--dng); border-color: color-mix(in srgb, var(--dng) 50%, var(--bd)); }
+.ap-btn[disabled] { opacity: .45; cursor: not-allowed; }
+.ap-ico { appearance: none; background: none; border: 1px solid transparent; color: var(--t2); border-radius: var(--r-md); width: 30px; height: 30px; display: inline-grid; place-items: center; cursor: pointer; flex: none; }
+.ap-ico:hover { border-color: var(--bd); color: var(--t1); }
+.ap-ico[disabled] { color: var(--t3); cursor: not-allowed; }
+.ap-lock { color: var(--wrn); flex: none; }
+.ap-seg { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.ap-seg button { appearance: none; background: var(--bg2); border: 1px solid var(--bd); color: var(--t2); border-radius: var(--r-pill); padding: 3px 10px; font: inherit; font-size: var(--fs-sm); cursor: pointer; min-height: 28px; }
+.ap-seg button[aria-pressed="true"] { color: var(--acc); border-color: var(--acc); background: color-mix(in srgb, var(--acc) 12%, var(--bg2)); }
+.ap-seg button[disabled] { opacity: .45; cursor: not-allowed; }
+.ap-radio { width: 16px; height: 16px; accent-color: var(--acc); flex: none; }
+.ap-toggle { appearance: none; width: 34px; height: 18px; border-radius: var(--r-pill); background: var(--bg3); border: 1px solid var(--bd); position: relative; cursor: pointer; flex: none; }
+.ap-toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: var(--r-pill); background: var(--t3); transition: left .15s; }
+.ap-toggle:checked { background: color-mix(in srgb, var(--suc) 30%, var(--bg3)); border-color: var(--suc); }
+.ap-toggle:checked::after { left: 18px; background: var(--suc); }
+.ap-toggle:disabled { opacity: .5; cursor: not-allowed; }
+.ap-drop { border: 1px dashed var(--bdh); border-radius: var(--r-md); padding: 10px; display: grid; gap: 8px; }
+.ap-ta { width: 100%; min-height: 120px; background: var(--bg0); color: var(--t1); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 8px; font-family: var(--mono); font-size: var(--fs-touch-input, var(--fs-sm)); resize: vertical; }
+.ap-in { background: var(--bg0); color: var(--t1); border: 1px solid var(--bd); border-radius: var(--r-md); padding: 4px 8px; font: inherit; font-size: var(--fs-touch-input, var(--fs-base)); min-width: 0; width: 100%; }
+.ap-acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ap-check { display: grid; gap: 4px; margin-top: 8px; }
+.ap-check__l { display: flex; gap: 6px; align-items: flex-start; font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.ap-check__l iconify-icon { flex: none; margin-top: 2px; }
+.ap-ok { color: var(--suc); } .ap-bad { color: var(--dng); } .ap-warn { color: var(--wrn); } .ap-dim { color: var(--t3); }
+.ap-note { font-size: var(--fs-sm); color: var(--t2); border-left: 2px solid var(--inf); padding: 4px 8px; margin: 8px 0; background: color-mix(in srgb, var(--inf) 6%, transparent); }
+.ap-note--wrn { border-left-color: var(--wrn); background: color-mix(in srgb, var(--wrn) 6%, transparent); }
+.ap-mono { font-family: var(--mono); font-size: var(--fs-xs); }
+.ap-k { font-family: var(--mono); font-size: var(--fs-xs); color: var(--acc); }
+.ap-demo { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--wrn); border: 1px dashed var(--wrn); border-radius: var(--r-pill); padding: 0 6px; }
+
+/* ── предпросмотр: кусочек интерфейса в выбранной палитре/режиме/шрифтах ── */
+.pv { background: var(--bg0); color: var(--t1); border: 1px solid var(--bd); border-radius: var(--r-lg); overflow: hidden; font-family: var(--font); min-width: 0; }
+.pv__bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--bg1); border-bottom: 1px solid var(--bd); min-width: 0; }
+.pv__logo { font-family: var(--display); font-weight: var(--display-weight, 800); font-size: var(--fs-md); color: var(--acc); letter-spacing: .04em; }
+.pv__nav { display: flex; gap: 10px; font-size: var(--fs-sm); color: var(--t2); overflow: hidden; min-width: 0; flex: 1; }
+.pv__nav b { color: var(--t1); border-bottom: 2px solid var(--acc); }
+.pv__body { padding: 10px; display: grid; gap: 10px; }
+.pv__h { font-family: var(--display); font-weight: var(--display-weight, 800); font-size: var(--fs-lg); }
+.pv__p { color: var(--t2); font-size: var(--fs-sm); }
+.pv__tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); table-layout: fixed; }
+.pv__tbl th { text-align: left; font-family: var(--mono); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .06em; color: var(--t3); font-weight: 400; padding: 4px; border-bottom: 1px solid var(--bd); }
+.pv__tbl td { padding: 5px 4px; border-bottom: 1px solid var(--bd); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv__tbl tr:nth-child(even) td { background: var(--bg1); }
+.pv__id { font-family: var(--mono); font-size: var(--fs-xs); color: var(--acc); }
+.pv__st { display: inline-flex; align-items: center; gap: 4px; border: 1px solid currentColor; border-radius: var(--r-pill); padding: 0 6px; font-size: var(--fs-2xs); font-family: var(--mono); line-height: 16px; }
+.pv__row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pv__code { font-family: var(--mono); font-size: var(--fs-xs); background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r-sm); padding: 6px 8px; color: var(--t1); overflow-x: auto; white-space: pre; }
+.pv__lbl { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--t3); text-transform: uppercase; letter-spacing: .06em; }
+
+.ct { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.ct td { padding: 4px; border-top: 1px solid var(--bd); }
+.ct td:last-child { text-align: right; font-family: var(--mono); font-size: var(--fs-xs); white-space: nowrap; }
+
+/* ── развилки ── */
+.fk { display: grid; gap: 8px; }
+.fk__q { font-weight: 700; }
+.fk__opts { display: grid; gap: 8px; }
+@media (min-width: 600px) { .fk__opts { grid-template-columns: 1fr 1fr; } .fk__opts--3 { grid-template-columns: 1fr 1fr 1fr; } }
+.fk__o { border: 1px solid var(--bd); border-radius: var(--r-md); padding: 8px; background: var(--bg2); font-size: var(--fs-sm); min-width: 0; }
+.fk__o b { display: block; margin-bottom: 2px; }
+.fk__o.is-rec { border-color: var(--acc); }
+.fk__price { color: var(--t2); margin-top: 4px; }
+.fk__rec { font-family: var(--mono); font-size: var(--fs-2xs); color: var(--acc); text-transform: uppercase; letter-spacing: .06em; }
+.ev { font-size: var(--fs-sm); display: grid; gap: 6px; }
+.ev li { margin-left: 16px; overflow-wrap: anywhere; }
+.ev code, .ap-card code { font-family: var(--mono); font-size: var(--fs-xs); color: var(--inf); overflow-wrap: anywhere; }
+.verdict { display: flex; gap: 8px; align-items: flex-start; }
+.verdict__big { font-family: var(--display); font-weight: 800; font-size: var(--fs-lg); color: var(--wrn); }
+</style>
+</head>
+<body>
+<div class="ap">
+  <header class="ap-top">
+    <div class="ap-crumb">Админка · Справочники · Оформление <span class="ap-demo">прототип</span></div>
+    <h1 class="ap-h1">Оформление</h1>
+    <nav class="ap-tabs" role="tablist" aria-label="Разделы оформления">
+      <button class="ap-tab" role="tab" data-tab="styles"><iconify-icon icon="game-icons:paint-brush"></iconify-icon>Стили</button>
+      <button class="ap-tab" role="tab" data-tab="pick"><iconify-icon icon="game-icons:palette"></iconify-icon>Шрифты и палитра</button>
+      <button class="ap-tab" role="tab" data-tab="forks"><iconify-icon icon="game-icons:crossroad"></iconify-icon>Развилки</button>
+      <button class="ap-tab" role="tab" data-tab="about"><iconify-icon icon="game-icons:info"></iconify-icon>Что это</button>
+    </nav>
+  </header>
+
+  <!-- ═════════ 1. СТИЛИ ═════════ -->
+  <section class="ap-page" id="p-styles" role="tabpanel">
+    <div class="ap-grid ap-grid--2">
+      <div class="ap-grid">
+        <div class="ap-card">
+          <div class="ap-h2"><iconify-icon class="ap-lock" icon="game-icons:padlock"></iconify-icon>Наши — обязательные</div>
+          <div class="ap-sub">Входят в приложение (seidr.css в бандле). Удалить и выключить нельзя — можно выбрать умолчание для установки.</div>
+          <div class="ap-th">Палитры · 6 · у каждой тёмная и светлая</div>
+          <div id="ours-pal"></div>
+          <div class="ap-th">Пары шрифтов · 2</div>
+          <div id="ours-font"></div>
+        </div>
+
+        <div class="ap-card">
+          <div class="ap-h2"><iconify-icon icon="game-icons:upload"></iconify-icon>Свои — по желанию</div>
+          <div class="ap-sub">Набор токенов: JSON или CSS-переменные. Проверяется до сохранения: только известные токены, цвета — цветами, шрифты — только из состава приложения.</div>
+          <div class="ap-drop">
+            <div class="ap-acts">
+              <label class="ap-btn" for="up-file"><iconify-icon icon="game-icons:files"></iconify-icon> Файл .json / .css</label>
+              <input id="up-file" type="file" accept=".json,.css,application/json,text/css" hidden>
+              <button class="ap-btn" id="ex-good" type="button">Пример: годный</button>
+              <button class="ap-btn" id="ex-bad" type="button">Пример: с ошибками</button>
+            </div>
+            <input class="ap-in" id="up-name" type="text" placeholder="Название стиля" aria-label="Название стиля">
+            <textarea class="ap-ta" id="up-src" spellcheck="false" aria-label="Токены стиля" placeholder='{ "--acc": "#3a8fd8", "--bg0": "#0d1117" }  или  :root { --acc: #3a8fd8; }'></textarea>
+            <div class="ap-acts">
+              <button class="ap-btn" id="up-check" type="button">Проверить</button>
+              <button class="ap-btn ap-btn--pri" id="up-add" type="button" disabled>Добавить</button>
+            </div>
+            <div class="ap-check" id="up-res" aria-live="polite"></div>
+          </div>
+          <div class="ap-th">Загруженные</div>
+          <div id="own-list"></div>
+        </div>
+      </div>
+
+      <div class="ap-card ap-sticky">
+        <div class="ap-h2">Предпросмотр <span class="ap-chip" id="pv1-name">amber forest</span></div>
+        <div class="ap-acts" style="margin-bottom:8px">
+          <div class="ap-seg" id="pv1-mode"><button type="button" data-v="dark" aria-pressed="true">тёмная</button><button type="button" data-v="light" aria-pressed="false">светлая</button></div>
+        </div>
+        <div id="pv1"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 2. ШРИФТЫ И ПАЛИТРА ═════════ -->
+  <section class="ap-page" id="p-pick" role="tabpanel">
+    <div class="ap-grid ap-grid--2">
+      <div class="ap-grid">
+        <div class="ap-card">
+          <div class="ap-h2">Для кого выбор <span class="ap-chip ap-chip--wrn">развилка</span></div>
+          <div class="ap-seg" id="scope"><button type="button" data-v="install" aria-pressed="true">на установку (админ)</button><button type="button" data-v="user" aria-pressed="false">на себя (пользователь)</button></div>
+          <div class="ap-note" id="scope-note"></div>
+        </div>
+        <div class="ap-card">
+          <div class="ap-h2">Шрифты — каждая роль отдельно</div>
+          <div class="ap-sub">В бандле три семейства (@fontsource): Unbounded 800, Manrope 400/600/700, IBM Plex Mono 400/600. Другое семейство — только своим стилем с файлом шрифта (развилка 4).</div>
+          <div class="ap-th">Заголовки · --display</div>
+          <div class="ap-seg" id="f-display"></div>
+          <div class="ap-th">Текст · --font</div>
+          <div class="ap-seg" id="f-font"></div>
+          <div class="ap-th">Моно · --mono</div>
+          <div class="ap-seg" id="f-mono"></div>
+          <div class="ap-note">Сейчас в kit две готовые пары: <span class="ap-k">pair</span> (Unbounded + Manrope + Plex Mono) и <span class="ap-k">mono</span> (всё Plex Mono, <code>[data-font="mono"]</code>). Здесь роли выбираются независимо — пары становятся пресетами.</div>
+          <div class="ap-seg" id="f-presets"></div>
+        </div>
+        <div class="ap-card">
+          <div class="ap-h2">Палитра — отдельно от шрифтов</div>
+          <div id="pick-pal" class="ap-seg"></div>
+          <div class="ap-th">Режим</div>
+          <div class="ap-seg" id="pick-mode"><button type="button" data-v="dark" aria-pressed="true">тёмная</button><button type="button" data-v="light" aria-pressed="false">светлая</button><button type="button" data-v="both" aria-pressed="false">обе рядом</button></div>
+        </div>
+        <div class="ap-card">
+          <div class="ap-h2"><iconify-icon icon="game-icons:magnifying-glass"></iconify-icon>Читаемость</div>
+          <div class="ap-sub">Контраст считается по живым значениям токенов выбранной палитры (WCAG: текст ≥ 4.5, крупное и обвязка ≥ 3).</div>
+          <div id="contrast"></div>
+        </div>
+      </div>
+      <div class="ap-card ap-sticky">
+        <div class="ap-h2">Предпросмотр</div>
+        <div class="ap-grid" id="pv2"></div>
+        <div class="ap-acts" style="margin-top:10px">
+          <button class="ap-btn ap-btn--pri" type="button" id="save-pick">Сохранить</button>
+          <button class="ap-btn" type="button" id="reset-pick">Сбросить к умолчанию</button>
+          <span class="ap-mono ap-dim" id="save-out"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 3. РАЗВИЛКИ ═════════ -->
+  <section class="ap-page" id="p-forks" role="tabpanel">
+    <div class="ap-grid" id="forks"></div>
+  </section>
+
+  <!-- ═════════ 4. ЧТО ЭТО ═════════ -->
+  <section class="ap-page" id="p-about" role="tabpanel">
+    <div class="ap-grid ap-grid--2">
+      <div class="ap-card">
+        <div class="ap-h2">Что это и зачем</div>
+        <ul class="ev">
+          <li><b>Наши стили</b> — шесть палитр Seiðr (каждая в тёмной и светлой) и шрифты Unbounded / Manrope / IBM Plex Mono. Они в приложении, поэтому есть у любой установки с первого запуска и не ломаются от пустой базы.</li>
+          <li><b>Свои стили</b> — для клиента, которому нужен свой фирменный цвет. Загружается набор токенов, а не произвольный CSS: так чужой стиль не сломает раскладку и не обойдёт защиту страницы (CSP).</li>
+          <li><b>Шрифты и палитра</b> выбираются независимо: заголовки, текст и моно — по отдельности, палитра — отдельно. Предпросмотр сразу показывает шапку, таблицу, кнопки и чипы, а проверка читаемости предупреждает, если текст сольётся с фоном.</li>
+          <li><b>Зачем админка:</b> сегодня палитру выбирает только каждый человек себе, умолчание для всей установки задать негде; свои цвета клиента завести нельзя совсем.</li>
+        </ul>
+      </div>
+      <div class="ap-card">
+        <div class="ap-h2">Доезжают ли стили на свежую установку</div>
+        <div class="verdict"><span class="verdict__big">Частично</span></div>
+        <ul class="ev" style="margin-top:6px">
+          <li class="ap-ok"><b>Доезжает:</b> все цвета палитр, шкала шрифтов и гарнитуры — в бандле (<code>kit/src/styles/seidr.css</code>, шрифты — <code>@fontsource</code> в <code>web-next/src/App.tsx</code>). Свежей базе для вида они не нужны.</li>
+          <li class="ap-warn"><b>Подписи палитр:</b> справочник <code>palette</code> на свежей базе пуст — init-empty его не сеет (<code>scripts/model-migration/init-empty.mjs</code>, словари берутся из правил переноса, <code>palette</code> там нет). Экран настроек печатает «без статьи — показан код». На проде статья одна — <code>mono</code> из шести.</li>
+          <li class="ap-warn"><b>Цвета статусов:</b> на свежей базе статусы приходят с иконкой, но без цвета (<code>dictEntriesFromRules</code> не несёт color); шаг V с цветами (<code>StatusDictCoreSeed</code>) на базе из модели не запускается. Вид цел потому, что звезда статуса красится константами kit <code>kit/src/elements/statusMeta.ts</code> (--st-*) и цвет справочника не читает — правка цвета статуса в админке на звезду не влияет.</li>
+          <li class="ap-ok"><b>Цвета областей:</b> доезжают — <code>LoreSchemaAdditive</code> → <code>area_dict_seed</code> (SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS). Но v2 их не рисует: цвет area читает только замороженный v1.</li>
+          <li class="ap-bad"><b>Нет совсем:</b> умолчания палитры на установку, своих стилей, выбора шрифтов в v2 (в kit есть <code>data-font</code>, но панели «Вид» в web-next нет).</li>
+        </ul>
+      </div>
+      <div class="ap-card" style="grid-column:1/-1">
+        <div class="ap-h2">Опись: цвета и иконки — справочник или константа</div>
+        <div class="ap-sub">Прод, срез dictionary, 179 статей, 25.11.2026 (только чтение). «Свежая база» — что даёт init-empty + LoreSchemaAdditive.</div>
+        <div style="overflow-x:auto">
+        <table class="ct" style="min-width:560px">
+          <tr><td><b>Что</b></td><td><b>Откуда в v2</b></td><td><b>Цвет: hex / токен</b></td><td><b>Свежая база</b></td></tr>
+          <tr><td>Палитры, шрифты, шкала</td><td>константы kit (<code>seidr.css</code>, <code>prefs.ts</code>)</td><td>hex только в seidr.css</td><td class="ap-ok">в бандле</td></tr>
+          <tr><td>Статусы задач/спринтов/ADR/…</td><td>звезда — константы <code>statusMeta.ts</code>; справочник → <code>/lore/model</code> — списки</td><td>токены var(--…)</td><td class="ap-warn">иконки есть, цветов нет</td></tr>
+          <tr><td>Виды записей (цвет, значок)</td><td>константы <code>loreKinds.ts</code> + модель <code>type_color</code></td><td>токены --section-*</td><td class="ap-ok">в бандле</td></tr>
+          <tr><td>Области компонентов (area)</td><td>справочник; v2 не красит</td><td>токены / color-mix</td><td class="ap-ok">сеется (AUD-AREA-COLORS)</td></tr>
+          <tr><td>Продукты</td><td>справочник (<code>productPaint.ts</code>)</td><td>токены; из 17 у 1 нет цвета, у 4 нет иконки</td><td class="ap-warn">нет статей</td></tr>
+          <tr><td>Иконки компонентов</td><td>поле <code>game_icon</code> записи</td><td>—</td><td class="ap-warn">сид 25 компонентов AIDA</td></tr>
+          <tr><td>task_type, work_class, gain_rank, job_kind, uc_*</td><td>справочник (<code>taskDicts.ts</code>)</td><td class="ap-bad">26 сырых hex</td><td class="ap-warn">нет статей</td></tr>
+          <tr><td>artifact_kind</td><td>справочник</td><td class="ap-bad">var(--kind-*) — токенов нет в kit</td><td class="ap-warn">нет статей</td></tr>
+          <tr><td>Цвета связей графа</td><td>константы <code>loreEdges.ts</code></td><td>токены</td><td class="ap-ok">в бандле</td></tr>
+        </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+'use strict';
+// ── данные: настоящие из kit ──────────────────────────────────────────────
+// PALETTES — kit/src/tokens/prefs.ts (id, label, swatch). Значения цветов не копируются:
+// предпросмотр ставит data-theme/data-mode, а seidr.css отдаёт свои значения.
+const PALETTES = [
+  { id: 'amber-forest', label: 'amber forest', swatch: 'var(--swatch-amber-forest)' },
+  { id: 'lichen', label: 'lichen', swatch: 'var(--swatch-lichen)' },
+  { id: 'slate', label: 'slate', swatch: 'var(--swatch-slate)' },
+  { id: 'juniper', label: 'juniper', swatch: 'var(--swatch-juniper)' },
+  { id: 'warm-dark', label: 'warm dark', swatch: 'var(--swatch-warm-dark)' },
+  { id: 'mono', label: 'mono', swatch: 'var(--swatch-mono)' },
+];
+// Подписи из справочника palette на проде (query_slice dictionary, 25.11.2026): статья есть только у mono.
+const DICT_LABEL = { mono: 'приглушённая (mono)' };
+// FONT_PAIRS — kit/src/appearance/index.tsx; семейства — seidr.css :root и @fontsource в web-next.
+const FONTS = [
+  { id: 'Unbounded', css: "'Unbounded', sans-serif", note: '800' },
+  { id: 'Manrope', css: "'Manrope', sans-serif", note: '400–700' },
+  { id: 'IBM Plex Mono', css: "'IBM Plex Mono', monospace", note: '400/600', mono: true },
+];
+const FONT_PAIRS = [
+  { id: 'pair', label: 'pair — Unbounded + Manrope + Plex Mono', display: 'Unbounded', font: 'Manrope', mono: 'IBM Plex Mono' },
+  { id: 'mono', label: 'mono — всё IBM Plex Mono', display: 'IBM Plex Mono', font: 'IBM Plex Mono', mono: 'IBM Plex Mono' },
+];
+// Допустимые токены своего стиля — имена из seidr.css (ядро темы, статусы, виды записей).
+const CORE = ['bg0', 'bg1', 'bg2', 'bg3', 'bd', 'bdh', 't1', 't2', 't3', 'acc', 'suc', 'wrn', 'inf', 'dng', 'on-accent'];
+const ST = ['done', 'ready_for_deploy', 'uat', 'active', 'partial', 'planned', 'design', 'todo', 'backlog', 'deferred', 'blocked', 'cancelled'].map(s => 'st-' + s);
+const SECTION = ['milestones', 'sprints', 'adrs', 'decisions', 'releases', 'components', 'tech', 'features', 'actors', 'rbjg'].map(s => 'section-' + s);
+const ALLOWED = new Set([...CORE, ...ST, ...SECTION].map(t => '--' + t));
+const FONT_TOKENS = new Set(['--font', '--display', '--mono']);
+const REQUIRED = ['--bg0', '--bg1', '--t1', '--t2', '--acc'];
+
+// ── состояние в URL (правило: вкладка/выбор — в адресе) ─────────────────
+const st = {
+  tab: 'styles', def: 'amber-forest', pv1: 'amber-forest', pv1mode: 'dark',
+  scope: 'install', display: 'Unbounded', font: 'Manrope', mono: 'IBM Plex Mono', pal: 'amber-forest', mode: 'dark',
+};
+function readUrl() { const p = new URLSearchParams(location.hash.slice(1)); for (const k of Object.keys(st)) if (p.get(k)) st[k] = p.get(k); }
+function writeUrl() { const p = new URLSearchParams(); for (const [k, v] of Object.entries(st)) p.set(k, v); history.replaceState(null, '', '#' + p.toString()); }
+
+const own = [
+  // демо-запись, чтобы список не был пустым на показе
+  { id: 'own-corp', name: 'Корпоративный синий', demo: true, on: true, tokens: { '--bg0': '#0d1117', '--bg1': '#131a24', '--bg2': '#1a2330', '--bg3': '#223044', '--bd': '#2c3b52', '--bdh': '#3b4f6b', '--t1': '#dfe7f2', '--t2': '#9fb0c6', '--t3': '#8494aa', '--acc': '#3a8fd8', '--suc': '#5fb878', '--wrn': '#d39a35', '--inf': '#6cb2d8', '--dng': '#d0675c' } },
+];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fontCss = id => (FONTS.find(f => f.id === id) || FONTS[1]).css;
+
+// ── предпросмотр ─────────────────────────────────────────────────────────
+function preview({ pal, mode, display, font, mono, tokens }) {
+  const el = document.createElement('div');
+  el.className = 'pv';
+  if (pal && !pal.startsWith('own-')) el.setAttribute('data-theme', pal);
+  if (mode === 'light') el.setAttribute('data-mode', 'light');
+  const style = [];
+  if (display) style.push(`--display:${fontCss(display)}`);
+  if (font) style.push(`--font:${fontCss(font)}`);
+  if (mono) style.push(`--mono:${fontCss(mono)}`);
+  if (tokens) for (const [k, v] of Object.entries(tokens)) style.push(`${k}:${v}`);
+  el.setAttribute('style', style.join(';'));
+  const rows = [
+    ['FN-12', 'Сверка палитр с v1', 'active', 'В работе'],
+    ['FN-13', 'Пустые состояния списка', 'done', 'Готово'],
+    ['FN-14', 'Контраст светлой темы', 'blocked', 'Заблокировано'],
+    ['FN-15', 'Пара шрифтов по ролям', 'planned', 'Запланировано'],
+  ];
+  el.innerHTML = `
+    <div class="pv__bar"><span class="pv__logo">LORE</span>
+      <span class="pv__nav"><b>Задачи</b><span>Спринты</span><span>ADR</span><span>Релизы</span></span>
+      <span class="ap-chip">${mode === 'light' ? 'светлая' : 'тёмная'}</span></div>
+    <div class="pv__body">
+      <div><div class="pv__h">Спринт оформления</div><div class="pv__p">Текст второго уровня: описание, подписи полей и даты.</div></div>
+      <table class="pv__tbl"><colgroup><col style="width:62px"><col><col style="width:116px"></colgroup>
+        <thead><tr><th>Код</th><th>Задача</th><th>Статус</th></tr></thead>
+        <tbody>${rows.map(r => `<tr><td class="pv__id">${r[0]}</td><td>${r[1]}</td><td><span class="pv__st" style="color:var(--st-${r[2]})">${r[3]}</span></td></tr>`).join('')}</tbody></table>
+      <div class="pv__row">
+        <button class="ap-btn ap-btn--pri" type="button">Сохранить</button>
+        <button class="ap-btn" type="button">Отмена</button>
+        <button class="ap-btn ap-btn--dng" type="button">Удалить</button>
+      </div>
+      <div class="pv__row">
+        <span class="ap-chip ap-chip--acc">акцент</span><span class="ap-chip ap-chip--suc">успех</span><span class="ap-chip ap-chip--wrn">внимание</span><span class="ap-chip ap-chip--dng">ошибка</span><span class="ap-chip ap-chip--inf">инфо</span><span class="ap-chip">t3 · подпись</span>
+      </div>
+      <div><div class="pv__lbl">моно</div><div class="pv__code">task_set SPRINT_X/FN-12 → ready_for_deploy</div></div>
+    </div>`;
+  return el;
+}
+
+// ── 1. стили ─────────────────────────────────────────────────────────────
+function renderOurs() {
+  $('#ours-pal').innerHTML = PALETTES.map(p => `
+    <div class="ap-row">
+      <input class="ap-radio" type="radio" name="def" value="${p.id}" ${st.def === p.id ? 'checked' : ''} aria-label="Умолчание установки: ${p.label}">
+      <span class="ap-sw" style="background:${p.swatch}"></span>
+      <div class="ap-row__main"><div class="ap-row__name">${esc(DICT_LABEL[p.id] || p.label)}</div>
+        <div class="ap-row__meta">${p.id}${DICT_LABEL[p.id] ? '' : ' · <span class="ap-warn">нет статьи в справочнике — подпись = код</span>'}</div></div>
+      ${st.def === p.id ? '<span class="ap-chip ap-chip--acc">умолчание</span>' : ''}
+      <button class="ap-ico" type="button" data-pv="${p.id}" title="Предпросмотр" aria-label="Предпросмотр ${p.label}"><iconify-icon icon="game-icons:eye-target"></iconify-icon></button>
+      <span class="ap-lock" title="Встроенная — нельзя удалить или выключить"><iconify-icon icon="game-icons:padlock"></iconify-icon></span>
+    </div>`).join('');
+  $('#ours-font').innerHTML = FONT_PAIRS.map(f => `
+    <div class="ap-row">
+      <span class="ap-chip" style="font-family:${fontCss(f.display)}">Aa</span>
+      <div class="ap-row__main"><div class="ap-row__name">${esc(f.label)}</div><div class="ap-row__meta">kit FONT_PAIRS · ${f.id}</div></div>
+      <span class="ap-lock" title="Встроенная — нельзя удалить или выключить"><iconify-icon icon="game-icons:padlock"></iconify-icon></span>
+    </div>`).join('');
+}
+function renderOwn() {
+  $('#own-list').innerHTML = own.length ? own.map(o => `
+    <div class="ap-row">
+      <input class="ap-toggle" type="checkbox" data-tg="${o.id}" ${o.on ? 'checked' : ''} aria-label="Включить ${esc(o.name)}">
+      <span class="ap-sw4">${['--bg0', '--bg2', '--acc', '--t1'].map(k => `<i style="background:${o.tokens[k] || 'transparent'}"></i>`).join('')}</span>
+      <div class="ap-row__main"><div class="ap-row__name">${esc(o.name)} ${o.demo ? '<span class="ap-demo">демо</span>' : ''}</div>
+        <div class="ap-row__meta">${Object.keys(o.tokens).length} токенов · ${o.on ? 'виден в выборе' : 'выключен — скрыт из выбора'}</div></div>
+      <button class="ap-ico" type="button" data-pv="${o.id}" title="Предпросмотр" aria-label="Предпросмотр ${esc(o.name)}"><iconify-icon icon="game-icons:eye-target"></iconify-icon></button>
+      <button class="ap-ico" type="button" data-del="${o.id}" title="Удалить" aria-label="Удалить ${esc(o.name)}"><iconify-icon icon="game-icons:trash-can"></iconify-icon></button>
+    </div>`).join('') : '<div class="ap-dim ap-mono">Своих стилей нет — установка работает на наших.</div>';
+}
+function renderPv1() {
+  const o = own.find(x => x.id === st.pv1);
+  const p = PALETTES.find(x => x.id === st.pv1);
+  $('#pv1-name').textContent = o ? o.name : (p ? p.label : st.pv1);
+  $('#pv1').replaceChildren(preview(o ? { mode: 'dark', tokens: o.tokens } : { pal: st.pv1, mode: st.pv1mode }));
+  for (const b of $('#pv1-mode').children) { b.setAttribute('aria-pressed', String(b.dataset.v === st.pv1mode)); b.disabled = !!o; }
+}
+
+// ── проверка своего стиля ────────────────────────────────────────────────
+const COLOR_RE = /^(#[0-9a-f]{3}|#[0-9a-f]{4}|#[0-9a-f]{6}|#[0-9a-f]{8}|(rgb|rgba|hsl|hsla)\([^()]*\)|color-mix\(.*\)|var\(--[a-z0-9_-]+\))$/i;
+function parseSource(src) {
+  const s = src.trim();
+  if (!s) return { err: 'Пусто: вставьте JSON или CSS-переменные.' };
+  if (s.startsWith('{')) {
+    try { const j = JSON.parse(s); if (typeof j !== 'object' || Array.isArray(j)) return { err: 'JSON должен быть объектом «токен → значение».' }; return { pairs: Object.entries(j).map(([k, v]) => [k, String(v)]), kind: 'JSON' }; }
+    catch (e) { return { err: 'JSON не читается: ' + e.message }; }
+  }
+  const problems = [];
+  if (/@import|url\(/i.test(s)) problems.push('В файле @import или url(): внешние загрузки запрещены защитой страницы (CSP style-src \'self\'). Картинки и шрифты — через свои файлы ассетов.');
+  const blocks = [...s.matchAll(/([^{}]+)\{([^{}]*)\}/g)];
+  if (!blocks.length) return { err: 'Не нашли блок вида :root { --токен: значение; }.' };
+  const pairs = [];
+  for (const b of blocks) {
+    const sel = b[1].trim();
+    if (!/^(:root|\[data-mode=['"]?(light|dark)['"]?\])$/.test(sel)) problems.push(`Селектор «${sel}»: разрешены только :root и [data-mode="light"] — свой стиль меняет токены, а не элементы.`);
+    for (const d of b[2].split(';')) { const m = d.match(/^\s*([^:]+):\s*(.+?)\s*$/); if (m) pairs.push([m[1].trim(), m[2].trim()]); }
+  }
+  return { pairs, kind: 'CSS', problems };
+}
+function validate(src) {
+  const r = parseSource(src);
+  if (r.err) return { ok: false, lines: [['bad', r.err]] };
+  const lines = [], tokens = {};
+  for (const p of r.problems || []) lines.push(['bad', p]);
+  for (const [k, v] of r.pairs) {
+    if (/^font(-family|-size)?$/.test(k) || /^--fs-/.test(k)) { lines.push(['bad', `«${k}: ${v}» — сырой шрифт или кегль. Шкала --fs-* и гарнитуры — только наши; шрифт выбирается на странице «Шрифты и палитра».`]); continue; }
+    if (FONT_TOKENS.has(k)) {
+      const fam = v.split(',')[0].replace(/['"]/g, '').trim();
+      if (FONTS.some(f => f.id === fam)) { lines.push(['warn', `${k}: ${fam} — есть в приложении; лучше выбрать на странице шрифтов, а не в стиле.`]); tokens[k] = v; }
+      else lines.push(['bad', `${k}: «${fam}» — такого шрифта в приложении нет. Своё семейство — только вместе с файлом шрифта (развилка 4).`]);
+      continue;
+    }
+    if (!k.startsWith('--')) { lines.push(['bad', `«${k}» — это CSS-свойство, а не токен. Разрешены только переменные темы (--bg0, --acc…).`]); continue; }
+    if (!ALLOWED.has(k)) { lines.push(['bad', `${k} — неизвестная переменная: интерфейс её не читает. Допустимы: ядро (--bg0…--dng, --on-accent), статусы --st-*, виды --section-*.`]); continue; }
+    if (!COLOR_RE.test(v)) { lines.push(['bad', `${k}: «${v}» — не цвет. Ждём #hex, rgb()/hsl(), color-mix() или var(--токен).`]); continue; }
+    tokens[k] = v;
+  }
+  const miss = REQUIRED.filter(k => !tokens[k]);
+  if (miss.length) lines.push(['warn', `Не заданы ${miss.join(', ')} — возьмутся из amber forest. Проверьте контраст в предпросмотре.`]);
+  const n = Object.keys(tokens).length;
+  const bad = lines.some(l => l[0] === 'bad');
+  lines.unshift([bad ? 'bad' : 'ok', bad ? `Отказ: ${lines.filter(l => l[0] === 'bad').length} причин(ы) ниже. Принято бы ${n} токенов из ${r.pairs.length}.` : `Годится: ${n} токенов (${r.kind}).`]);
+  return { ok: !bad && n > 0, lines, tokens };
+}
+let lastCheck = null;
+function showCheck() {
+  lastCheck = validate($('#up-src').value);
+  const ic = { ok: 'game-icons:check-mark', bad: 'game-icons:cancel', warn: 'game-icons:hazard-sign' };
+  $('#up-res').innerHTML = lastCheck.lines.map(([k, t]) => `<div class="ap-check__l ap-${k}"><iconify-icon icon="${ic[k]}"></iconify-icon><span>${esc(t)}</span></div>`).join('');
+  $('#up-add').disabled = !lastCheck.ok || !$('#up-name').value.trim();
+  if (lastCheck.ok) { $('#pv1-name').textContent = ($('#up-name').value.trim() || 'новый стиль') + ' · черновик'; $('#pv1').replaceChildren(preview({ mode: 'dark', tokens: lastCheck.tokens })); }
+}
+const EX_GOOD = ':root {\n  --bg0: #10141a;\n  --bg1: #161c24;\n  --bg2: #1d2530;\n  --bg3: #26303d;\n  --bd:  #33404f;\n  --t1:  #e4ebf2;\n  --t2:  #a3b1c0;\n  --t3:  #8b98a8;\n  --acc: #e0a040;\n  --suc: #6cbf7f;\n  --wrn: #d8963a;\n  --inf: #6aaed6;\n  --dng: #d46a5f;\n}';
+const EX_BAD = ':root {\n  --acc: #e0a040;\n  --brand-primary: #ff00aa;\n  --bg0: tomato-ish;\n  font-family: "Comic Sans MS";\n  --fs-base: 15px;\n  --display: "Roboto Slab", serif;\n}\n.sk-btn { border-radius: 0; }\n@import url("https://cdn.example/x.css");';
+
+// ── 2. шрифты и палитра ──────────────────────────────────────────────────
+function segFonts(id, key, monoOnly) {
+  $(id).innerHTML = FONTS.map(f => `<button type="button" data-k="${key}" data-v="${f.id}" aria-pressed="${st[key] === f.id}" ${monoOnly && !f.mono ? 'disabled title="Не моноширинный — код и коды записей поплывут"' : ''} style="font-family:${f.css}">${f.id}</button>`).join('');
+}
+function renderPick() {
+  segFonts('#f-display', 'display'); segFonts('#f-font', 'font'); segFonts('#f-mono', 'mono', true);
+  $('#f-presets').innerHTML = FONT_PAIRS.map(p => `<button type="button" data-preset="${p.id}" aria-pressed="${st.display === p.display && st.font === p.font && st.mono === p.mono}">пресет ${p.id}</button>`).join('');
+  const pals = [...PALETTES.map(p => ({ id: p.id, label: DICT_LABEL[p.id] || p.label, sw: p.swatch, ours: true })), ...own.filter(o => o.on).map(o => ({ id: o.id, label: o.name, sw: o.tokens['--acc'] }))];
+  if (!pals.some(p => p.id === st.pal)) st.pal = 'amber-forest';
+  $('#pick-pal').innerHTML = pals.map(p => `<button type="button" data-pal="${p.id}" aria-pressed="${st.pal === p.id}"><span class="ap-sw" style="display:inline-block;width:10px;height:10px;vertical-align:0;background:${p.sw}"></span> ${esc(p.label)}${p.ours ? '' : ' · свой'}</button>`).join('');
+  const isOwn = st.pal.startsWith('own-');
+  for (const b of $('#pick-mode').children) { b.setAttribute('aria-pressed', String(b.dataset.v === st.mode)); b.disabled = isOwn && b.dataset.v !== 'dark'; }
+  if (isOwn) st.mode = 'dark';
+  for (const b of $('#scope').children) b.setAttribute('aria-pressed', String(b.dataset.v === st.scope));
+  $('#scope-note').innerHTML = st.scope === 'install'
+    ? 'Выбор станет <b>умолчанием установки</b>: его увидит каждый, кто ничего не выбирал сам. Сегодня такого уровня нет — умолчание зашито в коде (<code>LoreMePrefs.SETTINGS palette = amber-forest</code>).'
+    : 'Выбор — <b>только ваш</b>: личная настройка (сегодня так работает палитра — <code>/lore/me</code>, белый список <code>LoreMePrefs</code>). Шрифтов в белом списке пока нет.';
+  const o = own.find(x => x.id === st.pal);
+  const base = { pal: isOwn ? null : st.pal, display: st.display, font: st.font, mono: st.mono, tokens: o && o.tokens };
+  const modes = st.mode === 'both' ? ['dark', 'light'] : [st.mode];
+  $('#pv2').replaceChildren(...modes.map(m => preview({ ...base, mode: m })));
+  requestAnimationFrame(renderContrast);
+}
+
+// ── контраст по живым значениям ─────────────────────────────────────────
+function rgbOf(str) {
+  const s = (str || '').trim();
+  let m = s.match(/^#([0-9a-f]{3,8})$/i);
+  if (m) { let h = m[1]; if (h.length <= 4) h = [...h].map(c => c + c).join(''); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); }
+  m = s.match(/^rgba?\(\s*([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)/i);
+  if (m) return [+m[1], +m[2], +m[3]];
+  return null;
+}
+const lum = c => { const a = c.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2]; };
+const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+function renderContrast() {
+  const out = [];
+  for (const el of document.querySelectorAll('#pv2 .pv')) {
+    const cs = getComputedStyle(el), v = n => cs.getPropertyValue(n);
+    const mode = el.getAttribute('data-mode') === 'light' ? 'светлая' : 'тёмная';
+    const pairs = [['Основной текст на фоне', '--t1', '--bg0', 4.5], ['Вторичный текст на карточке', '--t2', '--bg1', 4.5], ['Подписи t3 на карточке', '--t3', '--bg1', 4.5], ['Ссылки и коды (акцент) на фоне', '--acc', '--bg0', 4.5], ['Текст кнопки на акценте', '--bg0', '--acc', 4.5], ['Рамка на фоне', '--bd', '--bg0', 1.4]];
+    out.push(`<div class="ap-th">${mode}</div><table class="ct">` + pairs.map(([name, fg, bg, need]) => {
+      const a = rgbOf(v(fg)), b = rgbOf(v(bg));
+      if (!a || !b) return `<tr><td>${name}</td><td class="ap-warn">не смогли проверить: значение не hex/rgb (${esc(v(fg).trim() || '—')})</td></tr>`;
+      const r = ratio(a, b), ok = r >= need, soft = !ok && r >= 3 && need === 4.5;
+      return `<tr><td>${name} <span class="ap-mono ap-dim">${fg}/${bg}</span></td><td class="${ok ? 'ap-ok' : soft ? 'ap-warn' : 'ap-bad'}">${r.toFixed(2)} ${ok ? '✓' : soft ? '· только крупное' : '· нечитаемо'}</td></tr>`;
+    }).join('') + '</table>');
+  }
+  $('#contrast').innerHTML = out.join('');
+}
+
+// ── 3. развилки ──────────────────────────────────────────────────────────
+const FORKS = [
+  { n: 1, q: 'Где хранить свои стили?', why: 'Наши — в бандле и так. Вопрос только про загруженные админом.', opts: [
+    { t: 'а) В базе: статья справочника palette (или app_setting) с JSON токенов', p: 'Едет вместе с базой (бэкап, перенос, init-empty — через правила). История SCD2. Применяется инлайн-переменными — CSP не трогаем. Цена: JSON 1–3 КБ в поле записи, новое поле tokens_json в KnowDictEntry.', rec: true },
+    { t: 'б) Файл в MinIO, в базе — ссылка', p: 'Можно класть и шрифты, и картинки. Цена: второе хранилище; при переносе базы файл отстаёт; CSS по ссылке требует расширить CSP style-src и проверять файл на сервере.' } ] },
+  { n: 2, q: 'Для кого действует выбор палитры и шрифтов?', why: 'Сегодня палитра — только личная (/lore/me), умолчание установки зашито в коде.', opts: [
+    { t: 'а) На установку: админ задаёт, пользователи не меняют', p: 'Единый вид у клиента. Цена: ломает уже работающий личный выбор палитры (настройка palette в LoreMePrefs).' },
+    { t: 'б) На пользователя: каждый себе, как сейчас', p: 'Ничего не ломаем. Цена: админ не может задать фирменный вид по умолчанию — новый человек видит amber.' },
+    { t: 'в) Оба уровня: админ — умолчание и набор разрешённых, человек — выбор внутри (предложено мной)', p: 'Цена: два слоя настройки и правило «личное главнее умолчания»; +1 настройка установки.', rec: true } ], three: true },
+  { n: 3, q: 'Формат «своих» стилей', why: 'Произвольный CSS ломает раскладку и обходит сторожа STYLE-01.', opts: [
+    { t: 'а) Только JSON «токен → цвет»', p: 'Проще всего проверить. Цена: дизайнер клиента обычно присылает CSS — придётся переводить руками.' },
+    { t: 'б) CSS-переменные в :root и [data-mode="light"], внутри приводим к JSON', p: 'Принимаем оба вида на входе, храним один. Цена: разбор CSS на сервере; селекторы, @import, url(), сырые шрифты — отказ с причиной.', rec: true } ] },
+  { n: 4, q: 'Свои шрифты (файлы) — сейчас или потом?', why: 'В бандле три семейства; выбор ролей — только среди них.', opts: [
+    { t: 'а) Только шрифты бандла', p: 'Быстро, без CSP и лицензий. Цена: фирменный шрифт клиента не поставить.', rec: true },
+    { t: 'б) Загрузка woff2 (MinIO + @font-face)', p: 'Полная брендировка. Цена: CSP font-src, проверка кириллицы и лицензии, хранилище файлов — отдельная задача.' } ] },
+  { n: 5, q: 'Подписи палитр на свежей установке', why: 'Справочник palette init-empty не сеет; на проде статья у 1 палитры из 6 — экран настроек пишет «показан код».', opts: [
+    { t: 'а) Сеять 6 статей palette (как area_dict_seed в LoreSchemaAdditive)', p: 'Чистая установка сразу с подписями ru/en. Цена: одна запись доводки + тест.', rec: true },
+    { t: 'б) Оставить как есть', p: 'Цена: «amber-forest» вместо названия у каждого нового клиента и строка-предупреждение в настройках.' } ] },
+  { n: 6, q: 'Сырые hex в справочниках', why: 'На проде 26 цветов hex (task_type 9, gain_rank 4, job_kind 4, uc_goal_level 4, work_class 3, uc_rigor 2) — не меняются с палитрой и в светлой теме бывают нечитаемы.', opts: [
+    { t: 'а) Перевести в токены (var(--…)/color-mix), как area и product', p: 'Цвет следует палитре и режиму, свой стиль их тоже перекрасит. Цена: правка 26 статей + сторож «цвет статьи — токен».', rec: true },
+    { t: 'б) Оставить hex', p: 'Цена: категории выпадают из темы; свой стиль клиента их не затронет.' } ] },
+];
+function renderForks() {
+  $('#forks').innerHTML = FORKS.map(f => `
+    <div class="ap-card fk">
+      <div class="ap-h2"><span class="ap-chip ap-chip--wrn">${f.n}</span>${esc(f.q)}</div>
+      <div class="ap-sub" style="margin:0">${esc(f.why)}</div>
+      <div class="fk__opts ${f.three ? 'fk__opts--3' : ''}">${f.opts.map(o => `<div class="fk__o ${o.rec ? 'is-rec' : ''}">${o.rec ? '<div class="fk__rec">рекомендация</div>' : ''}<b>${esc(o.t)}</b><div class="fk__price">${esc(o.p)}</div></div>`).join('')}</div>
+    </div>`).join('');
+}
+
+// ── вкладки и события ────────────────────────────────────────────────────
+function setTab(t) {
+  st.tab = t;
+  for (const b of document.querySelectorAll('.ap-tab')) b.setAttribute('aria-selected', String(b.dataset.tab === t));
+  for (const p of document.querySelectorAll('.ap-page')) p.classList.toggle('is-on', p.id === 'p-' + t);
+  if (t === 'pick') renderPick();
+  writeUrl();
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('button,input');
+  if (!t) return;
+  if (t.dataset.tab) return setTab(t.dataset.tab);
+  if (t.dataset.pv) { st.pv1 = t.dataset.pv; renderPv1(); writeUrl(); return; }
+  if (t.dataset.del) { const o = own.find(x => x.id === t.dataset.del); if (o && confirm(`Удалить стиль «${o.name}»? Пользователи, выбравшие его, вернутся к умолчанию установки.`)) { own.splice(own.indexOf(o), 1); if (st.pv1 === o.id) st.pv1 = st.def; renderOwn(); renderPv1(); } return; }
+  if (t.dataset.tg) { const o = own.find(x => x.id === t.dataset.tg); o.on = t.checked; renderOwn(); return; }
+  if (t.name === 'def') { st.def = t.value; st.pv1 = t.value; renderOurs(); renderPv1(); writeUrl(); return; }
+  if (t.closest('#pv1-mode') && t.dataset.v) { st.pv1mode = t.dataset.v; renderPv1(); writeUrl(); return; }
+  if (t.dataset.k) { st[t.dataset.k] = t.dataset.v; renderPick(); writeUrl(); return; }
+  if (t.dataset.preset) { const p = FONT_PAIRS.find(x => x.id === t.dataset.preset); Object.assign(st, { display: p.display, font: p.font, mono: p.mono }); renderPick(); writeUrl(); return; }
+  if (t.dataset.pal) { st.pal = t.dataset.pal; renderPick(); writeUrl(); return; }
+  if (t.closest('#pick-mode') && t.dataset.v) { st.mode = t.dataset.v; renderPick(); writeUrl(); return; }
+  if (t.closest('#scope') && t.dataset.v) { st.scope = t.dataset.v; renderPick(); writeUrl(); return; }
+});
+$('#ex-good').onclick = () => { $('#up-name').value = 'Ночной янтарь'; $('#up-src').value = EX_GOOD; showCheck(); };
+$('#ex-bad').onclick = () => { $('#up-name').value = 'Чужой бренд'; $('#up-src').value = EX_BAD; showCheck(); };
+$('#up-check').onclick = showCheck;
+$('#up-name').oninput = () => { if (lastCheck) $('#up-add').disabled = !lastCheck.ok || !$('#up-name').value.trim(); };
+$('#up-file').onchange = async e => { const f = e.target.files[0]; if (!f) return; if (f.size > 64 * 1024) { $('#up-res').innerHTML = '<div class="ap-check__l ap-bad">Файл больше 64 КБ — для набора токенов это слишком много.</div>'; return; } $('#up-src').value = await f.text(); if (!$('#up-name').value) $('#up-name').value = f.name.replace(/\.(json|css)$/i, ''); showCheck(); };
+$('#up-add').onclick = () => { if (!lastCheck || !lastCheck.ok) return; const id = 'own-' + Date.now(); own.push({ id, name: $('#up-name').value.trim(), on: true, tokens: lastCheck.tokens }); st.pv1 = id; $('#up-src').value = ''; $('#up-name').value = ''; $('#up-res').innerHTML = '<div class="ap-check__l ap-ok">Добавлен и включён: появился в выборе палитры.</div>'; $('#up-add').disabled = true; lastCheck = null; renderOwn(); renderPv1(); };
+$('#save-pick').onclick = () => { $('#save-out').textContent = `прототип: записали бы ${st.scope === 'install' ? 'умолчание установки' : 'личную настройку'} → palette=${st.pal}, display=${st.display}, font=${st.font}, mono=${st.mono}`; };
+$('#reset-pick').onclick = () => { Object.assign(st, { display: 'Unbounded', font: 'Manrope', mono: 'IBM Plex Mono', pal: st.def, mode: 'dark' }); $('#save-out').textContent = ''; renderPick(); writeUrl(); };
+
+readUrl();
+renderOurs(); renderOwn(); renderPv1(); renderForks();
+setTab(st.tab);
+</script>
+</body>
+</html>

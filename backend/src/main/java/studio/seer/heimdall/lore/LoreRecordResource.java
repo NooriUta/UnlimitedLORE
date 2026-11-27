@@ -134,6 +134,11 @@ public class LoreRecordResource extends LoreResourceBase {
             case "organization" -> new Source("org_by_id", "id", false);
             // SPRINT_LORE_MODEL_DOCS_TIDY/MD-05: паспорт PR — строка KnowPR по pr_uid «проект#номер».
             case "pr" -> new Source("pr_by_id", "id", false);
+            // KREG-13: типы выпуска 1.19.1 — скилл, супертег, вид реестра, сессия агента.
+            case "skill" -> new Source("skill_by_id", "id", false);
+            case "tag" -> new Source("tag_by_id", "id", false);
+            case "kind" -> new Source("kind_by_id", "id", false);
+            case "agent_session" -> new Source("agent_session_by_id", "id", false);
             default -> null;
         };
     }
@@ -674,6 +679,9 @@ public class LoreRecordResource extends LoreResourceBase {
                 new LoreSprintTaskResource.SprintComponentRequest(a, b, action), role);
             case SPRINT_MILESTONE -> milestoneResource.linkSprintMilestone(
                 new LoreMilestoneResource.SprintMilestoneRequest(a, b, action), role);
+            // QG-10: веха — a, компонент — b.
+            case MILESTONE_COMPONENT -> milestoneResource.linkMilestone(
+                new LoreMilestoneResource.MilestoneLinkRequest(a, "component", b, action), role);
             // IMPLEMENTED_IN идёт ADR → спринт: у ADR запись — a, у спринта (reversed) — тоже ADR в a.
             case ADR_SPRINT -> adrResource.linkAdr(new LoreAdrResource.AdrLinkRequest(a, b, null, null, action), role);
             case TASK_COMPONENT -> sprintTask.linkTaskComponent(

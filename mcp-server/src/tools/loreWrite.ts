@@ -2394,13 +2394,34 @@ export function registerLoreWrite(rawServer: McpServer): void {
         default_branch: z.string().optional(),
       })).optional().describe('origin + mirrors; stored as JSON, URL composed on read'),
       default_branch: z.string().optional().describe('repo default branch, e.g. "develop"'),
+      // Паритет с дверью POST /lore/project (ProjectFieldParityTest, слово владелицы 22.11.2026: «проверь паритет
+      // полей и MCP»): что паспорт проекта показывает — то агент может записать. Не передано — не трогается.
+      short_code: z.string().optional().describe('short project code shown in chips, e.g. "UDWE"'),
+      short_title_en: z.string().optional(),
+      short_title_pl: z.string().optional(),
+      title_en: z.string().optional(),
+      title_pl: z.string().optional(),
+      description: z.string().optional().describe('project description (ru), Markdown'),
+      description_en: z.string().optional(),
+      description_pl: z.string().optional(),
+      is_private: z.boolean().optional(),
     },
     path: '/lore/project',
-    body: ({ slug, name, hosts, default_branch }) => ({
+    body: ({ slug, name, hosts, default_branch, short_code, short_title_en, short_title_pl, title_en, title_pl,
+      description, description_en, description_pl, is_private }) => ({
       slug,
       name: name ?? null,
       hosts: hosts ? JSON.stringify(hosts) : null,
       default_branch: default_branch ?? null,
+      short_code: short_code ?? null,
+      short_title_en: short_title_en ?? null,
+      short_title_pl: short_title_pl ?? null,
+      title_en: title_en ?? null,
+      title_pl: title_pl ?? null,
+      description: description ?? null,
+      description_en: description_en ?? null,
+      description_pl: description_pl ?? null,
+      is_private: is_private ?? null,
     }),
   });
 

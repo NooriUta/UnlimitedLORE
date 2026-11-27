@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Доска канв</title>
+<!--
+  Прототип доски канв со стикерами для v2 (SPRINT_LORE_ADMIN_POLISH/AP-05, SPRINT_UXR_S7C_WHY_CANVAS/S7C-02..05).
+  Кода продукта нет — только дизайн. Вид и работа со стикерами — по кадрам Strategyzer, присланным владельцем 25.11.2026
+  (номера кадров стоят у каждой функции). Слова владельца: «просто картинки возьми и приведи к их виду, и, видимо,
+  достаточно, чтобы стикер хотя бы частью лежал в области, тогда места больше»; «плюс один перекрывал другой»;
+  «при перетаскивании с палитры инструментов рисуется shadow-стикер …; шаблон канвы сам выбирается как элемент, который
+  можно добавить на холст, и у него вверху при выборе своё плавающее с ним меню объекта».
+  Правило: стикер допустим, если пересекается с областью рамки хотя бы на minOverlap площади (15 %); область стикера —
+  та, где пересечение больше. Перекрытие стикеров свободное, верхний — с большим z.
+  Данные — живой снимок LORE 25.11.2026 (MCP, только чтение): FEAT-GITCYCLE, её боли, выгоды, работы, сценарии, роли.
+  Стикеры «пример, не из LORE» — придуманные черновики. Вид — в адресе: ?view=canvas|list&lang=ru|en.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg0:#12100c; --bg1:#1a1712; --bg2:#221e17; --bg3:#2b261d; --bd:#3a3326; --bdh:#5a4d36;
+  --t1:#eee6d6; --t2:#b9ad97; --t3:#8f846f;
+  --acc:#e0a84a; --suc:#7fb27a; --wrn:#d9a441; --dng:#d9665a; --inf:#6fa3c8;
+  /* «бумажный» набор доски — по мотивам кадров */
+  --board:#f4f4f2; --dot:#c9c9c6; --paper-sheet:#ffffff; --paper:#ebebea; --ink:#1c1c1c; --ink2:#5b5b5b; --ink3:#9a9a9a; --paper-sel:#2f6fd6;
+  --st-yellow:#f8d548; --st-green:#5aae46; --st-red:#ec6b66; --st-blue:#7fb1dc; --st-orange:#f08a2c;
+  --st-ink-dark:#2a2614; --st-ink-light:#ffffff; --st-shadow:rgba(0,0,0,.28); --st-x:#e2231a;
+  --hl-gain:rgba(90,174,70,.16); --hl-pain:rgba(236,107,102,.18); --hl-job:rgba(248,213,72,.26); --hl-vm:rgba(47,111,214,.12); --hl-bad:rgba(226,35,26,.16);
+  --fs-2xs:10.5px; --fs-xs:11.5px; --fs-sm:12px; --fs-base:13px; --fs-md:14px; --fs-lg:16px; --fs-xl:19px;
+  --r-md:6px; --r-lg:10px; --r-pill:999px;
+  --font:Manrope, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --head:Unbounded, Manrope, system-ui, sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, Consolas, monospace;
+}
+* { box-sizing:border-box; }
+html, body { margin:0; background:var(--bg0); color:var(--t1); font-family:var(--font); font-size:var(--fs-base); line-height:1.45; }
+button, input, select { font:inherit; color:inherit; }
+a { color:var(--acc); }
+:focus-visible { outline:2px solid var(--acc); outline-offset:2px; }
+.page { max-width:1280px; margin:0 auto; padding:12px 16px 72px; }
+.app { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:8px 12px; background:var(--bg1); border:1px solid var(--bd); border-radius:var(--r-lg); margin-bottom:12px; }
+.app .brand { font-family:var(--head); font-weight:800; font-size:var(--fs-sm); letter-spacing:.06em; color:var(--acc); }
+.app .crumbs { color:var(--t2); font-size:var(--fs-sm); }
+.app .crumbs b { color:var(--t1); }
+.tag { margin-left:auto; font-size:var(--fs-2xs); font-weight:700; color:var(--wrn); border:1px solid color-mix(in srgb,var(--wrn) 50%,transparent); border-radius:var(--r-pill); padding:1px 9px; }
+h1 { font-family:var(--head); font-weight:800; font-size:var(--fs-xl); margin:0 0 4px; }
+h2 { font-family:var(--head); font-weight:800; font-size:var(--fs-sm); text-transform:uppercase; letter-spacing:.08em; margin:0 0 8px; }
+h3 { font-size:var(--fs-2xs); font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--t3); margin:0 0 6px; }
+p { margin:0 0 6px; }
+.card { background:var(--bg1); border:1px solid var(--bd); border-radius:var(--r-lg); padding:12px; margin-bottom:12px; min-width:0; }
+.why p { color:var(--t2); font-size:var(--fs-md); }
+.why p b { color:var(--t1); }
+.src { font-size:var(--fs-xs); color:var(--t3); }
+.mono { font-family:var(--mono); }
+.chip { display:inline-flex; align-items:center; gap:4px; border:1px solid var(--bd); border-radius:var(--r-pill); padding:0 8px; font-size:var(--fs-xs); color:var(--t2); background:var(--bg2); white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+.chip.acc { color:var(--acc); border-color:color-mix(in srgb,var(--acc) 50%,transparent); }
+.chip.dng { color:var(--dng); border-color:color-mix(in srgb,var(--dng) 50%,transparent); }
+.bar { display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin-bottom:8px; }
+.btn { min-height:30px; padding:0 10px; border:1px solid var(--bd); border-radius:var(--r-pill); background:var(--bg2); color:var(--t1); font-weight:700; font-size:var(--fs-xs); cursor:pointer; white-space:nowrap; }
+.btn:hover { border-color:var(--bdh); }
+.btn[aria-pressed="true"] { border-color:var(--acc); background:color-mix(in srgb,var(--acc) 20%,transparent); }
+.btn.p { background:var(--acc); color:var(--bg0); border-color:var(--acc); }
+.sep { width:1px; height:22px; background:var(--bd); margin:0 4px; }
+.status { min-height:22px; font-size:var(--fs-sm); color:var(--t2); padding:3px 8px; border-radius:var(--r-md); background:var(--bg2); border:1px solid var(--bd); margin-bottom:8px; overflow-wrap:anywhere; }
+.status.bad { color:var(--dng); border-color:color-mix(in srgb,var(--dng) 50%,transparent); }
+.status.ok { color:var(--suc); }
+.stage { position:relative; height:660px; border:1px solid var(--bdh); border-radius:var(--r-lg); background:var(--board); overflow:hidden; }
+@media (max-width:760px){ .stage { height:540px; } }
+svg#scene { position:absolute; inset:0; display:block; width:100%; height:100%; user-select:none; -webkit-user-select:none; touch-action:none; }
+svg#scene.t-hand { cursor:grab; } svg#scene.t-sticker, svg#scene.t-text { cursor:copy; } svg#scene.t-pencil, svg#scene.t-line, svg#scene.t-shape { cursor:crosshair; }
+.credit { font-size:var(--fs-2xs); color:var(--t3); margin-top:4px; }
+.frcard { fill:var(--paper-sheet); stroke:var(--ink); stroke-width:2.4; }
+.frcard.sel { stroke:var(--paper-sel); stroke-width:3.5; }
+.frttl { fill:var(--ink); font:800 20px var(--font); pointer-events:none; }
+.frsub { fill:var(--ink3); font:600 10px var(--font); pointer-events:none; }
+.handle { fill:var(--paper-sel); }
+.line { fill:none; stroke:var(--ink); stroke-width:2.4; pointer-events:none; }
+.thin { fill:none; stroke:var(--ink); stroke-width:1.2; pointer-events:none; }
+.slab { fill:var(--ink2); font:600 11px var(--font); pointer-events:none; }
+.ico { fill:none; stroke:var(--ink); stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+.ico.f { fill:var(--ink); stroke:none; }
+.slot { fill:transparent; stroke:none; pointer-events:none; }
+.slot.selfill { fill:var(--hl); }
+.slot.hot-ok { fill:var(--hl); stroke:var(--paper-sel); stroke-width:2; stroke-dasharray:6 4; }
+.slot.hot-bad { fill:var(--hl-bad); stroke:var(--st-x); stroke-width:2; stroke-dasharray:6 4; }
+.achip { cursor:pointer; }
+.achip rect { fill:var(--paper-sheet); stroke:var(--ink3); stroke-width:1; }
+.achip text { fill:var(--ink); font:700 11px var(--font); }
+.achip:hover rect { stroke:var(--ink); }
+.st { cursor:grab; }
+.st .body { filter:drop-shadow(1px 2px 1.5px var(--st-shadow)); }
+.st.sel .ring { fill:none; stroke:var(--paper-sel); stroke-width:2.5; stroke-dasharray:5 3; }
+.st .tx { width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:3px 6px; font:800 10.5px/1.2 var(--font); text-transform:uppercase; letter-spacing:.02em; pointer-events:none; overflow:hidden; }
+.st .tx .c { font:600 8px var(--mono); text-transform:none; opacity:.75; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.st .tx .t { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.numb { fill:var(--ink); } .numt { fill:var(--paper-sheet); font:800 10px var(--mono); }
+.refx { fill:var(--st-x); font:900 46px var(--font); pointer-events:none; }
+.edge { fill:none; stroke-width:2.2; pointer-events:none; }
+.edge.dim { stroke-dasharray:5 4; opacity:.7; }
+.ulink { fill:none; stroke:var(--ink); stroke-width:2.2; pointer-events:none; }
+.ann { fill:none; stroke:var(--st-x); stroke-width:3; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+.annr { fill:none; stroke:var(--ink); stroke-width:2; pointer-events:none; }
+.annt { fill:var(--ink); font:700 16px var(--font); cursor:text; }
+.tmp { fill:none; stroke:var(--paper-sel); stroke-width:2; stroke-dasharray:6 4; pointer-events:none; }
+.ghost-st { opacity:.55; pointer-events:none; }
+.marq { fill:rgba(47,111,214,.08); stroke:var(--paper-sel); stroke-dasharray:4 3; }
+.ov { position:absolute; z-index:4; display:flex; gap:2px; align-items:center; background:var(--paper-sheet); border:1px solid var(--ink3); border-radius:8px; padding:2px; box-shadow:0 1px 4px var(--st-shadow); color:var(--ink); font-size:var(--fs-xs); }
+.ov.tl { top:8px; left:8px; }
+.ov.tools { bottom:8px; left:50%; transform:translateX(-50%); }
+.ov.zoom { bottom:8px; right:8px; }
+.ov.zoom #zpct { min-width:40px; text-align:center; font-family:var(--mono); font-size:var(--fs-2xs); }
+@media (max-width:760px){ .ov.zoom { bottom:52px; } }
+.tb { min-width:30px; min-height:30px; border:0; border-radius:6px; background:none; color:var(--ink); cursor:pointer; font-size:var(--fs-md); line-height:1; padding:0 6px; }
+.tb:hover { background:var(--paper); }
+.tb[aria-pressed="true"] { background:var(--ink); color:var(--paper-sheet); }
+.tb.red { color:var(--st-x); font-weight:900; }
+.tb:disabled { opacity:.35; cursor:not-allowed; }
+.tsep { width:1px; height:22px; background:var(--ink3); margin:0 2px; }
+.pop { position:absolute; z-index:6; display:flex; flex-wrap:wrap; gap:2px; align-items:center; background:var(--paper-sheet); border:1px solid var(--ink3); border-radius:8px; padding:3px 5px; box-shadow:0 2px 8px var(--st-shadow); color:var(--ink); max-width:calc(100% - 16px); font-size:var(--fs-xs); }
+.pop select { border:1px solid var(--ink3); border-radius:5px; background:var(--paper-sheet); color:var(--ink); font-size:var(--fs-2xs); min-height:26px; max-width:150px; }
+.pop .ttl { font-weight:800; padding:0 6px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pop.col { flex-direction:column; align-items:stretch; }
+.pop.col .tb { text-align:left; font-size:var(--fs-xs); }
+.fpc { display:inline-flex; gap:3px; padding:0 4px; }
+.fpc button { width:16px; height:16px; border-radius:50%; border:1px solid var(--ink3); cursor:pointer; padding:0; }
+.fpc button[aria-pressed="true"] { outline:2px solid var(--ink); outline-offset:1px; }
+.fpc button:disabled { cursor:not-allowed; opacity:.5; }
+.fpn { display:inline-flex; align-items:center; gap:1px; }
+.fpn b { min-width:18px; text-align:center; font-family:var(--mono); }
+.ed { position:absolute; z-index:7; resize:none; border:2px solid var(--paper-sel); border-radius:2px; background:var(--paper-sheet); color:var(--ink); font:800 11px/1.25 var(--font); text-align:center; padding:4px; }
+.res { position:absolute; z-index:5; top:50px; left:8px; bottom:56px; width:220px; background:var(--paper-sheet); border:1px solid var(--ink3); border-radius:8px; box-shadow:0 1px 4px var(--st-shadow); color:var(--ink); font-size:var(--fs-xs); display:flex; flex-direction:column; overflow:hidden; }
+.res .rt { display:flex; gap:10px; padding:6px 10px 0; border-bottom:1px solid var(--paper); font-weight:800; }
+.res .rt span { padding-bottom:4px; border-bottom:2px solid var(--ink); }
+.res input { margin:6px 8px; border:1px solid var(--ink3); border-radius:6px; padding:3px 8px; background:var(--paper-sheet); color:var(--ink); }
+.res .grp { padding:6px 10px 2px; color:var(--ink3); font-size:var(--fs-2xs); text-transform:uppercase; letter-spacing:.06em; }
+.res .it { display:flex; gap:6px; align-items:center; padding:4px 10px; cursor:pointer; border:0; background:none; text-align:left; width:100%; color:var(--ink); touch-action:none; }
+.res .it:hover { background:var(--paper); }
+.res .it small { margin-left:auto; color:var(--ink3); font-family:var(--mono); }
+.res .scroll { overflow-y:auto; flex:1; }
+.ghost { position:fixed; z-index:50; pointer-events:none; opacity:.6; border-radius:2px; box-shadow:2px 4px 8px var(--st-shadow); }
+.fr { font-size:var(--fs-2xs); color:var(--ink3); padding:0 4px; font-family:var(--mono); }
+.lst { display:grid; grid-template-columns:minmax(0,1fr); gap:10px; }
+@media (min-width:760px){ .lst { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+.lslot { border:1px solid var(--bd); border-radius:var(--r-lg); padding:8px; background:var(--bg1); min-width:0; }
+.li { border:1px solid var(--bd); border-left:5px solid var(--bd); border-radius:var(--r-md); background:var(--bg2); padding:6px 8px; margin-bottom:6px; min-width:0; }
+.li .t { font-size:var(--fs-sm); font-weight:600; overflow-wrap:anywhere; }
+.li .row { display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin-top:4px; }
+.tests, .src-tbl { width:100%; border-collapse:collapse; font-size:var(--fs-xs); }
+.tests td, .tests th, .src-tbl td, .src-tbl th { padding:3px 6px; border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent); text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+.tests th, .src-tbl th { color:var(--t3); font-size:var(--fs-2xs); text-transform:uppercase; letter-spacing:.06em; }
+.pass { color:var(--suc); font-weight:800; } .fail { color:var(--dng); font-weight:800; }
+pre.algo { background:var(--bg2); border:1px solid var(--bd); border-radius:var(--r-md); padding:8px; font:var(--fs-2xs)/1.5 var(--mono); color:var(--t2); white-space:pre-wrap; overflow-wrap:anywhere; margin:6px 0 0; max-height:320px; overflow-y:auto; }
+details summary { cursor:pointer; color:var(--acc); font-size:var(--fs-sm); font-weight:700; }
+.forks { display:flex; flex-direction:column; gap:10px; margin-top:10px; }
+.fork { border:1px solid var(--bd); border-radius:var(--r-lg); padding:10px; background:var(--bg1); }
+.fork h3 { font-size:var(--fs-xs); color:var(--t1); text-transform:none; letter-spacing:0; }
+.fork .ctx { color:var(--t2); font-size:var(--fs-xs); margin-bottom:8px; }
+.ab { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.opt { border:2px solid var(--bd); border-radius:var(--r-lg); padding:8px; background:var(--bg2); cursor:pointer; text-align:left; min-width:0; display:flex; flex-direction:column; gap:6px; }
+.opt[aria-pressed="true"] { border-color:var(--acc); background:color-mix(in srgb,var(--acc) 12%,var(--bg2)); }
+.opt .ol { font-weight:800; font-size:var(--fs-sm); }
+.opt .cost { font-size:var(--fs-2xs); color:var(--t2); }
+.opt .rec { font-size:var(--fs-2xs); font-weight:800; color:var(--suc); }
+.mock { background:var(--board); border:1px solid var(--bd); border-radius:var(--r-md); padding:4px; min-height:56px; }
+.mock svg { width:100%; height:56px; display:block; }
+.choice { margin-top:10px; font-size:var(--fs-sm); background:var(--bg2); border:1px solid var(--bd); border-radius:var(--r-md); padding:8px 10px; overflow-wrap:anywhere; }
+.choice b { color:var(--acc); }
+.foot { position:fixed; left:0; right:0; bottom:0; z-index:20; display:flex; flex-wrap:wrap; gap:4px 14px; align-items:center; padding:5px 16px; background:var(--bg1); border-top:1px solid var(--bd); font-size:var(--fs-2xs); color:var(--t3); }
+.foot .ver { font-family:var(--mono); }
+.foot a { color:var(--t2); text-decoration:none; }
+.foot a:hover { color:var(--acc); text-decoration:underline; }
+[hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="app">
+    <span class="brand">FORSETI</span>
+    <span class="crumbs">Продукт › <b>Доска канв</b></span>
+    <span class="tag">Прототип · кода нет</span>
+  </div>
+
+  <section class="card why" aria-labelledby="why-h">
+    <h1 id="why-h">Доска канв со стикерами</h1>
+    <p><b>Что это.</b> Бесконечная доска с точечной сеткой. Канвы — профиль клиента, карта ценности, бизнес-модель — это рамки-объекты: их добавляют с палитры или из «Ресурсов» слева, двигают целиком вместе со стикерами; у выбранной рамки сверху своё меню. Стикер достаточно положить <b>хотя бы частью</b> в нужную область (не меньше 15 % его площади); он относится к той области, где его больше. Стикеры свободно перекрывают друг друга.</p>
+    <p><b>Зачем.</b> В v1 стикеры «ходили не свободно» и канва была одна на экран. Здесь работа со стикерами взята с кадров Strategyzer (номер кадра — у каждой функции, таблица ниже), а связи стикеров — это связи графа LORE.</p>
+    <p class="src">Данные — живой снимок LORE 25.11.2026: FEAT-GITCYCLE, 3 боли, 2 выгоды, 2 работы, 3 сценария, 3 роли. «Пример, не из LORE» — придуманные черновики. Сохранение — заглушка.</p>
+  </section>
+
+  <section class="card" aria-labelledby="cv-h">
+    <h2 id="cv-h">FEAT-GITCYCLE · доска проекта NooriUta/UnlimitedLORE</h2>
+    <div class="bar" role="toolbar" aria-label="Вид">
+      <button class="btn" data-view="canvas">Доска</button>
+      <button class="btn" data-view="list">Списком по областям</button>
+      <span class="sep"></span>
+      <button class="btn" data-act="alledges" aria-pressed="false">Все связи</button>
+      <button class="btn" data-act="showann" aria-pressed="true" title="Слой пометок: карандаш, фигура, линия, текст">Пометки</button>
+      <button class="btn" data-act="tilt" aria-pressed="false">Наклон ±2°</button>
+      <button class="btn" data-act="multi" aria-pressed="false" title="Касанием выбирать несколько">Мультивыбор</button>
+      <span class="sep"></span>
+      <button class="btn p" data-act="save">Сохранить</button>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite">Тяните «стикер» с нижней панели на канву — под курсором тень, область подсвечена. Двойной щелчок — правка текста.</div>
+    <div class="stage" id="stage">
+      <svg id="scene" role="application" aria-label="Доска канв"></svg>
+      <div class="ov tl" role="toolbar" aria-label="Отмена">
+        <button class="tb" data-act="res" aria-pressed="true" title="Ресурсы — канвы проекта (кадры p30, p33)">☰</button>
+        <button class="tb" data-act="undo" title="Отменить (Ctrl+Z) · кадры 41154, p30">↶</button><button class="tb" data-act="redo" title="Повторить (Ctrl+Shift+Z) · кадры 41154, p30">↷</button>
+      </div>
+      <aside class="res" id="res" aria-label="Ресурсы">
+        <div class="rt"><span>Ресурсы</span><em class="fr">кадр p30</em></div>
+        <input id="res-q" type="search" placeholder="Поиск" aria-label="Поиск по ресурсам">
+        <div class="scroll" id="res-list"></div>
+      </aside>
+      <div class="ov tools" role="toolbar" aria-label="Инструменты · кадры 41154, p30, p33">
+        <button class="tb" data-tool="hand" title="Рука — панорама (H)">✋</button>
+        <button class="tb" data-tool="select" title="Выбор (V)">➤</button>
+        <button class="tb" data-tool="sticker" title="Стикер: тяните на канву — тень; или щёлкните инструмент, потом по канве (N)">▭</button>
+        <button class="tb" data-tool="shape" title="Фигура — рамка-пометка (R)">◇</button>
+        <button class="tb" data-tool="line" title="Линия/стрелка: от стикера к стикеру — связь (A) · кадры 41149, 41151">↗</button>
+        <button class="tb" data-tool="text" title="Текст (T)">T</button>
+        <button class="tb" data-tool="pencil" title="Карандаш — пометка поверх (P) · кадр 41157">✎</button>
+        <span class="tsep"></span>
+        <button class="tb" data-act="add" title="Добавить канву на доску">+</button>
+        <button class="tb" disabled title="Место под ИИ — не делаем">✦</button>
+      </div>
+      <div class="ov zoom" role="group" aria-label="Масштаб · кадры 41154, p30">
+        <button class="tb" data-act="laymenu" title="Раскладка">▦▾</button>
+        <span class="tsep"></span>
+        <button class="tb" data-act="zout" title="Мельче">−</button><span id="zpct">100%</span><button class="tb" data-act="zin" title="Крупнее">+</button><button class="tb" data-act="zfit" title="Все канвы">⤢</button>
+      </div>
+      <div class="pop" id="fp" hidden role="toolbar" aria-label="Меню стикера · кадр 41154">
+        <span class="fpc" id="fp-colors"></span>
+        <select id="fp-size" title="Размер текста"><option value="s">Мелкий</option><option value="m">Средний</option><option value="l">Крупный</option></select>
+        <span class="fpn" title="Номер в углу · кадр 41154"><button class="tb" data-fp="num-">−</button><b id="fp-num">—</b><button class="tb" data-fp="num+">+</button></span>
+        <button class="tb" data-fp="front" title="Наверх (Ctrl+])">⤒</button><button class="tb" data-fp="back" title="Вниз (Ctrl+[)">⤓</button>
+        <button class="tb red" data-fp="refute" title="Опровергнуто · кадр 41150">✕</button>
+        <button class="tb" data-fp="promote" title="Повысить до записи">⬆︎</button>
+        <button class="tb" data-fp="dup" title="Дублировать (Ctrl+D)">⧉</button>
+        <button class="tb" data-fp="del" title="Убрать с канвы (Delete)">⌫</button>
+        <span class="fr">41154</span>
+      </div>
+      <div class="pop" id="fm" hidden role="toolbar" aria-label="Меню рамки · кадры p29, p33">
+        <span class="ttl" id="fm-title"></span>
+        <button class="tb" data-fm="rename" title="Переименовать">✎</button>
+        <select id="fm-link" title="Связать с ролью или фичей"></select>
+        <button class="tb" data-fm="dup" title="Дублировать рамку со стикерами">⧉</button>
+        <button class="tb" data-fm="lock" title="Заблокировать">🔓</button>
+        <button class="tb" data-fm="del" title="Удалить рамку">⌫</button>
+        <button class="tb" data-fm="open" title="Открыть паспорт связанной записи">↗</button>
+        <span class="fr">p33</span>
+      </div>
+      <div class="pop col" id="cm" hidden role="menu" aria-label="Меню области"></div>
+      <div class="pop col" id="am" hidden role="menu" aria-label="Добавить канву"></div>
+      <div class="pop col" id="lm" hidden role="menu" aria-label="Раскладка"></div>
+      <textarea id="ed" class="ed" hidden aria-label="Текст"></textarea>
+    </div>
+    <div class="credit">Value Proposition Canvas, Business Model Canvas — Strategyzer AG</div>
+    <div id="list" class="lst" hidden></div>
+    <details style="margin-top:10px"><summary>Что ушло бы на сервер (заглушка)</summary>
+      <p class="src" style="margin-top:6px">Рамка — холст S7C-01 (<span class="mono">KnowCanvas</span>: title, template vp/bmc, project) плюс положение на доске; стикеры — <span class="mono">KnowCanvasItem</span> (x, y, w, h, slot, ref_type, ref_id) в координатах рамки, поэтому едут вместе с ней. Не в localStorage общим ключом, как в v1. Полей <b>z</b>, <b>refuted</b>, <b>num</b>, <b>tilt</b>, положения рамки на доске и <b>locked</b> сейчас нет — их нужно добавить, не трогая существующие.</p>
+      <pre class="algo" id="payload">Нажмите «Сохранить».</pre>
+    </details>
+  </section>
+
+  <section class="card" aria-labelledby="fr-h">
+    <h2 id="fr-h">Откуда взята каждая функция</h2>
+    <table class="src-tbl">
+      <tr><th>функция</th><th>кадр</th><th>что видно</th></tr>
+      <tr><td>Доска с точечной сеткой, рамки-канвы как объекты, масштаб в процентах</td><td class="mono">p30, p32, p33</td><td>платформа: профиль и бизнес-модель на доске, 51–72 %</td></tr>
+      <tr><td>Тень при перетаскивании на канву</td><td class="mono">p29 · слово владельца</td><td>ресурс «First Customer Profile v1» тянется на доску с тенью</td></tr>
+      <tr><td>Меню выбранной рамки сверху: заголовок, правка, …, копия, замок, «…»</td><td class="mono">p33</td><td>«(Active) My business model · Net estimate · ⧉ · 🔒 · …»</td></tr>
+      <tr><td>Панель «Ресурсы» слева со списком канв проекта, поиск</td><td class="mono">p30, p33</td><td>Assets: 7 assets</td></tr>
+      <tr><td>Чипы-подписи областей «выгоды ▾», «работы клиента ▾», «боли ▾»</td><td class="mono">p30, 41154</td><td>gains ▾ · customer jobs ▾ · pains ▾</td></tr>
+      <tr><td>Нижняя палитра: рука, выбор, стикер, фигура, линия, текст, карандаш, «+», ИИ</td><td class="mono">p30, p33, 41154</td><td>ИИ — только место</td></tr>
+      <tr><td>Справа снизу: раскладка ▾ и масштаб; слева сверху: отмена/повтор</td><td class="mono">p30, p33</td><td></td></tr>
+      <tr><td>Меню стикера: цвет, размер текста, номер, «…»</td><td class="mono">41154</td><td></td></tr>
+      <tr><td>Номер — чёрный квадратик в углу</td><td class="mono">41154</td><td></td></tr>
+      <tr><td>Стикер «хотя бы частью» в области, свисает за дугу; перекрытие</td><td class="mono">41150, 41149</td><td></td></tr>
+      <tr><td>Цвет = вид; белый лист, тонкие линии, подарок и лицо</td><td class="mono">41149, 41150</td><td></td></tr>
+      <tr><td>Красный X «опровергнуто»</td><td class="mono">41150</td><td></td></tr>
+      <tr><td>Стрелки от стикера к стикеру</td><td class="mono">41149, 41151</td><td></td></tr>
+      <tr><td>Карандаш поверх стикеров</td><td class="mono">41157</td><td></td></tr>
+      <tr><td>Бизнес-модель: 9 ячеек, подписи со значками</td><td class="mono">41151, p32</td><td></td></tr>
+      <tr><td>Двойной щелчок по месту — новый стикер; по стикеру — правка текста</td><td class="mono">p34</td><td>подсказка «by double-clicking on the place where you want to place the sticky»</td></tr>
+      <tr><td>«Повысить до записи», связи графа LORE, вид «списком», правило 15 %</td><td class="mono">—</td><td>наше, на кадрах нет</td></tr>
+    </table>
+  </section>
+
+  <section class="card" aria-labelledby="al-h">
+    <h2 id="al-h">Как вычисляется допустимое положение</h2>
+    <p style="color:var(--t2);font-size:var(--fs-sm)">Функция <span class="mono">clampToSlot(slot, rect, pt, opts)</span> — чистая, без DOM. Область — выпуклый многоугольник (сектор круга — дуга из мелких отрезков) в координатах рамки. Площадь пересечения — отсечением многоугольника прямоугольником стикера. Допустимо, если пересечение ≥ <span class="mono">minOverlap</span> = 15 % площади стикера. Множество таких положений выпукло, поэтому ближайшее допустимое ищется по его границе: из внутренней точки по направлениям, двоичным поиском края, с уточнением угла. Старые режимы — параметром: <span class="mono">{overflow: 0.5}</span> — центр в области, <span class="mono">{overflow: 0}</span> — весь стикер внутри. Область стикера — где пересечение больше; при равенстве — где центр. Перебираются области всех рамок на доске.</p>
+    <details><summary>Самопроверка: <span id="tsum"></span></summary><table class="tests" id="tests"></table></details>
+  </section>
+
+  <section class="card" aria-labelledby="fk-h">
+    <h2 id="fk-h">Развилки для владельца</h2>
+    <div class="forks" id="forks"></div>
+    <div class="choice" id="choice"></div>
+  </section>
+</div>
+<footer class="foot" aria-label="Нижняя полоса">
+  <span class="ver">LORE v2 · v1.18.0-proto</span>
+  <a id="credit" href="https://www.strategyzer.com" target="_blank" rel="noopener"></a>
+</footer>
+
+<script>
+'use strict';
+/* ═════════ 1. Геометрия: чистые функции ═════════ */
+const FIG = 540, R = 270;
+const C = { x: R, y: R };
+function polyHps(poly) {
+  const cx = poly.reduce((s, p) => s + p[0], 0) / poly.length, cy = poly.reduce((s, p) => s + p[1], 0) / poly.length;
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const [x0, y0] = poly[i], [x1, y1] = poly[(i + 1) % poly.length];
+    let nx = -(y1 - y0), ny = x1 - x0; const L = Math.hypot(nx, ny); if (L < 1e-9) continue; nx /= L; ny /= L;
+    let d = nx * x0 + ny * y0; if (nx * cx + ny * cy < d) { nx = -nx; ny = -ny; d = -d; }
+    out.push({ nx, ny, d });
+  }
+  return out;
+}
+function mkSlot(id, type, poly) {
+  const xs = poly.map(p => p[0]), ys = poly.map(p => p[1]);
+  const cen = poly.reduce((s, p) => [s[0] + p[0] / poly.length, s[1] + p[1] / poly.length], [0, 0]);
+  return { id, type, poly, hps: polyHps(poly), cen: { x: cen[0], y: cen[1] }, bb: { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) } };
+}
+function sectorPoly(a0, a1) {
+  const pts = [[C.x, C.y]], n = Math.max(2, Math.ceil((a1 - a0) / 4));
+  for (let i = 0; i <= n; i++) { const a = (a0 + (a1 - a0) * i / n) * Math.PI / 180; pts.push([C.x + R * Math.cos(a), C.y + R * Math.sin(a)]); }
+  return pts;
+}
+/** Площадь пересечения выпуклого многоугольника и прямоугольника (Сазерленд — Ходжмен). */
+function overlapArea(slot, rect, p) {
+  if (p.x > slot.bb.x1 || p.x + rect.w < slot.bb.x0 || p.y > slot.bb.y1 || p.y + rect.h < slot.bb.y0) return 0;
+  let pts = slot.poly;
+  const clip = (inside, cut) => { const out = []; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length], ia = inside(a), ib = inside(b); if (ia) out.push(a); if (ia !== ib) out.push(cut(a, b)); } pts = out; };
+  const X0 = p.x, X1 = p.x + rect.w, Y0 = p.y, Y1 = p.y + rect.h;
+  const lx = (a, b, x) => [x, a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0])], ly = (a, b, y) => [a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]), y];
+  clip(q => q[0] >= X0, (a, b) => lx(a, b, X0)); if (!pts.length) return 0;
+  clip(q => q[0] <= X1, (a, b) => lx(a, b, X1)); if (!pts.length) return 0;
+  clip(q => q[1] >= Y0, (a, b) => ly(a, b, Y0)); if (!pts.length) return 0;
+  clip(q => q[1] <= Y1, (a, b) => ly(a, b, Y1)); if (pts.length < 3) return 0;
+  let s = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; s += a[0] * b[1] - b[0] * a[1]; }
+  return Math.abs(s) / 2;
+}
+const DEF = { minOverlap: 0.15 };
+function corePts(rect, o) { return o >= 0.5 ? [[rect.w / 2, rect.h / 2]] : [[rect.w * o, rect.h * o], [rect.w * (1 - o), rect.h * o], [rect.w * o, rect.h * (1 - o)], [rect.w * (1 - o), rect.h * (1 - o)]]; }
+function isFeasible(slot, rect, p, opts = DEF, eps = 0.05) {
+  if (opts.overflow === undefined) return overlapArea(slot, rect, p) >= (opts.minOverlap ?? 0.15) * rect.w * rect.h - eps;
+  const o = Math.min(Math.max(opts.overflow, 0), 0.5);
+  for (const [cx, cy] of corePts(rect, o)) for (const h of slot.hps) if (h.nx * (p.x + cx) + h.ny * (p.y + cy) < h.d - eps) return false;
+  return true;
+}
+/** Ближайшая к pt допустимая позиция левого верхнего угла стикера rect={w,h} в области slot. */
+function clampToSlot(slot, rect, pt, opts = DEF) {
+  if (isFeasible(slot, rect, pt, opts, 0)) return { x: pt.x, y: pt.y, ok: true };
+  if (opts.overflow !== undefined) return clampDykstra(slot, rect, pt, opts.overflow);
+  const q0 = { x: slot.cen.x - rect.w / 2, y: slot.cen.y - rect.h / 2 };
+  if (!isFeasible(slot, rect, q0, opts, 0)) return { x: q0.x, y: q0.y, ok: false };
+  const edge = th => { const ux = Math.cos(th), uy = Math.sin(th); let lo = 0, hi = 1400;
+    for (let i = 0; i < 26; i++) { const m = (lo + hi) / 2; if (isFeasible(slot, rect, { x: q0.x + ux * m, y: q0.y + uy * m }, opts, 0)) lo = m; else hi = m; }
+    return { x: q0.x + ux * lo, y: q0.y + uy * lo }; };
+  const dist = q => Math.hypot(q.x - pt.x, q.y - pt.y);
+  let best = null, bth = 0; const N = 72;
+  for (let k = 0; k < N; k++) { const th = k * 2 * Math.PI / N; const q = edge(th); if (!best || dist(q) < dist(best)) { best = q; bth = th; } }
+  let a = bth - 2 * Math.PI / N, b = bth + 2 * Math.PI / N;
+  for (let i = 0; i < 30; i++) { const m1 = a + (b - a) / 3, m2 = b - (b - a) / 3; if (dist(edge(m1)) < dist(edge(m2))) b = m2; else a = m1; }
+  const q = edge((a + b) / 2); if (dist(q) < dist(best)) best = q;
+  return { x: best.x, y: best.y, ok: true };
+}
+function clampDykstra(slot, rect, pt, overflow) {
+  const o = Math.min(Math.max(overflow, 0), 0.5), cs = corePts(rect, o);
+  const sets = slot.hps.map(h => { const d = h.d - Math.min(...cs.map(([cx, cy]) => h.nx * cx + h.ny * cy)); return q => { const s = h.nx * q.x + h.ny * q.y; return s >= d ? q : { x: q.x + (d - s) * h.nx, y: q.y + (d - s) * h.ny }; }; });
+  let x = { x: pt.x, y: pt.y }; const inc = sets.map(() => ({ x: 0, y: 0 }));
+  for (let it = 0; it < 4000; it++) { const prev = x; for (let i = 0; i < sets.length; i++) { const z = { x: x.x + inc[i].x, y: x.y + inc[i].y }; const nx = sets[i](z); inc[i] = { x: z.x - nx.x, y: z.y - nx.y }; x = nx; } if (Math.hypot(x.x - prev.x, x.y - prev.y) < 1e-7 && it > 3) break; }
+  return { x: x.x, y: x.y, ok: isFeasible(slot, rect, x, { overflow: o }, 0.05) };
+}
+/** Область по наибольшей площади пересечения; при равенстве (±1 %) — где центр. */
+function slotOf(slots, rect, p) {
+  let best = null;
+  for (const s of slots) { const a = overlapArea(s, rect, p), inC = isFeasible(s, rect, p, { overflow: 0.5 }, 0);
+    if (!best || a > best.a * 1.01 || (Math.abs(a - best.a) <= best.a * 0.01 && inC && !best.inC)) best = { id: s.id, a, inC }; }
+  return best;
+}
+/** Верхний стикер в точке: больший z. */
+function topAt(list, pt) { return list.filter(s => pt.x >= s.x && pt.x <= s.x + s.w && pt.y >= s.y && pt.y <= s.y + s.h).sort((a, b) => b.z - a.z)[0] || null; }
+
+/* ═════════ 2. Типы рамок и их области ═════════ */
+const VPC = {
+  ps: mkSlot('ps', 'vm', [[0, 0], [270, 270], [0, 540]]),
+  gc: mkSlot('gc', 'vm', [[0, 0], [540, 0], [540, 270], [270, 270]]),
+  pr: mkSlot('pr', 'vm', [[270, 270], [540, 270], [540, 540], [0, 540]]),
+  gains: mkSlot('gains', 'cp', sectorPoly(180, 315)),
+  pains: mkSlot('pains', 'cp', sectorPoly(45, 180)),
+  jobs: mkSlot('jobs', 'cp', sectorPoly(-45, 45)),
+};
+const BW = 1080, BH = 660, CW = 216, TH = 440;
+const box = (x0, y0, x1, y1) => [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+const BMC = {
+  kp: mkSlot('kp', 'bmc', box(0, 0, CW, TH)), ka: mkSlot('ka', 'bmc', box(CW, 0, 2 * CW, TH / 2)), kr: mkSlot('kr', 'bmc', box(CW, TH / 2, 2 * CW, TH)),
+  vp: mkSlot('vp', 'bmc', box(2 * CW, 0, 3 * CW, TH)), cr: mkSlot('cr', 'bmc', box(3 * CW, 0, 4 * CW, TH / 2)), ch: mkSlot('ch', 'bmc', box(3 * CW, TH / 2, 4 * CW, TH)),
+  cs: mkSlot('cs', 'bmc', box(4 * CW, 0, BW, TH)), cost: mkSlot('cost', 'bmc', box(0, TH, BW / 2, BH)), rev: mkSlot('rev', 'bmc', box(BW / 2, TH, BW, BH)),
+};
+const TYPES = {
+  cp: { name:'Профиль клиента', w:FIG, h:FIG, slots:{ gains:VPC.gains, pains:VPC.pains, jobs:VPC.jobs } },
+  vm: { name:'Карта ценности', w:FIG, h:FIG, slots:{ ps:VPC.ps, gc:VPC.gc, pr:VPC.pr } },
+  bmc: { name:'Бизнес-модель', w:BW, h:BH, slots:BMC },
+};
+const FPAD = 30, FHEAD = 58;
+const NAME = { ps:'Продукты и услуги', gc:'Создают выгоду', pr:'Снимают боль', gains:'Выгоды', pains:'Боли', jobs:'Работы клиента',
+  kp:'Ключевые партнёры', ka:'Ключевые виды деятельности', kr:'Ключевые ресурсы', vp:'Ценностные предложения', cr:'Отношения с клиентами', ch:'Каналы', cs:'Сегменты клиентов', cost:'Структура издержек', rev:'Потоки доходов' };
+const COLOR = { gains:['--st-green', '--st-ink-light', '--hl-gain'], pains:['--st-red', '--st-ink-light', '--hl-pain'], jobs:['--st-yellow', '--st-ink-dark', '--hl-job'],
+  ps:['--st-blue', '--st-ink-dark', '--hl-vm'], gc:['--st-green', '--st-ink-light', '--hl-gain'], pr:['--st-red', '--st-ink-light', '--hl-pain'],
+  vp:['--st-orange', '--st-ink-light', '--hl-vm'], cs:['--st-orange', '--st-ink-light', '--hl-vm'] };
+const colorOf = slot => COLOR[slot] || ['--st-yellow', '--st-ink-dark', '--hl-job'];
+const ACCEPT = { ps:['uc','feature'], gc:['uc'], pr:['uc'], gains:['gain'], pains:['pain'], jobs:['job'], vp:['feature'], cs:['actor'] };
+const KIND_OF_SLOT = { ps:'uc', gc:'uc', pr:'uc', gains:'gain', pains:'pain', jobs:'job', vp:'feature', cs:'actor' };
+const KIND_WORD = { pain:'боль', gain:'выгода', job:'работа', uc:'сценарий', feature:'фича', actor:'роль', note:'заметка' };
+const REL = { relieves:{ w:'снимает боль', c:'var(--st-red)' }, delivers:{ w:'создаёт выгоду', c:'var(--st-green)' }, performs:{ w:'делает работу', c:'var(--st-orange)' }, blocks:{ w:'мешает работе', c:'var(--ink3)', dim:true }, success:{ w:'успех работы', c:'var(--ink3)', dim:true } };
+
+/* ═════════ 3. Данные ═════════ */
+const W = 104, H = 56;
+const REC = [
+  { id:'FEAT-GITCYCLE', kind:'feature', t:'Полный git-цикл сессии без токена у агента', slot:'ps', rel:[] },
+  { id:'UC-GIT-WATCH', kind:'uc', t:'Слежение за CI-статусом ветки', slot:'ps', rel:[] },
+  { id:'UC-GIT-MERGE', kind:'uc', t:'Merge по зелёному CI одним вызовом', slot:'gc', rel:[['relieves','PAIN-LORE-MANUAL-HANDOFF'],['relieves','PAIN-LORE-RAW-TOKEN'],['delivers','GAIN-LORE-LINKED-RELEASES'],['delivers','GAIN-LORE-SAFE-MERGE'],['performs','JOB-SHIP-CHANGE']] },
+  { id:'UC-GIT-PR', kind:'uc', t:'Агент открывает PR с телом из релиза', slot:'pr', rel:[['relieves','PAIN-LORE-BROKEN-LINKS'],['relieves','PAIN-LORE-MANUAL-HANDOFF'],['performs','JOB-KEEP-CORPUS-TRUE']] },
+  { id:'PAIN-LORE-RAW-TOKEN', r:'high', kind:'pain', t:'Агенту нужен сырой git-токен', slot:'pains', rel:[['blocks','JOB-SHIP-CHANGE']] },
+  { id:'PAIN-LORE-MANUAL-HANDOFF', r:'high', kind:'pain', t:'PR и merge — ручной хендофф', slot:'pains', rel:[['blocks','JOB-SHIP-CHANGE']] },
+  { id:'PAIN-LORE-BROKEN-LINKS', r:'normal', kind:'pain', t:'Релизы с пустыми связями', slot:'pains', rel:[['blocks','JOB-KEEP-CORPUS-TRUE']] },
+  { id:'GAIN-LORE-SAFE-MERGE', r:'essential', kind:'gain', t:'Merge мимо красного CI невозможен', slot:'gains', rel:[['success','JOB-SHIP-CHANGE']] },
+  { id:'GAIN-LORE-LINKED-RELEASES', r:'expected', kind:'gain', t:'Релиз связан с PR и спринтом сам', slot:'gains', rel:[['success','JOB-KEEP-CORPUS-TRUE']] },
+  { id:'JOB-SHIP-CHANGE', r:'high', kind:'job', t:'Провести изменение от ветки до релиза', slot:'jobs', rel:[] },
+  { id:'JOB-KEEP-CORPUS-TRUE', r:'high', kind:'job', t:'Держать корпус в согласии со сделанным', slot:'jobs', rel:[] },
+];
+const DRAFT = [ { t:'Ревью ждёт человека дольше CI', slot:'pains' }, { t:'Видно, где застрял git-цикл', slot:'gains' } ];
+const REC_BMC = [
+  { id:'FEAT-GITCYCLE', kind:'feature', t:'Полный git-цикл сессии без токена', slot:'vp', rel:[] },
+  { id:'ACT-LORE-AGENT-SESSION', kind:'actor', t:'Агент сессии', slot:'cs', rel:[] },
+  { id:'ACT-LORE-DEV', kind:'actor', t:'Разработчик', slot:'cs', rel:[] },
+  { id:'ACT-LORE-PM', kind:'actor', t:'Менеджер продукта', slot:'cs', rel:[] },
+];
+const DRAFT_BMC = [ { t:'Forgejo — git-хостинг', slot:'kp' }, { t:'Вести git-цикл за агента', slot:'ka' }, { t:'Токены Forgejo на сервере', slot:'kr' },
+  { t:'Самообслуживание через MCP', slot:'cr' }, { t:'Инструменты MCP в сессии', slot:'ch' }, { t:'Сервер CI и Forgejo', slot:'cost' }, { t:'Внутренний продукт — дохода нет', slot:'rev' } ];
+const LINK_OPTS = [['', 'не связана'], ['FEAT-GITCYCLE', 'фича FEAT-GITCYCLE'], ['FEAT-LORE-HONEST', 'фича FEAT-LORE-HONEST'], ['FEAT-VP-FIT', 'фича FEAT-VP-FIT'], ['ACT-LORE-AGENT-SESSION', 'роль · Агент сессии'], ['ACT-LORE-DEV', 'роль · Разработчик'], ['ACT-LORE-PM', 'роль · Менеджер продукта']];
+
+const RANK = { high:0, essential:0, normal:1, expected:1, desired:2, low:3, unexpected:3 };
+const rankKey = s => s.ref_id ? (RANK[s.r] ?? 5) : 9;
+function gridCells(slot, rect, gap = 8) {
+  const sx = rect.w + gap, sy = rect.h + gap;
+  const bm = slot.type === 'bmc', ax = bm ? slot.bb.x0 + gap : C.x + gap / 2, ay = bm ? slot.bb.y0 + 26 : C.y + gap / 2;
+  const cells = [];
+  for (let i = -8; i <= 12; i++) for (let j = -8; j <= 10; j++) { const p = { x: ax + i * sx, y: ay + j * sy }; if (!isFeasible(slot, rect, p, { overflow: 0 }, 0.01)) continue;
+    // не закрывать значок в центре (подарок, лицо)
+    if (!bm) { const nx = Math.max(p.x, Math.min(C.x, p.x + rect.w)), ny = Math.max(p.y, Math.min(C.y, p.y + rect.h)); if (Math.hypot(nx - C.x, ny - C.y) < 50) continue; }
+    cells.push({ ...p, i, j }); }
+  // ранг 1 — ближе к середине области (её центроиду), дальше — по удалению; у бизнес-модели — построчно
+  const key = bm ? (c => c.j * 100 + c.i) : (c => Math.round(Math.hypot(c.x + rect.w / 2 - slot.cen.x, c.y + rect.h / 2 - slot.cen.y) / 10) * 1000 + c.j * 10 + c.i);
+  return cells.sort((a, b) => key(a) - key(b));
+}
+/** «Разложить»: стикеры области — ровной сеткой по рангу; только по кнопке. */
+function layoutSlot(list, frame, slotId) {
+  const items = list.filter(s => s.frame === frame.id && s.slot === slotId).sort((a, b) => rankKey(a) - rankKey(b) || a.uid.localeCompare(b.uid, 'en', { numeric: true }));
+  if (!items.length) return;
+  const sl = TYPES[frame.type].slots[slotId], cells = gridCells(sl, items[0]);
+  items.forEach((s, i) => { const c = cells.length ? cells[i % cells.length] : { x: sl.cen.x - s.w / 2, y: sl.cen.y - s.h / 2 }; const k = cells.length ? Math.floor(i / cells.length) : 0; s.x = c.x + k * 12; s.y = c.y + k * 12; });
+}
+let UID = 0;
+const nid = p => p + (++UID) + '-' + Math.floor(Math.random() * 1e4);
+function seed() {
+  const frames = [
+    { id:'f-vm', type:'vm', title:'Карта ценности · v1', link:'FEAT-GITCYCLE', x:40, y:90, locked:false },
+    { id:'f-cp', type:'cp', title:'Профиль клиента · Агент сессии', link:'ACT-LORE-AGENT-SESSION', x:700, y:90, locked:false },
+    { id:'f-bmc', type:'bmc', title:'Бизнес-модель · LORE', link:null, x:40, y:800, locked:false },
+  ];
+  const st = [];
+  const fOf = slot => frames.find(f => TYPES[f.type].slots[slot]);
+  const add = (o, ex) => { const f = fOf(o.slot); st.push({ uid:'s' + String(st.length + 1).padStart(2, '0'), frame:f.id, ref_id:ex ? null : o.id, kind:ex ? (KIND_OF_SLOT[o.slot] || 'note') : o.kind, r:o.r, t:o.t, slot:o.slot, rel:o.rel || [], w:W, h:H, x:0, y:0, z:0, refuted:false, example:!!ex }); };
+  REC.forEach(o => add(o)); DRAFT.forEach(o => add(o, true)); REC_BMC.forEach(o => add(o)); DRAFT_BMC.forEach(o => add(o, true));
+  frames.forEach(f => Object.keys(TYPES[f.type].slots).forEach(k => layoutSlot(st, f, k)));
+  st.forEach((s, i) => s.z = i + 1);
+  // Показ правила: боль свисает за дугу, черновик выгоды лежит поверх соседа.
+  const bl = st.find(s => s.ref_id === 'PAIN-LORE-BROKEN-LINKS'), a = 118 * Math.PI / 180;
+  bl.x = C.x + (R + 4) * Math.cos(a) - W / 2; bl.y = C.y + (R + 4) * Math.sin(a) - H / 2;
+  const sm = st.find(s => s.ref_id === 'GAIN-LORE-SAFE-MERGE'), dg = st.find(s => !s.ref_id && s.slot === 'gains');
+  dg.x = sm.x + 34; dg.y = sm.y + 22; dg.z = st.length + 1;
+  return { frames, st, links: [], ann: [] };
+}
+
+/* ═════════ 4. Состояние ═════════ */
+const q = new URLSearchParams(location.search);
+let DOC = seed();
+let sel = new Set(), selFrame = null, tool = 'select', drag = null;
+const undo = [], redo = [];
+const VIEW = { k: 1, x: 0, y: 0 };
+const snap = () => JSON.stringify(DOC);
+function pushUndo() { undo.push(snap()); if (undo.length > 60) undo.shift(); redo.length = 0; }
+function restore(json) { DOC = JSON.parse(json); sel = new Set([...sel].filter(u => DOC.st.some(s => s.uid === u))); if (selFrame && !frameById(selFrame)) selFrame = null; render(); }
+function doUndo() { if (!undo.length) return say('Отменять нечего.'); redo.push(snap()); restore(undo.pop()); say(`Отменено. Шагов отмены осталось: ${undo.length}.`); }
+function doRedo() { if (!redo.length) return say('Повторять нечего.'); undo.push(snap()); restore(redo.pop()); say('Повторено.'); }
+const byUid = u => DOC.st.find(s => s.uid === u);
+const frameById = id => DOC.frames.find(f => f.id === id);
+const slotOfSt = s => TYPES[frameById(s.frame).type].slots[s.slot];
+function say(msg, cls) { const el = document.getElementById('status'); el.textContent = msg; el.className = 'status' + (cls ? ' ' + cls : ''); }
+const pressed = act => document.querySelector(`[data-act=${act}]`).getAttribute('aria-pressed') === 'true';
+const topZ = () => Math.max(0, ...DOC.st.map(s => s.z));
+const toScene = s => { const f = frameById(s.frame); return { x: f.x + s.x, y: f.y + s.y }; };
+const center = s => { const p = toScene(s); return { x: p.x + s.w / 2, y: p.y + s.h / 2 }; };
+const frameRect = f => { const T = TYPES[f.type]; return { x: f.x - FPAD, y: f.y - FHEAD, w: T.w + 2 * FPAD, h: T.h + FHEAD + FPAD }; };
+
+/* ═════════ 5. Отрисовка ═════════ */
+const svg = document.getElementById('scene'), stage = document.getElementById('stage');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+function tiltOf(uid) { let h = 0; for (const ch of uid) h = (h * 31 + ch.charCodeAt(0)) % 997; return ((h % 41) / 10) - 2; }
+const ptsAttr = (poly, o) => poly.map(p => `${o.x + p[0]},${o.y + p[1]}`).join(' ');
+const ICON = {
+  gift: (x, y, s = 1) => `<g transform="translate(${x},${y}) scale(${s})"><rect class="ico" x="-30" y="-14" width="60" height="44"/><rect class="ico" x="-34" y="-24" width="68" height="12"/><path class="ico" d="M0 -24V30M-12 -24c-14-14 4-22 12 0c8-22 26-14 12 0"/></g>`,
+  face: (x, y) => `<g transform="translate(${x},${y})"><circle class="ico" r="32" cx="6"/><circle class="ico f" cx="-6" cy="-6" r="3"/><path class="ico" d="M-26 -2l-8 8 8 2M-24 14c4 4 10 4 14 2"/></g>`,
+  smile: (x, y) => `<g transform="translate(${x},${y})"><circle class="ico" r="6"/><path class="ico" d="M-3 1.5c1.7 2 4.3 2 6 0"/></g>`,
+  sad: (x, y) => `<g transform="translate(${x},${y})"><circle class="ico" r="6"/><path class="ico" d="M-3 3.5c1.7-2 4.3-2 6 0"/></g>`,
+  list: (x, y) => `<g transform="translate(${x},${y})"><path class="ico" d="M-6 -4h2M-6 0h2M-6 4h2M-1 -4h7M-1 0h7M-1 4h7"/></g>`,
+  up: (x, y) => `<g transform="translate(${x},${y})"><path class="ico" d="M-6 4l4-4 3 2.5 5-6M3 -3.5h3v3"/></g>`,
+  plaster: (x, y) => `<g transform="translate(${x},${y}) rotate(-35)"><rect class="ico" x="-7" y="-3" width="14" height="6" rx="3"/></g>`,
+  boxes: (x, y) => `<g transform="translate(${x},${y})"><rect class="ico" x="-6" y="-1" width="5" height="5"/><rect class="ico" x="1" y="-1" width="5" height="5"/><rect class="ico" x="-2.5" y="-7" width="5" height="5"/></g>`,
+  link: (x, y) => `<g transform="translate(${x},${y})"><rect class="ico" x="-10" y="-4" width="11" height="8" rx="4" transform="rotate(-40)"/><rect class="ico" x="-1" y="-4" width="11" height="8" rx="4" transform="rotate(-40)"/></g>`,
+  check: (x, y) => `<g transform="translate(${x},${y})"><rect class="ico" x="-7" y="-7" width="14" height="14" rx="2"/><path class="ico" d="M-4 0l3 3 5-6"/></g>`,
+  heart: (x, y) => `<g transform="translate(${x},${y})"><path class="ico f" d="M0 7C-9 0-8-7-3-7c2 0 3 1 3 3c0-2 1-3 3-3c5 0 6 7-3 14z"/></g>`,
+  truck: (x, y) => `<g transform="translate(${x},${y})"><rect class="ico" x="-10" y="-6" width="12" height="9"/><path class="ico" d="M2 -3h5l3 3v3H2"/><circle class="ico" cx="-6" cy="5" r="2"/><circle class="ico" cx="6" cy="5" r="2"/></g>`,
+  people: (x, y) => `<g transform="translate(${x},${y})"><circle class="ico" cx="-4" cy="-4" r="3"/><circle class="ico" cx="5" cy="-4" r="3"/><path class="ico" d="M-10 7c0-5 12-5 12 0M-1 7c0-5 12-5 12 0"/></g>`,
+  tag: (x, y) => `<g transform="translate(${x},${y})"><path class="ico" d="M-9 -7h8l9 9-8 8-9-9z"/><circle class="ico f" cx="-5" cy="-3" r="1.4"/></g>`,
+  coin: (x, y) => `<g transform="translate(${x},${y})"><circle class="ico" r="8"/><path class="ico" d="M-2 5V-5h4a3 3 0 0 1 0 6h-5M-4 2h6"/></g>`,
+  boxes2: (x, y) => `<g transform="translate(${x},${y})"><rect class="ico" x="-9" y="-2" width="8" height="8"/><rect class="ico" x="1" y="-2" width="8" height="8"/><rect class="ico" x="-4" y="-11" width="8" height="8"/></g>`,
+};
+/** Чип-подпись области (кадры p30, 41154): значок, название, «▾». */
+function chip(f, slotId, x, y, icon) {
+  const t = NAME[slotId].toLowerCase(), w = 30 + t.length * 6.2;
+  return `<g class="achip" data-chip="${f.id}:${slotId}" transform="translate(${f.x + x - w / 2},${f.y + y - 10})"><rect width="${w}" height="20" rx="10"/>${icon(12, 10)}<text x="22" y="14">${esc(t)} ▾</text></g>`;
+}
+function slotPolys(f) {
+  const selSlots = new Set([...sel].map(u => byUid(u)).filter(s => s && s.frame === f.id).map(s => s.slot));
+  return Object.values(TYPES[f.type].slots).map(sl => `<polygon class="slot${selSlots.has(sl.id) ? ' selfill' : ''}" style="--hl:var(${colorOf(sl.id)[2]})" data-slot="${f.id}:${sl.id}" points="${ptsAttr(sl.poly, f)}"/>`).join('');
+}
+function frameSvg(f) {
+  const r = frameRect(f), T = TYPES[f.type], isSel = selFrame === f.id;
+  let h = `<g class="frame" data-frame="${f.id}"><rect class="frcard${isSel ? ' sel' : ''}" data-frame="${f.id}" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="12"/>`;
+  h += `<text class="frttl" x="${f.x}" y="${f.y - 22}">${esc(f.title)}</text><text class="frsub" x="${r.x + 6}" y="${r.y - 6}">${esc(T.name.toLowerCase())}${f.link ? ' · ' + esc(f.link) : ''}${f.locked ? ' · заблокирована' : ''}</text>`;
+  if (isSel) for (const [hx, hy] of [[r.x, r.y + r.h / 2], [r.x + r.w, r.y + r.h / 2], [r.x + r.w / 2, r.y], [r.x + r.w / 2, r.y + r.h]]) h += `<circle class="handle" cx="${hx}" cy="${hy}" r="5"/>`;
+  h += slotPolys(f);
+  if (f.type === 'vm') {
+    h += `<rect class="line" x="${f.x}" y="${f.y}" width="${FIG}" height="${FIG}"/><path class="thin" d="M${f.x},${f.y}L${f.x + 270},${f.y + 270}L${f.x},${f.y + FIG}M${f.x + 270},${f.y + 270}H${f.x + FIG}"/>`;
+    h += ICON.gift(f.x + 270, f.y + 270);
+    h += chip(f, 'gc', 405, 200, ICON.up) + chip(f, 'pr', 405, 345, ICON.plaster) + chip(f, 'ps', 92, 270, ICON.boxes);
+  } else if (f.type === 'cp') {
+    h += `<circle class="line" cx="${f.x + C.x}" cy="${f.y + C.y}" r="${R}"/>`;
+    for (const a of [-45, 45, 180]) { const rr = a * Math.PI / 180; h += `<path class="thin" d="M${f.x + C.x + 40 * Math.cos(rr)},${f.y + C.y + 40 * Math.sin(rr)}L${f.x + C.x + R * Math.cos(rr)},${f.y + C.y + R * Math.sin(rr)}"/>`; }
+    h += ICON.face(f.x + C.x, f.y + C.y);
+    h += chip(f, 'gains', 175, 150, ICON.smile) + chip(f, 'jobs', 430, 270, ICON.list) + chip(f, 'pains', 175, 395, ICON.sad);
+  } else {
+    h += `<rect class="line" x="${f.x}" y="${f.y}" width="${BW}" height="${BH}"/>`;
+    h += `<path class="thin" d="M${f.x + CW},${f.y}V${f.y + TH}M${f.x + 2 * CW},${f.y}V${f.y + TH}M${f.x + 3 * CW},${f.y}V${f.y + TH}M${f.x + 4 * CW},${f.y}V${f.y + TH}M${f.x},${f.y + TH}H${f.x + BW}M${f.x + BW / 2},${f.y + TH}V${f.y + BH}M${f.x + CW},${f.y + TH / 2}H${f.x + 2 * CW}M${f.x + 3 * CW},${f.y + TH / 2}H${f.x + 4 * CW}"/>`;
+    const ic = { kp:'link', ka:'check', kr:'boxes2', vp:'gift', cr:'heart', ch:'truck', cs:'people', cost:'tag', rev:'coin' };
+    for (const s of Object.values(BMC)) {
+      h += `<text class="slab" x="${f.x + s.bb.x0 + 8}" y="${f.y + s.bb.y0 + 16}">${NAME[s.id]}</text>`;
+      const ix = f.x + s.bb.x1 - 16, iy = f.y + s.bb.y0 + 13;
+      h += ic[s.id] === 'gift' ? ICON.gift(ix, iy + 2, 0.24) : ICON[ic[s.id]](ix, iy);
+    }
+  }
+  return h + '</g>';
+}
+function stickerSvg(s) {
+  const p = toScene(s), draft = !s.ref_id;
+  const [bg, ink] = draft && s.color ? [s.color, s.color === '--st-yellow' || s.color === '--st-blue' ? '--st-ink-dark' : '--st-ink-light'] : colorOf(s.slot);
+  const fs = { s: 9, m: 10.5, l: 13 }[s.fs || 'm'];
+  const rot = pressed('tilt') ? ` rotate(${tiltOf(s.uid)},${s.w / 2},${s.h / 2})` : '';
+  return `<g class="st${sel.has(s.uid) ? ' sel' : ''}" data-uid="${s.uid}" transform="translate(${p.x},${p.y})${rot}" tabindex="0" role="button" aria-label="${esc((KIND_WORD[s.kind] || 'заметка') + ': ' + s.t)}">
+    <rect class="body" width="${s.w}" height="${s.h}" fill="var(${bg})"/>
+    <foreignObject width="${s.w}" height="${s.h}"><div xmlns="http://www.w3.org/1999/xhtml" class="tx" style="color:var(${ink});font-size:${fs}px">${draft ? `<span class="c">черновик${s.example ? ' · пример, не из LORE' : ''}</span>` : `<span class="c">${esc(s.ref_id)}</span>`}<span class="t">${esc(s.t)}</span></div></foreignObject>
+    ${s.num ? `<rect class="numb" x="-6" y="-6" width="16" height="16"/><text class="numt" x="2" y="6" text-anchor="middle">${s.num}</text>` : ''}
+    ${s.refuted ? `<text class="refx" x="${s.w / 2}" y="${s.h / 2 + 16}" text-anchor="middle">X</text>` : ''}
+    ${sel.has(s.uid) ? `<rect class="ring" x="-4" y="-4" width="${s.w + 8}" height="${s.h + 8}"/>` : ''}</g>`;
+}
+function rim(s, qq) { const c = center(s), dx = qq.x - c.x, dy = qq.y - c.y; const t = Math.min(dx ? (s.w / 2) / Math.abs(dx) : Infinity, dy ? (s.h / 2) / Math.abs(dy) : Infinity, 1); return { x: c.x + dx * t, y: c.y + dy * t }; }
+function curve(a, b, rel, cls) {
+  const A = center(a), B = center(b), ctrl = { x: (A.x + B.x) / 2 - (B.y - A.y) * 0.16, y: (A.y + B.y) / 2 + (B.x - A.x) * 0.16 };
+  const p0 = rim(a, ctrl), p1 = rim(b, ctrl), r = REL[rel];
+  return `<path class="${cls}${r && r.dim ? ' dim' : ''}" d="M${p0.x},${p0.y} Q${ctrl.x},${ctrl.y} ${p1.x},${p1.y}" ${r ? `stroke="${r.c}"` : ''} marker-end="url(#m-${r ? rel : 'free'})"><title>${esc(r ? r.w : 'стрелка')}</title></path>`;
+}
+function edges() {
+  const all = pressed('alledges'), focus = new Set([...sel].map(u => byUid(u)?.ref_id).filter(Boolean));
+  let h = '';
+  for (const a of DOC.st) {
+    if (!a.ref_id || frameById(a.frame).type === 'bmc') continue;
+    for (const [rel, to] of a.rel) for (const b of DOC.st.filter(x => x.ref_id === to && frameById(x.frame).type !== 'bmc')) {
+      if (!all && !focus.has(a.ref_id) && !focus.has(b.ref_id)) continue; h += curve(a, b, rel, 'edge');
+    }
+  }
+  return h;
+}
+function linkRel(a, b) {
+  const k = a.ref_id ? a.kind : (KIND_OF_SLOT[a.slot] || 'note'), m = b.ref_id ? b.kind : (KIND_OF_SLOT[b.slot] || 'note');
+  if (k === 'uc' && m === 'pain') return 'relieves'; if (k === 'uc' && m === 'gain') return 'delivers'; if (k === 'uc' && m === 'job') return 'performs';
+  if (k === 'pain' && m === 'job') return 'blocks'; if (k === 'gain' && m === 'job') return 'success'; return 'free';
+}
+function annSvg() {
+  if (!pressed('showann')) return '';
+  return DOC.ann.map(a => a.kind === 'path' ? `<path class="ann" d="M${a.pts.map(p => p.join(',')).join(' L')}"/>`
+    : a.kind === 'rect' ? `<rect class="annr" x="${a.x}" y="${a.y}" width="${a.w}" height="${a.h}" rx="6"/>`
+    : a.kind === 'line' ? `<path class="ulink" d="M${a.x1},${a.y1} L${a.x2},${a.y2}" marker-end="url(#m-free)"/>`
+    : `<text class="annt" data-ann="${a.id}" x="${a.x}" y="${a.y}">${esc(a.t)}</text>`).join('');
+}
+function viewSize() { return { w: stage.clientWidth || 1000, h: stage.clientHeight || 600 }; }
+const linksSvg = () => DOC.links.map(l => { const a = byUid(l.from), b = byUid(l.to); return a && b ? curve(a, b, l.rel, 'ulink') : ''; }).join('');
+function renderBoard() {
+  const vs = viewSize(), vw = vs.w / VIEW.k, vh = vs.h / VIEW.k;
+  svg.setAttribute('viewBox', `${VIEW.x} ${VIEW.y} ${vw} ${vh}`);
+  const mk = (k, c) => `<marker id="m-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${c}"/></marker>`;
+  const defs = `<defs><pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r="1.3" fill="var(--dot)"/></pattern>${Object.entries(REL).map(([k, r]) => mk(k, r.c)).join('')}${mk('free', 'var(--ink)')}</defs>`;
+  svg.innerHTML = defs + `<rect id="bg" x="${VIEW.x - 10}" y="${VIEW.y - 10}" width="${vw + 20}" height="${vh + 20}" fill="url(#dots)"/>`
+    + `<g id="frames">${DOC.frames.map(frameSvg).join('')}</g>`
+    + `<g id="stk">${[...DOC.st].sort((a, b) => a.z - b.z).map(stickerSvg).join('')}</g><g id="edges">${edges()}</g>`
+    + `<g id="ulinks">${linksSvg()}</g><g id="annl">${annSvg()}</g><g id="tmp"></g><rect id="marq" class="marq" hidden/>`;
+  svg.setAttribute('class', 't-' + tool);
+  document.getElementById('zpct').textContent = Math.round(VIEW.k * 100) + '%';
+}
+function render() {
+  renderBoard();
+  document.querySelectorAll('[data-tool]').forEach(b => b.setAttribute('aria-pressed', b.dataset.tool === tool));
+  document.querySelector('[data-act=undo]').disabled = !undo.length;
+  document.querySelector('[data-act=redo]').disabled = !redo.length;
+  renderList(); renderRes(); placePanels();
+}
+
+/* ═════════ 6. Панели над объектами ═════════ */
+const PALETTE = ['--st-yellow', '--st-green', '--st-red', '--st-blue', '--st-orange'];
+function placeAbove(el, r) {
+  const st = stage.getBoundingClientRect(); el.hidden = false;
+  const w = el.offsetWidth, h = el.offsetHeight;
+  let x = r.left - st.left + r.width / 2 - w / 2, y = r.top - st.top - h - 8;
+  if (y < 46) y = Math.min(r.bottom - st.top + 8, st.height - h - 50);
+  el.style.left = Math.max(4, Math.min(x, st.width - w - 4)) + 'px'; el.style.top = Math.max(4, y) + 'px';
+}
+function placePanels() {
+  const fp = document.getElementById('fp'), fm = document.getElementById('fm');
+  fp.hidden = true; fm.hidden = true;
+  if (drag || stage.hidden) return;
+  if (sel.size === 1) {
+    const s = byUid([...sel][0]), g = s && svg.querySelector(`.st[data-uid="${s.uid}"]`);
+    if (g) {
+      const cur = s.ref_id ? colorOf(s.slot)[0] : (s.color || colorOf(s.slot)[0]);
+      document.getElementById('fp-colors').innerHTML = PALETTE.map(c => `<button data-fp="color" data-c="${c}" style="background:var(${c})" aria-pressed="${c === cur}" ${s.ref_id ? 'disabled title="У записи цвет = вид"' : 'title="Цвет черновика"'}></button>`).join('');
+      document.getElementById('fp-size').value = s.fs || 'm';
+      document.getElementById('fp-num').textContent = s.num || '—';
+      fp.querySelector('[data-fp=promote]').disabled = !!s.ref_id;
+      placeAbove(fp, g.getBoundingClientRect());
+    }
+  } else if (selFrame) {
+    const f = frameById(selFrame), card = f && svg.querySelector(`rect.frcard[data-frame="${f.id}"]`);
+    if (card) {
+      document.getElementById('fm-title').textContent = f.title;
+      document.getElementById('fm-link').innerHTML = LINK_OPTS.map(([v, t]) => `<option value="${v}" ${v === (f.link || '') ? 'selected' : ''}>${t}</option>`).join('');
+      const lk = fm.querySelector('[data-fm=lock]'); lk.textContent = f.locked ? '🔒' : '🔓'; lk.title = f.locked ? 'Разблокировать' : 'Заблокировать'; lk.setAttribute('aria-pressed', f.locked);
+      fm.querySelector('[data-fm=del]').disabled = f.locked;
+      placeAbove(fm, card.getBoundingClientRect());
+    }
+  }
+}
+function renderRes() {
+  const qv = (document.getElementById('res-q').value || '').toLowerCase();
+  const ic = { cp:'◔', vm:'◇', bmc:'▦' };
+  const onBoard = DOC.frames.filter(f => !qv || f.title.toLowerCase().includes(qv));
+  document.getElementById('res-list').innerHTML = `<div class="grp">На доске · ${onBoard.length}</div>` + onBoard.map(f => `<button class="it" data-goto="${f.id}">${ic[f.type]} ${esc(f.title)}<small>${DOC.st.filter(s => s.frame === f.id).length}</small></button>`).join('')
+    + `<div class="grp">Шаблоны — тяните на доску</div>` + Object.entries(TYPES).filter(([, T]) => !qv || T.name.toLowerCase().includes(qv)).map(([k, T]) => `<button class="it" data-tpl="${k}">${ic[k]} ${T.name}</button>`).join('');
+}
+document.getElementById('res-q').addEventListener('input', renderRes);
+
+/* ═════════ 7. Размещение стикера ═════════ */
+const accepts = (s, slotId) => !s.ref_id || (ACCEPT[slotId] || []).includes(s.kind);
+const refuseText = (s, id) => `${s.ref_id} — запись «${KIND_WORD[s.kind]}»: в «${NAME[id]}» её не положить, тип записи перетаскиванием не меняется.`;
+/** Куда встанет стикер при желаемом левом верхнем угле want (координаты доски): по всем рамкам и их областям. */
+function placeAt(s, want) {
+  const A = s.w * s.h, ov = [];
+  for (const f of DOC.frames) for (const sl of Object.values(TYPES[f.type].slots)) {
+    const loc = { x: want.x - f.x, y: want.y - f.y };
+    ov.push({ f, sl, loc, a: overlapArea(sl, s, loc), inC: isFeasible(sl, s, loc, { overflow: 0.5 }, 0) });
+  }
+  const better = (m, x) => (!m || x.a > m.a * 1.01 || (Math.abs(x.a - m.a) <= m.a * 0.01 && x.inC && !m.inC)) ? x : m;
+  const top = ov.reduce(better, null);
+  const refused = top && top.a >= DEF.minOverlap * A && !accepts(s, top.sl.id) ? top : null;
+  const ok = ov.filter(x => accepts(s, x.sl.id) && x.a >= DEF.minOverlap * A - 0.05);
+  if (ok.length) { const b = ok.reduce(better, null); return { frame: b.f.id, slot: b.sl.id, x: b.loc.x, y: b.loc.y, refused, pulled: false }; }
+  let best = null;
+  for (const x of ov) { if (!accepts(s, x.sl.id)) continue; const c = clampToSlot(x.sl, s, x.loc); const d = Math.hypot(c.x - x.loc.x, c.y - x.loc.y); if (!best || d < best.d) best = { frame: x.f.id, slot: x.sl.id, x: c.x, y: c.y, d }; }
+  return { ...best, refused, pulled: true };
+}
+function hot(key, ok) { svg.querySelectorAll('.slot').forEach(el => el.classList.remove('hot-ok', 'hot-bad')); if (key) svg.querySelector(`.slot[data-slot="${key}"]`)?.classList.add(ok ? 'hot-ok' : 'hot-bad'); }
+function applyPlace(s, r) { s.frame = r.frame; s.slot = r.slot; s.x = r.x; s.y = r.y; if (!s.ref_id && KIND_OF_SLOT[r.slot]) s.kind = KIND_OF_SLOT[r.slot]; }
+function newSticker(P) {
+  const s = { uid:nid('s'), frame:DOC.frames[0].id, ref_id:null, kind:'note', t:'Новый стикер', slot:Object.keys(TYPES[DOC.frames[0].type].slots)[0], rel:[], w:W, h:H, x:0, y:0, z:topZ() + 1, refuted:false };
+  applyPlace(s, placeAt(s, { x: P.x - W / 2, y: P.y - H / 2 }));
+  return s;
+}
+
+/* ═════════ 8. Указатель ═════════ */
+const ptScene = e => { const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse()); return { x: p.x, y: p.y }; };
+const multi = () => pressed('multi');
+function setTool(t) { tool = t; render(); say({ hand:'Рука: тяните доску.', select:'Выбор: стикеры и рамки; рамкой мышью — несколько стикеров.', sticker:'Стикер: щёлкните по канве — встанет черновик, вид по области.', shape:'Фигура: тяните — рамка-пометка.', line:'Линия: от стикера к стикеру — связь; иначе — линия-пометка.', text:'Текст: щёлкните — подпись.', pencil:'Карандаш: рисуйте пометку поверх.' }[t]); }
+svg.addEventListener('pointerdown', e => {
+  closeMenus();
+  if (!document.getElementById('ed').hidden) return;
+  const g = e.target.closest('.st'), chipEl = e.target.closest('.achip'), card = e.target.closest('[data-frame]'), P = ptScene(e);
+  if (chipEl && tool === 'select') { openChipMenu(chipEl); return; }
+  if (tool === 'hand' || (tool === 'select' && !g && !card && e.pointerType === 'touch' && !multi())) { svg.setPointerCapture(e.pointerId); drag = { kind:'pan', c0:{ x:e.clientX, y:e.clientY }, v0:{ ...VIEW } }; return; }
+  if (tool === 'sticker') { pushUndo(); const s = newSticker(P); DOC.st.push(s); sel = new Set([s.uid]); selFrame = null; tool = 'select'; render(); say(`Стикер поставлен в «${NAME[s.slot]}» (вид по области).`, 'ok'); window.__lastNew = s.uid; return; }
+  if (tool === 'line') { svg.setPointerCapture(e.pointerId); drag = { kind:'line', from: g ? g.dataset.uid : null, P0:P }; return; }
+  if (tool === 'shape') { svg.setPointerCapture(e.pointerId); drag = { kind:'shape', P0:P }; return; }
+  if (tool === 'pencil') { svg.setPointerCapture(e.pointerId); drag = { kind:'pen', pts:[[+P.x.toFixed(1), +P.y.toFixed(1)]] }; return; }
+  if (tool === 'text') { pushUndo(); const a = { id:nid('a'), kind:'text', x:P.x, y:P.y, t:'Текст' }; DOC.ann.push(a); render(); openEditor({ ann:a.id }); return; }
+  if (g) {
+    const u = g.dataset.uid; selFrame = null;
+    if (e.shiftKey || multi()) { sel.has(u) ? sel.delete(u) : sel.add(u); } else if (!sel.has(u)) sel = new Set([u]);
+    render(); if (!sel.has(u)) return;
+    svg.setPointerCapture(e.pointerId);
+    drag = { kind:'move', P0:P, lead:u, before:snap(), moved:false, start:[...sel].map(id => ({ id, scene: toScene(byUid(id)) })) };
+    e.preventDefault(); return;
+  }
+  if (card) {
+    const f = frameById(card.dataset.frame); sel = new Set(); selFrame = f.id; render();
+    if (f.locked) { say(`Рамка «${f.title}» заблокирована — не двигается.`); return; }
+    svg.setPointerCapture(e.pointerId); drag = { kind:'frame', id:f.id, P0:P, f0:{ x:f.x, y:f.y }, before:snap(), moved:false }; return;
+  }
+  sel = new Set(); selFrame = null; render();
+  if (e.pointerType === 'mouse' || e.pointerType === 'pen') { svg.setPointerCapture(e.pointerId); drag = { kind:'marq', P0:P }; }
+});
+svg.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const P = ptScene(e);
+  if (drag.kind === 'pan') { const s = 1 / VIEW.k; VIEW.x = drag.v0.x - (e.clientX - drag.c0.x) * s; VIEW.y = drag.v0.y - (e.clientY - drag.c0.y) * s; renderBoard(); return; }
+  if (drag.kind === 'marq') {
+    const x = Math.min(P.x, drag.P0.x), y = Math.min(P.y, drag.P0.y), w = Math.abs(P.x - drag.P0.x), h = Math.abs(P.y - drag.P0.y);
+    const m = svg.querySelector('#marq'); m.removeAttribute('hidden'); m.setAttribute('x', x); m.setAttribute('y', y); m.setAttribute('width', w); m.setAttribute('height', h);
+    sel = new Set(); DOC.st.forEach(s => { const p = toScene(s); if (p.x < x + w && p.x + s.w > x && p.y < y + h && p.y + s.h > y) sel.add(s.uid); });
+    svg.querySelectorAll('.st').forEach(g => g.classList.toggle('sel', sel.has(g.dataset.uid))); return;
+  }
+  if (drag.kind === 'frame') { const f = frameById(drag.id); f.x = Math.round(drag.f0.x + P.x - drag.P0.x); f.y = Math.round(drag.f0.y + P.y - drag.P0.y); drag.moved = true; renderBoard(); return; }
+  if (drag.kind === 'line') { const a = drag.from ? center(byUid(drag.from)) : drag.P0; svg.querySelector('#tmp').innerHTML = `<path class="tmp" d="M${a.x},${a.y} L${P.x},${P.y}"/>`; drag.P1 = P; return; }
+  if (drag.kind === 'shape') { const x = Math.min(P.x, drag.P0.x), y = Math.min(P.y, drag.P0.y); drag.r = { x, y, w: Math.abs(P.x - drag.P0.x), h: Math.abs(P.y - drag.P0.y) }; svg.querySelector('#tmp').innerHTML = `<rect class="tmp" x="${x}" y="${y}" width="${drag.r.w}" height="${drag.r.h}" rx="6"/>`; return; }
+  if (drag.kind === 'pen') { drag.pts.push([+P.x.toFixed(1), +P.y.toFixed(1)]); svg.querySelector('#tmp').innerHTML = `<path class="ann" d="M${drag.pts.map(p => p.join(',')).join(' L')}"/>`; return; }
+  const dx = P.x - drag.P0.x, dy = P.y - drag.P0.y;
+  if (!drag.moved) {
+    if (Math.hypot(dx, dy) < 2) return;
+    drag.moved = true;
+    let z = topZ(); drag.start.map(st => byUid(st.id)).sort((a, b) => a.z - b.z).forEach(s => s.z = ++z);   // тот, что тащат, — наверх
+    const stk = svg.querySelector('#stk'); drag.start.forEach(st => { const g = svg.querySelector(`.st[data-uid="${st.id}"]`); if (g) stk.appendChild(g); });
+    document.getElementById('fp').hidden = true;
+  }
+  drag.refused = null;
+  for (const st of drag.start) {
+    const s = byUid(st.id), r = placeAt(s, { x: st.scene.x + dx, y: st.scene.y + dy });
+    applyPlace(s, r);
+    if (st.id === drag.lead) { drag.refused = r.refused; drag.pulled = r.pulled; hot(r.refused ? r.refused.f.id + ':' + r.refused.sl.id : r.frame + ':' + r.slot, !r.refused); }
+    const g = svg.querySelector(`.st[data-uid="${s.uid}"]`), p = toScene(s);
+    g?.setAttribute('transform', `translate(${p.x},${p.y})${pressed('tilt') ? ` rotate(${tiltOf(s.uid)},${s.w / 2},${s.h / 2})` : ''}`);
+  }
+  const s = byUid(drag.lead), pct = Math.round(100 * overlapArea(slotOfSt(s), s, s) / (s.w * s.h));
+  if (drag.refused) say(refuseText(s, drag.refused.sl.id) + ` Остаётся в «${NAME[s.slot]}».`, 'bad');
+  else say(`«${NAME[s.slot]}» · ${frameById(s.frame).title}: в области ${pct} % стикера${drag.pulled ? ' — подтянут к ближайшей области' : ''}.`);
+  svg.querySelector('#edges').innerHTML = edges();
+  svg.querySelector('#ulinks').innerHTML = linksSvg();
+});
+function endDrag(e) {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.kind === 'move' && d.moved) {
+    undo.push(d.before); if (undo.length > 60) undo.shift(); redo.length = 0;
+    const s = byUid(d.lead);
+    if (d.refused) say(refuseText(s, d.refused.sl.id) + ` Остался в «${NAME[s.slot]}».`, 'bad');
+    else say(`Положено в «${NAME[s.slot]}»${!s.ref_id ? ' — черновик теперь «' + (KIND_WORD[s.kind] || 'заметка') + '»' : ''}.`, 'ok');
+  }
+  if (d.kind === 'frame' && d.moved) { undo.push(d.before); redo.length = 0; say(`Рамка «${frameById(d.id).title}» сдвинута вместе со стикерами.`, 'ok'); }
+  if (d.kind === 'line') {
+    const el = e && document.elementFromPoint(e.clientX, e.clientY), g = el && el.closest && el.closest('.st');
+    if (d.from && g && g.dataset.uid !== d.from) {
+      const a = byUid(d.from), b = byUid(g.dataset.uid), rel = linkRel(a, b);
+      pushUndo(); DOC.links.push({ from:a.uid, to:b.uid, rel });
+      say(rel === 'free' ? 'Стрелка проведена (виды не образуют пару связи графа).' : `Связь: ${a.ref_id || 'черновик'} ${REL[rel].w} ${b.ref_id || 'черновик'} — в продукте ребро графа (S7C-05).`, 'ok');
+    } else if (!d.from && d.P1 && Math.hypot(d.P1.x - d.P0.x, d.P1.y - d.P0.y) > 6) { pushUndo(); DOC.ann.push({ id:nid('a'), kind:'line', x1:d.P0.x, y1:d.P0.y, x2:d.P1.x, y2:d.P1.y }); say('Линия-пометка добавлена.', 'ok'); }
+    else if (d.from) say('Стрелка не проведена: отпустите на другом стикере.', 'bad');
+  }
+  if (d.kind === 'shape' && d.r && d.r.w > 6 && d.r.h > 6) { pushUndo(); DOC.ann.push({ id:nid('a'), kind:'rect', ...d.r }); say('Фигура-пометка добавлена.', 'ok'); }
+  if (d.kind === 'pen' && d.pts.length > 1) { pushUndo(); DOC.ann.push({ id:nid('a'), kind:'path', pts:d.pts }); say('Пометка карандашом добавлена (слой «пометки»).', 'ok'); }
+  hot(null); render();
+}
+svg.addEventListener('pointerup', endDrag);
+svg.addEventListener('pointercancel', endDrag);
+svg.addEventListener('wheel', e => { e.preventDefault(); if (e.ctrlKey) zoomAt(e.deltaY < 0 ? 1.12 : 1 / 1.12, ptScene(e)); else { VIEW.x += e.deltaX / VIEW.k; VIEW.y += e.deltaY / VIEW.k; renderBoard(); placePanels(); } }, { passive: false });
+
+/* Тень при перетаскивании с палитры и из «Ресурсов» (слово владельца; кадр p29). */
+let ghost = null;
+function startGhost(kind, e, btn) { ghost = { kind, x0:e.clientX, y0:e.clientY, active:false }; try { btn.releasePointerCapture(e.pointerId); } catch (_) {} }
+function ghostMove(e) {
+  if (!ghost) return;
+  if (!ghost.active && Math.hypot(e.clientX - ghost.x0, e.clientY - ghost.y0) < 5) return;
+  if (!ghost.active) {
+    ghost.active = true; const el = document.createElement('div'); el.className = 'ghost'; el.id = 'ghost'; document.body.appendChild(el);
+    const k = VIEW.k, T = ghost.kind === 'sticker' ? { w: W, h: H } : { w: TYPES[ghost.kind].w + 2 * FPAD, h: TYPES[ghost.kind].h + FHEAD + FPAD };
+    Object.assign(el.style, { width: T.w * k + 'px', height: T.h * k + 'px', background: ghost.kind === 'sticker' ? 'var(--st-yellow)' : 'var(--paper-sheet)', border: ghost.kind === 'sticker' ? '0' : '2px dashed var(--ink)' });
+  }
+  const el = document.getElementById('ghost'); el.style.left = (e.clientX - el.offsetWidth / 2) + 'px'; el.style.top = (e.clientY - el.offsetHeight / 2) + 'px';
+  const r = svg.getBoundingClientRect(), over = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  ghost.over = over;
+  if (over && ghost.kind === 'sticker') {
+    const P = ptScene(e), probe = { uid:'probe', ref_id:null, kind:'note', w:W, h:H };
+    const pl = placeAt(probe, { x: P.x - W / 2, y: P.y - H / 2 }); ghost.place = pl;
+    hot(pl.frame + ':' + pl.slot, true);
+    const f = frameById(pl.frame);
+    svg.querySelector('#tmp').innerHTML = `<rect class="ghost-st" x="${f.x + pl.x}" y="${f.y + pl.y}" width="${W}" height="${H}" fill="var(${colorOf(pl.slot)[0]})"/>`;
+    el.style.opacity = '0.25';
+    say(`Ляжет в «${NAME[pl.slot]}» · ${f.title}${pl.pulled ? ' — подтянется к ближайшей области' : ''}. Esc — отмена.`);
+  } else { hot(null); const t = svg.querySelector('#tmp'); if (t) t.innerHTML = ''; el.style.opacity = '0.6'; }
+}
+function ghostEnd(e, cancel) {
+  if (!ghost) return;
+  const g = ghost; ghost = null; document.getElementById('ghost')?.remove(); hot(null);
+  if (!g.active) { if (!cancel) g.kind === 'sticker' ? setTool('sticker') : addFrame(g.kind); return; }
+  if (cancel || !g.over) { render(); say('Перетаскивание отменено.'); return; }
+  if (g.kind === 'sticker') { pushUndo(); const s = { uid:nid('s'), frame:g.place.frame, ref_id:null, kind:'note', t:'Новый стикер', slot:g.place.slot, rel:[], w:W, h:H, x:0, y:0, z:topZ() + 1, refuted:false }; applyPlace(s, g.place); DOC.st.push(s); sel = new Set([s.uid]); selFrame = null; render(); say(`Стикер положен в «${NAME[s.slot]}». Двойной щелчок — текст.`, 'ok'); window.__lastNew = s.uid; }
+  else addFrame(g.kind, ptScene(e));
+}
+document.addEventListener('pointermove', ghostMove);
+document.addEventListener('pointerup', e => ghostEnd(e, false));
+const stickerBtn = document.querySelector('[data-tool=sticker]');
+stickerBtn.addEventListener('pointerdown', e => { e.preventDefault(); startGhost('sticker', e, stickerBtn); });
+document.getElementById('res-list').addEventListener('pointerdown', e => { const t = e.target.closest('[data-tpl]'); if (t) { e.preventDefault(); startGhost(t.dataset.tpl, e, t); } });
+document.getElementById('res-list').addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if (g) focusFrame(g.dataset.goto); });
+
+/* ═════════ 9. Рамки ═════════ */
+function addFrame(type, P) {
+  pushUndo();
+  const T = TYPES[type], vs = viewSize();
+  const cx = P ? P.x : VIEW.x + vs.w / VIEW.k / 2, cy = P ? P.y : VIEW.y + vs.h / VIEW.k / 2;
+  const f = { id:nid('f'), type, title:T.name + ' · новая', link:null, x:Math.round(cx - T.w / 2), y:Math.round(cy - T.h / 2), locked:false };
+  DOC.frames.push(f); sel = new Set(); selFrame = f.id; render();
+  say(`Рамка «${T.name}» добавлена на доску; стикеры в неё кладут так же — хотя бы частью в область.`, 'ok');
+}
+function focusFrame(id) {
+  const f = frameById(id), r = frameRect(f), vs = viewSize();
+  VIEW.k = Math.min(1.5, Math.max(0.2, Math.min(vs.w / (r.w + 60), vs.h / (r.h + 60))));
+  VIEW.x = r.x + r.w / 2 - vs.w / VIEW.k / 2; VIEW.y = r.y + r.h / 2 - vs.h / VIEW.k / 2;
+  sel = new Set(); selFrame = id; render();
+}
+document.getElementById('fm').addEventListener('click', e => {
+  const b = e.target.closest('[data-fm]'); if (!b || b.disabled || !selFrame) return;
+  const f = frameById(selFrame), a = b.dataset.fm;
+  if (a === 'rename') openEditor({ frame: f.id });
+  if (a === 'lock') { pushUndo(); f.locked = !f.locked; render(); say(f.locked ? 'Рамка заблокирована: не двигается и не удаляется; стикеры в ней править можно.' : 'Рамка разблокирована.', 'ok'); }
+  if (a === 'dup') {
+    pushUndo(); const T = TYPES[f.type], nf = { ...f, id:nid('f'), title:f.title + ' · копия', x:f.x + T.w + 2 * FPAD + 60, locked:false };
+    DOC.frames.push(nf); let z = topZ(); DOC.st.filter(s => s.frame === f.id).forEach(s => DOC.st.push({ ...s, uid:nid('s'), frame:nf.id, z:++z }));
+    selFrame = nf.id; render(); say('Рамка продублирована со стикерами (версия канвы, как «V2» на кадре p30).', 'ok');
+  }
+  if (a === 'del') { pushUndo(); const n = DOC.st.filter(s => s.frame === f.id).length; DOC.st = DOC.st.filter(s => s.frame !== f.id); DOC.frames = DOC.frames.filter(x => x.id !== f.id); selFrame = null; render(); say(`Рамка удалена вместе с ${n} стикерами; записи в LORE остаются. Ctrl+Z — вернуть.`, 'ok'); }
+  if (a === 'open') say(f.link ? `Откроется паспорт ${f.link} (v2: ?open=${f.link}).` : 'Рамка не связана с записью — свяжите с ролью или фичей.', f.link ? 'ok' : 'bad');
+});
+document.getElementById('fm-link').addEventListener('change', e => { if (!selFrame) return; pushUndo(); frameById(selFrame).link = e.target.value || null; render(); say('Рамка связана: ' + (e.target.value || 'нет'), 'ok'); });
+function closeMenus() { ['cm', 'am', 'lm'].forEach(id => document.getElementById(id).hidden = true); }
+function openChipMenu(el) {
+  const [, sid] = el.dataset.chip.split(':'), m = document.getElementById('cm');
+  m.innerHTML = `<button class="tb" data-cm="add">+ стикер в «${NAME[sid]}»</button><button class="tb" data-cm="lay">▦ разложить по рангу</button><span class="fr">чип · p30</span>`;
+  m.dataset.key = el.dataset.chip; placeAbove(m, el.getBoundingClientRect());
+}
+document.getElementById('cm').addEventListener('click', e => {
+  const b = e.target.closest('[data-cm]'); if (!b) return; const [fid, sid] = document.getElementById('cm').dataset.key.split(':'), f = frameById(fid), sl = TYPES[f.type].slots[sid];
+  closeMenus(); pushUndo();
+  if (b.dataset.cm === 'add') { const s = { uid:nid('s'), frame:fid, ref_id:null, kind:KIND_OF_SLOT[sid] || 'note', t:'Новый стикер', slot:sid, rel:[], w:W, h:H, x:sl.cen.x - W / 2, y:sl.cen.y - H / 2, z:topZ() + 1, refuted:false }; DOC.st.push(s); sel = new Set([s.uid]); render(); say(`Стикер добавлен в «${NAME[sid]}».`, 'ok'); }
+  else { layoutSlot(DOC.st, f, sid); render(); say(`«${NAME[sid]}» разложены ровной сеткой по рангу. Ctrl+Z — вернуть.`, 'ok'); }
+});
+function openMenu(id, btn, html) { closeMenus(); const m = document.getElementById(id); m.innerHTML = html; placeAbove(m, btn.getBoundingClientRect()); }
+document.getElementById('am').addEventListener('click', e => { const b = e.target.closest('[data-add]'); if (b) { closeMenus(); addFrame(b.dataset.add); } });
+document.getElementById('lm').addEventListener('click', e => {
+  const b = e.target.closest('[data-lay]'); if (!b || b.disabled) return; closeMenus(); pushUndo();
+  const fr = b.dataset.lay === 'sel' && selFrame ? [frameById(selFrame)] : DOC.frames;
+  fr.forEach(f => Object.keys(TYPES[f.type].slots).forEach(k => layoutSlot(DOC.st, f, k))); render(); say('Разложено ровной сеткой по рангу. Ctrl+Z — вернуть.', 'ok');
+});
+
+/* ═════════ 10. Правка текста, панель стикера, слои ═════════ */
+function openEditor(target) {
+  const ed = document.getElementById('ed'), st = stage.getBoundingClientRect();
+  let el, val;
+  if (target.uid) { el = svg.querySelector(`.st[data-uid="${target.uid}"] .body`); val = byUid(target.uid).t; }
+  else if (target.ann) { el = svg.querySelector(`[data-ann="${target.ann}"]`); val = DOC.ann.find(a => a.id === target.ann).t; }
+  else { el = svg.querySelector(`rect.frcard[data-frame="${target.frame}"]`); val = frameById(target.frame).title; }
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  ed.hidden = false; ed.value = val; ed.dataset.target = JSON.stringify(target);
+  const w = target.frame ? 260 : Math.max(r.width, 120), h = target.frame ? 34 : Math.max(r.height, 40);
+  Object.assign(ed.style, { left: Math.max(4, Math.min(r.left - st.left, st.width - w - 4)) + 'px', top: Math.max(4, r.top - st.top) + 'px', width: w + 'px', height: h + 'px' });
+  setTimeout(() => { ed.focus(); ed.select(); }, 0);
+}
+function closeEditor(save) {
+  const ed = document.getElementById('ed'); if (ed.hidden) return;
+  const t = JSON.parse(ed.dataset.target || '{}'); ed.hidden = true;
+  const obj = t.uid ? byUid(t.uid) : t.ann ? DOC.ann.find(a => a.id === t.ann) : frameById(t.frame);
+  const key = t.frame ? 'title' : 't';
+  if (save && obj && ed.value.trim() && ed.value.trim() !== obj[key]) { pushUndo(); obj[key] = ed.value.trim(); say(obj.ref_id ? `Текст на стикере изменён; название записи ${obj.ref_id} правится в её паспорте.` : 'Текст изменён.', 'ok'); }
+  render();
+}
+svg.addEventListener('dblclick', e => {
+  const g = e.target.closest('.st'), an = e.target.closest('[data-ann]');
+  if (g) return openEditor({ uid: g.dataset.uid });
+  if (an) return openEditor({ ann: an.dataset.ann });
+  const card = e.target.closest('[data-frame]');
+  if (card && tool === 'select') { const P = ptScene(e); pushUndo(); const s = newSticker(P); DOC.st.push(s); sel = new Set([s.uid]); selFrame = null; render(); openEditor({ uid: s.uid }); }   // кадр p34: двойной щелчок по месту — стикер
+});
+const edEl = document.getElementById('ed');
+edEl.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); closeEditor(true); } if (e.key === 'Escape') closeEditor(false); e.stopPropagation(); });
+edEl.addEventListener('blur', () => closeEditor(true));
+function normalizeZ() { [...DOC.st].sort((a, b) => a.z - b.z).forEach((s, i) => s.z = i + 1); }
+function layer(op) {
+  if (!sel.size) return; pushUndo();
+  const ord = [...DOC.st].sort((a, b) => a.z - b.z);
+  if (op === 'front') { let z = topZ(); ord.filter(s => sel.has(s.uid)).forEach(s => s.z = ++z); }
+  if (op === 'back') { let z = Math.min(...DOC.st.map(s => s.z)); ord.filter(s => sel.has(s.uid)).reverse().forEach(s => s.z = --z); }
+  if (op === 'up' || op === 'down') { const list = op === 'up' ? ord : [...ord].reverse(); for (let i = list.length - 2; i >= 0; i--) { const a = list[i], b = list[i + 1]; if (sel.has(a.uid) && !sel.has(b.uid)) { [a.z, b.z] = [b.z, a.z]; [list[i], list[i + 1]] = [b, a]; } } }
+  normalizeZ(); render();
+  say(`Выбранное — ${{ front:'на передний план', back:'на задний план', up:'на слой выше', down:'на слой ниже' }[op]}. Слой: ${[...sel].map(u => byUid(u).z).join(', ')} из ${DOC.st.length}.`);
+}
+function promote(s) {
+  const href = `v2gap-create-types.html?t=${['uc', 'note'].includes(s.kind) ? 'feature' : s.kind}&title=${encodeURIComponent(s.t)}`;
+  say(`«Повысить до записи» открывает форму «+ Новая» с текстом стикера (${href}). После создания у стикера появится код записи.`, 'ok');
+  window.__lastPromote = href; if (!window.__noNav) window.open(href, '_blank', 'noopener');
+}
+document.getElementById('fp').addEventListener('click', e => {
+  const b = e.target.closest('[data-fp]'); if (!b || b.disabled || sel.size !== 1) return;
+  const s = byUid([...sel][0]), a = b.dataset.fp;
+  if (a === 'front' || a === 'back') return layer(a);
+  if (a === 'refute') { pushUndo(); s.refuted = !s.refuted; render(); return say(s.refuted ? 'Опровергнуто: стикер на месте, поверх — красный X (кадр 41150).' : 'Отметка снята.', s.refuted ? 'bad' : 'ok'); }
+  if (a === 'num-' || a === 'num+') { pushUndo(); s.num = Math.max(0, (s.num || 0) + (a === 'num+' ? 1 : -1)) || null; return render(); }
+  if (a === 'color') { pushUndo(); s.color = b.dataset.c; return render(); }
+  if (a === 'dup') { pushUndo(); const c = { ...s, uid:nid('s'), ref_id:null, example:false, x:s.x + 14, y:s.y + 14, z:topZ() + 1, rel:[] }; DOC.st.push(c); sel = new Set([c.uid]); render(); return say(s.ref_id ? 'Копия — черновик: вторая карточка той же записи на одной канве не нужна.' : 'Дубликат добавлен.', 'ok'); }
+  if (a === 'del') { pushUndo(); DOC.st = DOC.st.filter(x => x.uid !== s.uid); DOC.links = DOC.links.filter(l => l.from !== s.uid && l.to !== s.uid); sel = new Set(); render(); return say(s.ref_id ? `Стикер убран с канвы; запись ${s.ref_id} в LORE остаётся. Ctrl+Z — вернуть.` : 'Черновик убран. Ctrl+Z — вернуть.', 'ok'); }
+  if (a === 'promote') promote(s);
+});
+document.getElementById('fp-size').addEventListener('change', e => { if (sel.size !== 1) return; pushUndo(); byUid([...sel][0]).fs = e.target.value; render(); });
+
+/* ═════════ 11. Масштаб, кнопки, клавиши ═════════ */
+function zoomAt(f, P) { const vs = viewSize(); const k2 = Math.min(3, Math.max(0.15, VIEW.k * f)); const px = P ? P.x : VIEW.x + vs.w / VIEW.k / 2, py = P ? P.y : VIEW.y + vs.h / VIEW.k / 2; VIEW.x = px - (px - VIEW.x) * VIEW.k / k2; VIEW.y = py - (py - VIEW.y) * VIEW.k / k2; VIEW.k = k2; renderBoard(); placePanels(); }
+function zoomFit() {
+  if (!DOC.frames.length) return;
+  const rs = DOC.frames.map(frameRect), x0 = Math.min(...rs.map(r => r.x)), y0 = Math.min(...rs.map(r => r.y)), x1 = Math.max(...rs.map(r => r.x + r.w)), y1 = Math.max(...rs.map(r => r.y + r.h));
+  const vs = viewSize(); VIEW.k = Math.min(1.5, Math.min(vs.w / (x1 - x0 + 80), vs.h / (y1 - y0 + 120)));
+  VIEW.x = (x0 + x1) / 2 - vs.w / VIEW.k / 2; VIEW.y = (y0 + y1) / 2 - vs.h / VIEW.k / 2 + 10 / VIEW.k; render();
+}
+document.querySelectorAll('[data-tool]').forEach(b => { if (b.dataset.tool !== 'sticker') b.addEventListener('click', () => setTool(b.dataset.tool)); });
+document.addEventListener('click', e => {
+  const v = e.target.closest('[data-view]'); if (v) { setView(v.dataset.view); return; }
+  const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+  const a = b.dataset.act;
+  if (['alledges', 'tilt', 'multi', 'showann', 'res'].includes(a)) { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); if (a === 'res') document.getElementById('res').hidden = !pressed('res'); render(); return; }
+  if (a === 'undo') doUndo(); if (a === 'redo') doRedo();
+  if (a === 'zin') zoomAt(1.2); if (a === 'zout') zoomAt(1 / 1.2); if (a === 'zfit') zoomFit();
+  if (a === 'add') openMenu('am', b, Object.entries(TYPES).map(([k, T]) => `<button class="tb" data-add="${k}">+ ${T.name}</button>`).join('') + '<span class="fr">«+» · p30</span>');
+  if (a === 'laymenu') openMenu('lm', b, `<button class="tb" data-lay="sel" ${selFrame ? '' : 'disabled'}>▦ разложить выбранную рамку</button><button class="tb" data-lay="all">▦ разложить все рамки</button><span class="fr">меню раскладки · p30</span>`);
+  if (a === 'save') {
+    normalizeZ(); render();
+    const out = DOC.frames.map(f => ({ canvas: { title:f.title, template:f.type === 'bmc' ? 'bmc' : 'vp', part:f.type, link:f.link, board_x:f.x, board_y:f.y, locked:f.locked },
+      items: DOC.st.filter(s => s.frame === f.id).sort((x, y) => x.z - y.z).map(s => ({ item_uid:s.uid, text:s.t, slot:s.slot, x:+s.x.toFixed(1), y:+s.y.toFixed(1), w:s.w, h:s.h, z:s.z, num:s.num || null, refuted:s.refuted, ref_type:s.ref_id ? s.kind : null, ref_id:s.ref_id })) }));
+    document.getElementById('payload').textContent = '(заглушка — не отправлено)\n' + JSON.stringify({ canvases: out, links: DOC.links, annotations: DOC.ann.length }, null, 1);
+    say(`Сохранение — заглушка: рамок ${DOC.frames.length}, слои 1..${DOC.st.length}; полезная нагрузка — под доской.`, 'ok');
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input,select,textarea')) return;
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (e.key === 'Escape') { if (ghost) { ghostEnd(e, true); return; } closeMenus(); if (drag) { drag = null; render(); } setTool('select'); return; }
+  if (ctrl && e.code === 'KeyZ') { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
+  if (ctrl && e.code === 'KeyY') { e.preventDefault(); doRedo(); return; }
+  if (ctrl && e.code === 'KeyD' && sel.size === 1) { e.preventDefault(); document.querySelector('[data-fp=dup]').click(); return; }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && sel.size === 1) { e.preventDefault(); document.querySelector('[data-fp=del]').click(); return; }
+  if (e.code === 'BracketRight') { e.preventDefault(); layer(ctrl ? 'front' : 'up'); return; }
+  if (e.code === 'BracketLeft') { e.preventDefault(); layer(ctrl ? 'back' : 'down'); return; }
+  const TK = { KeyH:'hand', KeyV:'select', KeyN:'sticker', KeyR:'shape', KeyA:'line', KeyT:'text', KeyP:'pencil' };
+  if (!ctrl && TK[e.code]) { setTool(TK[e.code]); return; }
+  const arrows = { ArrowLeft:[-4,0], ArrowRight:[4,0], ArrowUp:[0,-4], ArrowDown:[0,4] };
+  if (arrows[e.key] && sel.size) { e.preventDefault(); pushUndo(); sel.forEach(u => { const s = byUid(u), p = toScene(s); applyPlace(s, placeAt(s, { x: p.x + arrows[e.key][0], y: p.y + arrows[e.key][1] })); }); render(); }
+});
+
+/* ═════════ 12. Вид «списком» ═════════ */
+function renderList() {
+  document.getElementById('list').innerHTML = DOC.frames.map(f => `<div class="lslot"><h3>${esc(f.title)}</h3>${Object.keys(TYPES[f.type].slots).map(k => {
+    const items = DOC.st.filter(s => s.frame === f.id && s.slot === k).sort((a, b) => b.z - a.z);
+    return `<div class="src" style="margin:6px 0 2px">${NAME[k]} · ${items.length}</div>` + items.map(s => `<div class="li" style="border-left-color:var(${colorOf(s.slot)[0]})"><div class="t">${s.refuted ? '<span class="chip dng">✕</span> ' : ''}${s.num ? `<span class="chip">№${s.num}</span> ` : ''}${esc(s.t)}</div><div class="row">${s.ref_id ? `<span class="chip acc">${esc(s.ref_id)}</span>` : '<span class="chip">черновик</span>'}<span class="chip">слой ${s.z}</span></div></div>`).join('');
+  }).join('')}</div>`).join('');
+}
+function setView(v) {
+  stage.hidden = v === 'list'; document.getElementById('list').hidden = v !== 'list';
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v));
+  const u = new URL(location.href); u.searchParams.set('view', v); history.replaceState(null, '', u);
+  if (v === 'canvas') render();
+}
+window.addEventListener('resize', () => render());
+
+/* ═════════ 13. Самопроверка ═════════ */
+function brute(slot, rect, pt, opts = DEF, step = 2) {
+  let best = Infinity;
+  for (let x = slot.bb.x0 - rect.w; x <= slot.bb.x1; x += step) for (let y = slot.bb.y0 - rect.h; y <= slot.bb.y1; y += step)
+    if (isFeasible(slot, rect, { x, y }, opts, 0)) { const d = Math.hypot(x - pt.x, y - pt.y); if (d < best) best = d; }
+  return best;
+}
+function selfTest() {
+  const r = { w: W, h: H }, A = W * H, rows = [];
+  const T = (name, fn) => { let ok = false, info = ''; try { const res = fn(); ok = res === true || !!(res && res.ok); info = (res && res.info) || ''; } catch (err) { info = String(err); } rows.push({ name, ok, info }); };
+  const near = (a, b, e = 0.6) => Math.abs(a - b) <= e;
+  const pct = (sl, p) => (100 * overlapArea(sl, r, p) / A).toFixed(1) + ' %';
+  T('Площадь: целиком внутри = w·h; без пересечения = 0', () => { const p = { x: 380, y: 60 }; return { ok: near(overlapArea(VPC.gc, r, p), A, 0.01) && overlapArea(VPC.gc, r, { x: 900, y: 900 }) === 0, info: pct(VPC.gc, p) }; });
+  T('Внутри области — не сдвигается', () => { const p = { x: 380, y: 60 }; const c = clampToSlot(VPC.gc, r, p); return c.ok && c.x === p.x && c.y === p.y; });
+  T('Регресс: почти целиком за дугой, краем в «Болях» — остаётся', () => { const a = 120 * Math.PI / 180, p = { x: C.x + (R + 18) * Math.cos(a) - W / 2, y: C.y + (R + 18) * Math.sin(a) - H / 2 }; const c = clampToSlot(VPC.pains, r, p); const old = clampToSlot(VPC.pains, r, p, { overflow: 0 }); return { ok: c.ok && c.x === p.x && c.y === p.y && overlapArea(VPC.pains, r, p) < 0.5 * A, info: `в области ${pct(VPC.pains, p)}; правило v1 сдвинуло бы на ${Math.hypot(old.x - p.x, old.y - p.y).toFixed(1)}` }; });
+  T('Регресс: на диагонали квадрата — к большей части', () => { const p = { x: 140, y: 70 }; const b = slotOf([VPC.ps, VPC.gc, VPC.pr], r, p); const aG = overlapArea(VPC.gc, r, p), aP = overlapArea(VPC.ps, r, p); return { ok: b.id === (aG > aP ? 'gc' : 'ps') && aG !== aP, info: `«Создают выгоду» ${pct(VPC.gc, p)} · «Продукты» ${pct(VPC.ps, p)} → ${b.id}` }; });
+  T('Регресс: ноль пересечения — подтягивается до minOverlap, ближайше', () => { const p = { x: 900, y: 300 }; const c = clampToSlot(VPC.jobs, r, p); const d = Math.hypot(c.x - p.x, c.y - p.y), b = brute(VPC.jobs, r, p); return { ok: c.ok && overlapArea(VPC.jobs, r, c) >= 0.15 * A - 1 && d <= b + 1.5, info: `в области ${pct(VPC.jobs, c)}; сдвиг ${d.toFixed(1)} · перебор ${b.toFixed(1)}` }; });
+  T('Подтягивание из угла листа к «Выгодам» — ближайшее', () => { const p = { x: -250, y: -250 }; const c = clampToSlot(VPC.gains, r, p); const d = Math.hypot(c.x - p.x, c.y - p.y), b = brute(VPC.gains, r, p); return { ok: d <= b + 1.5 && overlapArea(VPC.gains, r, c) >= 0.15 * A - 1, info: `сдвиг ${d.toFixed(1)} · перебор ${b.toFixed(1)}` }; });
+  T('Идемпотентность: clamp(clamp(p)) = clamp(p)', () => { const a = clampToSlot(VPC.pains, r, { x: 700, y: 700 }); const b = clampToSlot(VPC.pains, r, a); return { ok: near(a.x, b.x, 1e-3) && near(a.y, b.y, 1e-3), info: `${a.x.toFixed(2)}, ${a.y.toFixed(2)}` }; });
+  T('600 случайных точек × 6 областей: результат всегда ≥ 15 %', () => { let rnd = 7, bad = 0; const R2 = () => (rnd = (rnd * 16807) % 2147483647) / 2147483647; for (const s of Object.values(VPC)) for (let i = 0; i < 100; i++) { const c = clampToSlot(s, r, { x: R2() * 1000 - 230, y: R2() * 1000 - 230 }); if (!c.ok || overlapArea(s, r, c) < 0.15 * A - 1) bad++; } return { ok: bad === 0, info: `нарушений ${bad} из 600` }; });
+  T('Старый режим {overflow: 0.5}: центр внутри сектора', () => { const c = clampToSlot(VPC.pains, r, { x: 600, y: 600 }, { overflow: 0.5 }); return { ok: c.ok && isFeasible(VPC.pains, r, c, { overflow: 0.5 }), info: `${c.x.toFixed(1)}, ${c.y.toFixed(1)}` }; });
+  T('Старый режим {overflow: 0}: весь стикер внутри треугольника', () => { const c = clampToSlot(VPC.ps, r, { x: -100, y: 400 }, { overflow: 0 }); return { ok: c.ok && isFeasible(VPC.ps, r, c, { overflow: 0 }), info: `${c.x.toFixed(1)}, ${c.y.toFixed(1)}` }; });
+  T('Два стикера в одной точке — оба допустимы, сверху больший z', () => { const p = { x: 120, y: 330 }; const a = { uid:'a', x:p.x, y:p.y, w:W, h:H, z:3 }, b = { uid:'b', x:p.x, y:p.y, w:W, h:H, z:7 }; const t = topAt([a, b], { x: p.x + 10, y: p.y + 10 }); return { ok: isFeasible(VPC.pains, a, a) && isFeasible(VPC.pains, b, b) && t.uid === 'b', info: 'сверху: ' + t.uid }; });
+  T('Бизнес-модель: на границе ячеек — к большей площади', () => { const p = { x: 3 * CW - 30, y: 100 }; const b = slotOf(Object.values(BMC), r, p); return { ok: b.id === 'cr', info: `«Ценностные предложения» ${pct(BMC.vp, p)} · «Отношения» ${pct(BMC.cr, p)} → ${b.id}` }; });
+  T('Рамка сдвинута — стикер едет вместе (координаты рамки)', () => { const f = { x:100, y:100 }, s = { x:50, y:60 }; const before = { x: f.x + s.x, y: f.y + s.y }; f.x += 300; return { ok: f.x + s.x === before.x + 300 && f.y + s.y === before.y, info: 'сдвиг 300 по x' }; });
+  T('Разложить: стикеры целиком в областях и без перекрытий', () => { const t = seed(); t.frames.forEach(f => Object.keys(TYPES[f.type].slots).forEach(k => layoutSlot(t.st, f, k))); let over = 0, out = 0; for (const a of t.st) { const f = t.frames.find(x => x.id === a.frame); if (!isFeasible(TYPES[f.type].slots[a.slot], a, a, { overflow: 0 }, 0.05)) out++; for (const b of t.st) if (a.uid < b.uid && a.frame === b.frame && a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y) over++; } return { ok: over === 0 && out === 0, info: `перекрытий ${over}, вылезших ${out}` }; });
+  const pass = rows.filter(x => x.ok).length;
+  document.getElementById('tsum').innerHTML = `<span class="${pass === rows.length ? 'pass' : 'fail'}">${pass} из ${rows.length} зелёные</span>`;
+  document.getElementById('tests').innerHTML = '<tr><th>случай</th><th>итог</th><th>подробно</th></tr>' + rows.map(x => `<tr><td>${esc(x.name)}</td><td class="${x.ok ? 'pass' : 'fail'}">${x.ok ? 'да' : 'НЕТ'}</td><td class="mono">${esc(x.info)}</td></tr>`).join('');
+  return { pass, total: rows.length, failed: rows.filter(x => !x.ok).map(x => x.name + ': ' + x.info) };
+}
+
+/* ═════════ 14. Развилки ═════════ */
+const FORKS = [
+  { id: 1, q: 'Какая часть стикера должна лежать в области?', ctx: 'Сейчас — не меньше 15 % площади: «хотя бы частью». Параметр один.',
+    a: { l: 'Хотя бы частью (15 %)', c: 'Максимум места, как на кадрах. Стикер на границе выглядит «ничьим» — область видна подсветкой при выборе.', m: '<svg viewBox="0 0 120 56"><path d="M4 4H116V52" fill="none" stroke="var(--ink)"/><rect x="100" y="18" width="40" height="22" fill="var(--st-green)"/></svg>' },
+    b: { l: 'Больше половины (50 %)', c: 'Принадлежность видна сразу. Места меньше, у дуги стикер чаще подтягивается.', m: '<svg viewBox="0 0 120 56"><path d="M4 4H116V52" fill="none" stroke="var(--ink)"/><rect x="90" y="18" width="40" height="22" fill="var(--st-green)"/></svg>' },
+    rec: 'a' },
+  { id: 2, q: 'Чем рисовать доску в продукте', ctx: 'По типам @xyflow/react 12.12.1 в node_modules kit: у узла есть zIndex, parentId (рамка с детьми двигается целиком), касание и щипок, выбор рамкой; onNodeDrag ничего не возвращает, поэтому правило положения ставится в onNodesChange. Отмены нет — своя в любом варианте.',
+    a: { l: 'React Flow (уже в kit)', c: 'Доска, панорама, масштаб, слои, рамка-родитель — из коробки; движок уже есть (GC-02). Своё — правило положения, тень с палитры, отмена.', m: '<svg viewBox="0 0 120 56"><rect x="6" y="6" width="70" height="44" fill="none" stroke="var(--ink)"/><rect x="14" y="14" width="26" height="14" fill="var(--st-yellow)"/><text x="98" y="34" font-size="9" fill="var(--ink2)" text-anchor="middle">xyflow</text></svg>' },
+    b: { l: 'Свой SVG (как в прототипе)', c: 'Ноль зависимостей. Панораму, щипок, выбор рамкой, доступность — пишем и держим сами.', m: '<svg viewBox="0 0 120 56"><rect x="6" y="6" width="70" height="44" fill="none" stroke="var(--ink)"/><rect x="14" y="14" width="26" height="14" fill="var(--st-yellow)"/><text x="98" y="34" font-size="9" fill="var(--ink2)" text-anchor="middle">SVG</text></svg>' },
+    rec: 'a' },
+  { id: 3, q: 'Разрешение Strategyzer на канву в софте', ctx: 'Подпись «по методологии Strategyzer» в нижней полосе стоит (слово владельца). По странице «Usage of our tools» VPC в софте — только с явного разрешения Strategyzer AG; BMC — Creative Commons с подписью.',
+    a: { l: 'Написать Strategyzer AG', c: 'Вид как на кадрах остаётся. Срок ответа неизвестен.', m: '<svg viewBox="0 0 120 56"><rect x="8" y="8" width="40" height="40" fill="none" stroke="var(--ink)"/><circle cx="92" cy="28" r="20" fill="none" stroke="var(--ink)"/></svg>' },
+    b: { l: 'Своя рамка, без их вида', c: 'Свобода сразу. Узнаваемость канона теряется.', m: '<svg viewBox="0 0 120 56"><rect x="8" y="8" width="48" height="40" rx="8" fill="none" stroke="var(--ink)"/><rect x="64" y="8" width="48" height="40" rx="8" fill="none" stroke="var(--ink)"/></svg>' },
+    rec: 'a' },
+];
+const pick = {};
+function renderForks() {
+  document.getElementById('forks').innerHTML = FORKS.map(f => `<div class="fork"><h3>${f.id}. ${f.q}</h3><div class="ctx">${f.ctx}</div><div class="ab">${['a', 'b'].map(k => `<button class="opt" aria-pressed="${pick[f.id] === k}" data-fork="${f.id}" data-k="${k}"><span class="ol">${k === 'a' ? 'а' : 'б'}) ${f[k].l}</span><div class="mock">${f[k].m}</div><span class="cost">${f[k].c}</span>${f.rec === k ? '<span class="rec">рекомендую</span>' : ''}</button>`).join('')}</div></div>`).join('');
+  const p = FORKS.map(f => pick[f.id] ? `${f.id}${pick[f.id] === 'a' ? 'а' : 'б'}` : null).filter(Boolean);
+  document.getElementById('choice').innerHTML = p.length ? `Ваш выбор: <b>${p.join(', ')}</b> — можно ответить так же коротко.` : `Выберите карточку в каждой развилке. Рекомендация: <b>${FORKS.map(f => f.id + (f.rec === 'a' ? 'а' : 'б')).join(', ')}</b>.`;
+}
+document.addEventListener('click', e => { const o = e.target.closest('[data-fork]'); if (o) { pick[o.dataset.fork] = o.dataset.k; renderForks(); } });
+
+/* ═════════ старт ═════════ */
+document.getElementById('credit').textContent = q.get('lang') === 'en' ? 'by Strategyzer methodology · strategyzer.com' : 'по методологии Strategyzer · strategyzer.com';
+if (document.documentElement.clientWidth < 900) { document.querySelector('[data-act=res]').setAttribute('aria-pressed', 'false'); document.getElementById('res').hidden = true; }
+setView(q.get('view') === 'list' ? 'list' : 'canvas');
+zoomFit();
+renderForks();
+window.__selftest = selfTest();
+window.__vp = { get DOC() { return DOC; }, VPC, BMC, TYPES, isFeasible, clampToSlot, overlapArea, slotOf, toScene, center, frameById, get VIEW() { return VIEW; }, placeAt, deselect: () => { sel = new Set(); selFrame = null; render(); } };
+</script>
+</body>
+</html>

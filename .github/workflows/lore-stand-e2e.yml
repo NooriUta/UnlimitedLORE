@@ -176,6 +176,9 @@ jobs:
         continue-on-error: true
         run: bash .github/scripts/artifact-endpoint-diag.sh
 
+      # Прогон 11265 (26.11.2026, v1.19.1): 76/76 pass, а джоба красная — «Create Artifact Container: socket hang up» ×5.
+      # Итог смоука = итог тестов (их шаг выше не защищён); выгрузка скринов — не повод держать шлагбаум прода.
+      # Литерал true: выражение ${{ … }} Forgejo в этом поле не разбирает (workflowForgejoBools.test.ts).
       - name: Скрины и отчёт — артефакт
         if: always()
         continue-on-error: true

@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Репозитории и организации — прототип</title>
+<!-- D-2026-MIG-REPOSITORY-ORGANIZATION (владелица 19.11.2026): репозиторий — отдельный объект (хост + владелец +
+     имя = полный путь); проект → один основной; компонент → свой репозиторий; репозиторий → зеркало / использует;
+     организация — самостоятельный объект. Данные — из репетиции переноса на ryzenai (27 репозиториев).
+     Только раскладка и поведение, процесс «прототип → approve → код». Экраны собираются из kit: ListView,
+     RecordView (паспорт, вкладки), Pill, GameIcon, EmptyState. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg0:#141108; --bg1:#1c1810; --bg2:#252019; --bd:#42382a; --t1:#ede5d0; --t2:#a6997f; --t3:#9c937b;
+  --acc:#a8b860; --suc:#7dbf78; --wrn:#d4922a; --inf:#88b8a8; --dng:#cf6c5e;
+  --fs-2xs:9px; --fs-xs:10px; --fs-sm:11px; --fs-base:12px; --fs-md:13px; --fs-lg:14px; --fs-xl:20px;
+  --font:'Manrope',sans-serif; --mono:'IBM Plex Mono',monospace; --display:'Unbounded',sans-serif;
+  --r-md:6px; --r-lg:10px;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg0); color:var(--t1); font:var(--fs-base)/1.5 var(--font); }
+.top { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:8px 16px; border-bottom:1px solid var(--bd); background:var(--bg1); }
+.top b { font-family:var(--display); letter-spacing:.04em; }
+.top .note { color:var(--t3); font-size:var(--fs-xs); }
+.screens { display:flex; gap:4px; flex-wrap:wrap; padding:8px 16px; }
+.screens button { border:1px solid var(--bd); background:var(--bg2); color:var(--t2); border-radius:999px; padding:2px 10px; font:600 var(--fs-sm) var(--font); cursor:pointer; }
+.screens button.on { border-color:var(--acc); color:var(--t1); }
+.frame { margin:0 16px 16px; border:1px solid var(--bd); border-radius:var(--r-lg); background:var(--bg1); overflow:hidden; }
+.bar { display:flex; align-items:center; gap:8px; padding:8px 16px; border-bottom:1px solid var(--bd); }
+.crumbs { color:var(--acc); font-size:var(--fs-sm); }
+.grow { flex:1; }
+.pill { display:inline-flex; align-items:center; gap:4px; padding:1px 8px; border:1px solid var(--bd); border-radius:999px; background:var(--bg2); color:var(--t2); font:600 var(--fs-xs)/1.6 var(--font); white-space:nowrap; }
+.pill.acc { border-color:var(--acc); color:var(--acc); } .pill.inf { border-color:var(--inf); color:var(--inf); }
+.pill.wrn { border-color:var(--wrn); color:var(--wrn); } .pill.suc { border-color:var(--suc); color:var(--suc); }
+.btn { min-height:26px; padding:0 12px; border:1px solid var(--bd); border-radius:999px; background:var(--bg2); color:var(--t1); font:600 var(--fs-sm) var(--font); cursor:pointer; }
+.btn--primary { background:var(--acc); color:var(--bg0); border-color:var(--acc); }
+.tabs { display:flex; gap:2px; padding:0 16px; border-bottom:1px solid var(--bd); overflow-x:auto; }
+.tabs span { color:var(--t2); font:600 var(--fs-sm) var(--font); padding:8px 10px; text-transform:uppercase; letter-spacing:.05em; white-space:nowrap; }
+.tabs span.on { color:var(--t1); box-shadow:inset 0 -2px 0 var(--acc); }
+.tabs .cnt { font-family:var(--mono); color:var(--t3); margin-left:4px; }
+.main { padding:12px 16px 20px; }
+.kind { color:var(--t2); font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.06em; }
+h1 { margin:2px 0 8px; font:800 var(--fs-xl)/1.25 var(--display); overflow-wrap:anywhere; }
+h3 { margin:14px 0 6px; font:700 var(--fs-sm) var(--font); text-transform:uppercase; letter-spacing:.06em; color:var(--t2); }
+.facts { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.mono { font-family:var(--mono); }
+.sub { color:var(--t3); font-size:var(--fs-xs); }
+a { color:var(--acc); text-decoration:none; }
+.tbl { width:100%; border-collapse:collapse; font-size:var(--fs-sm); }
+.tbl th { text-align:left; color:var(--t3); font:600 var(--fs-2xs) var(--font); text-transform:uppercase; letter-spacing:.08em; padding:4px 6px; border-bottom:1px solid var(--bd); }
+.tbl td { padding:5px 6px; border-bottom:1px solid color-mix(in srgb,var(--bd) 50%,transparent); vertical-align:top; overflow-wrap:anywhere; }
+dl.kv { display:grid; grid-template-columns:minmax(0,160px) minmax(0,1fr); gap:4px 12px; margin:0; }
+dl.kv dt { color:var(--t3); font-size:var(--fs-xs); text-transform:uppercase; letter-spacing:.05em; }
+dl.kv dd { margin:0; overflow-wrap:anywhere; }
+.tree { list-style:none; margin:0; padding:0; }
+.tree li { padding:4px 0; border-bottom:1px dashed color-mix(in srgb,var(--bd) 60%,transparent); }
+.tree li ul { list-style:none; margin:4px 0 0 18px; padding:0; }
+.empty { border:1px dashed var(--bd); border-radius:var(--r-lg); padding:16px; color:var(--t2); }
+.why { margin:8px 16px 16px; padding:8px 12px; border-left:2px solid var(--acc); background:var(--bg2); color:var(--t2); font-size:var(--fs-xs); }
+[hidden] { display:none !important; }
+@media (max-width:560px) {
+  .tbl thead { display:none; }
+  .tbl tr { display:block; border-bottom:1px solid var(--bd); padding:4px 0; }
+  .tbl td { display:block; border:0; padding:1px 6px; }
+  .tbl td[data-l]::before { content:attr(data-l) ': '; color:var(--t3); font-size:var(--fs-2xs); text-transform:uppercase; }
+  dl.kv { grid-template-columns:minmax(0,1fr); }
+}
+</style>
+</head>
+<body>
+<div class="top"><b>LORE</b><span class="note">Прототип: репозитории и организации на новой модели (1.18). Данные — репетиция переноса, 27 репозиториев.</span></div>
+<div class="screens" id="screens">
+  <button data-s="proj" class="on">Проект → «Репозитории»</button>
+  <button data-s="repo">Паспорт репозитория</button>
+  <button data-s="comp">Компонент → репозиторий</button>
+  <button data-s="list">Раздел «Репозитории»</button>
+  <button data-s="org">Раздел «Организации»</button>
+</div>
+
+<!-- 1. Проект: вкладка «Репозитории» -->
+<section class="frame" data-screen="proj">
+  <div class="bar"><span class="crumbs">← Проекты / MIDGARD</span><span class="grow"></span><span class="pill">⤢</span></div>
+  <div class="main">
+    <div class="kind">Проект</div><h1>MIDGARD</h1>
+    <div class="facts"><span class="pill acc">группа MIDGARD</span><span class="pill" style="white-space:normal">синонимы: AIDA/MIDGARD · AIDA/GLADSHEIM · AIDA/TEIKN · AIDA/BOKVIT</span></div>
+  </div>
+  <div class="tabs"><span>Обзор</span><span>Спринты<span class="cnt">31</span></span><span>Компоненты<span class="cnt">16</span></span><span class="on">Репозитории<span class="cnt">4</span></span><span>Ещё</span></div>
+  <div class="main">
+    <h3>Основной</h3>
+    <ul class="tree"><li><a href="#" data-go="repo">git.seidrstudio.pro/AIDA/MIDGARD</a> <span class="pill suc">основной</span> <span class="sub">ветка main</span>
+      <ul><li class="sub">зеркал нет · использует — не указано</li></ul></li></ul>
+    <h3>Репозитории компонентов</h3>
+    <table class="tbl"><thead><tr><th>компонент</th><th>репозиторий</th><th>зеркала</th></tr></thead><tbody>
+      <tr><td data-l="компонент"><a href="#" data-go="comp">GLADSHEIM</a></td><td data-l="репозиторий"><a href="#" data-go="repo">git.seidrstudio.pro/AIDA/GLADSHEIM</a></td><td data-l="зеркала">—</td></tr>
+      <tr><td data-l="компонент"><a href="#">TEIKN</a></td><td data-l="репозиторий"><a href="#">git.seidrstudio.pro/AIDA/TEIKN</a></td><td data-l="зеркала">—</td></tr>
+      <tr><td data-l="компонент"><a href="#">BOKVIT</a></td><td data-l="репозиторий"><a href="#">git.seidrstudio.pro/AIDA/BOKVIT</a></td><td data-l="зеркала">—</td></tr>
+    </tbody></table>
+    <h3>Использует (зависимости)</h3>
+    <div class="empty">Не указано. <button class="btn">+ репозиторий, который использует</button> <span class="sub">например, kit</span></div>
+  </div>
+  <div class="why">Основной у проекта ровно один. Репозитории влитых проектов (GLADSHEIM, TEIKN, BÓKVIT) стали репозиториями их компонентов. Зеркало — связь репозитория, а не роль в проекте.</div>
+</section>
+
+<!-- 2. Паспорт репозитория -->
+<section class="frame" data-screen="repo" hidden>
+  <div class="bar"><span class="crumbs">← Репозитории / AIDA/UnlimitedLORE</span><span class="grow"></span><span class="pill">⤢</span></div>
+  <div class="main">
+    <div class="kind">Репозиторий</div><h1>UnlimitedLORE</h1>
+    <div class="facts"><span class="pill suc">основной у проекта LORE</span><span class="pill inf">зеркал 1</span></div>
+    <dl class="kv">
+      <dt>Полный путь</dt><dd class="mono">git.seidrstudio.pro/AIDA/UnlimitedLORE</dd>
+      <dt>Хост</dt><dd>git.seidrstudio.pro <span class="sub">Forgejo</span></dd>
+      <dt>Владелец на хосте</dt><dd>AIDA</dd>
+      <dt>Ветка по умолчанию</dt><dd class="mono">develop</dd>
+      <dt>Адрес</dt><dd><a href="#">https://git.seidrstudio.pro/AIDA/UnlimitedLORE</a></dd>
+    </dl>
+    <h3>Связи</h3>
+    <table class="tbl"><thead><tr><th>связь</th><th>с чем</th></tr></thead><tbody>
+      <tr><td data-l="связь">основной у проекта</td><td data-l="с чем"><a href="#" data-go="proj">LORE</a></td></tr>
+      <tr><td data-l="связь">зеркало</td><td data-l="с чем"><a href="#">github.com/NooriUta/UnlimitedLORE</a></td></tr>
+      <tr><td data-l="связь">использует</td><td data-l="с чем"><span class="sub">не указано</span></td></tr>
+      <tr><td data-l="связь">лежит в папках</td><td data-l="с чем"><span class="sub">данные miniLORE (папка → репозиторий) — когда miniLORE их передаст</span></td></tr>
+    </tbody></table>
+  </div>
+  <div class="why">Владелец на хосте (AIDA, NooriUta, ciadmin) — характеристика репозитория: вместе с хостом и именем даёт полный путь. Это не организация.</div>
+</section>
+
+<!-- 3. Компонент: поле «Репозиторий» -->
+<section class="frame" data-screen="comp" hidden>
+  <div class="bar"><span class="crumbs">← Компоненты / GLADSHEIM</span></div>
+  <div class="main">
+    <div class="kind">Компонент</div><h1>GLADSHEIM</h1>
+    <dl class="kv">
+      <dt>Проект</dt><dd><a href="#" data-go="proj">MIDGARD</a></dd>
+      <dt>Продукт</dt><dd>Мидгард</dd>
+      <dt>Репозиторий</dt><dd><a href="#" data-go="repo">git.seidrstudio.pro/AIDA/GLADSHEIM</a> <span class="pill">сменить…</span></dd>
+      <dt>Зеркала репозитория</dt><dd class="sub">нет</dd>
+    </dl>
+  </div>
+  <div class="why">У компонента — свой основной репозиторий. Пусто — значит, компонент живёт в основном репозитории проекта.</div>
+</section>
+
+<!-- 4. Раздел «Репозитории» -->
+<section class="frame" data-screen="list" hidden>
+  <div class="bar"><span class="crumbs">Репозитории</span><span class="pill">27</span><span class="grow"></span><span class="pill">Группировка: проект ▾</span></div>
+  <div class="main">
+    <table class="tbl"><thead><tr><th>полный путь</th><th>роль</th><th>проект / компонент</th><th>зеркала</th></tr></thead><tbody>
+      <tr><td data-l="путь" class="mono"><a href="#" data-go="repo">git.seidrstudio.pro/AIDA/UnlimitedLORE</a></td><td data-l="роль"><span class="pill suc">основной</span></td><td data-l="проект">LORE</td><td data-l="зеркала">1</td></tr>
+      <tr><td data-l="путь" class="mono">git.seidrstudio.pro/AIDA/forgejo-mcp</td><td data-l="роль"><span class="pill">компонент</span></td><td data-l="проект">LORE · FORGEJO_MCP</td><td data-l="зеркала">—</td></tr>
+      <tr><td data-l="путь" class="mono">git.seidrstudio.pro/AIDA/miniLORE</td><td data-l="роль"><span class="pill suc">основной</span></td><td data-l="проект">miniLORE</td><td data-l="зеркала">—</td></tr>
+      <tr><td data-l="путь" class="mono">git.seidrstudio.pro/AIDA/miniLore_serverside</td><td data-l="роль"><span class="pill">компонент</span></td><td data-l="проект">miniLORE · MINILORE_SRV</td><td data-l="зеркала">—</td></tr>
+      <tr><td data-l="путь" class="mono">git.seidrstudio.pro/AIDA/udwe-mig-gen</td><td data-l="роль"><span class="pill suc">основной</span></td><td data-l="проект">udwe</td><td data-l="зеркала">1 (github.com/ivanovalex32/UDWE)</td></tr>
+      <tr><td data-l="путь" class="mono">github.com/NooriUta/UnlimitedLORE</td><td data-l="роль"><span class="pill inf">зеркало</span></td><td data-l="проект">↑ AIDA/UnlimitedLORE</td><td data-l="зеркала">—</td></tr>
+    </tbody></table>
+    <div class="sub" style="margin-top:6px">… ещё 21. Фильтры: хост, владелец, роль, проект. Группировка по проекту — общий механизм: репозиторий в нескольких — в каждой группе.</div>
+  </div>
+</section>
+
+<!-- 5. Раздел «Организации» -->
+<section class="frame" data-screen="org" hidden>
+  <div class="bar"><span class="crumbs">Организации</span><span class="pill">0</span><span class="grow"></span><button class="btn btn--primary">+ организация</button></div>
+  <div class="main">
+    <div class="empty"><b>Организаций пока нет.</b> Это не «пусто по ошибке»: тип заведён переносом, а какие организации завести и с чем их связать, решает владелица.<br>
+      <span class="sub">Не путать с владельцем репозитория на хосте (AIDA, NooriUta) — тот остаётся полем репозитория.</span></div>
+    <h3>Предложение полей</h3>
+    <dl class="kv"><dt>Код</dt><dd class="mono">SEIDR_STUDIO</dd><dt>Название</dt><dd>Seiðr Studio</dd><dt>Связи</dt><dd class="sub">❓ проекты / продукты / люди — ваше решение</dd></dl>
+  </div>
+</section>
+
+<script>
+const show = s => { document.querySelectorAll('[data-screen]').forEach(x => x.hidden = x.dataset.screen !== s); document.querySelectorAll('#screens button').forEach(b => b.classList.toggle('on', b.dataset.s === s)); };
+document.querySelectorAll('#screens button').forEach(b => b.onclick = () => show(b.dataset.s));
+document.querySelectorAll('[data-go]').forEach(a => a.onclick = e => { e.preventDefault(); show(a.dataset.go); });
+</script>
+</body>
+</html>

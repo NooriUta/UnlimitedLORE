@@ -373,7 +373,9 @@ public abstract class LoreResourceBase {
         "gain", "SELECT gain_id FROM KnowGain WHERE gain_id = :id LIMIT 1",
         "job", "SELECT job_id FROM KnowJob WHERE job_id = :id LIMIT 1",
         "actor", "SELECT actor_id FROM KnowProjectActor WHERE actor_id = :id LIMIT 1",
-        "feature", "SELECT uc_id FROM KnowUseCase WHERE uc_id = :id LIMIT 1");
+        "feature", "SELECT uc_id FROM KnowUseCase WHERE uc_id = :id LIMIT 1",
+        // Волна 2: «+ Новая» вехи — /lore/milestone тоже UPSERT.
+        "milestone", "SELECT milestone_id FROM KnowMilestone WHERE milestone_id = :id LIMIT 1");
 
     /** Режим записи: пусто или {@code upsert} — прежнее поведение, {@code create} — строгий; прочее — 400. */
     Response modeError(String mode) {

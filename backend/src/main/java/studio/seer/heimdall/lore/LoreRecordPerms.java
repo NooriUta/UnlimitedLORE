@@ -57,7 +57,9 @@ final class LoreRecordPerms {
      * У типа только-для-чтения создание из паспорта есть, только если он здесь (включён своей волной) И у него есть
      * блок create модели. Волна 1 — продуктовый слой; организация — раньше, под super-admin.
      */
-    static final java.util.Set<String> PASSPORT_CREATE = java.util.Set.of("organization", "pain", "gain", "job", "actor", "feature");
+    static final java.util.Set<String> PASSPORT_CREATE = java.util.Set.of("organization", "pain", "gain", "job", "actor", "feature",
+        // Волна 2 (4а): веха — путь /lore/milestone пишет только переданное (LH-44), цель — SCD2-версиями.
+        "milestone");
 
     /** Причина у типа, где правка и создание есть, а статус в паспорте не меняется. */
     static final String STATUS_ONLY_READ_ONLY_REASON = "статус в паспорте не меняется: правятся поля с путём записи";

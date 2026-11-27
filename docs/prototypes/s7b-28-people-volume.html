@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>S7B-28 · люди на объёме и «+ Человек» — прототип</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;600;700&family=Unbounded:wght@800&display=swap" rel="stylesheet">
+<style>
+/* Токены — :root kit/src/styles/seidr.css (тёмная amber Seiðr). Только токены, без своих цветов. */
+:root{--bg0:#141108;--bg1:#1c1810;--bg2:#252019;--bg3:#302a20;--bd:#42382a;--t1:#ede5d0;--t2:#a6997f;--t3:#9c937b;--acc:#a8b860;--suc:#7dbf78;--wrn:#d4922a;--inf:#88b8a8;--dng:#cf6c5e;
+--mono:'IBM Plex Mono',monospace;--display:'Unbounded',sans-serif;--fs-2xs:9px;--fs-xs:10px;--fs-sm:11px;--fs-base:12px;--fs-md:13px;--fs-lg:14px;--fs-xl:20px;--fs-2xl:24px;--r-sm:4px;--r-md:6px;--r-lg:10px;--r-pill:999px}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg0);color:var(--t1);font:400 var(--fs-base)/1.5 Manrope,system-ui,sans-serif}
+.page{max-width:1280px;margin:0 auto;padding:14px 18px 60px}
+h1{margin:0 0 4px;font:800 var(--fs-xl)/1.2 var(--display)}
+h2{margin:22px 0 8px;font:800 var(--fs-lg)/1.25 var(--display)}
+.lead{margin:0 0 10px;color:var(--t2);font-size:var(--fs-sm);max-width:900px}
+.qt{width:100%;border-collapse:collapse;font-size:var(--fs-sm);border:1px solid var(--bd)}
+.qt th{background:var(--bg2);color:var(--t2);font:700 var(--fs-xs)/1.2 var(--mono);letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd)}
+.qt td{padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:top}
+.qt td:first-child{font:700 var(--fs-md) var(--mono);color:var(--acc);width:34px}
+.qt .rec{color:var(--suc)}
+.cap{font:500 var(--fs-2xs) var(--mono);color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin:14px 0 4px}
+.frame{border:1px solid var(--bd);border-radius:var(--r-lg);background:var(--bg1);overflow:hidden;min-width:0;position:relative}
+.phone{max-width:412px}
+.sec-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--bd)}
+.sec-head h3{margin:0;font:800 var(--fs-md) var(--display)}
+.sec-head .n{font:600 var(--fs-sm) var(--mono);color:var(--t3)}
+.sp{flex:1}
+.btn{font:inherit;font-size:var(--fs-sm);color:var(--t1);background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-md);padding:4px 10px;cursor:pointer}
+.btn.pri{border-color:var(--acc);color:var(--acc)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 12px 8px;border-bottom:1px solid var(--bd)}
+.search{font:inherit;font-size:var(--fs-sm);color:var(--t1);background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-md);padding:4px 8px;width:220px;max-width:100%}
+.lbl{font:700 var(--fs-2xs) var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--t3);margin-left:6px}
+.chip{border:1px solid var(--bd);border-radius:var(--r-pill);padding:1px 8px;font:inherit;font-size:var(--fs-xs);color:var(--t2);background:none;cursor:pointer;white-space:nowrap}
+.chip b{font:500 var(--fs-2xs) var(--mono);color:var(--t3);margin-left:3px}
+.chip[aria-pressed="true"]{border-color:var(--acc);color:var(--t1)}
+select.sel{font:inherit;font-size:var(--fs-xs);color:var(--t1);background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-md);padding:2px 6px}
+.tbl{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.tbl th{position:sticky;top:0;background:var(--bg3);color:var(--t3);font:700 var(--fs-2xs) var(--text,Manrope);letter-spacing:.07em;text-transform:uppercase;text-align:left;padding:5px 8px;border-bottom:1px solid var(--bd)}
+.tbl td{padding:5px 8px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.tbl tr:hover td{background:var(--bg2)}
+.tbl .login{font-family:var(--mono);font-size:var(--fs-xs);color:var(--t2)}
+.tbl .num{font-family:var(--mono);text-align:right;color:var(--t2)}
+.role{display:inline-block;border:1px solid var(--bd);border-radius:var(--r-pill);padding:0 6px;font-size:var(--fs-2xs);color:var(--t2);margin-right:3px}
+.role.adm{border-color:var(--wrn);color:var(--wrn)}
+.you{font-size:var(--fs-2xs);color:var(--acc);margin-left:4px}
+.warn{color:var(--wrn)}
+.scroll{max-height:520px;overflow:auto}
+.more{display:flex;gap:10px;align-items:center;padding:8px 12px;font-size:var(--fs-xs);color:var(--t3);border-top:1px solid var(--bd)}
+.more button{border:0;background:none;color:var(--acc);font:inherit;cursor:pointer;padding:0}
+.grp td{background:var(--bg2);font:700 var(--fs-2xs) Manrope;text-transform:uppercase;letter-spacing:.07em;color:var(--t3)}
+.none{padding:18px 12px;color:var(--t3);font-size:var(--fs-sm)}
+/* лист «+ Человек» — тот же мастер UC-1 */
+.sheet{position:absolute;top:0;right:0;bottom:0;width:min(360px,100%);background:var(--bg1);border-left:1px solid var(--bd);box-shadow:-8px 0 24px rgba(0,0,0,.35);display:grid;grid-template-rows:auto auto 1fr auto}
+.sheet[hidden]{display:none}
+.sh-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--bd)}
+.sh-head b{font:800 var(--fs-md) var(--display);flex:1}
+.steps{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--bd);font-size:var(--fs-2xs);color:var(--t3);flex-wrap:wrap}
+.steps span{border:1px solid var(--bd);border-radius:var(--r-pill);padding:0 6px}
+.steps span.on{border-color:var(--acc);color:var(--t1)}
+.sh-body{padding:12px;display:grid;gap:8px;align-content:start;font-size:var(--fs-sm)}
+.sh-body label{display:grid;gap:3px;color:var(--t2);font-size:var(--fs-xs)}
+.sh-body input{font:inherit;font-size:var(--fs-sm);color:var(--t1);background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r-md);padding:5px 8px}
+.sh-foot{display:flex;justify-content:flex-end;gap:6px;padding:10px 12px;border-top:1px solid var(--bd)}
+.note{font-size:var(--fs-xs);color:var(--t3)}
+/* телефон */
+.card{padding:8px 12px;border-bottom:1px solid var(--bd);display:grid;gap:2px}
+.card .top{display:flex;gap:6px;align-items:baseline}
+.card .nm{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.frames{display:grid;grid-template-columns:minmax(0,1fr) 412px;gap:14px;align-items:start}
+@media (max-width:1000px){.frames{grid-template-columns:minmax(0,1fr)}}
+</style></head><body><div class="page">
+<h1>Люди на объёме и кнопка «+ Человек»</h1>
+<p class="lead">Прототип к SPRINT_UXR_S7B_ADMIN/S7B-28 — раздел «Люди и их проекты». Вопрос владелицы 11.11: «кнопки завести новую учётку нет, и сейчас пользователей 5, а когда будет 55 — что будет с админкой?» Данные выдуманные (55 человек), формы настоящие. Заведение — тот же мастер UC-1 (SPRINT_UXR_S7B_ADMIN/S7B-17), а не второй путь.</p>
+
+<h2>Что решить</h2>
+<table class="qt"><thead><tr><th>№</th><th>Вопрос</th><th>Варианты и цена</th><th>Рекомендация</th></tr></thead><tbody>
+<tr><td>1</td><td>Куда ведёт «+ Человек»?</td><td>а) открывает мастер UC-1 боковым листом здесь же — список не теряется; б) уводит в раздел «Мастера» — проще, но человек теряет место в списке</td><td class="rec">а</td></tr>
+<tr><td>2</td><td>Сколько людей видно сразу?</td><td>а) первые 50 + «ещё 50» (общая механика kit, S9-11) — без страниц; б) страницы по 25 — привычно, но ищут глазами по страницам; в) все — на 55 терпимо, на 500 нет</td><td class="rec">а</td></tr>
+<tr><td>3</td><td>Порядок по умолчанию?</td><td>а) по имени; б) сначала новые (недавно заведённые) — удобно сразу после «+ Человек»; в) по числу проектов</td><td class="rec">а, после заведения новый — подсвечен вверху</td></tr>
+<tr><td>4</td><td>Фильтры над списком?</td><td>а) роль (админ / автор / читатель) и проект чипами с числами + «без проектов» — видно, кого надо пристроить; б) только поиск, как сейчас — на 55 приходится листать</td><td class="rec">а</td></tr>
+<tr><td>5</td><td>Разрез по роли?</td><td>а) выкл по умолчанию, включается переключателем; б) всегда группами по роли — «админы» сверху, но список длиннее</td><td class="rec">а</td></tr>
+<tr><td>6</td><td>Телефон?</td><td>а) карточки по одному человеку, фильтр — нижним листом «Фильтр · N»; б) та же таблица с прокруткой вбок — неудобно пальцем</td><td class="rec">а</td></tr>
+</tbody></table>
+
+<h2>Раздел «Люди и их проекты»</h2>
+<div class="frames">
+ <div>
+  <div class="cap">1280 · таблица, фильтры чипами, первые 50 + «ещё»</div>
+  <div class="frame" id="desk">
+   <div class="sec-head"><h3>Люди и их проекты</h3><span class="n" id="cnt"></span><span class="sp"></span>
+    <button class="btn pri" type="button" id="add">+ Человек</button></div>
+   <div class="bar">
+    <input class="search" type="search" id="q" placeholder="Имя, логин или почта" aria-label="Поиск людей">
+    <span class="lbl">роль</span><span id="roles"></span>
+    <span class="lbl">проект</span><span id="projs"></span>
+    <span class="sp"></span>
+    <label class="note"><input type="checkbox" id="byrole"> по роли</label>
+    <select class="sel" id="sort" aria-label="Порядок"><option value="name">по имени</option><option value="new">сначала новые</option><option value="projects">по числу проектов</option></select>
+   </div>
+   <div class="scroll"><table class="tbl"><thead><tr><th>Человек</th><th>Логин</th><th>Роли</th><th style="text-align:right">Проектов</th><th>Последний вход</th></tr></thead><tbody id="rows"></tbody></table></div>
+   <div class="more" id="more"></div>
+   <div class="sheet" id="pass" hidden role="dialog" aria-label="Паспорт человека">
+    <div class="sh-head"><b id="pname"></b><button class="btn" type="button" id="pclose" aria-label="Закрыть">✕</button></div>
+    <div class="steps"><span class="on">Проекты и роли</span><span>Агенты</span><span>Кто видит</span><span>Журнал</span></div>
+    <div class="sh-body" id="pbody"></div>
+    <div class="sh-foot"><button class="btn" type="button">Сменить роль…</button><button class="btn" type="button" style="color:var(--dng)">Отключить…</button></div>
+   </div>
+   <div class="sheet" id="sheet" hidden role="dialog" aria-label="Подключить человека">
+    <div class="sh-head"><b>Подключить человека</b><button class="btn" type="button" id="close" aria-label="Закрыть">✕</button></div>
+    <div class="steps"><span class="on">1 · учётка</span><span>2 · как у похожего</span><span>3 · проверка</span><span>4 · готово</span></div>
+    <div class="sh-body">
+     <label>Логин<input value="ivanova" aria-label="Логин"></label>
+     <label>Почта<input value="ivanova@example.org" aria-label="Почта"></label>
+     <p class="note">Тот же мастер UC-1, что в «Мастерах» (S7B-17): проверка в Keycloak, роли «как у похожего», дифф перед применением. Закрыли лист — вы на том же месте списка.</p>
+    </div>
+    <div class="sh-foot"><button class="btn" type="button">Отмена</button><button class="btn pri" type="button">Дальше</button></div>
+   </div>
+  </div>
+ </div>
+ <div>
+  <div class="cap">412 · карточки, фильтр нижним листом</div>
+  <div class="frame phone">
+   <div class="sec-head"><h3>Люди</h3><span class="n" id="cnt2"></span><span class="sp"></span><button class="btn pri" type="button">+ Человек</button></div>
+   <div class="bar"><input class="search" type="search" placeholder="Поиск" aria-label="Поиск людей (телефон)" style="flex:1"><button class="btn" type="button" id="fbtn">Фильтр</button></div>
+   <div id="cards"></div>
+   <div class="more" id="more2"></div>
+  </div>
+ </div>
+</div>
+<p class="note">По уточнению владелицы после #1202: «Люди должны быть табличным стандартным значением, а тот экран, который собран сейчас, должен стать паспортом». Щёлкните строку — справа откроется паспорт человека: нынешний экран (проекты и роли, агенты, «кто видит», эффективный доступ, «Отключить…»), необычный по содержимому, но паспорт по раскладке. Пусто, нет прав и сбой — разными словами (честные состояния kit).</p>
+</div>
+<script>
+(() => {
+  const first = ['Анна','Борис','Вера','Глеб','Дина','Егор','Жанна','Зоя','Игорь','Кира','Лев','Мира','Ника','Олег','Пётр','Рита','Семён','Тая','Ульяна','Фёдор','Хельга','Ярослав'];
+  const last = ['Иванова','Петров','Смирнова','Кузнецов','Попова','Васильев','Соколова','Михайлов','Новикова','Фёдоров','Морозова'];
+  const LAT = ['ivanova','petrov','smirnova','kuznetsov','popova','vasiliev','sokolova','mikhailov','novikova','fedorov','morozova'];
+  const projects = ['UnlimitedLORE','miniLORE','AIDA','Datawanderers','MIDGARD','BRAGI','MUNINN'];
+  const ROLE = ['читатель','автор','админ'];
+  let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const people = Array.from({ length: 55 }, (_, i) => {
+    const nP = i % 11 === 3 ? 0 : 1 + Math.floor(rnd() * 4);
+    const ps = [...projects].sort(() => rnd() - .5).slice(0, nP);
+    const role = i < 3 ? 'админ' : rnd() < .25 ? 'автор' : 'читатель';
+    const name = `${first[i % first.length]} ${last[(i * 7) % last.length]}`;
+    return { name, login: LAT[(i * 7) % LAT.length] + (i + 1), role, ps, added: 55 - i, seen: i % 9 === 0 ? '—' : `${1 + (i * 3) % 28}.10`, you: i === 0 };
+  });
+  const st = { q: '', role: new Set(), proj: new Set(), byrole: false, sort: 'name', limit: 50 };
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  function filtered() {
+    const q = st.q.trim().toLowerCase();
+    let l = people.filter(p => (!q || p.name.toLowerCase().includes(q) || p.login.includes(q))
+      && (!st.role.size || st.role.has(p.role))
+      && (!st.proj.size || [...st.proj].some(x => x === '∅' ? p.ps.length === 0 : p.ps.includes(x))));
+    l = [...l].sort(st.sort === 'new' ? (a, b) => b.added - a.added : st.sort === 'projects' ? (a, b) => b.ps.length - a.ps.length : (a, b) => a.name.localeCompare(b.name));
+    if (st.byrole) l.sort((a, b) => ROLE.indexOf(b.role) - ROLE.indexOf(a.role));
+    return l;
+  }
+  function chips() {
+    const cnt = (f) => people.filter(f).length;
+    $('roles').innerHTML = ROLE.slice().reverse().map(r => `<button class="chip" type="button" data-role="${r}" aria-pressed="${st.role.has(r)}">${r}<b>${cnt(p => p.role === r)}</b></button>`).join(' ');
+    const top = projects.slice(0, 4);
+    $('projs').innerHTML = top.map(x => `<button class="chip" type="button" data-proj="${x}" aria-pressed="${st.proj.has(x)}">${x}<b>${cnt(p => p.ps.includes(x))}</b></button>`).join(' ')
+      + ` <button class="chip" type="button" data-proj="∅" aria-pressed="${st.proj.has('∅')}"><span class="warn">без проектов</span><b>${cnt(p => !p.ps.length)}</b></button> <button class="chip" type="button">ещё ${projects.length - top.length}</button>`;
+  }
+  function render() {
+    chips();
+    const l = filtered(); const shown = l.slice(0, st.limit);
+    $('cnt').textContent = `${l.length}${l.length !== people.length ? ' из ' + people.length : ''}`;
+    $('cnt2').textContent = $('cnt').textContent;
+    let lastRole = null;
+    $('rows').innerHTML = shown.length ? shown.map(p => {
+      const g = st.byrole && p.role !== lastRole ? (lastRole = p.role, `<tr class="grp"><td colspan="5">${esc(p.role)} · ${l.filter(x => x.role === p.role).length}</td></tr>`) : '';
+      return g + `<tr data-i="${people.indexOf(p)}" style="cursor:pointer"><td>${esc(p.name)}${p.you ? '<span class="you">это вы</span>' : ''}</td><td class="login">${esc(p.login)}</td><td><span class="role${p.role === 'админ' ? ' adm' : ''}">${esc(p.role)}</span></td><td class="num">${p.ps.length || '<span class="warn">0</span>'}</td><td class="login">${p.seen}</td></tr>`;
+    }).join('') : `<tr><td colspan="5" class="none">Никого не нашлось по этим условиям — это не «людей нет»: снимите фильтр.</td></tr>`;
+    const rest = l.length - shown.length;
+    $('more').innerHTML = `показаны ${shown.length} из ${l.length}` + (rest > 0 ? ` · <button type="button" id="mbtn">ещё ${Math.min(50, rest)}</button>` : '');
+    $('more2').innerHTML = $('more').innerHTML.replace('id="mbtn"', '');
+    $('cards').innerHTML = shown.slice(0, 8).map(p => `<div class="card"><div class="top"><span class="nm">${esc(p.name)}</span><span class="role${p.role === 'админ' ? ' adm' : ''}">${esc(p.role)}</span></div><div class="login">${esc(p.login)} · проектов ${p.ps.length} · вход ${p.seen}</div></div>`).join('');
+    const nf = st.role.size + st.proj.size; $('fbtn').textContent = nf ? `Фильтр · ${nf}` : 'Фильтр';
+    const mb = $('mbtn'); if (mb) mb.onclick = () => { st.limit += 50; render(); };
+  }
+  document.addEventListener('click', e => {
+    const r = e.target.closest('[data-role]'), p = e.target.closest('[data-proj]');
+    if (r) { const v = r.dataset.role; st.role.has(v) ? st.role.delete(v) : st.role.add(v); st.limit = 50; render(); }
+    if (p) { const v = p.dataset.proj; st.proj.has(v) ? st.proj.delete(v) : st.proj.add(v); st.limit = 50; render(); }
+  });
+  $('q').oninput = e => { st.q = e.target.value; st.limit = 50; render(); };
+  $('sort').onchange = e => { st.sort = e.target.value; render(); };
+  $('byrole').onchange = e => { st.byrole = e.target.checked; render(); };
+  $('rows').onclick = e => { const tr = e.target.closest('tr[data-i]'); if (!tr) return; const p = people[+tr.dataset.i];
+    $('pname').textContent = p.name; $('sheet').hidden = true;
+    $('pbody').innerHTML = `<div class="login">${esc(p.login)} · последний вход ${p.seen}</div>` + (p.ps.length ? p.ps.map(x => `<div>${esc(x)} <span class="role${p.role === 'админ' ? ' adm' : ''}">${esc(p.role)}</span></div>`).join('') : '<div class="warn">Ни одного проекта — человек ничего не видит</div>') + `<p class="note">Здесь всё содержимое нынешнего экрана «Люди и их проекты» для одного человека.</p>`;
+    $('pass').hidden = false; };
+  $('pclose').onclick = () => { $('pass').hidden = true; };
+  $('add').onclick = () => { $('pass').hidden = true; $('sheet').hidden = false; };
+  $('close').onclick = () => { $('sheet').hidden = true; };
+  render();
+})();
+</script>
+</body></html>

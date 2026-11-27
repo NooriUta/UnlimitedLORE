@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Доступ к машинам — kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#14110c;--bg1:#1c1811;--bg2:#252016;--bg3:#2f2819;--bd:#3a3222;--t1:#f3e9d2;--t2:#cbbd9c;--t3:#8f8267;--acc:#e3a83b;--suc:#7fb069;--wrn:#e0a030;--dng:#d0603f;--inf:#6fa3c7;
+--fs-2xs:11px;--fs-xs:12px;--fs-sm:13px;--fs-md:15px;--fs-lg:18px;--head:"Unbounded",system-ui,sans-serif;--font:"Manrope",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t1);font:var(--fs-xs)/1.45 var(--font);padding:12px 16px}
+h1{font:800 var(--fs-lg) var(--head);margin:0 0 2px;color:var(--acc)}
+h2{font:800 var(--fs-xs) var(--head);margin:0 0 6px;text-transform:uppercase;letter-spacing:.04em}
+h3{font:700 var(--fs-2xs) var(--mono);margin:10px 0 4px;color:var(--t3);text-transform:uppercase}
+.lead{color:var(--t2);margin:0 0 8px;max-width:960px}
+.kit{font:700 var(--fs-2xs) var(--mono);color:var(--inf);border:1px dashed var(--inf);border-radius:4px;padding:0 4px;margin-left:4px;vertical-align:middle;white-space:nowrap}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.k{color:var(--t3);font:700 var(--fs-2xs) var(--mono);text-transform:uppercase}
+.pill{display:inline-block;border:1px solid var(--bd);border-radius:999px;padding:0 8px;font-size:var(--fs-2xs);color:var(--t2);white-space:nowrap}
+.pill b{color:var(--t1)}
+.pill.acc{border-color:var(--acc);color:var(--acc)}.pill.suc{border-color:var(--suc);color:var(--suc)}.pill.inf{border-color:var(--inf);color:var(--inf)}.pill.wrn{border-color:var(--wrn);color:var(--wrn)}
+.more{border-style:dashed;cursor:pointer}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--bd);margin:8px 0 10px;flex-wrap:wrap}
+.tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--t2);padding:6px 10px;font:700 var(--fs-xs) var(--font);cursor:pointer}
+.tab.on{color:var(--acc);border-color:var(--acc)}
+input,select{background:var(--bg2);color:var(--t1);border:1px solid var(--bd);border-radius:6px;padding:3px 8px;font:var(--fs-xs) var(--font);min-width:0}
+.btn{border:1px solid var(--bd);background:var(--bg2);color:var(--t1);border-radius:6px;padding:3px 10px;font-size:var(--fs-xs);cursor:pointer}
+.btn.pri{border-color:var(--acc);color:var(--acc)}.btn.dng{border-color:var(--dng);color:var(--dng)}.btn.sm{padding:1px 7px;font-size:var(--fs-2xs)}
+.btn[disabled]{opacity:.45;cursor:default}
+.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;min-width:0}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-xs)}
+th,td{border-bottom:1px solid var(--bd);padding:4px 6px;text-align:left;vertical-align:top}
+th{color:var(--t3);font:700 var(--fs-2xs) var(--mono);text-transform:uppercase;position:sticky;top:0;background:var(--bg1);z-index:1}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--bg2)}tr.sel td{background:var(--bg3)}
+.grp td{background:var(--bg2);font:700 var(--fs-2xs) var(--mono);color:var(--t2);text-transform:uppercase;cursor:pointer}
+.scroll{overflow:auto;max-height:560px}
+.mono{font-family:var(--mono);font-size:var(--fs-2xs)}
+.note{color:var(--t3);font-size:var(--fs-2xs);margin:6px 0 0}
+.bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
+/* Drawer (паспорт) */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(760px,100%);background:var(--bg1);border-left:1px solid var(--bd);z-index:21;overflow:auto;padding:10px 12px}
+@media (max-width:700px){.drawer{top:12%;border-left:0;border-top:1px solid var(--bd);border-radius:12px 12px 0 0}}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:999px;overflow:hidden}
+.seg button{background:none;border:0;color:var(--t2);padding:2px 10px;font:var(--fs-2xs) var(--font);cursor:pointer}
+.seg button.on{background:var(--acc);color:var(--bg)}
+.opt{display:inline-flex;gap:4px;align-items:center;border:1px solid var(--bd);border-radius:999px;padding:0 8px;font-size:var(--fs-2xs);cursor:pointer;color:var(--t2)}
+.opt.on{border-color:var(--acc);color:var(--acc)}
+.picker{position:relative}.picker .list{border:1px solid var(--bd);border-radius:6px;background:var(--bg2);max-height:200px;overflow:auto;margin-top:4px}
+.picker .gl{font:700 var(--fs-2xs) var(--mono);color:var(--t3);text-transform:uppercase;padding:4px 8px 2px;position:sticky;top:0;background:var(--bg2)}
+.picker .o{padding:3px 8px;cursor:pointer;display:flex;justify-content:space-between;gap:6px}.picker .o:hover{background:var(--bg3)}
+.diff{font:var(--fs-2xs) var(--mono);background:var(--bg2);border-radius:6px;padding:6px 8px;max-height:150px;overflow:auto}
+.add{color:var(--suc)}.chg{color:var(--wrn)}
+.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--acc);border-radius:8px;padding:6px 10px;z-index:30;display:flex;gap:8px;align-items:center}
+/* Matrix */
+.mxwrap{overflow:auto;max-width:100%;max-height:560px;border:1px solid var(--bd);border-radius:6px}
+.mx{border-collapse:separate;border-spacing:0}
+.mx td,.mx th{text-align:center;padding:3px 4px;white-space:nowrap;border-bottom:1px solid var(--bd)}
+.mx td:first-child,.mx th:first-child{text-align:left;position:sticky;left:0;background:var(--bg1);z-index:2}
+.mx th{z-index:3}.mx th:first-child{z-index:4}
+.mx .hl{background:var(--bg2)}
+.cell{display:inline-block;min-width:22px;border-radius:999px;font:700 var(--fs-2xs) var(--mono);padding:0 5px}
+.c-own{background:var(--acc);color:var(--bg)}.c-act{border:1px solid var(--suc);color:var(--suc)}.c-view{border:1px solid var(--inf);color:var(--inf)}.c-no{color:var(--t3)}
+.legend li{margin:3px 0}
+.hide{display:none}
+</style>
+</head>
+<body>
+<h1>Доступ к машинам · S7B-ACL-3 · v3 из блоков kit</h1>
+<p class="lead">Данные те же, что в v2: 10 проектов, 56 человек, около 60 машин. Раскладка теперь собрана из стандартных блоков kit, как предложила kit-сессия и согласовали вы. Синяя пометка <span class="kit">kit: Блок</span> показывает, какой блок стоит на этом месте. Собственных блоков здесь нет.</p>
+<div class="row" id="stats"></div>
+<div class="tabs" id="tabs"></div>
+<section id="v-machines"></section>
+<section id="v-people" class="hide"></section>
+<section id="v-matrix" class="hide"></section>
+<div id="drawer"></div>
+<div id="toast"></div>
+
+<h2 style="margin-top:14px">Как читать (что изменилось против v2)</h2>
+<ol class="legend">
+ <li><b>Машины</b> — стандартный ListView. Над ним поиск, фильтры по проекту и harness, группировка по владельцу или проекту, счётчик «показано N из M». Двухколоночной раскладки v2 больше нет.</li>
+ <li>Щелчок по строке открывает <b>паспорт машины</b> в Drawer. На десктопе это панель справа, на телефоне нижний лист. Внутри два раздела: «Допуски» и «Допустить».</li>
+ <li><b>Допуски</b> — ListView, сгруппированный по проектам: в группе первые 8 строк и «ещё N» (perGroup, механика S9-11). Человек с допуском в нескольких проектах попадает в каждую группу, поэтому сумма по группам больше общего числа. У строки свои действия (rowActions); отмеченные галочкой строки можно изменить пачкой (bulkActions).</li>
+ <li><b>Допустить</b>. Кого допускаем — ScopePicker с двумя подписанными группами: «участники проектов машины» и «не в проектах машины». Такие группы kit-сессия добавляет в ScopePicker. Кнопка «вся команда проекта» заполняет выбор целиком. Что можно — Segmented, проекты и harness — FieldEditor enum multi. Перед применением показывается DiffPreview, после — BatchUndo «Отменить пачку».</li>
+ <li><b>Люди</b>. Отдельного экрана «Люди и машины» нет: это блок «Машины» в паспорте человека из S7B-28 (#1226). Список людей — тот же стандартный, что в S7B-28.</li>
+ <li><b>Матрица проекта</b> — блок Matrix из kit2. Прокрутка вбок идёт внутри контейнера, страницу не распирает. Строка и колонка подсвечиваются при наведении.</li>
+ <li>Ряд цифр сверху — обычные Pill. Общий блок «сводка» запланирован в SPRINT_UXR_S13_KIT4/K4-SUMMARY-QUEUE.</li>
+</ol>
+<script>
+// Детерминированная генерация: зерно фиксировано, при обновлении данные те же.
+let seed=20261111;function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
+function pick(a){return a[Math.floor(rnd()*a.length)]}
+function sample(a,n){const c=a.slice(),o=[];while(o.length<n&&c.length)o.push(c.splice(Math.floor(rnd()*c.length),1)[0]);return o}
+function rint(a,b){return a+Math.floor(rnd()*(b-a+1))}
+
+const PROJECTS=['UnlimitedLORE','AIDA','miniLORE','miniLore_serverside','BRAGI','ODIN','volva','seidr-site','forgejo-mcp','freyja'];
+const HARN=['Claude Code','Codex','Kimi Code','Cursor','Gemini CLI'];
+const S1=['ar','vo','fro','va','li','mi','ka','se','ro','ta','ni','da','le','ve','go','zo','ul','ir','ya','bo'];
+const S2=['lva','lov','sil','na','ra','kin','sha','dov','rin','lis','mar','tov','nik','gor','lia','van','ser','dim'];
+const people=[];const seen=new Set(['omiloreadmin']);people.push({login:'omiloreadmin',harn:['Claude Code','Kimi Code'],projects:[]});
+while(people.length<56){const l=pick(S1)+pick(S2)+(rnd()<.25?rint(1,9):'');if(seen.has(l))continue;seen.add(l);people.push({login:l,harn:sample(HARN,rint(1,2)),projects:[]})}
+const P={};people.forEach(p=>P[p.login]=p);
+const teams={};
+PROJECTS.forEach(pr=>{const t=sample(people.slice(1),rint(10,12));if(pr==='UnlimitedLORE'||pr==='miniLORE')t.unshift(people[0]);teams[pr]=t.map(p=>p.login);t.forEach(p=>p.projects.push(pr))});
+
+// Машины: на каждый harness проекта — 2 машины у участников с этим harness; машина одна на (владелец, harness, номер) и копит проекты
+const machines=[];const byKey={};
+PROJECTS.forEach(pr=>{
+ const hs=[...new Set(teams[pr].flatMap(l=>P[l].harn))];
+ hs.forEach(h=>{
+  const owners=teams[pr].filter(l=>P[l].harn.includes(h));
+  sample(owners,Math.min(2,owners.length)).forEach(o=>{
+   const k=o+'|'+h;let m=byKey[k];
+   if(!m){const host=o+'-'+pick(['matebook','thinkpad','mac','ws','nuc','xps','zen']);m={id:host,client:'minilore-link-'+host,owner:o,harn:[h],projects:[],acl:[]};byKey[k]=m;machines.push(m)}
+   if(!m.projects.includes(pr))m.projects.push(pr);
+  })
+ })
+});
+// Допуски: на каждый проект машины — 2–6 участников проекта (не владелец)
+const DATES=['04.11','06.11','07.11','09.11','10.11','11.11'];
+machines.forEach(m=>{
+ const granted={};
+ m.projects.forEach(pr=>{
+  sample(teams[pr].filter(l=>l!==m.owner),rint(2,6)).forEach(l=>{
+   if(!granted[l]){granted[l]={who:l,role:rnd()<.45?'actor':'viewer',projects:[],harn:rnd()<.2?m.harn.slice():[],by:rnd()<.85?m.owner:'omiloreadmin',at:pick(DATES)+' '+String(rint(8,20)).padStart(2,'0')+':'+String(rint(0,59)).padStart(2,'0')};m.acl.push(granted[l])}
+   granted[l].projects.push(pr)
+  })
+ })
+});
+const grantsTotal=machines.reduce((s,m)=>s+m.acl.length,0);
+
+
+// ---- UI v3: только блоки kit ----
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const K=n=>`<span class="kit">kit: ${n}</span>`;
+const st=Object.assign({t:'machines',m:'',p:'',xp:'UnlimitedLORE',q:'',fp:'',fh:'',g:'owner'},Object.fromEntries(new URLSearchParams(location.hash.slice(1))));
+function save(){location.replace('#'+new URLSearchParams(st))}
+function chips(list,cls='',max=3){if(!list.length)return '<span class="pill">все</span>';return list.slice(0,max).map(x=>`<span class="pill ${cls}">${esc(x)}</span>`).join(' ')+(list.length>max?` <span class="pill more" title="${esc(list.slice(max).join(', '))}">ещё ${list.length-max}</span>`:'')}
+const roleP=r=>r==='actor'?'<span class="pill suc">видит и пишет</span>':r==='owner'?'<span class="pill acc">владелец</span>':'<span class="pill inf">только видит</span>';
+
+document.getElementById('stats').innerHTML=[['проектов',PROJECTS.length],['людей',people.length],['машин',machines.length],['допусков',grantsTotal]].map(([k,v])=>`<span class="pill">${k} <b>${v}</b></span>`).join(' ')+K('Pill');
+const TABS=[['machines','Машины'],['people','Люди'],['matrix','Матрица проекта']];
+function renderTabs(){tabs.innerHTML=TABS.map(([k,l])=>`<button class="tab ${st.t===k?'on':''}" data-t="${k}">${l}</button>`).join('')+K('Tabs');tabs.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{st.t=b.dataset.t;save();render()});TABS.forEach(([k])=>document.getElementById('v-'+k).classList.toggle('hide',k!==st.t))}
+
+// ---- Машины: ListView ----
+function renderMachines(){
+ const q=st.q.toLowerCase();
+ const ms=machines.filter(m=>(!q||m.id.includes(q)||m.owner.includes(q))&&(!st.fp||m.projects.includes(st.fp))&&(!st.fh||m.harn.includes(st.fh)));
+ const groups={};ms.forEach(m=>(st.g==='owner'?[m.owner]:st.g==='project'?m.projects:['']).forEach(k=>(groups[k]=groups[k]||[]).push(m)));
+ const sel=(id,v,opts,ph)=>`<select data-f="${id}"><option value="">${ph}</option>${opts.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select>`;
+ document.getElementById('v-machines').innerHTML=`<div class="card"><h2>Машины ${K('ListView')}</h2>
+ <div class="bar"><input type="search" data-f="q" value="${esc(st.q)}" placeholder="машина, владелец…" style="max-width:240px">${sel('fp',st.fp,PROJECTS,'все проекты')}${sel('fh',st.fh,HARN,'все harness')}
+ <span class="k">группы</span><select data-f="g">${[['owner','по владельцу'],['project','по проекту'],['','без групп']].map(([v,l])=>`<option value="${v}" ${v===st.g?'selected':''}>${l}</option>`).join('')}</select>
+ <span class="note">показано ${ms.length} из ${machines.length}${st.g==='project'?' · машина с несколькими проектами — в каждой группе':''}</span></div>
+ <div class="scroll"><table><thead><tr><th>Машина</th><th>Владелец</th><th>Harness</th><th>Проекты</th><th>Допущено</th></tr></thead><tbody>
+ ${ms.length?Object.keys(groups).sort().map(k=>(k?`<tr class="grp"><td colspan="5">${esc(k)} · ${groups[k].length}</td></tr>`:'')+groups[k].map(m=>`<tr class="click ${m.id===st.m?'sel':''}" data-m="${m.id}"><td class="mono">${esc(m.id)}</td><td>${esc(m.owner)}</td><td>${chips(m.harn)}</td><td>${chips(m.projects)} ${K('ValueChips')}</td><td>${m.acl.length} чел.</td></tr>`).join('')).join(''):'<tr><td colspan="5" class="note">Под фильтр не попала ни одна машина — «не нашлось», а не «машин нет».</td></tr>'}
+ </tbody></table></div></div>`;
+ const root=document.getElementById('v-machines');
+ root.querySelectorAll('[data-f]').forEach(e=>e.oninput=()=>{st[e.dataset.f]=e.value;save();renderMachines();if(e.dataset.f==='q'){const n=root.querySelector('[data-f=q]');n.focus();n.setSelectionRange(n.value.length,n.value.length)}});
+ root.querySelectorAll('[data-m]').forEach(e=>e.onclick=()=>{st.m=e.dataset.m;st.p='';save();renderMachines();renderDrawer()});
+}
+
+// ---- Паспорт машины: Drawer ----
+const openG={},budget={};let checked=new Set();let draft={who:[],role:'viewer',projects:[],harn:[]};let pq='';
+function renderDrawer(){
+ const d=document.getElementById('drawer');
+ if(st.m){const m=machines.find(x=>x.id===st.m);if(!m){d.innerHTML='';return}d.innerHTML=`<div class="scrim" data-close></div><div class="drawer">${machinePassport(m)}</div>`;wireMachine(m)}
+ else if(st.p){const p=people.find(x=>x.login===st.p);d.innerHTML=`<div class="scrim" data-close></div><div class="drawer">${personPassport(p)}</div>`;d.querySelectorAll('[data-m]').forEach(e=>e.onclick=()=>{st.p='';st.m=e.dataset.m;st.t='machines';save();render()})}
+ else d.innerHTML='';
+ d.querySelectorAll('[data-close]').forEach(e=>e.onclick=()=>{st.m='';st.p='';save();renderDrawer();if(st.t==='machines')renderMachines()});
+}
+function machinePassport(m){
+ const byP={};m.projects.forEach(p=>byP[p]=[]);m.acl.forEach(a=>a.projects.forEach(p=>byP[p].push(a)));
+ const rows=m.projects.map(p=>{const key=m.id+p,open=openG[key]!==false,lim=budget[key]||8,list=byP[p];
+  return `<tr class="grp" data-g="${key}"><td colspan="6">${open?'▾':'▸'} ${esc(p)} · ${list.length} из команды ${teams[p].length}</td></tr>`+(open?list.slice(0,lim).map(a=>`<tr><td><input type="checkbox" data-c="${a.who}" ${checked.has(a.who)?'checked':''}></td><td><b>${esc(a.who)}</b></td><td>${roleP(a.role)}</td><td>${chips(a.projects)}</td><td>${chips(a.harn)}</td><td style="white-space:nowrap"><button class="btn sm">Изменить</button> <button class="btn sm dng">Снять</button></td></tr>`).join('')+(list.length>lim?`<tr><td colspan="6"><button class="btn sm" data-more="${key}">Показаны ${lim} из ${list.length} · ещё ${Math.min(8,list.length-lim)}</button></td></tr>`:''):'');}).join('');
+ return `<div class="row" style="justify-content:space-between"><h2 style="margin:0">Паспорт машины ${K('RecordReader · Drawer')}</h2><button class="btn sm" data-close>Закрыть</button></div>
+ <div class="row" style="margin-top:6px"><b class="mono">${esc(m.id)}</b><span class="pill">${esc(m.client)}</span><span class="k">владелец</span><span class="pill acc">${esc(m.owner)}</span><span class="k">harness</span>${chips(m.harn)}</div>
+ <div class="row" style="margin-top:4px"><span class="k">проекты</span>${chips(m.projects,'',6)}</div>
+ <h3>Допуски · ${m.acl.length} чел. + владелец ${K('ListView · grouping project · perGroup 8')}</h3>
+ <div class="bar">${checked.size?`<span class="pill acc">выбрано ${checked.size}</span><button class="btn sm">Сменить роль</button><button class="btn sm dng">Снять у выбранных</button> ${K('bulkActions')}`:'<span class="note">Отметьте строки, чтобы изменить пачкой</span>'}</div>
+ <div class="scroll" style="max-height:340px"><table><thead><tr><th></th><th>Человек</th><th>Роль ${K('Pill')}</th><th>Проекты</th><th>Harness</th><th>${K('rowActions')}</th></tr></thead><tbody>
+ <tr><td></td><td><b>${esc(m.owner)}</b></td><td>${roleP('owner')}</td><td><span class="pill">все</span></td><td><span class="pill">все</span></td><td></td></tr>${rows}</tbody></table></div>
+ <p class="note">Если у человека допуск по нескольким проектам, он стоит в каждой их группе. Поэтому сумма по группам больше общего числа — так и должно быть.</p>
+ <h3>Допустить</h3>${grantForm(m)}`;
+}
+function grantForm(m){
+ const inM=new Set(m.projects.flatMap(p=>teams[p]));const q=pq.toLowerCase();
+ const cand=people.filter(p=>p.login!==m.owner&&!draft.who.includes(p.login)&&(!q||p.login.includes(q)));
+ const a=cand.filter(p=>inM.has(p.login)),b=cand.filter(p=>!inM.has(p.login));
+ const o=x=>{const ex=m.acl.find(g=>g.who===x.login);return `<div class="o" data-w="${x.login}"><span>${esc(x.login)}</span><span class="k">${ex?'уже допущен':x.projects.filter(p=>m.projects.includes(p)).join(', ')||x.projects.slice(0,2).join(', ')}</span></div>`};
+ const lines=draft.who.map(w=>{const ex=m.acl.find(g=>g.who===w);return `<div class="${ex?'chg':'add'}">${ex?'~':'+'} ${esc(w)} · ${draft.role==='actor'?'видит и пишет':'только видит'} · ${draft.projects.join(', ')||'— проект не выбран'} · ${draft.harn.join(', ')||'все harness'}${ex?' (было: '+(ex.role==='actor'?'пишет':'видит')+', '+ex.projects.join(', ')+')':''}</div>`}).join('');
+ return `<div class="k">Кто ${K('ScopePicker · группы с подписями')}</div>
+ <div class="picker"><input type="search" id="pq" value="${esc(pq)}" placeholder="логин…" style="width:100%">
+  <div class="list">${a.length?`<div class="gl">участники проектов машины · ${a.length}</div>`+a.slice(0,30).map(o).join(''):''}${b.length?`<div class="gl">не в проектах машины · ${b.length}</div>`+b.slice(0,30).map(o).join(''):''}${!a.length&&!b.length?`<div class="o note">Не нашлось по «${esc(pq)}»</div>`:''}</div></div>
+ <div class="row" style="margin-top:4px">${draft.who.map(w=>`<span class="pill acc">${esc(w)} <span data-rm="${w}" style="cursor:pointer">×</span></span>`).join('')}</div>
+ <div class="row" style="margin-top:4px"><span class="k">вся команда</span>${m.projects.map(p=>`<button class="btn sm" data-team="${p}">${esc(p)}</button>`).join('')}</div>
+ <div class="k" style="margin-top:8px">Что можно ${K('Segmented')}</div>
+ <div class="seg"><button data-r="viewer" class="${draft.role==='viewer'?'on':''}">только видит</button><button data-r="actor" class="${draft.role==='actor'?'on':''}">видит и пишет</button></div>
+ <div class="k" style="margin-top:8px">Проекты машины ${K('FieldEditor · enum multi')}</div>
+ <div class="row">${m.projects.map(p=>`<span class="opt ${draft.projects.includes(p)?'on':''}" data-gp="${p}">${esc(p)}</span>`).join('')}</div>
+ <div class="k" style="margin-top:8px">Harness · пусто — все</div>
+ <div class="row">${m.harn.map(h=>`<span class="opt ${draft.harn.includes(h)?'on':''}" data-gh="${h}">${esc(h)}</span>`).join('')}</div>
+ <div class="k" style="margin-top:8px">Что изменится · ${draft.who.length} ${K('DiffPreview')}</div>
+ <div class="diff">${lines||'<span class="note">Никого не выбрали</span>'}</div>
+ <div class="row" style="margin-top:8px"><button class="btn pri" id="apply" ${draft.who.length&&draft.projects.length?'':'disabled'}>Применить</button><button class="btn" id="reset">Сбросить</button></div>`;
+}
+function wireMachine(m){
+ const d=document.getElementById('drawer'),re=()=>{const y=d.querySelector('.drawer').scrollTop;renderDrawer();d.querySelector('.drawer').scrollTop=y};
+ d.querySelectorAll('[data-g]').forEach(e=>e.onclick=()=>{openG[e.dataset.g]=openG[e.dataset.g]===false;re()});
+ d.querySelectorAll('[data-more]').forEach(e=>e.onclick=()=>{budget[e.dataset.more]=(budget[e.dataset.more]||8)+8;re()});
+ d.querySelectorAll('[data-c]').forEach(e=>e.onchange=()=>{e.checked?checked.add(e.dataset.c):checked.delete(e.dataset.c);re()});
+ const pi=d.querySelector('#pq');pi.oninput=()=>{pq=pi.value;re();const n=d.querySelector('#pq');n.focus();n.setSelectionRange(n.value.length,n.value.length)};
+ d.querySelectorAll('[data-w]').forEach(e=>e.onclick=()=>{draft.who.push(e.dataset.w);re()});
+ d.querySelectorAll('[data-rm]').forEach(e=>e.onclick=()=>{draft.who=draft.who.filter(w=>w!==e.dataset.rm);re()});
+ d.querySelectorAll('[data-team]').forEach(e=>e.onclick=()=>{const p=e.dataset.team;teams[p].filter(l=>l!==m.owner).forEach(l=>{if(!draft.who.includes(l))draft.who.push(l)});if(!draft.projects.includes(p))draft.projects.push(p);re()});
+ d.querySelectorAll('[data-r]').forEach(e=>e.onclick=()=>{draft.role=e.dataset.r;re()});
+ d.querySelectorAll('[data-gp]').forEach(e=>e.onclick=()=>{const p=e.dataset.gp;draft.projects=draft.projects.includes(p)?draft.projects.filter(x=>x!==p):[...draft.projects,p];re()});
+ d.querySelectorAll('[data-gh]').forEach(e=>e.onclick=()=>{const h=e.dataset.gh;draft.harn=draft.harn.includes(h)?draft.harn.filter(x=>x!==h):[...draft.harn,h];re()});
+ d.querySelector('#reset').onclick=()=>{draft={who:[],role:'viewer',projects:[],harn:[]};re()};
+ d.querySelector('#apply').onclick=()=>{const n=draft.who.length;draft={who:[],role:'viewer',projects:[],harn:[]};re();toast.innerHTML=`<div class="toast">Применено: ${n} ${n===1?'допуск':'допусков'} · одна пачка в журнале <button class="btn sm pri">Отменить пачку</button> ${K('BatchUndo')}</div>`;setTimeout(()=>toast.innerHTML='',6000)};
+}
+
+// ---- Люди: стандартный список S7B-28 → паспорт человека с блоком «Машины» ----
+function personPassport(p){
+ const own=machines.filter(m=>m.owner===p.login),acc=machines.map(m=>({m,a:m.acl.find(g=>g.who===p.login)})).filter(x=>x.a);
+ return `<div class="row" style="justify-content:space-between"><h2 style="margin:0">Паспорт человека ${K('S7B-28 PersonPassport')}</h2><button class="btn sm" data-close>Закрыть</button></div>
+ <div class="row" style="margin-top:6px"><b>${esc(p.login)}</b><span class="k">проекты</span>${chips(p.projects,'',6)}<span class="k">harness</span>${chips(p.harn)}</div>
+ <h3>Проекты и роли</h3><p class="note">Блок из S7B-28 (#1226), здесь не повторяю.</p>
+ <h3>Машины · владеет ${own.length} · допущен к ${acc.length} ${K('ListView')}</h3>
+ <table><thead><tr><th>Машина</th><th>Владелец</th><th>Роль</th><th>Проекты допуска</th><th>Harness</th></tr></thead><tbody>
+ ${own.map(m=>`<tr class="click" data-m="${m.id}"><td class="mono">${esc(m.id)}</td><td>—</td><td>${roleP('owner')}</td><td>${chips(m.projects)}</td><td>${chips(m.harn)}</td></tr>`).join('')}
+ ${acc.map(({m,a})=>`<tr class="click" data-m="${m.id}"><td class="mono">${esc(m.id)}</td><td>${esc(m.owner)}</td><td>${roleP(a.role)}</td><td>${chips(a.projects)}</td><td>${chips(a.harn)}</td></tr>`).join('')}
+ ${!own.length&&!acc.length?'<tr><td colspan="5" class="note">Ни одной машины: не владеет и не допущен</td></tr>':''}</tbody></table>
+ <p class="note">Пригодится при уходе человека (S7B-20): видно, какие допуски снимать. Щелчок по строке открывает паспорт машины.</p>`;
+}
+let ppq='',ppp='';
+function renderPeople(){
+ const q=ppq.toLowerCase(),ps=people.filter(p=>(!q||p.login.includes(q))&&(!ppp||p.projects.includes(ppp)));
+ const root=document.getElementById('v-people');
+ root.innerHTML=`<div class="card"><h2>Люди ${K('ListView · S7B-28')}</h2>
+ <div class="bar"><input type="search" id="ppq" value="${esc(ppq)}" placeholder="человек…" style="max-width:240px"><select id="ppp"><option value="">все проекты</option>${PROJECTS.map(p=>`<option ${p===ppp?'selected':''}>${p}</option>`).join('')}</select><span class="note">показано ${ps.length} из ${people.length}</span></div>
+ <div class="scroll"><table><thead><tr><th>Человек</th><th>Проекты</th><th>Harness</th><th>Машин</th></tr></thead><tbody>
+ ${ps.map(p=>{const n=machines.filter(m=>m.owner===p.login||m.acl.some(a=>a.who===p.login)).length;return `<tr class="click" data-p="${p.login}"><td><b>${esc(p.login)}</b></td><td>${chips(p.projects)}</td><td>${chips(p.harn)}</td><td>${n||'<span class="note">0</span>'}</td></tr>`}).join('')}</tbody></table></div>
+ <p class="note">Это тот же список, что в S7B-28. Колонка «Машин» здесь — для прототипа, её место решает S7B-28.</p></div>`;
+ const i=root.querySelector('#ppq');i.oninput=()=>{ppq=i.value;renderPeople();const n=root.querySelector('#ppq');n.focus();n.setSelectionRange(n.value.length,n.value.length)};
+ root.querySelector('#ppp').oninput=e=>{ppp=e.target.value;renderPeople()};
+ root.querySelectorAll('[data-p]').forEach(e=>e.onclick=()=>{st.p=e.dataset.p;st.m='';save();renderDrawer()});
+}
+
+// ---- Матрица: kit Matrix ----
+function renderMatrix(){
+ const pr=st.xp,ms=machines.filter(m=>m.projects.includes(pr)),team=teams[pr];
+ const none=team.filter(l=>!ms.some(m=>m.owner===l||m.acl.some(a=>a.who===l&&a.projects.includes(pr))));
+ const root=document.getElementById('v-matrix');
+ root.innerHTML=`<div class="card"><h2>Матрица проекта ${K('Matrix (kit2)')}</h2>
+ <div class="bar"><select id="xp">${PROJECTS.map(p=>`<option ${p===pr?'selected':''}>${p}</option>`).join('')}</select>
+ <span class="note">${team.length} человек × ${ms.length} машин · без доступа ни к одной машине проекта: ${none.length}</span>
+ <span class="cell c-own">В</span> владелец <span class="cell c-act">П</span> пишет <span class="cell c-view">Ч</span> видит <span class="cell c-no">·</span> нет</div>
+ <div class="mxwrap"><table class="mx"><thead><tr><th>Человек</th>${ms.map((m,j)=>`<th data-col="${j}" title="${esc(m.id)}">${esc(m.id.split('-')[0])}<br><span class="k">${esc(m.harn[0].split(' ')[0])}</span></th>`).join('')}</tr></thead><tbody>
+ ${team.map(l=>`<tr><td><b>${esc(l)}</b>${none.includes(l)?' <span class="pill wrn">без доступа</span>':''}</td>${ms.map((m,j)=>{let c='<span class="cell c-no">·</span>';if(m.owner===l)c='<span class="cell c-own">В</span>';else{const a=m.acl.find(g=>g.who===l&&g.projects.includes(pr));if(a)c=a.role==='actor'?'<span class="cell c-act">П</span>':'<span class="cell c-view">Ч</span>'}return `<td data-col="${j}">${c}</td>`}).join('')}</tr>`).join('')}</tbody></table></div>
+ <p class="note">Щелчок по ячейке — предложение правки (onPropose) → DiffPreview в паспорте машины. Прокрутка вбок идёт внутри рамки, страница не распирается.</p></div>`;
+ root.querySelector('#xp').oninput=e=>{st.xp=e.target.value;save();renderMatrix()};
+ const t=root.querySelector('.mx');t.onmouseover=e=>{const td=e.target.closest('td,th');t.querySelectorAll('.hl').forEach(x=>x.classList.remove('hl'));if(!td)return;td.parentElement.querySelectorAll('td').forEach(x=>x.classList.add('hl'));const c=td.dataset.col;if(c!=null)t.querySelectorAll(`[data-col="${c}"]`).forEach(x=>x.classList.add('hl'))};
+}
+
+function render(){renderTabs();if(st.t==='machines')renderMachines();else if(st.t==='people')renderPeople();else renderMatrix();renderDrawer()}
+render();
+</script>
+</body>
+</html>

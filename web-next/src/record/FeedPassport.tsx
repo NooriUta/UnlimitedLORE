@@ -23,14 +23,14 @@ import { useAppT } from '../i18n';
 import { mdFor } from './ListPassport';
 import { fromLoreRecord } from './loreRecordContract';
 import { passportHref } from './passportHref';
-import { type PassportType } from './passportAdapters';
+import { type AnyPassportType } from './passportAdapters';
 import { loadRecordContract } from './recordSource';
 import { HISTORY_PAGE, HISTORY_TRACKED, HistoryForbidden, fetchHistory } from './historySource';
 
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
 
 export interface FeedPassportProps {
-  type: PassportType;
+  type: AnyPassportType;
   id: string;
   fetchImpl?: typeof fetch;
 }
