@@ -72,10 +72,18 @@ final class Whoami {
         return new Graph(self, g.owners(), g.projectRoles());
     }
 
-    /** Роль первой оси — то же правило, что {@code SeerRoleFromTokenFilter}. */
+    /** Роль realm для регистрации выпусков из CI (служебная учётка lore-ci-release), без admin. */
+    static final String RELEASE_MANAGER = "release-manager";
+
+    /**
+     * Роль первой оси — ЕДИНСТВЕННОЕ правило: им же пользуется {@code SeerRoleFromTokenFilter}.
+     * Старшая роль побеждает; release-manager ниже admin (27.11.2026, владелица: «пусть заводит
+     * роль release manager») — пишет только POST /lore/release, остальное как viewer.
+     */
     static String seerRole(Set<String> realmRoles) {
         if (realmRoles.contains("super-admin")) return "superadmin";
         if (realmRoles.contains("admin")) return "admin";
+        if (realmRoles.contains(RELEASE_MANAGER)) return RELEASE_MANAGER;
         return "viewer";
     }
 

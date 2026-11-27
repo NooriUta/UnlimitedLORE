@@ -197,7 +197,7 @@ public class LoreReleaseResource extends LoreResourceBase {
     public Response createRelease(ReleaseCreateRequest req,
                                   @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
-        requireAdmin(role);
+        requireReleaseWriter(role);
         if (req == null || req.release_id() == null || req.release_id().isBlank()) {
             return badParams("release_id required");
         }
