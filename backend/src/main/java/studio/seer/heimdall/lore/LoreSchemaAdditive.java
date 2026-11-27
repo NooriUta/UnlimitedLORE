@@ -62,7 +62,7 @@ final class LoreSchemaAdditive {
         3, "7f859c257fe15414",
         4, "8db786982331b847",
         5, "a4b19c3f6c60ca04",
-        6, "0000000000000000");
+        6, "e12f8d031ca6b863");
 
     /** Последний шаг V. Реестр шагов заморожен: новое — только в {@link #CHANGES}. */
     static final int LAST_V_STEP = 100;

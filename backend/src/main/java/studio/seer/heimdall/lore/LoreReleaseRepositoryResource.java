@@ -184,10 +184,10 @@ public class LoreReleaseRepositoryResource extends LoreResourceBase {
 
     private Set<String> names(ForgejoBridge.Repo fr, String what, String field) throws Exception {
         Set<String> out = new TreeSet<>();
-        String sep = what.contains("?") ? "&" : "?";
+        
         for (int page = 1; page <= MAX_PAGES; page++) {
             // page обязателен: Forgejo 17 без page игнорирует limit (ForgejoListPagingGuardTest)
-            HttpResponse<String> r = forgejo.api(fr, "GET", "/repos/" + fr.path() + what + sep + "page=" + page + "&limit=" + PAGE, null);
+            HttpResponse<String> r = forgejo.api(fr, "GET", "/repos/" + fr.path() + (what.contains("?") ? what + "&page=" : what + "?page=") + page + "&limit=" + PAGE, null);
             if (r.statusCode() != 200) {
                 LOG.warnf("[LORE RELEASE-REPO] %s%s: Forgejo %d", fr.path(), what, r.statusCode());
                 return null;
