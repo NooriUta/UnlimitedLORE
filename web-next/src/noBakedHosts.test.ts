@@ -3,7 +3,8 @@
 //
 // Что сканируется. Тесты web-next гоняются в CI ДО `npm run build`, поэтому бандл здесь не собрать — сторож
 // читает то, из чего бандл и образы собираются:
-//   • web-next/src/** и kit/src/** — без *.test.*, *.spec.*, e2e и тестовых помощников;
+//   • web-next/src/** — без *.test.*, *.spec.*, e2e и тестовых помощников;
+//   • kit — dist установленного пакета @seidr/kit (K5-PACKAGE-DELIVERY): ровно то, что уедет в бандл;
 //   • backend/src/main/** — код и ресурсы образа бэкенда;
 //   • образ веба: web-next/Dockerfile, docker/*.sh; пакет установки deploy/install/** (кроме README);
 //   • web-next/dist/** — если бандл собран локально (после `npm run build`), он проверяется тоже.
@@ -12,6 +13,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { KIT_PKG_DIR } from './test/kitPaths';
 
 const repo = resolve(__dirname, '../..');
 const OUR_HOSTS = /seidrstudio\.pro|\bodal\./i;
@@ -99,7 +101,7 @@ describe('SELF-PROVISION · в образе и бандле нет наших и
   it('исходники веба, kit, бэкенда (src/main), образа веба и пакета установки', () => {
     const files = [
       ...walk(resolve(repo, 'web-next/src')),
-      ...walk(resolve(repo, 'kit/src')),
+      ...walk(resolve(KIT_PKG_DIR, 'dist')),
       ...walk(resolve(repo, 'backend/src/main')),
       resolve(repo, 'web-next/Dockerfile'),
       ...walk(resolve(repo, 'docker')).filter(f => /\.sh$/.test(f)),

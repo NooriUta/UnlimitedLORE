@@ -1,0 +1,145 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>UI LORE v2: как аккуратно жить с двумя приложениями · 08.11.2026</title><link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"><style>:root{--bg0:#f5f3ee;--bg1:#faf8f3;--bg3:#eee9df;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#6f6249;--acc:#8a560a;--wrn:#a06010;--dng:#c03030;--suc:#3d7a38;--inf:#3a7060;--font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:14px/1.55 var(--font)}.wrap{max-width:1000px;margin:0 auto;padding:18px 12px 60px}h1{font:800 21px/1.25 var(--head);margin:0 0 6px;color:var(--acc)}h2{font:800 17px/1.3 var(--head);margin:28px 0 8px}.muted{color:var(--t2);font-size:11px}.mono{font-family:var(--mono);font-size:.9em}.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin:10px 0}.tldr{border-left:3px solid var(--acc)}.good{border-left:3px solid var(--suc)}.warn{border-left:3px solid var(--dng)}.card ul,.card ol{margin:6px 0 0;padding-left:20px}.card li{margin:5px 0;font-size:12.5px}table{width:100%;border-collapse:collapse;font-size:12.5px}th{font:700 10px/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px;border-bottom:1px solid var(--bd);background:var(--bg3)}td{padding:7px 6px;border-bottom:1px solid var(--bd);vertical-align:top}.tw{overflow-x:auto}.s{font:700 10px/1.4 var(--font);padding:2px 7px;border-radius:999px;white-space:nowrap;text-transform:uppercase}.b{background:#f6dcd8;color:var(--dng)}.h{background:#f6e3d0;color:var(--wrn)}.m{background:var(--bg3);color:var(--t2)}.who{font:600 10px/1 var(--mono);color:var(--inf);white-space:nowrap}</style></head><body><div class="wrap">
+<h1>UI LORE v2: как аккуратно жить с двумя приложениями</h1>
+<div class="muted">08.11.2026 · исследование к ADR-LORE-045 (PROPOSED) · только чтение: код репо UnlimitedLORE (ветка feat/ve2-volva-embed-sign, совпадает с develop по затронутым файлам), miniLORE (app_flutter), LORE-слайсы, веб-источники · <b>[гипотеза]</b> = не проверено замером</div>
+
+<div class="card tldr"><b>TL;DR</b><ul>
+<li><b>Рекомендация: v2 — на отдельном поддомене</b> <span class="mono">lore-next.odal.seidrstudio.pro</span> через Traefik (свой роутер и сервис <span class="mono">lore-app-next</span>), тот же <span class="mono">lore-backend</span>, тот же KC-клиент <span class="mono">lore-app</span> с добавленными <i>точными</i> redirect URI. Отдельный origin бесплатно разводит localStorage и сессию OIDC; общая cookie темы <span class="mono">seer-prefs</span> остаётся общей (так и задумано).</li>
+<li><b>Отдельный порт отпадает:</b> на <span class="mono">http://IP:порт</span> вход по OIDC физически невозможен (PKCE требует <span class="mono">crypto.subtle</span> = защищённый контекст). <b>Путь <span class="mono">/next</span></b> возможен, но тянет base-path в Vite/роутер/redirect и общий localStorage — дороже и рискованнее.</li>
+<li><b>Главная находка:</b> MCP ходит в бэкенд <i>через nginx фронта</i> (<span class="mono">LORE_BACKEND_URL=http://192.168.3.131:4400</span>). Кто держит :4400, тот держит MCP. Значит прокси <span class="mono">/lore/</span>, <span class="mono">/bench/</span>, <span class="mono">/tyr-*</span> обязаны быть байт-в-байт одинаковы в обоих образах, а на переключении :4400 не трогаем.</li>
+<li><b>Поправка к посылке ADR:</b> miniLORE не строит веб-ссылки <span class="mono">/lore?section=…</span> — <span class="mono">lore_refs.dart</span> только находит id в тексте, а запись открывается в самом приложении через шлюз. Веб-ссылки в старом формате рождаются в заметках релиза (<span class="mono">release-html.sh:55</span>), Telegram, телах доков и ответах сессий — их и защищает нормализатор.</li>
+<li><b>Фриз v1 — предлагаю каталогом, а не долгой веткой</b> [предложение, нужно решение владелицы]: v2 растёт в <span class="mono">web-next/</span> того же develop, v1 остаётся в <span class="mono">src/</span> под сторожем «только багфиксы». Один конвейер, один preprod, никаких двух веток с расходящимся бэкендом.</li>
+</ul></div>
+
+<h2>Как устроено сейчас</h2>
+<div class="tw"><table><tr><th>Что</th><th>Факт</th><th>Где</th></tr>
+<tr><td>Фронт</td><td>Сервис <span class="mono">lore-app</span> (nginx + SPA), опубликован <span class="mono">4400:80</span>; VITE_* впекаются на сборке (build-args), LORE_PUBLIC_URL и LORE_OIDC_ORIGIN — runtime через envsubst</td><td class="mono">docker-compose.yml:257-284; Dockerfile:27-34</td></tr>
+<tr><td>Бэкенд</td><td><span class="mono">lore-backend</span>, порт 9100 только на 127.0.0.1; ресурс <span class="mono">@Path("/lore")</span></td><td class="mono">docker-compose.yml:63, 115; AidaLoreResource.java:50</td></tr>
+<tr><td>Traefik</td><td>Один роутер <span class="mono">Host(`lore.odal.seidrstudio.pro`)</span>, websecure, certresolver regru (DNS-01); оверлей только на сервере. Комментарий: новый origin = ТРИ списка (CORS_ORIGINS, redirectUris, webOrigins)</td><td class="mono">docker-compose.traefik.yml:24-27, 40-42, 62</td></tr>
+<tr><td>nginx</td><td><span class="mono">location = /lore</span> отдаёт index.html (SPA), <span class="mono">/lore/</span> и <span class="mono">/bench/</span> — прокси в бэкенд, <span class="mono">/tyr-api/</span>, <span class="mono">/tyr-ws</span>, <span class="mono">/tyr-runs/</span>, SPA fallback <span class="mono">/</span>; index.html <span class="mono">no-cache</span>, /assets — хэшированные; редирект AL-71 на https только для документных location и только с голого IP</td><td class="mono">nginx.conf.template:28-40, 100-120, 130-134, 141-149, 161-185, 191-195</td></tr>
+<tr><td>MCP</td><td>Ходит через :4400 фронта, поэтому редирект AL-71 нарочно не стоит на <span class="mono">/lore/</span></td><td class="mono">nginx.conf.template:8-10, 101-107; mcp-server/src/backend.ts:6</td></tr>
+<tr><td>CSP</td><td><span class="mono">connect-src 'self' ${LORE_OIDC_ORIGIN}</span>, <span class="mono">frame-ancestors 'self'</span> — повторяется в трёх местах</td><td class="mono">nginx.conf.template:91, 119, 138</td></tr>
+<tr><td>OIDC в SPA</td><td>oidc-client-ts, client_id по умолчанию <span class="mono">lore-app</span>; <span class="mono">redirect_uri = location.origin + /auth/callback</span>, logout → <span class="mono">origin + /</span>; сессия в <b>localStorage</b> (<span class="mono">oidc.user:…</span>), отметка принудительного входа — sessionStorage</td><td class="mono">src/auth/session.ts:14, 30-35, 133-139</td></tr>
+<tr><td>KC-клиент</td><td><span class="mono">lore-app</span>: public + PKCE S256, redirectUris/webOrigins с шаблоном <span class="mono">YOUR-LORE-HOST/*</span> (wildcard-хвост), <span class="mono">post.logout.redirect.uris: "+"</span>. Файл realm НЕ зеркало прода (см. память) — менять в живом KC</td><td class="mono">backend/keycloak/omilore-realm.json:47-69</td></tr>
+<tr><td>CORS</td><td>Список сервирующих адресов, пусто → дефолт; забытый адрес = 403 только на записи</td><td class="mono">docker-compose.yml:178-185; application.properties:85-113</td></tr>
+<tr><td>Хранилище браузера</td><td>localStorage: <span class="mono">lore-theme</span>, <span class="mono">lore-palette</span>, <span class="mono">lore-mode</span>, <span class="mono">lore-project-scope</span>, <span class="mono">lore.product.listWidth</span>, <span class="mono">lore.vp.pos</span>, <span class="mono">lore-news-seen</span>, <span class="mono">bragi-draft-*</span>, <span class="mono">oidc.user:*</span>. Префикса версии нет, стиль ключей смешанный (<span class="mono">lore-</span> и <span class="mono">lore.</span>)</td><td class="mono">AppShell.tsx:62-63; ProjectScopeContext.tsx:22; product/shared.tsx:152; LoreVpCanvas.tsx:511; LoreNewsFeed.tsx:59; LoreBragiPublicationEditor.tsx:253</td></tr>
+<tr><td>Cookie темы</td><td><span class="mono">seer-prefs</span>, <span class="mono">Domain=.</span>+последние 3 метки хоста = <span class="mono">.odal.seidrstudio.pro</span>, Path=/ — видна всем поддоменам и теме KC</td><td class="mono">src/theme/prefs.ts:18-35</td></tr>
+<tr><td>Service worker</td><td>Не найден (grep <span class="mono">serviceWorker|registerSW|workbox|manifest.webmanifest</span> по src, index.html, vite.config.ts, package.json — 0). Положительный контроль: тот же grep находит <span class="mono">document.cookie</span> в prefs.ts</td><td>—</td></tr>
+<tr><td>Маршруты SPA</td><td><span class="mono">BrowserRouter</span> без basename; <span class="mono">/</span>→<span class="mono">/lore?section=plan</span>, <span class="mono">/lore/*</span>, <span class="mono">/benchmark…</span>, <span class="mono">/muninn/*</span>, <span class="mono">/tyr/*</span>, <span class="mono">/bragi/*</span>, <span class="mono">/auth/callback</span></td><td class="mono">src/App.tsx:59-73</td></tr>
+<tr><td>CD</td><td>LORE CD по push в <span class="mono">preprod</span>; собирает оба образа из одного коммита; накатка схемы <b>отдельным шагом до</b> подмены контейнера, рантайм стартует с <span class="mono">lore.migrate=false</span>; затем <span class="mono">up -d --no-deps lore-backend</span> и <span class="mono">lore-app</span>; COMPOSE_FILE с traefik-оверлеем; LORE_PUBLIC_URL прод-адреса</td><td class="mono">.github/workflows/lore-cd.yml:33-35, 133, 151, 171, 217-221, 240-275</td></tr>
+<tr><td>Völva embed</td><td><span class="mono">GET /lore/embed/volva/{chart}?project=</span> — подписанный URL (JWT), ttl 600 с по умолчанию, проект заперт пределами вызывающего</td><td class="mono">AidaLoreResource.java:107-151; VolvaEmbedSigner.java:24</td></tr>
+<tr><td>Скоуп чтения</td><td>Вызывающий опознаётся по <span class="mono">client_id</span> токена ИЛИ <span class="mono">sub</span>; служебные читатели — список client_id (<span class="mono">lore-reader-minilore</span>)</td><td class="mono">AidaLoreResource.java:62-68, 1030-1040</td></tr>
+<tr><td>miniLORE</td><td>Шлюз <span class="mono">minilore2.odal…</span>, KC тот же realm; <span class="mono">lore_refs.dart</span> парсит id, веб-URL не строит. Контракт miniLORE = API бэкенда (<span class="mono">/lore/news</span>, слайсы)</td><td class="mono">Mobilepoc/app_flutter/lib/src/config.dart:58, 77; data/lore_refs.dart:1-30</td></tr>
+<tr><td>Веб-ссылки старого вида</td><td>Генерируются в HTML релиза: <span class="mono">/lore?section=sprints&amp;passport=…</span></td><td class="mono">.github/scripts/release-html.sh:55, 225</td></tr>
+<tr><td>DNS</td><td><span class="mono">lore.odal.seidrstudio.pro</span> → 192.168.3.131; <span class="mono">lore-next.odal…</span> не резолвится (nslookup 08.11) — wildcard-записи нет, нужна своя A-запись</td><td>замер</td></tr>
+</table></div>
+
+<h2>Варианты разведения</h2>
+<div class="tw"><table><tr><th>Критерий</th><th>Тот же origin, путь <span class="mono">/next</span></th><th>Поддомен <span class="mono">lore-next.odal…</span></th><th>Отдельный порт <span class="mono">:4401</span></th></tr>
+<tr><td>Вход OIDC</td><td>Работает (https)</td><td>Работает (https, DNS-01 серт)</td><td><b>Не работает</b> по http на IP: нет crypto.subtle → PKCE падает (traefik.yml:3-7)</td></tr>
+<tr><td>localStorage / сессия</td><td><b>Общие</b>: одна сессия (плюс), но ключи v1/v2 сталкиваются — v2 с другим форматом сломает v1. Нужен префикс <span class="mono">lore.v2.*</span> с первого дня</td><td>Раздельные по origin. Второй вход бесшумный через SSO-cookie KC</td><td>Раздельные (origin включает порт)</td></tr>
+<tr><td>Cookie <span class="mono">seer-prefs</span></td><td>Общая</td><td>Общая (<span class="mono">Domain=.odal…</span>) — это и нужно</td><td>Голый IP → cookie без Domain, раздельно</td></tr>
+<tr><td>Keycloak</td><td>Новый redirect <span class="mono">/next/auth/callback</span>; webOrigins тот же</td><td>+ redirect URI и webOrigin нового хоста (точные, без <span class="mono">*</span>)</td><td>+ URI, но смысла нет — вход невозможен</td></tr>
+<tr><td>CORS_ORIGINS</td><td>Не меняется</td><td>+ новый origin (иначе 403 на записи)</td><td>+ origin</td></tr>
+<tr><td>Traefik</td><td>Роутер <span class="mono">Host &amp;&amp; PathPrefix(`/next`)</span> (длиннее → приоритетнее); v1-роутер без изменений</td><td>Отдельный роутер + сервис, по шаблону существующего</td><td>Мимо Traefik</td></tr>
+<tr><td>Сборка v2</td><td>Vite <span class="mono">base:'/next/'</span>, <span class="mono">basename</span> роутера, redirect_uri, nginx root под /next — и всё это убрать на переключении (вторая миграция путей)</td><td>Как у v1, без base-path; на переключении меняется только хост</td><td>Как у v1</td></tr>
+<tr><td>Ссылки</td><td><span class="mono">/next/lore?…</span> — после переключения тоже нужно нормализовать</td><td>Тот же путь <span class="mono">/lore?…</span> на другом хосте — нормализатор только для схемы параметров</td><td>—</td></tr>
+<tr><td>Риски</td><td>Коллизии ключей, общий CSP/кэш, двойная смена путей</td><td>DNS-запись, ещё один серт, три списка origin</td><td>Неработоспособен для входа</td></tr>
+</table></div>
+<div class="card good"><b>Рекомендация: поддомен.</b> Изоляция хранилища даётся браузером, а не дисциплиной; путь <span class="mono">/lore</span> и параметры совпадают с v1, поэтому переключение = смена хоста у роутеров. Тему не теряем благодаря общей cookie. Отдельный KC-клиент <i>не</i> заводим [гипотеза-риск]: скоуп опознаёт вызывающего и по client_id (AidaLoreResource.java:1030-1040) — новый клиент рискует попасть в «не заведён в графе ролей»; люди опознаются по sub, но проверять дешевле, чем чинить. Достаточно добавить точные URI в <span class="mono">lore-app</span> (Red Hat по CVE-2026-7504 советует перечислять URI явно, без wildcard).</div>
+
+<h2>Бэкенд: правила расширения</h2>
+<div class="card"><ul>
+<li><b>Expand → migrate → contract</b> (Fowler, Parallel Change): новое поле/эндпоинт добавляется рядом, v1 продолжает читать старое; удаление старого — только после выключения v1 и отдельным PR.</li>
+<li><b>Только аддитивные миграции.</b> Любой <span class="mono">./gradlew test</span> мигрирует прод-схему, т.е. схема может уехать вперёд <i>работающего</i> бэкенда ещё до мержа. Значит каждая миграция обязана быть безопасна для текущего прод-бэкенда: новые типы/свойства/индексы — да; переименование, смена типа, NOT NULL без дефолта, удаление — нет (это фаза contract).</li>
+<li><b>Ответы — только расширять:</b> новые поля в JSON можно, переименовывать/убирать/менять смысл нельзя; новые параметры слайса — необязательные с прежним поведением по умолчанию.</li>
+<li><b>Запись — через общий сервис SCD2</b> (ADR п.4), одинаково для v1, v2, MCP, miniLORE; никаких «v2-only» обходных INSERT.</li>
+<li><b>Контрактные тесты на каждый PR бэкенда</b> (блокирующий гейт):
+<ul><li>MCP: снимок списка инструментов + форма ответа ключевых (<span class="mono">query_slice</span>, <span class="mono">search</span>, <span class="mono">task_new</span>, <span class="mono">status_set</span>, <span class="mono">lore_version</span>) против бэкенда PR; есть зачаток — <span class="mono">LoreQgRunContractTest.java</span>.</li>
+<li>Телефонный API miniLORE: <span class="mono">/lore/news</span>, слайсы и открытие по id для 18 типов (ET-01) — снимки форм ответа.</li>
+<li>Старые веб-ссылки: таблица <span class="mono">section × passport</span> → v1 и v2 открывают ту же запись (Playwright, smoke).</li>
+<li>Völva: <span class="mono">/lore/embed/volva/{chart}</span> — 200 своим, отказ служебному клиенту, проект заперт массивом.</li>
+<li>Диф схемы ответов (снимки JSON или OpenAPI + oasdiff) против базы develop — информационный, падающий только на удалении/переименовании.</li></ul></li>
+</ul></div>
+
+<h2>Данные пользователя</h2>
+<div class="card"><ul>
+<li><b>Неймспейс ключей:</b> v2 пишет только <span class="mono">lore.v2.*</span> через одну обёртку <span class="mono">storage.ts</span> (запрет прямого <span class="mono">localStorage</span> линтером). v1 не трогаем — его ключи (список выше) считаем <span class="mono">lore.v1</span>-наследием; v2 может <i>читать</i> их один раз для импорта (проект, тема), но не писать.</li>
+<li>На поддомене коллизий нет физически, но префикс всё равно нужен: на переключении v2 переедет на origin v1 и встретит его старые ключи.</li>
+<li><b>Cookie <span class="mono">seer-prefs</span></b> — общая платформенная, формат <span class="mono">{theme, palette}</span> заморожен (expand-only), её читает и тема KC.</li>
+<li><b>Серверные настройки</b> по D-2026-UXR-VIEWS-SERVER: виды, избранное, личные умолчания (D-2026-UXR-RAIL-OFF, D-2026-UXR-READ-COLLAPSE) — на сервере, с полем <span class="mono">ui_version</span>/схемой версии у записи; v1 их не видит и не ломает. Это и есть «переносимость» между v1 и v2 и между устройствами.</li>
+<li>Черновики (<span class="mono">bragi-draft-*</span>) — не мигрируем, предупреждаем в v1 баннером перед переключением [гипотеза: объём реальных черновиков мал].</li>
+</ul></div>
+
+<h2>CI/CD</h2>
+<div class="card"><ul>
+<li><b>Один конвейер, два образа:</b> в compose новый сервис <span class="mono">lore-app-next</span> (build context — <span class="mono">web-next/</span>, тот же nginx.conf.template, без публикации хост-порта или только <span class="mono">127.0.0.1</span>), роутер в traefik-оверлее.</li>
+<li>Шаг <span class="mono">which</span> в lore-cd.yml расширить: <span class="mono">frontend-next</span>; dispatch-параметр service получает третье значение.</li>
+<li><b>Сначала preprod</b> (как сейчас): v2 живёт только на стенде до решения о переключении; v1-образ продолжает собираться из <span class="mono">src/</span>.</li>
+<li>nginx-шаблон — общий файл для обоих образов (не копия), чтобы прокси MCP не разошлись; health-check деплоя для v2 — тот же <span class="mono">curl 127.0.0.1/</span>, плюс проба <span class="mono">/lore/version</span> через контейнер v2.</li>
+<li>Frontend CI: отдельный job для <span class="mono">web-next/</span> (tsc, vitest, STYLE-01, i18n-coverage); сторож «в <span class="mono">src/</span> только fix-коммиты» — информационный, не блокирующий.</li>
+<li>Если владелица оставит вариант ADR «ветка <span class="mono">release/ui-v1</span>»: тогда нужен второй workflow, собирающий только <span class="mono">lore-app</span> из этой ветки, и запрет CD собирать <span class="mono">lore-app</span> из preprod — иначе первый же preprod-деплой выкатит недоделанный v2 на место v1. Это главный аргумент за каталог.</li>
+</ul></div>
+
+<h2>Переключение и откат</h2>
+<div class="card"><ol>
+<li>Фаза «проба»: v2 на <span class="mono">lore-next</span>, флаг «новая навигация» в меню аватара v1 = ссылка на v2 с текущим адресом (через нормализатор); в v2 — «вернуться в классический» (как GitHub Feature Preview / Atlassian Labs).</li>
+<li>Фаза «по умолчанию» (Atlassian: admin → opt-in/out → always-on): владелица решает дату; в v1 баннер «через N дней основной — v2».</li>
+<li>Переключение: Traefik-роутер <span class="mono">lore</span> переводим на сервис v2, а v1 получает роутер <span class="mono">lore-classic.odal…</span> (DNS + URI в KC + CORS заранее). Порт <span class="mono">:4400</span> и его nginx-прокси (MCP) не трогаем до отдельного шага.</li>
+<li><b>Нормализатор ссылок</b> в v2: любой старый <span class="mono">/lore?section=X&amp;passport=Y</span> (и устаревшие <span class="mono">tab</span>) → новая схема через <span class="mono">history.replace</span>, с таблицей соответствий в коде и тестом на каждую строку; неизвестное — честная страница «ссылка старого вида, открыть в классическом».</li>
+<li>v1 держим на запасном адресе <b>4–6 недель</b> [гипотеза срока — по метрике откатов]; выключаем, когда переходов в classic &lt; порога за 2 недели.</li>
+<li><b>Kill switch / откат</b> = вернуть роутер <span class="mono">lore</span> на сервис v1 (одна метка, <span class="mono">up -d --no-deps</span>), без пересборки; заранее отрепетировать на preprod и записать runbook.</li>
+<li>Contract-фаза бэкенда — только после выключения v1, отдельными PR.</li>
+<li>:4400 (MCP) — последним шагом: либо остаётся за v1-nginx до конца, либо уходит v2-образу с тем же шаблоном; проба <span class="mono">lore_version</span> из MCP после каждого шага.</li>
+</ol></div>
+
+<h2>Риски и как ловим</h2>
+<div class="tw"><table><tr><th>Риск</th><th>Как ловим</th></tr>
+<tr><td><span class="s b">выс</span> Отвалился MCP после смены контейнера на :4400</td><td>Общий nginx-шаблон; CD-проба <span class="mono">/lore/version</span> через каждый фронт-контейнер; MCP <span class="mono">lore_version</span> после деплоя</td></tr>
+<tr><td><span class="s b">выс</span> Миграция из теста ветки v2 сломала v1/работающий бэкенд</td><td>Правило аддитивности + ревью-чек «миграция безопасна для текущего прода»; проверка факта миграции после падений (память LiveDbTest)</td></tr>
+<tr><td><span class="s b">выс</span> Preprod-деплой выкатил v2 на место v1</td><td>Каталог <span class="mono">web-next/</span> и отдельный сервис; не переиспользовать имя <span class="mono">lore-app</span></td></tr>
+<tr><td><span class="s h">сред</span> Вход на новом хосте: забыт один из трёх списков</td><td>Чек-лист из traefik.yml:24-27; e2e «войти и записать» на v2 до анонса</td></tr>
+<tr><td><span class="s h">сред</span> Расхождение ответов при изменении бэкенда «под v2»</td><td>Контрактные тесты + диф снимков JSON в CI</td></tr>
+<tr><td><span class="s h">сред</span> Старые ссылки (релизы, Telegram, тела доков) ведут в никуда</td><td>Нормализатор + тест на таблицу соответствий; v1 на запасном адресе</td></tr>
+<tr><td><span class="s h">сред</span> Устаревший index.html / chunk-load error после деплоя</td><td>Уже есть <span class="mono">no-cache</span> на index.html; добавить в v2 одноразовую перезагрузку по <span class="mono">vite:preloadError</span>; service worker не заводить до выключения v1</td></tr>
+<tr><td><span class="s m">низ</span> Двойные багфиксы в v1</td><td>Только безопасность и потеря данных; остальное — «в v2»</td></tr>
+<tr><td><span class="s m">низ</span> Не видно, лучше ли v2</td><td>Метрики по origin (Referer/Host в логе бэкенда или заголовок <span class="mono">X-Lore-UI: v1|v2</span>): время до ответа, доля «сбой как пусто», переходы в classic</td></tr>
+</table></div>
+
+<h2>Чек-лист задач</h2>
+<div class="card"><b>Серверный спринт</b><ul>
+<li>A-запись DNS <span class="mono">lore-next.odal.seidrstudio.pro</span> → 192.168.3.131 (и позже <span class="mono">lore-classic</span>).</li>
+<li>Сервис <span class="mono">lore-app-next</span> в compose + роутер/сервис в traefik-оверлее, общий nginx.conf.template.</li>
+<li>KC <span class="mono">lore-app</span>: точные redirectUris/webOrigins нового хоста в живом realm (через вход владелицы).</li>
+<li>CORS_ORIGINS: добавить новый origin в переменных стенда.</li>
+<li>lore-cd.yml: выход <span class="mono">frontend-next</span>, сборка/деплой/проба нового сервиса.</li>
+<li>Проба CD: <span class="mono">/lore/version</span> через каждый фронт-контейнер (защита MCP).</li>
+<li>Контрактные снимки MCP-инструментов против бэкенда PR.</li>
+<li>Контрактные снимки API miniLORE (<span class="mono">/lore/news</span>, открытие по id, 18 типов).</li>
+<li>Контракт-тест Völva embed (свой/служебный/запертый проект).</li>
+<li>Ревью-гард: миграции только аддитивные (чек в PR-шаблоне + тест на запрещённые DDL).</li>
+<li>Серверные настройки пользователя и виды (D-2026-UXR-VIEWS-SERVER) с полем версии.</li>
+<li>Заголовок <span class="mono">X-Lore-UI</span> в логах/метриках бэкенда.</li>
+<li>Runbook «переключение и откат одной меткой Traefik», репетиция на preprod.</li></ul>
+<b>UI-спринт</b><ul>
+<li>Каркас <span class="mono">web-next/</span> (Vite, свой Dockerfile, CI-job, STYLE-01, i18n).</li>
+<li>Обёртка <span class="mono">storage.ts</span> с префиксом <span class="mono">lore.v2.*</span> + lint-запрет прямого localStorage.</li>
+<li>Одноразовый импорт из ключей v1 (проект, тема) без записи в них.</li>
+<li>Нормализатор старых ссылок + тест на всю таблицу соответствий.</li>
+<li>Смоук «старая ссылка открывает ту же запись в v1 и v2» (Playwright).</li>
+<li>Флаг «новая навигация» в меню аватара v1 и «классический вид» в v2.</li>
+<li>Обработка <span class="mono">vite:preloadError</span> (одна перезагрузка с защитой от цикла).</li>
+<li>Сторож «в <span class="mono">src/</span> только fix» (информационный).</li>
+<li>Баннер в v1 о дате переключения и о несохранённых черновиках BRAGI.</li></ul></div>
+
+<h2>Источники</h2>
+<div class="card"><ul>
+<li><a href="https://martinfowler.com/bliki/ParallelChange.html">Fowler — Parallel Change (expand/contract)</a>; <a href="https://blog.thepete.net/blog/2023/12/05/expand/contract-making-a-breaking-change-without-a-big-bang/">Hodgson — Expand/Contract</a></li>
+<li><a href="https://dev.to/iagenko/the-strangler-fig-in-production-running-angularjs-and-nextjs-side-by-side-2f7c">Strangler fig: два фронта на одном бэкенде</a>; <a href="https://developers.redhat.com/articles/2026/04/22/how-we-rewrote-production-ui-without-stopping-it">Red Hat — переписали прод-UI без остановки</a>; <a href="https://www.thoughtworks.com/en-sg/insights/articles/farewell-angularjs">Thoughtworks — риски</a></li>
+<li><a href="https://community.atlassian.com/forums/Navigation-Refresh-articles/The-new-navigation-opt-in-is-now-available/ba-p/2998006">Atlassian — opt-in новой навигации</a>; <a href="https://community.atlassian.com/forums/Navigation-Refresh-discussions/Ask-an-engineer-Behind-the-scenes-of-the-new-navigation/m-p/3044579">три фазы раскатки</a></li>
+<li><a href="https://github.blog/changelog/2025-07-31-expanded-public-preview-for-improved-repository-creation-experience/">GitHub — opt-out preview и «switch back to classic»</a>; <a href="https://linear.app/blog/how-we-redesigned-the-linear-ui">Linear — раскатка по процентам воркспейсов</a></li>
+<li><a href="https://goo.gle/multiple-pwas-same-domain">Google — несколько приложений на одном origin делят хранилище</a></li>
+<li><a href="https://access.redhat.com/security/cve/CVE-2026-7504">CVE-2026-7504 — wildcard redirect URI в Keycloak</a>; <a href="https://phasetwo.io/docs/security/oauth-security-bcp/">RFC 9700 для Keycloak</a></li>
+<li><a href="https://community.traefik.io/t/same-host-one-with-pathprefix-one-without/9312">Traefik — приоритет по длине правила</a></li>
+<li><a href="https://oneuptime.com/blog/post/2026-08-24-consumer-driven-contract-breaking-changes/view">Pact + oasdiff в CI</a>; <a href="https://www.technetexperts.com/spa-deployment-chunk-loading-failure-fix/amp/">chunk-load после деплоя</a></li>
+</ul></div>
+</div></body></html>

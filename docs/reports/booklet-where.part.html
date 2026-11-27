@@ -1,0 +1,56 @@
+  <section id="where" style="grid-column:1/-1;padding:28px 32px 44px;border-top:1px solid rgba(0,0,0,.08)">
+    <h2 style="margin:0 0 6px">Где взять</h2>
+    <p style="margin:0 0 18px;opacity:.75;max-width:70ch">Всё, что мы отдаём наружу, лежит в зеркале <b>SeidrStudio</b> на нашем git-сервере: репозитории только для чтения и выпуски с файлами. Нужна учётная запись на сервере — без входа страницы не открываются.</p>
+
+    <h3 style="margin:18px 0 8px">Репозитории — что есть что</h3>
+    <table style="border-collapse:collapse;width:100%;max-width:980px">
+      <thead><tr style="text-align:left;opacity:.7">
+        <th style="padding:6px 10px 6px 0">репозиторий</th><th style="padding:6px 10px">что это</th>
+      </tr></thead>
+      <tbody>
+        <tr><td style="padding:6px 10px 6px 0;white-space:nowrap"><a href="https://git.seidrstudio.pro/SeidrStudio/UnlimitedLORE">SeidrStudio/UnlimitedLORE</a></td>
+            <td style="padding:6px 10px">LORE целиком: сервер, веб-интерфейс, подключение для ИИ-агентов (MCP), установщик и инструмент переноса данных. Отсюда же выпуски с дистрибутивами.</td></tr>
+        <tr><td style="padding:6px 10px 6px 0;white-space:nowrap"><a href="https://git.seidrstudio.pro/SeidrStudio/miniLORE">SeidrStudio/miniLORE</a></td>
+            <td style="padding:6px 10px">Телефон: приложение для Android и шлюз машины, который показывает приложению живые сессии агентов. Здесь же выпуски шлюза.</td></tr>
+        <tr><td style="padding:6px 10px 6px 0;white-space:nowrap"><a href="https://git.seidrstudio.pro/SeidrStudio/miniLore_serverside">SeidrStudio/miniLore_serverside</a></td>
+            <td style="padding:6px 10px">Сервер miniLORE — связывает телефон, шлюзы машин и LORE. Ставится вместе с LORE по выбору.</td></tr>
+        <tr><td style="padding:6px 10px 6px 0;white-space:nowrap"><a href="https://git.seidrstudio.pro/SeidrStudio/lorekit">SeidrStudio/lorekit</a></td>
+            <td style="padding:6px 10px">Общие части веб-интерфейса: таблицы, паспорта, графики, плитки показаний, темы. То, из чего собран интерфейс LORE.</td></tr>
+        <tr><td style="padding:6px 10px 6px 0;white-space:nowrap"><a href="https://git.seidrstudio.pro/SeidrStudio/forgejo-mcp">SeidrStudio/forgejo-mcp</a></td>
+            <td style="padding:6px 10px">Мост между ИИ-агентом и git-хостом: позволяет агенту читать и вести PR, выпуски и журналы сборок. Форк, лицензия MIT.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin:26px 0 8px">Дистрибутивы — что скачивать</h3>
+    <table style="border-collapse:collapse;width:100%;max-width:980px">
+      <thead><tr style="text-align:left;opacity:.7">
+        <th style="padding:6px 10px 6px 0">файл</th><th style="padding:6px 10px">зачем</th><th style="padding:6px 10px;white-space:nowrap">где</th>
+      </tr></thead>
+      <tbody>
+        <tr><td style="padding:6px 10px 6px 0"><b>lore-migrate-linux-x64</b><br><span style="opacity:.7">119 МБ</span></td>
+            <td style="padding:6px 10px">Установщик LORE одним файлом: окно по шагам, перенос данных, сам пакет внутри. Node внутри — доустанавливать нечего. Linux x86-64, Docker, ~5 ГБ места.</td>
+            <td style="padding:6px 10px"><a href="https://git.seidrstudio.pro/SeidrStudio/UnlimitedLORE/releases">выпуск LORE</a></td></tr>
+        <tr><td style="padding:6px 10px 6px 0"><b>lore-installer-&lt;версия&gt;.tar.gz</b><br><span style="opacity:.7">~350 КБ</span></td>
+            <td style="padding:6px 10px">Лёгкий пакет для Linux: сценарий установки, compose, пример настроек, README и инструмент переноса.</td>
+            <td style="padding:6px 10px"><a href="https://git.seidrstudio.pro/SeidrStudio/UnlimitedLORE/releases">выпуск LORE</a></td></tr>
+        <tr><td style="padding:6px 10px 6px 0"><b>lore-installer-&lt;версия&gt;-windows.zip</b><br><span style="opacity:.7">~350 КБ</span></td>
+            <td style="padding:6px 10px">То же для Windows: распаковывается без лишних программ, запускается из PowerShell. Нужен Docker Desktop в режиме Linux-контейнеров.</td>
+            <td style="padding:6px 10px"><a href="https://git.seidrstudio.pro/SeidrStudio/UnlimitedLORE/releases">выпуск LORE</a></td></tr>
+        <tr><td style="padding:6px 10px 6px 0"><b>lore-src-&lt;версия&gt;.tar.gz</b><br><span style="opacity:.7">~15 МБ</span></td>
+            <td style="padding:6px 10px">Исходный код: нужен, если хотите собрать образы у себя, без нашего реестра.</td>
+            <td style="padding:6px 10px"><a href="https://git.seidrstudio.pro/SeidrStudio/UnlimitedLORE/releases">выпуск LORE</a></td></tr>
+        <tr><td style="padding:6px 10px 6px 0"><b>SHA256SUMS</b></td>
+            <td style="padding:6px 10px">Подписи всех файлов выпуска — сверьте перед установкой: <code>sha256sum -c SHA256SUMS</code>.</td>
+            <td style="padding:6px 10px"><a href="https://git.seidrstudio.pro/SeidrStudio/UnlimitedLORE/releases">выпуск LORE</a></td></tr>
+                <tr><td style="padding:6px 10px 6px 0"><b>miniLORE-f1.12.86.apk</b><br><span style="opacity:.7">75 МБ</span></td>
+            <td style="padding:6px 10px">Приложение для телефона (Android). Ставится вручную: разрешите установку из этого источника. Версии для iOS нет.</td>
+            <td style="padding:6px 10px"><a href="https://git.seidrstudio.pro/SeidrStudio/miniLORE/releases/tag/v1.12.86">выпуск v1.12.86</a></td></tr>
+<tr><td style="padding:6px 10px 6px 0"><b>miniLORE-link-setup-0.3.81.exe</b><br><b>minilore-link_0.3.81_amd64.deb</b><br><b>minilore-link-linux-0.3.81.tar.gz</b></td>
+            <td style="padding:6px 10px">Шлюз машины: показывает телефону живые сессии агентов этой машины. Ставится на каждую машину, где работают агенты.</td>
+            <td style="padding:6px 10px"><a href="https://git.seidrstudio.pro/SeidrStudio/miniLORE/releases/tag/link-v0.3.81">выпуск link-v0.3.81</a></td></tr>
+      </tbody>
+    </table>
+
+    <p style="margin:18px 0 0;opacity:.8;max-width:70ch"><b>Порядок установки:</b> скачать установщик LORE → запустить и пройти окно → поставить шлюз на свою машину → (по выбору) включить сервер miniLORE в том же окне и поставить приложение на телефон.</p>
+    <p style="margin:10px 0 0;opacity:.7;max-width:70ch">Выпуск LORE с дистрибутивами публикуется на странице выпусков репозитория <a href="https://git.seidrstudio.pro/SeidrStudio/UnlimitedLORE/releases">SeidrStudio/UnlimitedLORE</a>. Приложение для Android выпускается отдельно, в репозитории miniLORE; версии для iOS нет.</p>
+  </section>

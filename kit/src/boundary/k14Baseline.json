@@ -1,7 +1,0 @@
-{
-  "_about": "Эталон сторожа K-14 (k14Boundary.test.ts): известный долг предметности LORE в kit на 11.11.2026 после выноса news/activity (SPRINT_UXR_S7B_ADMIN/S7B-27). Не разрешение, а перечень к разбору в SPRINT_UXR_S7B_ADMIN/S7B-23. Новая строка сюда — только с причиной и задачей; вынесли — строку убрать (сторож краснеет на устаревшую).",
-  "files": {
-    "src/auth/oidc.ts": { "markers": ["client_id"], "why": "OIDC-параметр протокола client_id — стандарт, не предметность; оставлен (S7B-23_2)" },
-    "src/core/validate.ts": { "markers": ["ready_for_deploy"], "why": "имя токена темы --st-ready_for_deploy в перечне KIT_COLOR_TOKENS (сверка с seidr.css). Цвет — тема kit; переименование токена задевает цвета статусов в модели сервера (shared/model) — зона модели, отдельной задачей (S7B-23_2)" }
-  }
-}

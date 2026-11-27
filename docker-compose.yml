@@ -4,7 +4,7 @@ services:
   # #22), so a future Dali/Heimdall S3 rollout can reuse the same env-var
   # shape even though no service currently runs this in the monorepo.
   minio:
-    image: minio/minio:latest
+    image: pgsty/silo:RELEASE.2026-11-12T00-00-00Z
     command: server /data --console-address ":9001"
     # unless-stopped, а НЕ always: при снятии бэкапов контейнеры останавливают
     # намеренно, и always поднял бы их обратно посреди снимка, испортив его.
@@ -30,8 +30,8 @@ services:
   # готовом хранилище ничего не меняет и не падает.
   minio-init:
     # PL-04 (08.11.2026): образа minio/mc больше нет ни на Docker Hub, ни на
-    # Quay — клиент mc той же версии лежит внутри minio/minio (/usr/bin/mc).
-    image: minio/minio:latest
+    # Quay — клиент mc лежит внутри образа сервера (/usr/bin/mc); с 27.11 сервер — Silo (D-2026-S3-MINIO-TO-SILO).
+    image: pgsty/silo:RELEASE.2026-11-12T00-00-00Z
     depends_on:
       - minio
     restart: "no"
@@ -181,6 +181,8 @@ services:
       # (LORE_VOLVA_EMBED_SECRET) бэкенд берёт через SecretProvider — env или Infisical.
       # Пусто → /lore/embed/volva/* отвечает 503 «не настроено».
       - LORE_VOLVA_EMBED_SITE_URL=${LORE_VOLVA_EMBED_SITE_URL:-}
+      # EMB-L6: издатель подписи ES256 (claim iss). Пусто — ES256 не включается, встройка остаётся на HS256.
+      - LORE_VOLVA_EMBED_ISSUER=${LORE_VOLVA_EMBED_ISSUER:-}
       # LINKS-VIEW-HOLDER: адрес сервера miniLORE для читателя «держателей» записи. Пусто → not_configured.
       # Препрод: http://minilore-srv-preprod:8080 (общая сеть headscale-net; задаётся в lore-cd.yml).
       - lore.minilore.url=${LORE_MINILORE_URL:-}
@@ -406,4 +408,3 @@ services:
 
 volumes:
   lore-minio-data:
-

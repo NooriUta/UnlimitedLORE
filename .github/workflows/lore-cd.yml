@@ -121,6 +121,8 @@ jobs:
       LORE_SECRETS_PROVIDER: infisical
       # SPRINT_VIZ_EMBED/VE-2: адрес Völva для подписи встройки (ключ — из Infisical, LORE_VOLVA_EMBED_SECRET).
       LORE_VOLVA_EMBED_SITE_URL: https://volva.odal.seidrstudio.pro
+      # SPRINT_VIZ_EMBED/EMB-L6: издатель подписи ES256 препрода — ровно то, что принимает стенд Völva (без «/»).
+      LORE_VOLVA_EMBED_ISSUER: https://preprod.lore.odal.seidrstudio.pro
       # LINKS-VIEW-HOLDER: сервер miniLORE препрода по общей сети headscale-net (проба 16.11: /q/health 200).
       LORE_MINILORE_URL: http://minilore-srv-preprod:8080
       # Токен читателя miniLORE — тот же адрес, что был умолчанием в коде до SELF-PROVISION-STANDALONE.
@@ -391,6 +393,7 @@ jobs:
       # той же команде: упавший v2 должен быть виден как упавший v2.
       - name: Build frontend image (v2, lore-app-next)
         if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend_next == 'true'
+        # K5-PACKAGE-DELIVERY: @seidr/kit — через npm-прокси kkRepo (web-next/.npmrc), без ключа.
         run: bash .github/scripts/compose-build-retry.sh lore-app-next
 
       # AO-MCP-HOSTED (владелица 19.11.2026: «мне надоело локально mcp пересобирать»):

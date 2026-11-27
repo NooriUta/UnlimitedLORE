@@ -1,16 +1,17 @@
 // @vitest-environment jsdom
 // SPRINT_UXR_S4_UI_SHELL_LISTS/S4-00e — «/kit vs голый HTML».
-// Голый HTML (kit/demo/seidr-bare.html — снимок, его держит
-// kit/src/styles/bare-html.test.tsx) на одном seidr.css обязан показывать всё,
-// что показывает витрина /kit: каждый класс sk-…, отрисованный на /kit, есть и
-// в снимке. И наоборот по слою: CSS web-next не определяет классы kit и не
-// заводит своих токенов — вид элементов и тема живут ТОЛЬКО в seidr.css.
+// Голый HTML (demo/seidr-bare.html) и его снимок живут в репозитории kit (AIDA/lorekit,
+// bare-html.test.tsx) — в пакет он не входит. Здесь, на стороне LORE, сверяется то, что
+// видит потребитель: каждый класс sk-…, отрисованный на витрине /kit, описан в seidr.css
+// установленного пакета (K5-PACKAGE-DELIVERY). И по слою: CSS web-next не определяет
+// классы kit и не заводит своих токенов — вид элементов и тема живут ТОЛЬКО в seidr.css.
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { registerGameIcons } from '@seidr/kit';
+import { KIT_CSS } from '../test/kitPaths';
 
 vi.mock('mermaid', () => ({
   default: { registerLayoutLoaders: vi.fn(), initialize: vi.fn(), render: vi.fn(async () => ({ svg: '<svg></svg>' })) },
@@ -21,9 +22,11 @@ vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
 
 import KitPage from './KitPage';
 
-// vitest запускается из web-next/ (локально и в CI); kit — соседний каталог.
+// vitest запускается из web-next/ (локально и в CI).
 const WEB = process.cwd();
-const BARE = readFileSync(resolve(WEB, '../kit/demo/seidr-bare.html'), 'utf8');
+const KIT_CSS_TEXT = readFileSync(KIT_CSS, 'utf8');
+/** Классы sk-…, которые упоминает CSS-слой kit (в селекторах). */
+const cssClasses = (css: string) => new Set([...css.matchAll(/\.(sk-[\w-]+)/g)].map(m => m[1]));
 
 function skClasses(html: string): Set<string> {
   const out = new Set<string>();
@@ -46,19 +49,15 @@ beforeAll(() => {
 });
 
 describe('S4-00e · витрина /kit и голый HTML — один CSS-слой', () => {
-  it('каждый класс kit, отрисованный на /kit, есть в снимке голого HTML', async () => {
+  it('каждый класс kit, отрисованный на /kit, описан в seidr.css пакета', async () => {
     const { container } = render(<KitPage />);
     await waitFor(() => expect(container.querySelector('.sk-md .ProseMirror')).toBeTruthy());
     const onKit = skClasses(container.innerHTML);
-    const onBare = skClasses(BARE);
+    const inCss = cssClasses(KIT_CSS_TEXT);
     // Положительный контроль: обе стороны непусты и пересекаются по базовым.
     expect(onKit.size).toBeGreaterThan(20);
-    expect([...onBare]).toEqual(expect.arrayContaining(['sk-pill', 'sk-state--error', 'sk-frame']));
-    expect([...onKit].filter(c => !onBare.has(c)).sort()).toEqual([]);
-  });
-
-  it('голый HTML подключает seidr.css kit, а не копию', () => {
-    expect(BARE).toMatch(/<link rel="stylesheet" href="\.\.\/src\/styles\/seidr\.css">/);
+    expect([...inCss]).toEqual(expect.arrayContaining(['sk-pill', 'sk-state--error', 'sk-frame']));
+    expect([...onKit].filter(c => !inCss.has(c)).sort()).toEqual([]);
   });
 
   it('CSS web-next — только раскладка: без правил для sk-… и без своих токенов', () => {

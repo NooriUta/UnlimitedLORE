@@ -1,0 +1,140 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Новости и аналитика как объекты: как это устроено у эталонов · LORE UX · 08.11.2026</title><link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"><style>:root{--bg0:#f5f3ee;--bg1:#faf8f3;--bg3:#eee9df;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#6f6249;--acc:#8a560a;--wrn:#a06010;--dng:#c03030;--suc:#3d7a38;--inf:#3a7060;--font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:14px/1.55 var(--font)}.wrap{max-width:1000px;margin:0 auto;padding:18px 12px 60px}h1{font:800 21px/1.25 var(--head);margin:0 0 6px;color:var(--acc)}h2{font:800 17px/1.3 var(--head);margin:28px 0 8px}h3{font:700 13px/1.3 var(--font);margin:0 0 4px}.muted{color:var(--t2);font-size:11px}.mono{font-family:var(--mono);font-size:.9em}.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin:10px 0}.tldr{border-left:3px solid var(--acc)}.good{border-left:3px solid var(--suc)}.warn{border-left:3px solid var(--dng)}.card ul,.card ol{margin:6px 0 0;padding-left:20px}.card li{margin:5px 0;font-size:12.5px}.card p{margin:4px 0;font-size:12.5px}table{width:100%;border-collapse:collapse;font-size:12.5px}th{font:700 10px/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px;border-bottom:1px solid var(--bd);background:var(--bg3)}td{padding:7px 6px;border-bottom:1px solid var(--bd);vertical-align:top}.tw{overflow-x:auto}.s{font:700 10px/1.4 var(--font);padding:2px 7px;border-radius:999px;white-space:nowrap;text-transform:uppercase}.b{background:#f6dcd8;color:var(--dng)}.h{background:#f6e3d0;color:var(--wrn)}.m{background:var(--bg3);color:var(--t2)}.ok{background:#dcebd8;color:var(--suc)}.who{font:600 10px/1 var(--mono);color:var(--inf);white-space:nowrap}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}.grid .card{margin:0}a{color:var(--acc)}</style></head><body><div class="wrap">
+<h1>Новости и аналитика как отдельные объекты: как это устроено у эталонов</h1>
+<div class="muted">08.11.2026 · материал к открытому вопросу владелицы: новости и аналитика как отдельные объекты · решение не предлагается, только факты и наблюдения · метки: <span class="s ok">док</span> — подтверждено документацией (ссылка в «Источниках»), <span class="s h">по знанию продукта</span> — не перепроверено в этом заходе, <span class="s b">UNCONFIRMED</span> — сомнительно</div>
+
+<h2>TL;DR</h2>
+<div class="card tldr"><ul>
+<li><b>Новости у лидеров — хранимый объект, а не вычисляемая лента.</b> Linear (обновление проекта/инициативы), Redmine и OpenProject (News), Confluence (блог-пост), Backstage (announcement), GitHub (release) хранят запись с id, автором, датой, телом и комментариями. Вычисляемые ленты (Jira activity stream, вкладка «Updates» в Notion, Inbox в Linear) существуют <i>рядом</i> и показывают события, но объектами не являются.</li>
+<li><b>Новость почти всегда привязана к контейнеру:</b> проекту, инициативе, пространству или репозиторию. Самостоятельная «новость ни о чём» встречается только у Backstage (там есть категории и теги).</li>
+<li><b>Аналитика у BI-инструментов — объект с жизненным циклом</b> (Metabase: вопрос, дашборд, модель, метрика; Grafana: дашборд и library panel). У трекеров аналитика долго была видом над набором задач (Linear Insights, Notion Chart view), но теперь и они вводят сохраняемый объект «дашборд» с владельцем и видимостью (Linear Dashboards, Plane Dashboards, Jira Dashboards).</li>
+<li><b>Типичный набор полей объекта:</b> id, владелец/автор, область (проект/команда/личное), видимость, тело/конфигурация, история версий, комментарии/реакции, подписка (уведомления, рассылка, алерты), ссылка (URL) и встраивание.</li>
+<li><b>В навигации</b> новости обычно живут вкладкой внутри проекта и дублируются агрегатом на главной. Дашборды — отдельным разделом с папками или коллекциями.</li>
+</ul></div>
+
+<h2>A. Новости, активность, обновления</h2>
+<div class="grid">
+<div class="card good"><h3>Linear: Project / Initiative updates <span class="s ok">док</span></h3>
+<p><b>Объект.</b> Поля: здоровье (On track / At risk / Off track), автор (первым пишет лид, дальше любой участник), rich-text тело с файлами, комментарии (уведомление в Inbox, двусторонняя синхронизация со Slack), эмодзи-реакции.</p>
+<p><b>Где живёт.</b> Последнее обновление показано на Overview проекта или инициативы. Вкладка Updates хранит всю историю вперемешку с изменениями свойств (срок, участники). Обновление инициативы подтягивает обновления подпроектов. Можно включить приход в Inbox.</p>
+<p><b>Жизненный цикл.</b> Напоминания по расписанию лиду, статус «Update Missing», если обновление просрочено. Публикация в Slack-канал.</p>
+<p><b>Связь с работой.</b> Обновление принадлежит проекту или инициативе. Явных ссылок на задачи в модели нет, только упоминания в тексте <span class="s h">по знанию продукта</span>.</p></div>
+
+<div class="card"><h3>Linear: Inbox <span class="s h">по знанию продукта</span></h3>
+<p><b>Вычисляемая лента уведомлений</b> по подпискам: назначения, упоминания, комментарии, обновления проектов. У элемента есть состояние «прочитано / отложено», но это уведомление <i>о</i> событии, а не самостоятельный контент.</p></div>
+
+<div class="card good"><h3>Redmine: модуль News <span class="s ok">док</span></h3>
+<p><b>Объект.</b> Поля: заголовок, краткое описание (summary), полное описание. Принадлежит проекту. Права на создание, правку и удаление задаются ролями.</p>
+<p><b>Где живёт.</b> Вкладка News в меню проекта (рядом с Issues и Wiki). Summary выводится в блоке «Latest news» на Overview проекта.</p>
+<p>Комментарии к новости, уведомление по почте, Atom-лента <span class="s h">по знанию продукта</span> (на странице доков это не описано).</p></div>
+
+<div class="card good"><h3>OpenProject: модуль News <span class="s ok">док</span></h3>
+<p><b>Объект.</b> Заголовок, summary, описание с форматированием и макросами (например, встроенная таблица work packages). Комментарии (новые сверху). <b>Watch / Unwatch</b>: письмо при изменении или новом комментарии.</p>
+<p><b>Где живёт.</b> Пункт News в левом меню проекта, обратный хронологический порядок. Виджет «последние новости» на домашней странице проекта. Агрегат по всем проектам на главной, клик ведёт в проект.</p>
+<p><b>Связь с работой:</b> через макросы в теле, отдельных рёбер нет.</p></div>
+
+<div class="card"><h3>Jira: activity stream <span class="s h">по знанию продукта</span></h3>
+<p><b>Вычисляемая лента</b> событий по задачам, проектам и пользователям (гаджет на дашборде, вкладка в проекте). Своего тела, автора-«публикатора» и комментариев нет.</p></div>
+
+<div class="card good"><h3>Confluence: блог-посты <span class="s ok">док</span> (частично)</h3>
+<p><b>Объект</b> в пространстве (space), датированный. Комментарии, лайки <span class="s h">по знанию продукта</span>. Подписка (watch) на страницу, блог-пост или пространство: письмо при изменении, комментарии, вложении. Есть отдельный режим «только новые блог-посты в этом пространстве» (без правок и комментариев). Именно этим режимом пользуются для анонсов.</p>
+<p><b>Связь с Jira:</b> смарт-ссылки и макросы в теле <span class="s h">по знанию продукта</span>.</p></div>
+
+<div class="card"><h3>Notion: «Updates» и история страницы <span class="s h">по знанию продукта</span></h3>
+<p>Панель Updates (inbox) и история страницы — <b>вычисляемые</b> по правкам, упоминаниям и комментариям. Отдельного типа «новость» нет. Анонсы делают обычной страницей или записью в базе «News» с полями, которые заводит сама команда.</p></div>
+
+<div class="card"><h3>Plane <span class="s ok">док</span> (частично)</h3>
+<p>Pages: проектные, вики и страницы teamspace, с версиями, комментариями и встроенными задачами. <b>Отдельного объекта «обновление проекта» в просмотренных доках не найдено</b>. Обновления проекта (updates) с health есть в продукте <span class="s b">UNCONFIRMED</span>.</p></div>
+
+<div class="card good"><h3>Backstage: плагин announcements <span class="s ok">док</span> (частично)</h3>
+<p><b>Объект</b> в собственной БД плагина: announcement, плюс отдельные сущности category и tag. Есть REST API, интеграция с permissions, поиском (анонсы попадают в общий поиск), событиями и сигналами. Уведомление при создании отключено по умолчанию и включается флагом <span class="mono">sendNotification</span>. Аудит создания, правки и удаления.</p>
+<p><b>Где живёт.</b> Отдельная страница <span class="mono">/announcements</span>, карточка на главной, баннер последнего анонса, админ-портал.</p>
+<p>Поля (title, excerpt, body, publisher, active, start date) <span class="s h">по знанию продукта</span>: в прочитанном README не перечислены.</p></div>
+
+<div class="card good"><h3>GitHub: Releases и Discussions <span class="s h">по знанию продукта</span></h3>
+<p><b>Release</b> — объект репозитория: тег, автор, дата, markdown-тело, ассеты, реакции, статусы draft / pre-release / latest, опционально связанная Discussion для комментариев. Подписка через Watch → Releases only. <b>Discussion</b> — тред с категориями (в том числе Announcements, куда пишут только мейнтейнеры).</p></div>
+
+<div class="card"><h3>Obsidian, Logseq, Tana <span class="s h">по знанию продукта</span></h3>
+<p>Своего типа «новость» нет. Журнал — это daily notes (страница на дату). Ленты собирают запросами (Dataview, Logseq queries, Tana live search по супертегу <span class="mono">#update</span>). То есть хранится заметка, а лента вычисляется.</p></div>
+</div>
+
+<h2>B. Аналитика</h2>
+<div class="grid">
+<div class="card good"><h3>Metabase <span class="s ok">док</span></h3>
+<p><b>Объекты:</b> question (запрос плюс визуализация), dashboard, model, metric. Все лежат в <b>коллекциях</b>, у которых свои права. История: до 15 версий на объект с откатом. Новая версия пишется при сохранении, переносе, откате, удалении в корзину и верификации. <b>Верификация</b> контента (знак «проверено») в Pro/Enterprise.</p>
+<p><b>Подписки:</b> алерты на вопрос (по расписанию или по условию, почта и Slack), рассылка дашборда. <b>Встраивание:</b> публичные ссылки, guest embedding. Remote Sync (версионирование в git) в Pro/Enterprise.</p></div>
+
+<div class="card good"><h3>Grafana <span class="s ok">док</span> (частично)</h3>
+<p><b>Dashboard</b> — объект в папке, с RBAC. uid, история версий и JSON-модель <span class="s h">по знанию продукта</span>. <b>Library panel</b> — переиспользуемая панель: правка расходится по всем дашбордам, видно, где она используется, можно отвязать. Хранится в папке, права через RBAC.</p>
+<p><b>Annotation</b> — хранимое событие на графике: время или интервал, текст со ссылками, теги, привязка к дашборду. Создаётся также через HTTP API. Тег-запрос собирает аннотации со всей организации. Это ближе всего к схеме «новость, наложенная на метрику».</p></div>
+
+<div class="card good"><h3>Linear: Insights → Dashboards <span class="s ok">док</span></h3>
+<p><b>Insights — вид:</b> панель справа над задачами текущего представления (custom view, команда, проект, цикл). Делятся ссылкой или CSV, сохранения как объекта нет.</p>
+<p><b>Dashboards (Enterprise) — объект:</b> один владелец (можно сменить), область видимости: workspace, команда или личный. Виджеты — это insights (график, число, таблица). Одно insight может стоять на нескольких дашбордах, добавляется из меню view. Живут в Views → вкладка Dashboards.</p></div>
+
+<div class="card"><h3>Jira: дашборды, гаджеты, фильтры <span class="s ok">док</span> (сообщество)</h3>
+<p><b>Дашборд и сохранённый фильтр — отдельные объекты</b>, у каждого владелец и свои права шаринга. Гаджет берёт данные из фильтра, поэтому для чужого просмотра надо делиться <i>и</i> дашбордом, <i>и</i> фильтром (частая проблема). Шаринг требует глобального права Create Shared Objects.</p></div>
+
+<div class="card"><h3>Notion: Chart view и Dashboard view <span class="s ok">док</span> (частично)</h3>
+<p><b>Chart — вид базы данных</b> (вкладка рядом с table/board): bar, line, donut, number. Править записи из чарта нельзя. Дашборд — либо страница с несколькими встроенными видами, либо новый Dashboard view с виджетами. Владельца и подписки у чарта как объекта нет: всё наследуется от страницы <span class="s h">по знанию продукта</span>.</p></div>
+
+<div class="card good"><h3>Plane: Dashboards <span class="s ok">док</span></h3>
+<p><b>Объект уровня workspace:</b> холст виджетов, источник — выбранный набор проектов плюс базовый фильтр. Видимость: public (все в workspace) или private (только автор, тариф Business). Отдельно есть встроенная аналитика проекта как вид и аналитика страниц.</p></div>
+
+<div class="card"><h3>Port и Cortex: scorecards <span class="s ok">док</span> (Port) / <span class="s h">по знанию продукта</span> (Cortex)</h3>
+<p><b>Scorecard — объект-правило:</b> набор правил с уровнями (Bronze/Silver/Gold, A–F), считается по сущностям каталога и показывается вкладкой на странице сервиса. В Port scorecard задаётся на blueprint, дашборды — отдельные страницы с виджетами <span class="s h">по знанию продукта</span>. В Cortex есть ещё Initiatives (срок и цель по scorecard).</p></div>
+
+<div class="card"><h3>Productboard <span class="s h">по знанию продукта</span></h3>
+<p>Аналитика встроена в объекты (Insights / notes привязаны к фичам, в фиче видна сила спроса) и в сохраняемые роадмапы и вью с шарингом. Отдельного BI-объекта с алертами нет.</p></div>
+</div>
+
+<h2>Сравнение</h2>
+<div class="card tw"><table>
+<tr><th>Инструмент</th><th>Сущность</th><th>Хранимая / вычисл.</th><th>Владелец, автор</th><th>Область</th><th>Комменты, реакции</th><th>Подписка</th><th>История</th><th>Место в навигации</th></tr>
+<tr><td>Linear</td><td>Project/Initiative update</td><td>хранимая</td><td>автор</td><td>проект, инициатива</td><td>да / да</td><td>Inbox, Slack</td><td>лента Updates</td><td>вкладка Updates, Overview</td></tr>
+<tr><td>Redmine</td><td>News</td><td>хранимая</td><td>автор</td><td>проект</td><td>да*</td><td>почта*</td><td>—</td><td>вкладка проекта, Overview</td></tr>
+<tr><td>OpenProject</td><td>News</td><td>хранимая</td><td>автор</td><td>проект (+агрегат)</td><td>да</td><td>Watch</td><td>—</td><td>меню проекта, виджет, главная</td></tr>
+<tr><td>Confluence</td><td>Blog post</td><td>хранимая</td><td>автор</td><td>space</td><td>да / да*</td><td>Watch, «только новые посты»</td><td>версии*</td><td>блог пространства</td></tr>
+<tr><td>Backstage</td><td>Announcement</td><td>хранимая</td><td>publisher*</td><td>категория, теги</td><td>—*</td><td>notifications (опция)</td><td>аудит</td><td>/announcements, баннер, поиск</td></tr>
+<tr><td>GitHub</td><td>Release</td><td>хранимая</td><td>автор</td><td>репозиторий</td><td>через Discussion / да</td><td>Watch → Releases</td><td>правки*</td><td>Releases репо</td></tr>
+<tr><td>Jira / Notion / Linear Inbox</td><td>activity / updates</td><td>вычисляемая</td><td>—</td><td>подписки пользователя</td><td>—</td><td>сама является подпиской</td><td>—</td><td>гаджет, инбокс</td></tr>
+<tr><td>Metabase</td><td>Question, Dashboard, Model, Metric</td><td>хранимая</td><td>создатель</td><td>коллекция</td><td>—</td><td>алерты, рассылки</td><td>15 версий, откат</td><td>коллекции</td></tr>
+<tr><td>Grafana</td><td>Dashboard, Library panel, Annotation</td><td>хранимая</td><td>—*</td><td>папка, организация</td><td>—</td><td>алерты*</td><td>версии*</td><td>Dashboards, папки</td></tr>
+<tr><td>Linear</td><td>Insights → Dashboard</td><td>вид → хранимая</td><td>владелец</td><td>workspace, команда, личный</td><td>—</td><td>—</td><td>—</td><td>Views → Dashboards</td></tr>
+<tr><td>Jira</td><td>Dashboard + Filter</td><td>хранимая</td><td>владелец</td><td>шаринг</td><td>—</td><td>подписка на фильтр*</td><td>—</td><td>Dashboards</td></tr>
+<tr><td>Notion</td><td>Chart / Dashboard view</td><td>вид</td><td>от страницы</td><td>от страницы</td><td>от страницы</td><td>от страницы</td><td>от страницы</td><td>вкладка базы</td></tr>
+<tr><td>Plane</td><td>Dashboard</td><td>хранимая</td><td>автор</td><td>workspace, набор проектов</td><td>—</td><td>—</td><td>—</td><td>Dashboards</td></tr>
+<tr><td>Port / Cortex</td><td>Scorecard</td><td>хранимое правило, вычисляемый счёт</td><td>—*</td><td>каталог, blueprint</td><td>—</td><td>—*</td><td>—*</td><td>вкладка сущности</td></tr>
+</table><div class="muted">* — по знанию продукта, в этом заходе не перепроверено. «—» — в прочитанных доках не найдено (это не доказательство отсутствия).</div></div>
+
+<h2>Наблюдения (нейтрально)</h2>
+<div class="card"><ol>
+<li><b>Два слоя, а не один.</b> Почти везде одновременно есть хранимая «публикация» (update, news, release) и вычисляемая «лента событий» (activity, inbox). Их не смешивают: лента показывает, <i>что произошло</i>, публикация — <i>что автор об этом говорит</i>. Linear вплетает в ленту Updates и то и другое, но визуально различает.</li>
+<li><b>Новость почти всегда «о чём-то».</b> У лидеров у обновления есть контейнер (проект, инициатива, space, репозиторий) и часто структурный сигнал (health у Linear, tag у GitHub Release). Агрегат по всем контейнерам (главная в OpenProject, Inbox в Linear) строится поверх них.</li>
+<li><b>Аналитика дрейфует от вида к объекту.</b> Трекеры начинали с панели над текущим списком (Linear Insights, Notion chart) и добавили сохраняемый «дашборд» с владельцем и видимостью (Linear, Plane, Jira). BI-инструменты (Metabase, Grafana) объектные с самого начала. Плюс у них есть переиспользуемый «атом» (Metabase question, Grafana library panel, Linear insight), который стоит сразу на нескольких дашбордах.</li>
+<li><b>Минимальный набор метаданных, который повторяется:</b> id и стабильный URL, автор или владелец, область (проект, команда, личное), видимость. Для новостей добавляются тело, дата, комментарии, реакции и подписка. Для аналитики — источник или фильтр, история версий, алерты или рассылка и встраивание.</li>
+<li><b>Права наследуются от источника.</b> Jira (фильтр и дашборд шарятся отдельно), Linear (workspace-дашборд не видит приватные команды) и Grafana (тег-аннотации утекают в публичный дашборд) показывают одну ловушку: видимость аналитики зависит от видимости данных под ней.</li>
+<li><b>Поиск и API.</b> Где новость — объект, она попадает в общий поиск и API (Backstage search module, REST). Где это вид, её нельзя найти или процитировать отдельно, только страницу-носитель. Для MCP-доступа это граница между «есть id, можно сослаться» и «есть только экран».</li>
+</ol></div>
+
+<h2>Скриншоты (ссылки, проверено наличие)</h2>
+<div class="card"><ul>
+<li>Backstage announcements: карточка, страница, баннер, админ-портал — в README: <a href="https://github.com/backstage/community-plugins/tree/main/workspaces/announcements">github.com/backstage/community-plugins/…/announcements</a></li>
+</ul><p class="muted">Остальные доки (Linear, Metabase, Grafana, Plane) содержат иллюстрации, но прямые ссылки на картинки в этом заходе не проверялись, поэтому не приводятся.</p></div>
+
+<h2>Источники</h2>
+<div class="card"><ul>
+<li>Linear, Project and initiative updates: <a href="https://linear.app/docs/initiative-and-project-updates">linear.app/docs/initiative-and-project-updates</a></li>
+<li>Linear, Insights: <a href="https://linear.app/docs/insights">linear.app/docs/insights</a> · Dashboards: <a href="https://linear.app/docs/dashboards">linear.app/docs/dashboards</a></li>
+<li>Redmine, News: <a href="https://www.redmine.org/projects/redmine/wiki/RedmineNews">redmine.org/…/RedmineNews</a></li>
+<li>OpenProject, News: <a href="https://www.openproject.org/docs/user-guide/news/">openproject.org/docs/user-guide/news</a></li>
+<li>Confluence, Watch Pages, Spaces and Blogs: <a href="https://confluence.atlassian.com/conf100/watch-pages-spaces-and-blogs-1627457434.html">confluence.atlassian.com/…/watch-pages-spaces-and-blogs</a></li>
+<li>Jira, шаринг дашбордов: <a href="https://community.atlassian.com/learning/lesson/share-dashboards-in-jira">community.atlassian.com/learning/…/share-dashboards-in-jira</a>, <a href="https://community.atlassian.com/forums/Jira-questions/Shared-Dashboard-widgets-aren-t-correctly-displayed/qaq-p/2996887">тред о гаджетах и фильтрах</a></li>
+<li>Notion, Chart view: <a href="https://www.notion.com/help/charts">notion.com/help/charts</a> · гайд: <a href="https://www.notion.com/help/guides/charts-visualize-data-track-progress-in-notion">charts-visualize-data</a></li>
+<li>Plane, Pages: <a href="https://docs.plane.so/core-concepts/pages/overview">docs.plane.so/core-concepts/pages/overview</a> · Dashboards: <a href="https://docs.plane.so/dashboards">docs.plane.so/dashboards</a>, <a href="https://plane.so/dashboards">plane.so/dashboards</a></li>
+<li>Backstage announcements: <a href="https://github.com/backstage/community-plugins/tree/main/workspaces/announcements">workspace README</a>, <a href="https://github.com/backstage/community-plugins/blob/main/workspaces/announcements/plugins/announcements-backend/README.md">backend README</a></li>
+<li>Metabase, Questions: <a href="https://www.metabase.com/docs/latest/questions/start">metabase.com/docs/latest/questions/start</a> · History: <a href="https://www.metabase.com/docs/latest/exploration-and-organization/history">…/history</a></li>
+<li>Grafana, Library panels: <a href="https://grafana.com/docs/grafana/latest/dashboards/build-dashboards/manage-library-panels/">grafana.com/…/manage-library-panels</a> · Annotations: <a href="https://grafana.com/docs/grafana/latest/visualizations/dashboards/build-dashboards/annotate-visualizations/">grafana.com/…/annotate-visualizations</a></li>
+<li>Port, Scorecards: <a href="https://docs.port.io/scorecards/overview">docs.port.io/scorecards/overview</a></li>
+<li>Без первоисточника в этом заходе (по знанию продукта): Linear Inbox, Jira activity stream, Notion Updates, GitHub Releases/Discussions, Obsidian/Logseq/Tana, Cortex, Productboard, Grafana versions/uid, поля Backstage announcement, Plane project updates.</li>
+</ul></div>
+</div></body></html>

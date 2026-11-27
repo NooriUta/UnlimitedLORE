@@ -1,5 +1,4 @@
 import { defineConfig } from 'vitest/config';
-import { defaultClientConditions, defaultServerConditions, searchForWorkspaceRoot } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // LORE v2 (SPRINT_UXR_S3_V2_INFRA/S3-01, D-2026-UXR-V2-FOLDER-V1-FROZEN).
@@ -12,22 +11,12 @@ const bench = process.env.VITE_BENCH_API_URL ?? 'http://localhost:9100';
 
 export default defineConfig({
   plugins: [react()],
-  // Seiðr-kit (../kit, D-2026-UXR-KIT-REACT) подключён ссылкой file:../kit и
-  // разрешается в свой реальный путь. Локально у kit есть свой node_modules
-  // (для его тестов) — без dedupe его импорт `react` взял бы оттуда вторую
-  // копию React, и хуки упали бы «Invalid hook call». @iconify/react (S4-00b) —
-  // peer kit: реестр иконок у него модульный, и вторая копия не видела бы
-  // набор, зарегистрированный приложением.
-  // MD/HTML-элементы kit (@seidr/kit/content, S4-00d) — тоже peer: TipTap и
-  // ProseMirror держат состояние в модуле (две копии @tiptap/pm = «схема из
-  // чужого экземпляра»), а в образе у kit своего node_modules нет вовсе —
-  // импорт из исходников kit обязан разрешаться от web-next.
-  // SPRINT_UXR_S14_KIT5/K5-PACKAGE-DELIVERY: kit стал пакетом со сборкой (dist), а это приложение
-  // живёт в том же репозитории и берёт kit ИСХОДНИКАМИ — по своему условию exports «seidr-source».
-  // Без него вход kit вёл бы в dist, которого в репозитории нет (собирается только в пакет).
-  ssr: { resolve: { conditions: ['seidr-source', ...defaultServerConditions] } },
+  // Seiðr-kit — пакет @seidr/kit из реестра (AIDA/lorekit, SPRINT_UXR_S14_KIT5/K5-PACKAGE-DELIVERY):
+  // собранный dist, вход по обычным условиям exports. Условие «seidr-source» — только для разработки
+  // самого kit: исходников в пакете нет, и потребитель с этим условием получил бы битый вход.
+  // dedupe остаётся: peer-зависимости kit (React, @iconify/react, TipTap/ProseMirror, движки графа)
+  // держат состояние в модуле — две копии дают «Invalid hook call» и «схему из чужого экземпляра».
   resolve: {
-    conditions: ['seidr-source', ...defaultClientConditions],
     dedupe: ['echarts', 
       'react', 'react-dom', '@iconify/react',
       '@tiptap/core', '@tiptap/react', '@tiptap/pm', '@tiptap/starter-kit', '@tiptap/extension-image',
@@ -49,6 +38,11 @@ export default defineConfig({
   test: {
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'e2e/stand/**/*.test.ts'],
     setupFiles: ['src/test/setup.ts'],
+    // K5-PACKAGE-DELIVERY: kit — пакет в node_modules, а vitest такие исполняет мимо себя (externalize).
+    // Тогда vi.mock('mermaid' | движков графа …) в тестах web-next не доходил бы до импортов ВНУТРИ kit,
+    // и одна копия React/TipTap могла бы раздвоиться. Пока kit был исходником ../kit, он шёл через vite
+    // сам — inline сохраняет то же поведение для пакета.
+    server: { deps: { inline: ['@seidr/kit'] } },
     env: { VITE_LORE_AUTH_ENABLED: 'false' },
     // CI-WEBNEXT-ISOLATION (14.11.2026): при нехватке CPU (контейнер --cpus 1.5) полный прогон
     // красный 2 из 3 — «Test timed out in 5000ms» у axe по витрине и тяжёлых отрисовок; при
@@ -62,8 +56,6 @@ export default defineConfig({
   server: {
     // v1 в dev на :4400 — v2 рядом, а не вместо.
     port: 4401,
-    // Исходники kit лежат вне web-next — dev-сервер должен их отдавать.
-    fs: { allow: [searchForWorkspaceRoot(process.cwd()), '../kit'] },
     proxy: {
       '/lore/': { target: api, changeOrigin: true },
       '/bench/': { target: bench, changeOrigin: true },

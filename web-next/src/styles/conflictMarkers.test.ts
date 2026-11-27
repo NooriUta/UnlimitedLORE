@@ -10,7 +10,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { extname, join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const ROOTS = [join(__dirname, '..'), join(__dirname, '..', '..', '..', 'kit', 'src')];
+// K5-PACKAGE-DELIVERY: kit/ из репозитория ушёл в AIDA/lorekit — его исходники здесь не лежат,
+// маркеры в них ловит сборка и CI самого kit.
+const ROOTS = [join(__dirname, '..')];
 const EXT = new Set(['.ts', '.tsx', '.css', '.json', '.html', '.md']);
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -29,11 +31,10 @@ const files = ROOTS.flatMap(r => walk(r));
 const MARKER = new RegExp('^(' + '<'.repeat(7) + '|' + '>'.repeat(7) + ')( |\\r?$)|^' + '='.repeat(7) + '\\r?$');
 
 describe('нет маркеров конфликта слияния', () => {
-  it('сторож не слепой — видит App.css с содержимым и исходники kit', () => {
+  it('сторож не слепой — видит App.css с содержимым', () => {
     const app = files.find(p => p.endsWith(join('src', 'App.css')));
     expect(app).toBeDefined();
     expect(readFileSync(app!, 'utf8').length).toBeGreaterThan(1000);
-    expect(files.some(p => p.includes(join('kit', 'src')))).toBe(true);
   });
 
   it('ни в одном исходнике', () => {

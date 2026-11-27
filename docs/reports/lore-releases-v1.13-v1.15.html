@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LORE · обзор релизов v1.13 – v1.15</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Seiðr · светлая тема. Цвета и размеры — токенами. */
+  :root {
+    --bg: #faf6ee; --bg2: #ffffff; --bg3: #f3ecdf;
+    --bd: #e4d9c6; --bdh: #cdbb9c;
+    --t1: #241c12; --t2: #5a4c39; --t3: #8a7a62;
+    --acc: #b4690e; --acc-soft: #f6e3c4;
+    --suc: #2f7a45; --suc-soft: #e1f1e5;
+    --inf: #2c6a96; --inf-soft: #e0edf6;
+    --wrn: #9a6a00; --wrn-soft: #f7ecd0;
+    --dng: #a63d2f; --dng-soft: #f6e0dc;
+    --fs-2xs: 10px; --fs-xs: 11px; --fs-sm: 12.5px; --fs-md: 14px; --fs-lg: 17px; --fs-xl: 22px; --fs-2xl: 30px;
+    --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --sans: 'Manrope', system-ui, sans-serif;
+    --head: 'Unbounded', 'Manrope', sans-serif;
+    --r: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--t1); font: var(--fs-md)/1.65 var(--sans); }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 28px 16px 60px; }
+  a { color: var(--acc); text-decoration: none; border-bottom: 1px solid var(--acc-soft); }
+  a:hover { border-bottom-color: var(--acc); }
+  code { font-family: var(--mono); font-size: .9em; background: var(--bg3); padding: 1px 5px; border-radius: 4px; color: var(--t1); word-break: break-word; }
+  h1 { font: 800 var(--fs-2xl)/1.15 var(--head); margin: 0 0 6px; letter-spacing: -.01em; }
+  .sub { color: var(--t2); margin: 0 0 22px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 0 0 18px; }
+  .kpi { background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r); padding: 12px 14px; }
+  .kpi b { display: block; font: 800 var(--fs-xl)/1.1 var(--head); color: var(--acc); }
+  .kpi span { font-size: var(--fs-xs); color: var(--t3); text-transform: uppercase; letter-spacing: .08em; }
+  .note { background: var(--inf-soft); border: 1px solid var(--bd); border-left: 3px solid var(--inf); border-radius: var(--r); padding: 10px 14px; font-size: var(--fs-sm); color: var(--t2); margin: 0 0 18px; }
+  .story { background: var(--bg2); border: 1px solid var(--bd); border-radius: 14px; padding: 16px 20px; margin: 0 0 22px; }
+  .story h2 { font: 800 var(--fs-lg)/1.2 var(--head); margin: 0 0 8px; }
+  .story p { margin: 0 0 8px; }
+  .story ul { margin: 0; }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 26px; }
+  nav.toc a { border: 1px solid var(--bdh); border-radius: 999px; padding: 4px 12px; font: 600 var(--fs-sm) var(--mono); background: var(--bg2); }
+  section.rel { margin: 0 0 34px; }
+  .relhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin: 0 0 4px; padding-bottom: 8px; border-bottom: 2px solid var(--acc-soft); }
+  .tag { font: 800 var(--fs-2xl)/1 var(--head); color: var(--acc); }
+  .pill { display: inline-block; border-radius: 999px; padding: 2px 9px; font: 600 var(--fs-2xs)/1.6 var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+  .p-date { background: var(--bg3); color: var(--t2); }
+  .p-minor { background: var(--acc-soft); color: var(--acc); }
+  .p-patch { background: var(--suc-soft); color: var(--suc); }
+  .p-prs { background: var(--inf-soft); color: var(--inf); }
+  .reltitle { font-weight: 700; font-size: var(--fs-lg); margin: 10px 0 4px; }
+  .lead { color: var(--t2); margin: 0 0 14px; }
+  h3 { font: 700 var(--fs-xs)/1 var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--t3); margin: 22px 0 10px; }
+  .card { background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r); padding: 14px 16px; margin: 0 0 10px; }
+  .card h4 { font-size: var(--fs-md); margin: 0 0 8px; }
+  .row { display: grid; grid-template-columns: 96px 1fr; gap: 8px; margin: 5px 0; font-size: var(--fs-sm); }
+  .row > b { font: 600 var(--fs-2xs)/1.9 var(--mono); text-transform: uppercase; letter-spacing: .08em; }
+  .was > b { color: var(--dng); } .now > b { color: var(--suc); } .why > b { color: var(--inf); } .how > b { color: var(--acc); }
+  .card ul { margin: 2px 0 0; padding-left: 18px; }
+  .card li { margin: 3px 0; }
+  li::marker { color: var(--acc); }
+  .refs { font: var(--fs-xs) var(--mono); color: var(--t3); margin-top: 8px; }
+  .refs a { font-weight: 600; }
+  .tech { background: var(--bg2); border: 1px solid var(--bd); border-radius: var(--r); padding: 12px 16px; }
+  .tech table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+  .tech th { text-align: left; font: 600 var(--fs-2xs) var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--t3); padding: 6px 8px; border-bottom: 1px solid var(--bd); }
+  .tech td { padding: 6px 8px; border-bottom: 1px solid var(--bg3); vertical-align: top; }
+  .tech td:first-child { font-family: var(--mono); font-weight: 600; }
+  .sev { font: 600 var(--fs-2xs) var(--mono); padding: 1px 6px; border-radius: 999px; }
+  .sev-c { background: var(--dng-soft); color: var(--dng); } .sev-h { background: var(--wrn-soft); color: var(--wrn); }
+  .mig { background: var(--wrn-soft); border-radius: var(--r); padding: 10px 14px; font-size: var(--fs-sm); margin: 10px 0; }
+  .mig ul { margin: 4px 0 0; padding-left: 18px; }
+  .skipped { border: 1px dashed var(--bdh); border-radius: var(--r); padding: 12px 16px; color: var(--t3); font-size: var(--fs-sm); background: var(--bg2); }
+  .glossary { font-size: var(--fs-sm); color: var(--t2); }
+  .glossary dt { font-weight: 700; color: var(--t1); margin-top: 6px; }
+  .glossary dd { margin: 0 0 4px 0; }
+  footer { color: var(--t3); font-size: var(--fs-xs); margin-top: 30px; border-top: 1px solid var(--bd); padding-top: 12px; }
+  @media (max-width: 560px) { .row { grid-template-columns: 1fr; gap: 0; } .row > b { line-height: 1.4; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>LORE · обзор релизов v1.13 – v1.15</h1>
+<p class="sub">Период: 28 октября – 5 ноября 2026 года. Для каждого изменения — исходная проблема, принятое решение и его результат.</p>
+
+<div class="kpis">
+  <div class="kpi"><b>4</b><span>релиза</span></div>
+  <div class="kpi"><b>55</b><span>изменений кода (PR)</span></div>
+  <div class="kpi"><b>9</b><span>миграций схемы V48–V56</span></div>
+  <div class="kpi"><b>76</b><span>уязвимостей устранено</span></div>
+  <div class="kpi"><b>26.11.1</b><span>версия ArcadeDB</span></div>
+</div>
+
+<div class="story">
+  <h2>Итоги периода</h2>
+  <p>За девять дней LORE прошёл четыре релиза. Их общая тема — <b>достоверность</b>: система должна сообщать о фактическом положении дел, а не о формальном успехе операции.</p>
+  <ul>
+    <li><b>Достоверный результат записи.</b> Ранее операция записи могла вернуть <code>ok:true</code>, не изменив данных или, напротив, затронув соседние записи. Теперь ответ описывает фактическое изменение в графе (v1.13.0).</li>
+    <li><b>Ошибка загрузки больше не выдаётся за отсутствие данных.</b> Экран, не получивший ответа, сообщает о сбое, а не показывает пустой список (v1.14.0).</li>
+    <li><b>Новая административная панель</b> с поддержкой мобильных устройств и сохранением состояния экрана в адресе страницы (v1.13.1, v1.14.0).</li>
+    <li><b>Единый формат времени</b> во всей истории изменений и однозначное время UTC в ответах API; переход на ArcadeDB 26.11.1 (v1.15.0).</li>
+    <li><b>Безопасность зависимостей:</b> устранены 2 критические и 21 серьёзная уязвимость (v1.13.1).</li>
+  </ul>
+</div>
+
+<div class="note">Отчёт составлен по правилу описания релизов (decision:D-2026-LORE-RELEASE-NOTES-SHAPE): включены функциональные изменения и обновления технологий с указанием спринта и PR. Изменения инфраструктуры разработки и доставки (CI/CD) не включены. Версия v1.14.1 не выпускалась — её изменения вошли в v1.15.0.</div>
+
+<nav class="toc"><a href="#v1150">v1.15.0</a><a href="#v1140">v1.14.0</a><a href="#v1131">v1.13.1</a><a href="#v1130">v1.13.0</a><a href="#tech">обновления технологий</a><a href="#terms">термины</a></nav>
+
+<!-- ══════════════════ v1.15.0 ══════════════════ -->
+<section class="rel" id="v1150">
+  <div class="relhead"><span class="tag">v1.15.0</span><span class="pill p-date">05.11.2026</span><span class="pill p-minor">минорный</span><span class="pill p-prs">15 PR · #757–#775</span></div>
+  <div class="reltitle">Единый формат времени, постраничное чтение данных, защита закрытых спринтов, ArcadeDB 26.11.1</div>
+  <p class="lead">Наименее заметный внешне, но наиболее глубокий релиз периода: изменён тип времени во всей истории изменений, а каждый срез данных получил постраничный режим и выбор полей.</p>
+
+  <h3>Время в базе данных</h3>
+  <div class="card">
+    <h4>Единый тип времени для всей истории изменений (миграция V56)</h4>
+    <div class="row was"><b>Проблема</b><div>В десяти из двенадцати типов истории изменений (<code>*Hist</code>) время хранилось строкой, в двух — датой. Встречались записи, где начало периода было строкой, а окончание — датой. Сравнение, сортировка и агрегирование по времени вели себя по-разному в зависимости от типа.</div></div>
+    <div class="row now"><b>Решение</b><div>Поля <code>valid_from</code> и <code>valid_to</code> во всех двенадцати типах переведены в собственный тип даты ArcadeDB (DATETIME), как рекомендует документация СУБД. Миграция выполнена на рабочей базе 5 ноября за 17 минут. По каждому типу число заполненных значений до и после миграции совпало, нераспознанных значений и предупреждений не было; только по задачам обработано 12 278 записей.</div></div>
+    <div class="row why"><b>Результат</b><div>Корректная выборка состояния на заданную дату, точный расчёт сроков и длительности спринтов, единообразная сортировка истории; функции минимума и максимума по времени работают без ошибок.</div></div>
+    <div class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_ROADMAP_PER_PROJECT">SPRINT_LORE_ROADMAP_PER_PROJECT/RM-P13</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/769">#769</a></div>
+  </div>
+  <div class="card">
+    <h4>Время в ответах API — в однозначном формате UTC</h4>
+    <div class="row was"><b>Проблема</b><div>СУБД возвращает время без указания часового пояса (<code>2026-04-13 00:00:00.000</code>), а браузер интерпретирует такую строку как местное время. У пользователя в другом часовом поясе даты спринтов смещались на сутки.</div></div>
+    <div class="row now"><b>Решение</b><div>Все JSON-ответы LORE возвращают время в формате ISO 8601 с явным признаком UTC: <code>2026-04-13T00:00:00.000Z</code>. Формат на стороне СУБД намеренно не изменялся: проверка показала, что встроенная настройка формата в ArcadeDB формирует некорректную строку вида <code>…171Z.171</code>.</div></div>
+    <div class="row why"><b>Результат</b><div>Одинаковые даты для всех пользователей и агентов — независимо от устройства и часового пояса.</div></div>
+    <div class="refs">RM-P13 · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/768">#768</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/769">#769</a></div>
+  </div>
+
+  <h3>Чтение данных</h3>
+  <div class="card">
+    <h4>Постраничное чтение и выбор полей для любого среза данных</h4>
+    <div class="row was"><b>Проблема</b><div>Срез данных всегда возвращал результат целиком. Чтобы узнать текущий релиз, агент получал около 20 тысяч знаков описаний всех релизов.</div></div>
+    <div class="row now"><b>Решение</b><div>Любой срез принимает параметры <code>limit</code>, <code>offset</code> и <code>fields</code>. Сокращённый ответ явно сообщает об этом в поле <code>_page</code> (лимит, смещение, общее число, наличие продолжения, выбранные поля). Ошибка в имени поля приводит к ответу 400 со списком допустимых полей.</div></div>
+    <div class="row how"><b>Пример</b><div><code>releases?limit=1&amp;fields=release_id,is_current</code> — одна строка вместо полного списка.</div></div>
+    <div class="row why"><b>Результат</b><div>Объём передаваемых данных сокращается в десятки раз; ИИ-агенты расходуют существенно меньше контекста.</div></div>
+    <div class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_PRODUCT_BACKLOG">SPRINT_LORE_PRODUCT_BACKLOG/SE-01</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/758">#758</a></div>
+  </div>
+  <div class="card">
+    <h4>Пакетное чтение задач</h4>
+    <div class="row now"><b>Решение</b><div>Новый срез <code>tasks_by_uids</code> возвращает описания и атрибуты нескольких задач по списку идентификаторов вида <code>СПРИНТ/КОД</code> одним запросом.</div></div>
+    <div class="row how"><b>Пример</b><div><code>tasks_by_uids?task_uids=SPRINT_A/X-1,SPRINT_B/Y-2</code></div></div>
+    <div class="refs">SE-01 · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/761">#761</a></div>
+  </div>
+  <div class="card">
+    <h4>Порядок релизов и однозначные идентификаторы задач</h4>
+    <ul>
+      <li>Срез релизов возвращает текущий релиз первым. Ранее запрос с <code>limit=1</code> мог вернуть произвольный релиз с той же датой. <span class="refs">SPRINT_LORE_PRODUCT_BACKLOG/SE-08 · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/763">#763</a></span></li>
+      <li>Срез начала работ по задачам возвращает полный идентификатор (спринт и код). По одному коду задачу нельзя было однозначно сопоставить со спринтом: 220 кодов используются в нескольких спринтах. <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/775">#775</a></span></li>
+    </ul>
+  </div>
+
+  <h3>Задачи и спринты</h3>
+  <div class="card">
+    <h4>Защита закрытых спринтов</h4>
+    <div class="row was"><b>Проблема</b><div>Задачу можно было создать в уже закрытом спринте или перенести в него. В результате в двух закрытых спринтах Völva оказалось 11 незавершённых задач.</div></div>
+    <div class="row now"><b>Решение</b><div>Создание и перенос задачи в спринт со статусом «завершён» или «отменён» отклоняются с ответом 400. Ответ содержит название спринта, дату закрытия и рекомендуемое действие. Изменять статус задач, уже находящихся в таком спринте, по-прежнему можно — чтобы их можно было завершить.</div></div>
+    <div class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_MEASURE_TRUTH">SPRINT_LORE_MEASURE_TRUTH</a>/MT-SPRINT-DONE-GUARD · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/770">#770</a></div>
+  </div>
+  <div class="card">
+    <h4>Перенос, оценка и указание исполнителя</h4>
+    <ul>
+      <li><b>Перенос задачи сохраняет её статус.</b> Ранее при переносе в другой спринт статус сбрасывался на «запланирована». <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/771">#771</a></span></li>
+      <li><b>Оценку трудоёмкости можно задать при создании задачи</b>, без отдельного вызова. Принцип: всё, что принимает изменение задачи, принимает и её создание. <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/758">#758</a></span></li>
+      <li><b>Агента можно указать так же, как он отображается</b> («Claude Code (full)»): при записи имя приводится к идентификатору агента. <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/772">#772</a></span></li>
+    </ul>
+  </div>
+
+  <h3>Агенты и MCP</h3>
+  <div class="card">
+    <h4>Агент с полными правами может работать в рамках узкого профиля</h4>
+    <div class="row was"><b>Проблема</b><div>Универсальный агент <code>full</code> всегда выполнял запись с полными правами — даже при работе в роли тестировщика или маркетолога.</div></div>
+    <div class="row now"><b>Решение</b><div>Заголовок <code>X-Lore-Act-As</code> (в MCP — переменная <code>LORE_ACT_AS</code>) задаёт профиль, по матрице которого проверяется операция. Заявленный профиль может только сузить права, но не расширить их; профиль, закреплённый за собственным клиентом агента, заголовком не изменяется.</div></div>
+    <div class="row why"><b>Результат</b><div>Соблюдение принципа минимальных привилегий для ИИ-агентов без отдельной учётной записи под каждую роль.</div></div>
+    <div class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_AGENT_OBSERVABILITY">SPRINT_LORE_AGENT_OBSERVABILITY/AO-07</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/764">#764</a></div>
+  </div>
+  <div class="card">
+    <h4>Достоверная информация о версии MCP-сервера</h4>
+    <div class="row was"><b>Проблема</b><div>Проверка версии MCP-сервера читала файлы сборки на диске и сообщала об отсутствии расхождений, хотя процесс продолжал выполнять прежний код.</div></div>
+    <div class="row now"><b>Решение</b><div><code>lore_version</code> сообщает версию, которую фактически выполняет процесс. После пересборки, до переподключения сессии, возвращается вердикт <code>restart_needed</code>.</div></div>
+    <div class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/765">#765</a></div>
+  </div>
+
+  <h3>Административная панель</h3>
+  <div class="card">
+    <ul>
+      <li><b>«Глобальные роли».</b> Блок ролей Keycloak уровня всего реестра пользователей в карточке сотрудника получил понятное название и пояснение «действуют во всех проектах». <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/757">#757</a></span></li>
+      <li><b>Раздел «MCP»</b> объединяет «Инструменты MCP» и «Подключения». Справочник инструментов полон — 98 вместо 60 — и сверяется с кодом сервера. <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/757">#757</a></span></li>
+      <li><b>Перечень проектов для проверок качества задаётся в «Настройках»</b> (параметр <code>qg.actions_projects</code>), а не переменной окружения сервера. Известные параметры теперь редактируются из интерфейса. <span class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_QG_REBUILD">SPRINT_QG_REBUILD/QG-09</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/762">#762</a></span></li>
+    </ul>
+  </div>
+
+  <h3>Обновление технологий</h3>
+  <div class="card">
+    <h4>ArcadeDB 26.10.2 → 26.11.1</h4>
+    <div class="row now"><b>Решение</b><div>Рабочая база LORE переведена на ArcadeDB 26.11.1; простой при обновлении составил около 17 секунд. Перед обновлением проверена совместимость всех шести баз, размещённых на сервере (LORE, miniLORE, MIDGARD, RAGVSDL, BÓKVIT, библиографическая база), созданы и проверены резервные копии; число записей до и после обновления совпало. Подключены модули протокола PostgreSQL, метрик Prometheus, MCP и автоматического резервного копирования.</div></div>
+    <div class="row why"><b>Важно</b><div>В версии 26.11.1 отсутствующий именованный параметр SQL-запроса приводит к ошибке 400 (ранее подставлялось пустое значение). Полный набор тестов серверной части LORE на новой версии проходит.</div></div>
+    <div class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_ARCADEDB_26_11_ALL">SPRINT_ARCADEDB_26_11_ALL/LO-01</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/773">#773</a></div>
+  </div>
+  <div class="mig"><b>Совместимость v1.15.0</b><ul><li>Время в JSON передаётся в формате <code>…T…Z</code> с миллисекундами; формат с пробелом больше не используется.</li><li>Срезы без параметров <code>limit</code>, <code>offset</code>, <code>fields</code> отвечают, как прежде, простым списком.</li></ul></div>
+</section>
+
+<!-- ══════════════════ v1.14.0 ══════════════════ -->
+<section class="rel" id="v1140">
+  <div class="relhead"><span class="tag">v1.14.0</span><span class="pill p-date">05.11.2026</span><span class="pill p-minor">минорный</span><span class="pill p-prs">21 PR · #729–#754</span></div>
+  <div class="reltitle">Новая административная панель, явные сообщения об ошибках, мобильная версия, состояние экранов в адресе</div>
+  <p class="lead">Релиз посвящён интерфейсу: административная панель переработана по согласованному прототипу, а принцип «сбой загрузки — не пустой список» применён во всём приложении.</p>
+
+  <h3>Административная панель v2</h3>
+  <div class="card">
+    <h4>Новая компоновка по согласованному прототипу</h4>
+    <div class="row was"><b>Проблема</b><div>Длинные вкладки без общей картины состояния; счётчики показывали «0», когда данные не удалось загрузить; таблицы не помещались на экране телефона.</div></div>
+    <div class="row now"><b>Решение</b><div><ul>
+      <li>сводная строка состояния системы на всех вкладках;</li>
+      <li>достоверные счётчики в навигации: «?» означает «проверить не удалось», а не ноль;</li>
+      <li>указатель текущего раздела на телефоне и лента вкладок с подписями групп;</li>
+      <li>раздел «Люди» — список и карточка сотрудника рядом, на телефоне карточка открывается на весь экран;</li>
+      <li>таблицы на телефоне отображаются карточками, области касания — не меньше 40 пикселей.</li>
+    </ul></div></div>
+    <div class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_ADMIN_HOUSEKEEPING">SPRINT_LORE_ADMIN_HOUSEKEEPING/AH-04, AH-05</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/746">#746</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/749">#749</a></div>
+  </div>
+  <div class="card">
+    <h4>Все роли Keycloak доступны для просмотра и назначения</h4>
+    <div class="row was"><b>Проблема</b><div>Интеграция с Keycloak позволяла назначать только две роли — admin и viewer; остальные роли в карточке сотрудника не отображались.</div></div>
+    <div class="row now"><b>Решение</b><div>Отображаются и назначаются все роли реестра пользователей. Роль super-admin, как и прежде, назначается только через консоль Keycloak — это сделано намеренно.</div></div>
+    <div class="refs">AH-02 · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/729">#729</a></div>
+  </div>
+
+  <h3>Явные сообщения об ошибках</h3>
+  <div class="card">
+    <h4>Сбой загрузки больше не выдаётся за отсутствие данных</h4>
+    <div class="row was"><b>Проблема</b><div>Неудачный запрос во многих разделах отображался как пустой список. Отказ в доступе (код 403) показывался как «LORE недоступен». Отличить отсутствие данных от невозможности их получить было нельзя.</div></div>
+    <div class="row now"><b>Решение</b><div>Ошибка отображается явно — с кодом и кнопкой повторной загрузки: в ленте новостей, продуктовых срезах, административной панели, аналитике (16 срезов загружаются независимо друг от друга), разделе «Знания», аналитике BRAGI, TYR и bench. Сообщение «спринт или компонент не найден» выводится только при фактическом ответе 404.</div></div>
+    <div class="row why"><b>Результат</b><div>Решения принимаются на основе фактического состояния: пустой список действительно означает отсутствие данных.</div></div>
+    <div class="refs">AH-07 · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/730">#730</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/737">#737</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/742">#742</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/745">#745</a></div>
+  </div>
+
+  <h3>Мобильная версия и ссылки</h3>
+  <div class="card">
+    <h4>Девять экранов адаптированы для телефона</h4>
+    <div class="row now"><b>Решение</b><div>TYR, Timeline, Evolution, план BRAGI, паспорт компонента, Biblio, аналитика, вехи, редактор публикаций. Выбор проекта на телефоне вынесен в меню «⋯», изменение размеров панелей работает касанием.</div></div>
+    <div class="refs">AH-08 · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/750">#750</a></div>
+  </div>
+  <div class="card">
+    <h4>Состояние экрана сохраняется в адресе страницы</h4>
+    <div class="row was"><b>Проблема</b><div>Обновление страницы или переход по ссылке сбрасывали выбранную вкладку, элемент и фильтры; поделиться ссылкой на конкретное место было невозможно.</div></div>
+    <div class="row now"><b>Решение</b><div>Вкладки, выбранные элементы и фильтры сохраняются при обновлении страницы и передаются вместе со ссылкой. Переход по релизу или решению из ленты новостей открывает план сразу на нужном элементе.</div></div>
+    <div class="refs">AH-09 · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/747">#747</a></div>
+  </div>
+
+  <h3>Дизайн-система</h3>
+  <div class="card">
+    <ul>
+      <li>элементы плана BRAGI снова имеют рамку и читаются на любом фоне;</li>
+      <li>все поля с текстовой разметкой используют редактор TipTap (Markdown и диаграммы Mermaid) вместо простого текстового поля;</li>
+      <li>предварительный просмотр Markdown выполняется единым компонентом;</li>
+      <li>неработающие ссылки BRAGI исправлены;</li>
+      <li>изолированный просмотр HTML корректно отображается в светлой теме;</li>
+      <li>экран «Подключения» описывает действующий канал связи <code>minilore-link</code>.</li>
+    </ul>
+    <div class="refs">AH-10 · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/735">#735</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/743">#743</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/752">#752</a></div>
+  </div>
+
+  <h3>Права доступа и привязка к проектам</h3>
+  <div class="card">
+    <h4>Проект указывается при создании сущности</h4>
+    <div class="row was"><b>Проблема</b><div>Функции и сценарии использования создавались без проекта и привязывались отдельным вызовом — либо не привязывались вовсе. На 5 ноября таких сущностей насчитывалось 399.</div></div>
+    <div class="row now"><b>Решение</b><div><code>feature_new</code> и <code>uc_new</code> принимают параметр <code>project</code>. Новый срез <code>entities_without_project</code> подсчитывает сущности без проекта по типам; на нём основана проверка качества QG-LORE-PROJECT-BINDING.</div></div>
+    <div class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_PROJECT_SCOPE">SPRINT_LORE_PROJECT_SCOPE/AL-113</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/740">#740</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/744">#744</a></div>
+  </div>
+  <div class="card">
+    <ul>
+      <li><b>Связь релиза с проектом хранится ребром графа</b>, а не текстовым полем; агенты видны всем пользователям при включённом разграничении по проектам. <span class="refs">AL-96, AL-106 · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/738">#738</a></span></li>
+      <li><b>Маркетолог может создавать проблемы, выгоды и задачи пользователя</b> продуктового слоя; права согласованы во всех четырёх копиях матрицы доступа. <span class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_PRODUCT_FIT">SPRINT_LORE_PRODUCT_FIT/FIT-10</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/736">#736</a></span></li>
+      <li><b>MCP-сервер повторяет запрос на чтение</b> один раз, если неактивное соединение было разорвано; запросы на запись не повторяются. <span class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_MCP_DOCSYNC_GAPS">SPRINT_LORE_MCP_DOCSYNC_GAPS/DS-5</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/735">#735</a></span></li>
+    </ul>
+  </div>
+
+  <h3>Обновление технологий</h3>
+  <div class="tech"><table>
+    <tr><th>Пакет</th><th>Версия</th><th>Назначение</th></tr>
+    <tr><td>react-router</td><td>7</td><td>маршрутизация интерфейса, мажорное обновление</td></tr>
+    <tr><td>vitest</td><td>5</td><td>тестирование интерфейса, мажорное обновление</td></tr>
+    <tr><td>elkjs</td><td>0.12</td><td>автоматическая раскладка графов связей</td></tr>
+    <tr><td>awssdk</td><td>2.55.11</td><td>клиент файлового хранилища (MinIO) на сервере</td></tr>
+    <tr><td>vite</td><td>8.3.5</td><td>сборка интерфейса; зафиксированы безопасные версии katex, minimatch, source-map-js, brace-expansion</td></tr>
+  </table>
+  <div class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_DEPS_HOUSEKEEPING">SPRINT_LORE_DEPS_HOUSEKEEPING/DEP-05</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/732">#732</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/734">#734</a></div></div>
+  <div class="mig"><b>Миграции данных V52–V55</b><ul>
+    <li><b>V52</b> — у действующих записей истории без даты начала дата восстановлена по надёжному источнику; тестовая запись удалена (RM-P17).</li>
+    <li><b>V53</b> — веха «M2 ✓ core» получила корректный идентификатор <code>M2</code> (RM-X1).</li>
+    <li><b>V54</b> — удалены пустые типы устаревшей модели плана PlanItem (T-14).</li>
+    <li><b>V55</b> — семь задач DALI P1-* без даты получили дату по моменту слияния PR #204; источник даты сохранён (RM-P17).</li>
+  </ul></div>
+</section>
+
+<!-- ══════════════════ v1.13.1 ══════════════════ -->
+<section class="rel" id="v1131">
+  <div class="relhead"><span class="tag">v1.13.1</span><span class="pill p-date">04.11.2026</span><span class="pill p-patch">исправительный</span><span class="pill p-prs">3 PR · #725–#727</span></div>
+  <div class="reltitle">Безопасность зависимостей, прокрутка административной панели на телефоне</div>
+  <p class="lead">На 4 ноября система мониторинга уязвимостей сообщала о 76 открытых проблемах: 2 критических, 21 серьёзной, 44 средних и 9 незначительных. Уязвимые версии действительно использовались в зафиксированных зависимостях.</p>
+
+  <h3>Функциональные изменения</h3>
+  <div class="card">
+    <h4>Прокрутка административной панели на телефоне</h4>
+    <div class="row was"><b>Проблема</b><div>На узком экране содержимое панели обрезалось без возможности прокрутки — особенно в разделе «Люди».</div></div>
+    <div class="row now"><b>Решение</b><div>Основная область занимает доступную высоту и прокручивается; навигация размещена в одну строку с горизонтальной прокруткой.</div></div>
+    <div class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_ADMIN_HOUSEKEEPING">SPRINT_LORE_ADMIN_HOUSEKEEPING/AH-01</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/725">#725</a></div>
+  </div>
+
+  <h3>Обновление технологий — устранение уязвимостей</h3>
+  <div class="tech"><table>
+    <tr><th>Пакет</th><th>Версия</th><th>Устранённая проблема</th></tr>
+    <tr><td>dompurify</td><td>3.4.14 → 3.4.17</td><td><span class="sev sev-c">критическая</span> обход режима SAFE_FOR_TEMPLATES; <span class="sev sev-h">серьёзная</span> обработчик IN_PLACE</td></tr>
+    <tr><td>@tiptap/*</td><td>3.28.0 → 3.32.2</td><td><span class="sev sev-h">серьёзная</span> отказ в обслуживании через регулярные выражения в атрибутах Markdown; подмена <code>__proto__</code> при объединении атрибутов</td></tr>
+    <tr><td>@modelcontextprotocol/sdk</td><td>1.30.0 → 1.32.2</td><td><span class="sev sev-h">серьёзная ×3</span> отсутствие ограничения размера запроса и пакета; передача учётных данных OAuth стороннему серверу; задачи без привязки к сессии</td></tr>
+    <tr><td>proxy-addr</td><td>2.0.8</td><td><span class="sev sev-c">критическая</span></td></tr>
+    <tr><td>ip-address</td><td>10.7.6</td><td>подделка серверных запросов (SSRF)</td></tr>
+    <tr><td>hono · @hono/node-server</td><td>4.13.16 · 2.1.6</td><td>HTTP-слой MCP-сервера</td></tr>
+    <tr><td>body-parser · zod · fast-uri · qs</td><td>2.4.0 · 4.6.7 · 3.1.9 · 6.17.1</td><td>разбор запросов и схем MCP-сервера</td></tr>
+    <tr><td>markdown-it · moment</td><td>14.3.3 · 2.31.0</td><td>обработка разметки и дат в интерфейсе</td></tr>
+    <tr><td>browserslist · postcss-selector-parser</td><td>4.29.5 · 7.1.7</td><td>сборка стилей</td></tr>
+  </table>
+  <div class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_DEPS_HOUSEKEEPING">SPRINT_LORE_DEPS_HOUSEKEEPING/DEP-01…DEP-04</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/727">#727</a></div></div>
+</section>
+
+<!-- ══════════════════ v1.13.0 ══════════════════ -->
+<section class="rel" id="v1130">
+  <div class="relhead"><span class="tag">v1.13.0</span><span class="pill p-date">28.10.2026</span><span class="pill p-minor">минорный</span><span class="pill p-prs">16 PR · #687–#720</span></div>
+  <div class="reltitle">Достоверный результат операций записи, анализ структуры задач, доступ к базе по отдельному токену, автоматическое определение текущего релиза</div>
+  <p class="lead">Ответ на операцию записи теперь отражает фактическое изменение в графе, а не перечень выполненных команд. В ходе работы выявлены и устранены случаи скрытого повреждения данных при формально успешном ответе.</p>
+
+  <h3>Результат операций записи</h3>
+  <div class="card">
+    <h4>Каждая операция записи сообщает о фактическом результате</h4>
+    <div class="row was"><b>Проблема</b><div>Ответ <code>ok:true</code> означал лишь, что команды выполнились без исключения. Отсутствие изменений, повторное создание связи и удаление чужой привязки выглядели одинаково успешными.</div></div>
+    <div class="row now"><b>Решение</b><div>Ответ содержит поле <code>outcome</code> — результат операции: создано, обновлено, без изменений, удалено или не применимо, с указанием причины. Значение определяется по фактическому состоянию графа после записи. Механизм распространён на спецификации, релизы, проверки качества, вопросы, регламенты, компоненты, справочники, проекты, пользователей и роли, файлы, продуктовый слой и автоматическую привязку Forgejo. Прежние поля ответа сохранены.</div></div>
+    <div class="refs">ADR-LORE-043 · <a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_DB_RESILIENCE">SPRINT_LORE_DB_RESILIENCE/DBR-17</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/710">#710</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/714">#714</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/715">#715</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/719">#719</a></div>
+  </div>
+  <div class="card">
+    <h4>Устранённые случаи скрытого повреждения данных</h4>
+    <ul>
+      <li><b>Привязка спецификаций:</b> замена на несуществующий объект удаляла действующую привязку и лишь затем возвращала ошибку 404; удаление непривязанного компонента снимало существующую привязку.</li>
+      <li><b>Дублирование связей:</b> повторная привязка спецификации, релиза или PR создавала вторую связь — у спринта накапливалось по связи с релизом на каждое слияние.</li>
+      <li><b>Подсчёт связей релиза</b> учитывал выполненные команды, а не созданные связи: несуществующий спринт отображался как привязанный. Привязка к несуществующему релизу завершалась внутренней ошибкой 500.</li>
+      <li><b>Проверки качества:</b> запуск без проверки, рекомендация без запуска и перенос в несуществующий спринт создавали несвязанные записи при успешном ответе; повторный перенос создавал вторую задачу. Теперь — ответ 404 до записи, повтор не меняет данных.</li>
+      <li><b>Компоненты:</b> изменение несуществующего компонента завершалось успешно; смена родителя сохраняла прежнего — у компонента оказывалось два родителя.</li>
+      <li><b>Продуктовый слой:</b> недопустимая роль удаляла существующую связь до ответа с ошибкой 400.</li>
+      <li><b>Роли пользователей:</b> назначение роли в незарегистрированном проекте фиксировалось в журнале без фактического создания связи.</li>
+      <li><b>Справочники:</b> каждый повтор создавал пустую версию в истории.</li>
+      <li><b>Схема:</b> отсутствовал индекс <code>KnowPR(pr_uid)</code> — на новой базе привязка PR к релизу завершалась ошибкой 400.</li>
+    </ul>
+  </div>
+
+  <h3>Анализ структуры задач</h3>
+  <div class="card">
+    <h4>TaskShape — оценка полноты и сложности задачи по её описанию</h4>
+    <div class="row now"><b>Решение</b><div><ul>
+      <li>шаблон описания: обоснование, шаги, критерий готовности, тест, проверка на рабочей системе;</li>
+      <li>класс сложности S/M/L/XL по набору факторов и сверка с оценкой трудоёмкости;</li>
+      <li>рекомендации: разделить крупную задачу, объединить мелкие, добавить шаги, проверку, тест, оценку;</li>
+      <li>подсказки в ответе на создание и изменение задачи — без влияния на оценку качества;</li>
+      <li><code>GET /lore/task-shape</code> и MCP-инструмент <code>task_shape</code> — сводка по проектам для аналитики (Völva).</li>
+    </ul></div></div>
+    <div class="row why"><b>Калибровка</b><div>На выборке из 5310 задач медианная длительность растёт вместе с классом: S — 1,47 дня, M — 1,61, L — 2,88, XL — 6,83.</div></div>
+    <div class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_MEASURE_TRUTH">SPRINT_LORE_MEASURE_TRUTH/MT-TASK-SHAPE</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/717">#717</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/720">#720</a></div>
+  </div>
+
+  <h3>Доступ к базе данных и мониторинг</h3>
+  <div class="card">
+    <h4>Работа с базой по отдельному токену без права изменения схемы</h4>
+    <div class="row was"><b>Проблема</b><div>LORE подключался к ArcadeDB общей учётной записью root. Один неверный пароль любого соседнего сервиса блокировал root для всех баз на сервере — так 31 июля была недоступна рабочая система. Перезапуск контейнера неявно применял миграции схемы.</div></div>
+    <div class="row now"><b>Решение</b><div>Режим подключения <code>lore.mart.auth = basic | token</code>: рабочий процесс использует токен без права изменения схемы, а миграции применяются отдельным шагом, а не при запуске приложения. В режиме token без токена сервис не запускается — скрытого возврата к паролю нет.</div></div>
+    <div class="row why"><b>Состояние</b><div>Реализация готова; токены выпущены 5 ноября. Переключение — после размещения токенов в хранилище секретов и подтверждения со стороны соседних систем.</div></div>
+    <div class="refs">SPRINT_LORE_PRODUCT_BACKLOG/DBR-01 · DBR-06 · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/703">#703</a></div>
+  </div>
+  <div class="card">
+    <ul>
+      <li><b>Фактическая проверка интеграций:</b> группа мониторинга <code>bridges</code> обращается к Keycloak и Forgejo, а не только проверяет наличие настроек; проверка перед слиянием PR снова работает с интервалом ожидания 300 секунд. <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/710">#710</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/712">#712</a></span></li>
+      <li><b>Адрес Keycloak без значения по умолчанию</b> <code>localhost</code>: неверная настройка больше не выглядит рабочей. <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/710">#710</a></span></li>
+    </ul>
+  </div>
+
+  <h3>Релизы, срезы данных, MCP</h3>
+  <div class="card">
+    <ul>
+      <li><b>Текущий релиз определяется автоматически</b> по тегам Forgejo; синхронизация не откатывает отметку, если тега текущего релиза нет в репозитории. <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/702">#702</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/707">#707</a></span></li>
+      <li><b>Пакетный срез по спринтам</b> больше не возвращает пустой результат при запросе нескольких спринтов. <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/689">#689</a></span></li>
+      <li><b>Занятый код задачи</b> — понятный ответ 409 <code>TASK_ID_TAKEN</code> с предложением свободного кода вместо ошибки 502. <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/691">#691</a></span></li>
+      <li><b>Сверка документации:</b> срезы спецификаций и документов фильтруются по проекту; документы возвращают контрольную сумму SHA-256 и длину текста, что позволяет сверить их с файлом без загрузки; статус спецификации выбирается из справочника; добавлен инструмент назначения роли в проекте <code>project_role_set</code>. <span class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_LORE_MCP_DOCSYNC_GAPS">SPRINT_LORE_MCP_DOCSYNC_GAPS</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/708">#708</a></span></li>
+      <li><b>Проект при создании</b> принимают <code>adr_new</code>, <code>doc_new</code>, <code>spec_new</code>, <code>runbook_new</code>, <code>question_new</code>; при создании спринта сохраняется приоритет; срез релизов фильтруется по проекту и не ограничивается 200 строками. <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/710">#710</a></span></li>
+    </ul>
+  </div>
+
+  <h3>Проверки качества и интерфейс</h3>
+  <div class="card">
+    <ul>
+      <li><b>Исполнитель регламентных проверок качества</b> фиксирует запуск до начала работы и закрывает зависшие запуски со статусом ABORTED — запуск больше не теряется бесследно. Регламентные проверки по умолчанию отключены. <span class="refs"><a href="https://lore.odal.seidrstudio.pro/lore?section=sprints&passport=SPRINT_QG_REBUILD">SPRINT_QG_REBUILD/QG-11</a> · <a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/693">#693</a></span></li>
+      <li><b>Разграничение терминов:</b> «профиль агента» и «роль доступа» вместо единого слова «роль»; для участника продукта — «роль в продукте». <span class="refs"><a href="https://git.seidrstudio.pro/AIDA/UnlimitedLORE/pulls/687">#687</a></span></li>
+    </ul>
+  </div>
+  <div class="mig"><b>Миграции V48–V51 и совместимость</b><ul>
+    <li><b>V48</b> — справочник «роль агента» переименован в «профиль агента»; <b>V49</b> — контрольные суммы текстов документов; <b>V50</b> — справочник статусов спецификаций; <b>V51</b> — удаление устаревших связей статуса в истории ADR с сохранением выгрузки в журнале.</li>
+    <li>Вместо формально успешного ответа — явные отказы: 404 <code>TARGET_NOT_FOUND</code> при несуществующем объекте, 409 <code>TASK_ID_TAKEN</code>. Статус спецификации принимается только из справочника.</li>
+  </ul></div>
+</section>
+
+<!-- ══════════════════ сводно ══════════════════ -->
+<section class="rel" id="tech">
+  <div class="relhead"><span class="tag">Технологии</span><span class="pill p-prs">обновления за период</span></div>
+  <div class="tech"><table>
+    <tr><th>Технология</th><th>Версия</th><th>Релиз</th></tr>
+    <tr><td>ArcadeDB</td><td>26.10.2 → 26.11.1</td><td>v1.15.0</td></tr>
+    <tr><td>react-router</td><td>7</td><td>v1.14.0</td></tr>
+    <tr><td>vitest</td><td>4.1.12 → 5</td><td>v1.13.1 → v1.14.0</td></tr>
+    <tr><td>vite</td><td>8.3.5</td><td>v1.13.1, v1.14.0</td></tr>
+    <tr><td>elkjs · awssdk</td><td>0.12 · 2.55.11</td><td>v1.14.0</td></tr>
+    <tr><td>@tiptap/* · dompurify</td><td>3.32.2 · 3.4.17</td><td>v1.13.1</td></tr>
+    <tr><td>@modelcontextprotocol/sdk</td><td>1.32.2</td><td>v1.13.1</td></tr>
+    <tr><td>hono · zod · body-parser</td><td>4.13.16 · 4.6.7 · 2.4.0</td><td>v1.13.1</td></tr>
+  </table></div>
+</section>
+
+<section class="rel" id="terms">
+  <div class="relhead"><span class="tag">Термины</span></div>
+  <dl class="glossary card">
+    <dt>Срез данных (slice)</dt><dd>именованный запрос LORE на чтение, например «релизы», «задачи спринта».</dd>
+    <dt>История изменений (SCD2)</dt><dd>способ хранения, при котором каждое изменение записи сохраняется отдельной версией с периодом действия.</dd>
+    <dt>Миграция схемы</dt><dd>управляемое изменение структуры базы данных, применяемое один раз при развёртывании версии.</dd>
+    <dt>MCP</dt><dd>протокол, через который ИИ-агенты читают и изменяют данные LORE.</dd>
+    <dt>Проверка качества (QG)</dt><dd>автоматическое правило, контролирующее полноту и согласованность данных.</dd>
+  </dl>
+</section>
+
+<div class="skipped"><b>Не включено по правилу описания релизов</b> — изменения инфраструктуры разработки и доставки: проверки развёртывания, контроль описаний релиза и зеркалирования на GitHub, уведомления в Telegram, ограничения ресурсов тестовых серверов, процедура восстановления из резервной копии, разделение файла административной панели на модули без изменения поведения.</div>
+
+<footer>Источники: <code>RELEASE-v1.13.0.md</code>, <code>RELEASE-v1.13.1.md</code>, <code>RELEASE-v1.14.0.md</code>, <code>RELEASE-v1.15.0.md</code> в репозитории AIDA/UnlimitedLORE и страницы релизов в Forgejo. Подготовлено 5 ноября 2026 года.</footer>
+</div>
+</body>
+</html>

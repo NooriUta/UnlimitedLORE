@@ -27,6 +27,8 @@ services:
       - LORE_OIDC_ISSUER
       - KC_ADMIN_CLIENT_SECRET=${KC_ADMIN_CLIENT_SECRET:-}
       - LORE_VOLVA_EMBED_SITE_URL=${LORE_VOLVA_EMBED_SITE_URL:-}
+      # EMB-L6: издатель подписи ES256 (claim iss), значение — в .env рядом: https://lore.odal.seidrstudio.pro
+      - LORE_VOLVA_EMBED_ISSUER=${LORE_VOLVA_EMBED_ISSUER:-}
       # LINKS-VIEW-HOLDER: сервер miniLORE в общей сети lore-ygg-net (проба 16.11: /q/health 200 из бэкенда).
       - lore.minilore.url=${LORE_MINILORE_URL:-http://minilore-srv:8080}
       # Умолчание переехало из кода сюда (SELF-PROVISION-STANDALONE): в образе нашего Keycloak нет, адрес — у среды.

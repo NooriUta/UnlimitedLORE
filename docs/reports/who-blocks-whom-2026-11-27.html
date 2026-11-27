@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Кто кого держит — 27.11.2026</title>
+<style>
+  body{font-family:Manrope,system-ui,sans-serif;background:#fafaf7;color:#222;margin:0;padding:14px;font-size:14px;line-height:1.45}
+  h1{font-size:18px;margin:4px 0 2px}
+  h2{font-size:15px;margin:18px 0 6px;border-bottom:1px solid #ddd;padding-bottom:3px}
+  .sub{color:#666;font-size:12px}
+  .scroll{overflow-x:auto;border:1px solid #e3e0d8;border-radius:8px;background:#fff;padding:6px}
+  ol,ul{padding-left:20px;margin:4px 0}
+  li{margin:3px 0}
+  .o{color:#b45309;font-weight:700}
+  .c{color:#1d4ed8;font-weight:700}
+  .s{color:#15803d;font-weight:700}
+  table{border-collapse:collapse;font-size:12.5px;width:100%}
+  td,th{border:1px solid #e3e0d8;padding:4px 6px;vertical-align:top;text-align:left}
+  th{background:#f3f1ea;text-transform:uppercase;font-size:11px}
+</style>
+</head>
+<body>
+<h1>Кто кого держит и что делать первым</h1>
+<div class="sub">27.11.2026 · сводка сессии LORE по ответам сессий LORE, CICDGitHub, Völva, miniLORE, MIDGARD ×2, сайт, aida-root и данным LORE · разработка остановлена твоим словом</div>
+
+<h2>Граф (сверху вниз: что снимается первым)</h2>
+<div class="scroll">
+<pre class="mermaid">
+---
+config:
+  layout: elk
+  flowchart:
+    useMaxWidth: false
+---
+flowchart TB
+  classDef owner fill:#fde7c7,stroke:#b45309,color:#222
+  classDef cicd fill:#dbe7fb,stroke:#1d4ed8,color:#222
+  classDef sess fill:#dcf3e2,stroke:#15803d,color:#222
+
+  O1["① Пароль root базы на 152<br/>(виден в ps) — безопасность"]:::owner
+  O2["② Окно MinIO 28.11:<br/>время + пароль хранилища"]:::owner
+  O3["③ Токен реестра AIDA<br/>→ форма kkRepo"]:::owner
+  O4["④ Ключи ES256 + issuer в Infisical<br/>+ «ок» Völva 0.1.13"]:::owner
+  O5["⑤ «Да» на правку артефактов<br/>(MIDGARD, Völva, AIDA, сайт)"]:::owner
+  O6["⑥ Вход в Infisical: lore-provisioner<br/>+ секреты 5 профилей MCP"]:::owner
+  O7["⑦ Вход учёткой KC в MIDGARD"]:::owner
+  O8["⑧ Слово на удаления на ryzenai<br/>и midgard_datahub"]:::owner
+  O9["⑨ Сайт: «да» на сбор в NooriUta/AIDA<br/>+ убрать хост из core-services"]:::owner
+  O10["⑩ AIDA: путь восстановления<br/>8 пустых спек HOUND"]:::owner
+  O11["⑪ sudo для CoreDNS · Völva снаружи"]:::owner
+
+  O1 ==> O2 ==> O3 ==> O4 ==> O5 ==> O6 ==> O7 ==> O8 ==> O9 ==> O10 ==> O11
+
+  C2["CICD: хранилище miniLORE<br/>→ препрод → прод LORE"]:::cicd
+  L2["LORE: проверка ассетов"]:::sess
+  O2 --> C2 --> L2
+
+  C3["CICD: npm-прокси @seidr/kit"]:::cicd
+  L3["LORE: PR #1834"]:::sess
+  M3["MIDGARD-UI: шлюз на kit 0.2.2<br/>→ страница шлюза miniLORE"]:::sess
+  O3 --> C3
+  C3 --> L3
+  C3 --> M3
+
+  V4["Völva: релиз 0.1.13<br/>+ env issuers на стенде"]:::sess
+  L4["LORE+Völva: проверка ES256<br/>→ EMB-L6, HS256 выкл."]:::sess
+  O4 --> V4 --> L4
+
+  M5["Сессии правят ADR/спеки"]:::sess
+  O5 --> M5
+
+  C6["CICD: права + ротация<br/>→ LORE: MCP по http"]:::cicd
+  O6 --> C6
+
+  M7["MIDGARD: BOKVIT на 152<br/>→ CICD: сверка, уборка ryzenai"]:::sess
+  O7 --> M7
+  O8 --> M7
+
+  S9["Сайт: перенос записей"]:::sess
+  O9 --> S9
+  R10["aida-root: восстановить спеки"]:::sess
+  O10 --> R10
+</pre>
+</div>
+
+<h2>Порядок (что первым, что вторым)</h2>
+<ol>
+  <li><span class="o">Пароль root базы на 152</span> — единственный пункт про безопасность, 5 минут.</li>
+  <li><span class="o">Окно MinIO 28.11</span> — назвать время и пароль: тянет за собой хранилище miniLORE, препрод и прод LORE.</li>
+  <li><span class="o">Токен реестра AIDA в kkRepo</span> — снимает сразу двоих: LORE PR #1834 и MIDGARD/шлюз miniLORE на пакете kit.</li>
+  <li><span class="o">Ключи ES256 + «ок» Völva 0.1.13</span> — снимает встройку Völva в LORE ([[task:SPRINT_VIZ_EMBED/EMB-L6]], [[task:SPRINT_VIZ_EMBED/VE-8]]).</li>
+  <li><span class="o">«Да» на правку артефактов</span> — сверки готовы у MIDGARD, Völva, сайта, LORE; без «да» тексты не меняются.</li>
+  <li><span class="o">Вход в Infisical</span> — право записи lore-provisioner и перевыпуск секретов 5 профилей MCP (расходятся с KC, 401).</li>
+  <li><span class="o">Вход учёткой KC в MIDGARD</span> — итог пробы; за ним BOKVIT на 152 и уборка ryzenai.</li>
+  <li><span class="o">Слово на удаления</span> — старые службы ryzenai, midgard_datahub на 131, тестовые установки LORE на ryzenai.</li>
+  <li><span class="o">Сайт</span> — «да» на сбор записей в NooriUta/AIDA (17 спринтов в core-services, 1 в AIDA, 18 спек HARPA) и убрать ошибочный хост из core-services; плюс мерж PR #23, судьба [[sprint:SPRINT_SEO_SITE_WAVE3]].</li>
+  <li><span class="o">AIDA</span> — как восстанавливать 8 пустых спек HOUND/LOOM: скриптом из git или через MCP.</li>
+  <li><span class="o">Остальное</span> — sudo для автозапуска CoreDNS; Völva снаружи (VPN / открыть / боевой инстанс); [[task:SPRINT_MINILORE_LINK_PIPE/LP-20]], OWN-1, правило возраста архива miniLORE.</li>
+</ol>
+
+<h2>Состояние по проектам</h2>
+<table>
+<tr><th>Проект / сессия</th><th>Состояние</th><th>Ждёт от</th><th>Держит</th></tr>
+<tr><td><b>LORE</b> (3f1ccb23)</td><td>Прод v1.19.3, lore-host здоров. Ранбуки и инфраспеки сверены (18+4), статусы дописываются</td><td>ты: ключи ES256; CICD: npm-прокси для PR #1834; окно MinIO → проверка ассетов</td><td>Völva (совместная проверка ES256); CICD — текст спеки issuer v0.3 (стоит по стопу)</td></tr>
+<tr><td><b>Инфраструктура / CICDGitHub</b> (e867805b)</td><td>kkRepo, Forgejo, KC, раннеры работают; CoreDNS поднят 27.11 (лежал 43 ч); VPN xray на 131, похоже, мёртв</td><td>ты: время окна + пароль хранилища, токен реестра AIDA, sudo для CoreDNS, слово на удаления, вход в Infisical</td><td>LORE (#1834); MIDGARD-UI (пакет kit)</td></tr>
+<tr><td><b>Völva</b> (80e0681b)</td><td>Стенд 0.1.12, VE-8 в develop ждёт релиза 0.1.13; сверка сделана</td><td>ты: «ок» на 0.1.13, логин на стенд (9 задач 0.1.11), ответы по ADR-VOLVA-004/007; CICD: KC3, KCT-04</td><td>LORE — [[task:SPRINT_VIZ_EMBED/EMB-L6]]</td></tr>
+<tr><td><b>miniLORE</b> (67882f5d)</td><td>Прод srv 0.6.3 на lore-host здоров; на ноутбуке link 0.3.80 (выпуск 0.5.2 не поставлен — ждёт твоего слова); ранбук после перезагрузки переписан</td><td>ты: [[task:SPRINT_MINILORE_LINK_PIPE/LP-20]], OWN-1 (держит PH-4, FS-2…4), правило возраста архива</td><td>никого; риск — [[task:SPRINT_MINILORE_LINK_PIPE/LP-17]] (две сборки link)</td></tr>
+<tr><td><b>MIDGARD прод</b> (538b65ac)</td><td>Прод на 152, автовыкладка и бэкап работают; вход переключён на KC; 13 расхождений найдено</td><td>ты: смена пароля root базы, вход KC, «да» на правки, «да» на BOKVIT; железо — узлы выключены с 14.11</td><td>CICD — уборка ryzenai и сверка BOKVIT</td></tr>
+<tr><td><b>MIDGARD UI / kit</b> (7eb9fb11)</td><td>/appnew — прототип (ветка не влита), шлюз miniLORE на kit готов на ~⅓</td><td>ты: «да» на правки, статусы ADR 027/031–034, задача на шлюз; LORE: lorekit #7, адрес препрода для K6</td><td>miniLORE (страница шлюза); [[task:SPRINT_UXR_S15_KIT6/K6-GH-APPNEW-PARITY]], [[task:SPRINT_UXR_S15_KIT6/K6-GH-HUB-ADAPTER]] в BLOCKED</td></tr>
+<tr><td><b>Сайт</b> (824627a8)</td><td>Прод жив (200, noindex), спринт закрыт, реестр технологий поправлен (12 записей), спека релиза 1.1.0</td><td>ты: куда собирать записи (теперь NooriUta/AIDA), мерж PR #23, судьба [[sprint:SPRINT_SEO_SITE_WAVE3]], открывать ли odal наружу</td><td>никого</td></tr>
+<tr><td><b>AIDA / aida-root</b> (93da508a)</td><td>Сверка: 117 ADR, 249 спек, 77 доков; 9 спек HOUND/LOOM — пустые оболочки (1 восстановлена)</td><td>ты: путь восстановления 8 спек; статусы [[adr:ADR-INFRA-K8S-001]], [[adr:ADR-LORE-021]], doc guide_yc_deployment, 238 спек в PROPOSED</td><td>никого; тихий риск для работ по диалектам/geoid</td></tr>
+</table>
+
+<h2>Мелкое, но решить</h2>
+<ul>
+  <li>Архив miniLORE считает возраст по дате приёма: 640 293 из 825 169 записей приняты 18.11, поэтому до февраля переносить нечего, хотя 275 928 записей старше 90 дней (находка CICD).</li>
+  <li>Слаг NooriUta/seidr-site притягивает чужие спринты SPRINT_ALT_* — ловушка для любого, кто передаст его как git_project.</li>
+  <li>На ryzenai висят три тестовые установки LORE (lore1187, lore-e182, lorefinal) и упавшие fj-rehearsal-*; эмбеддер там 0.6B вместо плановой 8B (ODIN).</li>
+  <li>На 131 живы три моста (kc/inf/lore4400-forward) и остановленные копии KC/Infisical; Infisical открыт по http на 131:18080 и 143:18080.</li>
+  <li>MIDGARD-UI просит у LORE перенос lorekit #7 и адрес препрода для ретеста K6 — это разработка, стоит по стопу.</li>
+</ul>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs';
+  mermaid.registerLayoutLoaders(elkLayouts);
+  mermaid.initialize({startOnLoad:true, theme:'default', flowchart:{useMaxWidth:false}});
+</script>
+</body>
+</html>

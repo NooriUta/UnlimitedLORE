@@ -283,18 +283,10 @@ jobs:
           command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
           echo "node $(node --version), npm $(npm --version) — из образа, без загрузки"
 
-      # Seiðr-kit (kit/, D-2026-UXR-KIT-REACT): отдельный пакет со своими
-      # тестами (сверка токенов с v1, STYLE-01, тема). Тесты web-next их не
-      # запускают — поэтому свой шаг, и до web-next: сломанный kit ломает v2.
-      # S4-00e: здесь же единый CSS-слой — снимок голого HTML
-      # (kit/demo/seidr-bare.html, toMatchFileSnapshot; CI=true не пишет снимок,
-      # а валит расхождение) и «у каждого класса kit есть правило в seidr.css».
-      - name: Seiðr-kit (kit) — install + typecheck + test
-        working-directory: kit
-        run: |
-          bash ../.github/scripts/npm-retry.sh ci
-          npm run typecheck
-          npm test
+      # Seiðr-kit живёт в AIDA/lorekit (SPRINT_UXR_S14_KIT5/K5-PACKAGE-DELIVERY): его тесты, CSS-слой,
+      # снимок голого HTML, паритет i18n и контраст гоняет kit-ci.yml там. Здесь kit — пакет @seidr/kit
+      # через npm-прокси kkRepo (адрес — web-next/.npmrc; SPRINT_CICD_OPS_2611/CO-KKREPO-NPM-KIT):
+      # чтение анонимное, ключ реестра Forgejo держит прокси — шага с ключом здесь нет.
 
       # SPRINT_UXR_S11_TEST_OPT/CT-KIT-FIXTURES: скрипт снятия живых ответов
       # сервера в shared/fixtures (из них читают тесты kit и web-next). Здесь —
@@ -351,7 +343,7 @@ jobs:
       # skip link, цели касания ≥44px через --tap). Новый экран v2 кладёт туда
       # свой *.a11y.test.tsx и попадает под гейт без правки этого шага.
       # Контраст WCAG AA в обеих темах axe в jsdom не считает — его гейт на
-      # токенах (kit/src/styles/contrast.test.ts) в шаге «Seiðr-kit (kit)» выше.
+      # токенах (src/styles/contrast.test.ts) — в kit-ci.yml репозитория AIDA/lorekit.
       # Тот же scope-гард, что у установки web-next выше: без него пуш, не
       # трогающий v2 (например, хотфикс src/ #857), запускал npx vitest без
       # node_modules — npx тянул чужой vitest и падал на vite.config.ts.

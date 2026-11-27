@@ -1,0 +1,274 @@
+diff --git a/.scratch-rm-tasks-product.json b/.scratch-rm-tasks-product.json
+new file mode 100644
+index 00000000..8a179e23
+--- /dev/null
++++ b/.scratch-rm-tasks-product.json
+@@ -0,0 +1,55 @@
++{
++  "_": "Готовые полезные нагрузки для LORE. edit → POST /lore/task/edit/batch (массив), create → POST /lore/task (по одному). Правка владельца 26.08.2026: продукт содержит несколько корневых компонентов, значит продукт — своя сущность.",
++  "edit": [
++    {
++      "task_uid": "SPRINT_LORE_ROADMAP_PER_PROJECT/RM-P1",
++      "title": "Завести сущность продукта: продукт объединяет несколько корневых компонентов и репозиториев",
++      "task_type": "planning",
++      "note_md": "Правка владельца 26.08.2026: «продукт может содержать несколько корневых компонент, строй всё же продукт». Первая редакция этой задачи предлагала «продукт = корневой компонент» — снято как неверное: у AIDA корней десяток (DALI, HND, MT/MIMIR, HEIMDALL, ANVIL, SKULD, CHUR, SHT, YGG, INFRA, KC), а продукт один.\n\nЗначит нужна отдельная вершина продукта, а не переименование существующего.\n\nСвязи, которые она несёт:\n- продукт → корневые компоненты (MULTI): один продукт собирает несколько корней;\n- продукт → git-проекты (MULTI): монорепо NooriUta/AIDA держит несколько продуктов, а UDWE наоборот размазан на шесть слугов;\n- веха → продукт (заменяет BELONGS_TO_PROJECT из ADR-LORE-040 §1).\n\nЧто уже написано и не доделано, обе PROPOSED:\n- ADR-LORE-038 «Проект ≠ репозиторий» решил обратный случай (один продукт, несколько remote'ов — закрывается массивом hosts) и сознательно снял идею новой вершины: «схема НЕ трогается, нет нового KnowProject». Случай «одно репо — несколько продуктов» там не рассматривался. Дописать разделом, не переписывая принятое.\n- ADR-LORE-040 «Вехи и план — по проектам» вешает ребро вехи на KnowGitProject. После введения продукта §1 переписывается.\n\nADR-LORE-022 «Продуктовый слой» (ACCEPTED) — другая ось: Feature → UseCase → Task, фич в базе всего 9. Не путать.\n\nРезультат задачи: решение (KnowDecision) + правки в две ADR. Схема и миграция — RM-P6."
++    },
++    {
++      "task_uid": "SPRINT_LORE_ROADMAP_PER_PROJECT/RM-P2",
++      "title": "Собрать состав продуктов из 26 корневых компонентов",
++      "task_type": "analytics",
++      "note_md": "26 корневых компонентов (LoreComponent с parent_id = null). Задача — разложить их по продуктам и вынести за скобки то, что продуктом не является.\n\nЧерновая раскладка на подтверждение владельцем (НЕ решение, а материал):\n- AIDA — DALI, HND, MT/MIMIR, ANVIL, SKULD, CHUR, SHT, YGG, VERDANDI, AI, OBS;\n- LORE — OMILORE;\n- BRAGI — BRAGI; VOLVA — VOLVA; MIDGARD — MIDGARD; ODIN — ODIN;\n- UDWE — MIGGEN; SEIDR (сайт и бренд) — SEIDR, HARPA;\n- не продукт, а общий слой — INFRA, KC, SECURITY, FE, TYR, FRIGG;\n- не разработка вовсе — FREYJA (события, CFP, найм, ИП, аутрич).\n\nЗаодно: у 7 корней не заполнена area; у трёх корней ноль своих спринтов (SVC, FE, MT) — проверить, живые они или наследство.\n\nБез признака «продукт / общий слой / не разработка» портфель смешает продукт с инфраструктурой и с календарём, и карта снова станет нечитаемой."
++    },
++    {
++      "task_uid": "SPRINT_LORE_ROADMAP_PER_PROJECT/RM-P3",
++      "title": "Раздать спринты по продуктам: 46 из 406 вообще без компонента",
++      "task_type": "analytics",
++      "note_md": "46 спринтов из 406 не привязаны ни к одному компоненту; 30 из них незакрытые, то есть попадут в будущую карту и повиснут в воздухе. Спринт попадает в продукт через компонент, поэтому дыра в привязке к компоненту = дыра в карте продукта.\n\nОтдельно: у 59 из 104 незакрытых спринтов нет track_id — нынешняя доска плана лейнится по трекам и эти 59 показать не может.\n\nПривязка спринта к компоненту должна стать требованием линтера полноты — так же, как проект у спринта (RM-S3)."
++    },
++    {
++      "task_uid": "SPRINT_LORE_ROADMAP_PER_PROJECT/RM-P5",
++      "title": "Чтение и фильтр — от продукта, а не от git-проекта",
++      "task_type": "dev",
++      "note_md": "Фильтр в шапке сейчас работает по git-проекту. После RM-P1/RM-P6 главной осью становится продукт; git-проект остаётся вторым уровнем (полезен, когда надо смотреть именно репозиторий).\n\nПроверено на проде 25.08.2026: нынешний фильтр доделан наполовину. При выборе NooriUta/UnlimitedLORE на странице «Вехи» фильтруется числитель, но не знаменатель, не чипы проектов и не прогноз: M1 показывает «1/76 · 1%», M4 — «⚠ −22 дн, осталось 51 Sp» при выведенных 7/58, «Зависимости 67» не меняется вовсе. Корректно фильтруются только «Спринты без вех» и число баров на Ганте.\n\nТо есть RM-U2 — это не «сделать фильтр», а «дочинить фильтр до конца», и уже по новой оси.\n\nАДРЕСА (разбор корпуса 26.08.2026).\n\nПочему «1/76 · 1%» не чинится на бэкенде: слайс milestones (LoreSlices.java:853-864) вообще не принимает project — он отдаёт direct_sprint_ids по in(TARGETS_MILESTONE) для всех продуктов сразу. Асимметрия рождается на загрузке в LoreMilestonesView.tsx: строка 102 тянет milestones БЕЗ фильтра, строка 103 тянет sprints С фильтром, строка 104 sprint_done_dates опять без. Дальше :110 doneSet из отфильтрованных (числитель), :129 ids из неотфильтрованных (знаменатель), :131 open = ids.length - done (неверно), :251 рисует done/ids.length.\n\nОттуда же тянется прогноз: :222-229 riskBlock считает weeksNeeded от open, :119-124 avgVelocity от нефильтрованных дат — это и есть «⚠ −22 дн, осталось 51 Sp». И :138 чипы проектов берутся из отфильтрованной карты, поэтому чипы и числа противоречат друг другу; :317-328 подробности делают byId.get(sid) и рисуют пустые имена для чужих спринтов.\n\nТот же класс ошибки в двух других местах: LorePlanBoard.tsx:203-210 (фильтруется только sprints, а plan_config/sections/checkpoints/milestones/releases/components — нет; :228 sprint_deps тоже нет, отсюда неизменные «Зависимости 67») и LoreAnalyticsProduct.tsx:83-89 (project получает только actor_load, остальные пять источников корпусные, но смешиваются в одну панель).\n\nОхват скоупа уже: ProjectScopeContext.tsx хранит один nullable-слуг в localStorage, читают его ровно три компонента (LoreMilestonesView, LorePlanBoard, LoreAnalyticsProduct), а ещё пять держат свои независимые фильтры проекта (LoreAnalytics :478-482, LoreSprintTree :248, LoreReleasesBoard :126-134, LoreOpenQuestionsBoard :261, product/LoreActors :179). Двухуровневый скоуп меняет форму контекста и разъедется с этой пятёркой, если её не свести."
++    },
++    {
++      "task_uid": "SPRINT_LORE_ROADMAP_PER_PROJECT/RM-V1",
++      "title": "Ребро вехи вести на продукт; пересмотреть решение «M0–M7 принадлежат AIDA»",
++      "task_type": "design",
++      "note_md": "ADR-LORE-040 §1 даёт вехе BELONGS_TO_PROJECT на KnowGitProject, §2 фиксирует решением D-2026-LORE-M0M7-BELONG-TO-AIDA, что M0–M7 принадлежат проекту AIDA.\n\nПосле RM-P1 ребро ведётся на продукт. И само решение про M0–M7 требует ревизии: это не вехи продукта AIDA, а календарь одного забега (w0…w29: «ИП оформлен», «пентест», «HighLoad++ talk», «paying OEM»). Привязать его к AIDA как к продукту — значит зафиксировать нынешнюю путаницу в модели.\n\nВыполнять ПОСЛЕ RM-P1…RM-P6: пока нет сущности продукта, вешать на неё ребро нечем. Порядок задан владельцем: сначала продукты, потом вехи."
++    }
++  ],
++  "create": [
++    {
++      "task_id": "RM-P6",
++      "task_type": "dev",
++      "title": "Схема: вершина продукта, рёбра к компонентам и репозиториям, миграция",
++      "note_md": "Реализация решения из RM-P1. В схеме сейчас продукта нет: вершин Product/KnowProduct не существует (проверено по LoreSchemaInitializer), есть только LoreComponent, KnowGitProject и KnowFeature.\n\nДва пути, оба дают одни и те же рёбра — выбрать при принятии RM-P1:\n\nА. Справочником, как уже сделаны области. Область живёт как KnowDictEntry с dict_type='area', а связь компонента с ней — ребро IN_AREA (ADR-LORE-012 level B, LoreResourceBase.relinkArea). Продукт делается тем же приёмом: dict_type='product' + ребро IN_PRODUCT от корневого компонента. Плюсы: SCD2-история уже есть (KnowDictEntryHist, AL-43), эндпоинт записи /lore/dict/entry уже есть, админка справочников уже есть — новый тип вершины не заводится вовсе. Минус: продукту нужны свои поля (владелец, статус, паспорт) сверх label_ru, и он окажется справочником с обвязкой.\n\nБ. Своя вершина KnowProduct + KnowProductHist. Плюс: продукт — сущность первого класса, паспорт и история как у спринта. Минус: новый тип, новая миграция, новые MCP-инструменты (product_new/set/link), новая админка.\n\nРекомендация: А. Продукт по своей природе — короткий справочник (их будет 8–10), а вся содержательная информация уже висит на компонентах и спринтах. Если позже понадобится паспорт продукта, KnowDictEntry расширяется полями без миграции данных.\n\nРёбра в любом случае одни: продукт → корневые компоненты (MULTI), продукт → git-проекты (MULTI), веха → продукт.\n\nМиграция: разложить 26 корневых компонентов и 19 git-проектов по продуктам согласно результату RM-P2. Ничего не удалять — 5 пустых слугов и дубли разбираются в RM-P4, а не сносятся здесь.\n\nВНИМАНИЕ по процессу: любой ./gradlew test уводит прод-схему на следующую версию, в том числе не долистав Java-часть шага. Прогонять только на локальной Ygg-1 (localhost:2480), прод менять деплоем, факт миграции проверять данными, а не строкой в LoreSchemaVersion.\n\nДВЕ ЛОВУШКИ ИЗ РАЗБОРА КОРПУСА (26.08.2026).\n\n1. Имя занято. LoreProductResource.java уже существует и означает другое — продуктовый слой ADR-LORE-022 (Feature → UseCase → Actor → Pain/Gain/Job). Новую сущность нельзя называть product без уточнения, иначе на одном имени окажутся два разных понятия. Это довод в пользу варианта А: справочник dict_type=product не заводит ни вершины, ни ресурса с конфликтующим именем.\n\n2. Рёбер станет вдвое больше, если сначала не сделать общий помощник. BELONGS_TO_PROJECT сегодня пишут ДЕСЯТЬ независимых мест, у каждого своя идиома delete-then-create: KnowSprint (LoreSprintTaskResource :110-114), KnowADR (LoreAdrResource :423-455), KnowRelease (LoreReleaseResource :166-168, 460-469), KnowDoc (:276-287), KnowRunbook (:96-107), KnowSpec (:219-221), KnowDecision (:250-255), KnowQuestion (:294-303), KnowActor (LoreProductResource :406-462), KnowUseCase (LoreProductResource :1153-1167). Ребро продукта без общего помощника даст двадцать.\n\n3. У LoreComponent нет ребра на проект вообще — связь только выводится через спринты (LoreSlices.java:1017). Значит «продукт → корневой компонент» это по-настоящему новое ребро, а не переиспользование."
++    },
++    {
++      "task_id": "RM-P7",
++      "task_type": "dev",
++      "title": "Убрать жёсткие умолчания «NooriUta/AIDA» в записи релизов и PR",
++      "note_md": "Найдено разбором корпуса 26.08.2026.\n\nШесть мест молча приписывают запись монорепозиторию, когда вызывающий не передал проект:\n- LoreReleaseResource.java:59, 122, 203, 273, 367 — тернарник ? gitProject : \"NooriUta/AIDA\" повторён пять раз;\n- LoreSprintTaskResource.java:740 — то же для базы ссылки на PR.\nНа фронте ещё восемь: LoreReleasesBoard.tsx:126, 129, 134, 203, 210, 292 (включая сам предикат фильтра на :134) и LoreSprintDetail.tsx:1199, 1250.\n\nСейчас цена ошибки — «релиз уехал не в тот репозиторий». После введения продукта цена вырастет: сирота попадёт не в тот ПРОДУКТ, а это уже искажение портфеля и вехи. Умолчание надо заменить явной ошибкой или наследованием от спринта, а не подставлять монорепо."
++    },
++    {
++      "task_id": "RM-P8",
++      "task_type": "dev",
++      "title": "Свести две расходящиеся таблицы проектного скоупа",
++      "note_md": "Найдено разбором корпуса 26.08.2026.\n\nСписок слайсов, ограничиваемых проектом, ведётся вручную в двух местах и они уже разошлись:\n- LoreSlices.java:1702-1709 — PROJECT_SCOPED на шесть слайсов (sprints, adrs, releases, docs, runbooks, specs);\n- mcp-server/src/tools/loreRead.ts:9 — PROJECT_SCOPED_SLICES ровно на один (sprints).\nА принимают параметр project всего пять слайсов, и три из них фильтруют по-разному: sprints и actor_load обходом ребра, project_users по слугу, project_role_events по ПЛОСКОМУ СТРОКОВОМУ полю (LoreSlices.java:1325) — у последнего графа нет вовсе, переименование продукта за ним не пройдёт.\n\nПродуктовая ось добавит третью такую таблицу. Свести в один источник до того, как ось появится.\n\nЗаодно: слайс git_projects объявлен дважды (LoreSlices.java:1003 и :1312), второй молча затирает первый в LinkedHashMap — наружу уходит форма без is_private."
++    }
++  ]
++}
+\ No newline at end of file
+diff --git a/RELEASE-v1.7.2.md b/RELEASE-v1.7.2.md
+new file mode 100644
+index 00000000..5279b11a
+--- /dev/null
++++ b/RELEASE-v1.7.2.md
+@@ -0,0 +1,61 @@
++# v1.7.2 — одно слово «закрыто» и три его определения, вердикт, который не принимал релизы, скоуп через родителя
++
++Патч поверх v1.7.1. Механизм качества из двух прошлых релизов впервые применили к живому корпусу — и он тут же показал, чего не умеет: не принимал ни одного релиза, не видел компонент у спеки, а слайсы под ним считали закрытым не то, что считала закрытым Java. Плюс закрыты пять уязвимостей из семи, и две оставшиеся — решение, а не недосмотр.
++
++## Одно слово «закрыто», три определения, и все три разошлись
++
++Закрытость состояния определялась в SQL-слайсах предикатом «начинается со значка ✅ или ЗАВЕРШЁН». Строка **без** значка не считалась закрытой вообще.
++
++Замер на проде 26.08.2026: спринт `SPRINT_SITE_SEO_PRERENDER` с открытой hist-строкой ровно `"DONE"` остался без `done_date`, и семь задач с тем же статусом попадали в `open_tasks`, то есть числились незакрытыми. Второе хуже первого: пропавшая дата — дырка в ряду, задача в списке открытых — **активно ложное утверждение**.
++
++При этом `AidaLoreResource.classifyStatus()` те же строки всё это время считал закрытыми. Java и SQL держали два независимых определения одного слова, сверки между ними не было, расхождение молчало.
++
++История показывает, что это качели: до AL-117 предикат был подстрокой `LIKE '%DONE%'` и ловил ложное — «⬜ TODO — (V1 ✅ DONE…)». AL-117 сузил до значка и завёл ошибку противоположного знака. Правильный ответ не «значок или слова», а **якорь в начале строки**: слова вторым уровнем, но не подстрокой.
++
++Копий, однако, было не две, а три — третья `taskTick` во фронте. Следующая правка любой из них развела бы их снова, ровно как уже случилось: `MERGED` знали двое из трёх, `ЗАКРЫТ` — один, а SQL требовал `ЗАВЕРШЁН` строго через Ё, из-за чего `ЗАВЕРШЕНО` через Е закрывалось в Java и не закрывалось в SQL.
++
++Канонический источник в репозитории уже был — `shared/lore-statuses.json` с дрейф-проверками во всех трёх пакетах. Расхождение он не поймал не потому, что плох, а потому что покрывает **другую ось**: `planStatuses`/`statusRaw` говорят, что можно ЗАПИСАТЬ, и молчат о том, как ЧИТАТЬ свободный текст обратно. Поэтому заведена вторая секция `statusMatch` в том же файле, а не второй канон рядом — иначе дублирование лечилось бы дублированием.
++
++Слой слов существует ровно для восьми строк: на 406 открытых состояний спринтов и 3239 состояний задач приходится **одно** значение без значка. Он не должен заодно проглатывать «NOT DONE» — отсюда якорь.
++
++Данные не правились: `status_set` открыл бы новую SCD2-строку сегодняшней датой и подменил реальные даты закрытия.
++
++## Вердикт полноты не принимал ни одного релиза
++
++Тип `release` был заявлен в `quality_check` и не работал ВООБЩЕ. Релиз адресуется `release_uid` вида `{git_project}#{release_id}`, а валидация гоняла его через `SAFE_ID`, где нет ни `#`, ни возможности составного имени. Любой корректный запрос отбивался как «id contains illegal characters».
++
++Поймано первым же вызовом по релизам при обходе корпуса за месяц — то есть ровно тем, ради чего API и делался.
++
++## Спека с привязанным компонентом считалась непривязанной
++
++Найдено сессией MIDGARD с доказательствами: у трёх спек компонент привязан всеми доступными способами, а вердикт отвечал «компонент не привязан».
++
++Проверка читала `out('DOCUMENTED_IN')` — неверно дважды. Направление: `DOCUMENTED_IN` идёт компонент → спека, у спеки это ребро **входящее** (та же ошибка, что была с `SUPERSEDES` в прошлом релизе). Тип: `spec_link(rel="component")` пишет вообще другое ребро — `BELONGS_TO`.
++
++Одну связь «спека ↔ компонент» выражают ТРИ механизма: `BELONGS_TO`, `DOCUMENTED_IN` и плоское поле `component_id`. Каждый отвечает `ok:true`, а читатели смотрят в разные места. Проверка теперь засчитывает любой из трёх: требовать «правильный» значило бы заставить переделывать уже сделанное ради формы.
++
++Сама тройная правда — расхождение в модели, того же класса, что поле `git_project` у релиза против ребра. Заведена отдельно (FIX-9): чинить надо модель, а не проверку.
++
++## Скоуп проектов признаёт связь через родителя
++
++При включённом `lore.scope.enforce` проверка только прямой связи отрезала бы автора от его же вопроса, поднятого в его же ADR.
++
++Это измерено по графу, а не предположено: у решений **своего** ребра проекта нет ни у одного из 300 — проект выводится через родительский ADR; у вопросов 24 из 37 непривязанных ведут в проект через `RAISED_IN`.
++
++`PROJECT_SCOPED` теперь допускает несколько выражений на слайс, и сущность видна, если хотя бы один путь ведёт в разрешённый проект. Добавлены слайсы, которых в скоупе не было вовсе: `decisions`, `decisions_of_adr` и `open_questions`.
++
++## Статус вопроса нельзя было поставить, а форма говорила «сохранено»
++
++Жалоба архитектора: «статус не даёт сменить», «сменил в базе — после обновления пропало, видимо рендер хромает». Рендер был ни при чём: не сохранялось.
++
++Форма отправляла статус только для `open` и `dropped`, а для `deferred`/`closed` слала `null` — бэкенд статус не менял, UI показывал успех. Выбрать `deferred` было и нечем: в селекте он стоял disabled-заглушкой, а поля `trigger`, которое бэкенд ТРЕБУЕТ при `deferred`, в форме не было вовсе. То есть «отложен» невозможно было поставить никогда.
++
++Теперь `deferred` выбирается, при выборе появляется обязательное «условие возврата», пустое — честный отказ ДО отправки, а не тихий `null`. `closed` остаётся невыбираемым (инвариант ADR-021: ставится через ответ-решение), но подписан явно, а не выглядит поломкой.
++
++## Пять уязвимостей из семи
++
++Ручной прогон гейтов дал по типу SEC семь уязвимостей: одну high и шесть moderate. Правка только в `package-lock.json` — все прямые зависимости объявлены через `^`, обновления ложатся внутрь диапазонов.
++
++`dompurify` 3.4.12 → 3.4.14 стоит отметить отдельно: им чистится markdown в телах записей LORE, то есть путь эксплуатации в продукте реальный, а не теоретический. Плюс `nanoid` 3.3.16 → 3.3.18 (единственная high), `postcss`, `mermaid`, `react-router`, `@remix-run/router`, `@mermaid-js/parser`.
++
++**Две оставшиеся не чинятся, и это решение.** `react-router`/`react-router-dom` закрываются только мажорным переходом 6 → 7, то есть все маршруты приложения разом. Сама уязвимость — arbitrary constructor injection при СЕРВЕРНОЙ гидрации. Проверено по коду: приложение чисто клиентское — `createRoot`, а не `hydrateRoot`; `BrowserRouter`, а не `StaticRouter`; `renderToString` отсутствует; ssr в `vite.config` не настроен. Уязвимый путь не исполняется. Ломать маршрутизацию ради закрытия недостижимого кода — плохой размен.
+diff --git a/src/components/lore/LoreSprintDetail.tsx b/src/components/lore/LoreSprintDetail.tsx
+index 247023aa..ffe94f92 100644
+--- a/src/components/lore/LoreSprintDetail.tsx
++++ b/src/components/lore/LoreSprintDetail.tsx
+@@ -1280,8 +1280,26 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
+   if (!sprint)  return <div style={S.empty}>{t('lore.sprintDetail.notFound', 'Спринт {{sprintId}} не найден.', { sprintId })}</div>;
+ 
+   const status  = normalizeStatus(sprint.status_raw);
+-  const ghSlug  = sprint.git_projects?.[0] ?? 'NooriUta/AIDA';
+-  const ghBase  = ghSlug.startsWith('http') ? ghSlug : `https://github.com/${ghSlug}`;
++  // RM-P7: репозиторий берём, только когда он известен ОДНОЗНАЧНО.
++  //
++  // Здесь стояло `sprint.git_projects?.[0] ?? 'NooriUta/AIDA'`, и обе половины
++  // выражения врали по-своему. Умолчание приписывало спринт без проекта
++  // монорепозиторию — ссылка вела в чужой репозиторий и выглядела рабочей.
++  // А `[0]` у спринта с двумя репозиториями молча выбирал один из них: номера
++  // PR и версии релизов между репозиториями совпадают (13 пересечений по
++  // корпусу), так что «#612» открывался бы в соседнем проекте — и отличить это
++  // от верной ссылки на глаз нельзя.
++  //
++  // Поэтому `null` вместо догадки: ниже такие ссылки не рисуются вовсе, и
++  // вместо ложной ссылки видно, что репозиторий не определён. Та же развилка,
++  // что на сервере (`LoreReleaseResource.projectOf` → null, а не умолчание).
++  const sprintRepos = [...new Set(sprint.git_projects ?? [])];
++  const ghSlug  = sprintRepos.length === 1 ? sprintRepos[0] : null;
++  const ghBase  = ghSlug == null ? null
++    : ghSlug.startsWith('http') ? ghSlug : `https://github.com/${ghSlug}`;
++  const noRepoHint = sprintRepos.length === 0
++    ? t('lore.sprintDetail.noRepo.none', 'У спринта нет привязанного репозитория — ссылку построить не из чего')
++    : t('lore.sprintDetail.noRepo.many', 'Спринт привязан к нескольким репозиториям ({{n}}) — какой из них имеется в виду, неизвестно', { n: sprintRepos.length });
+   // Prefer the structured IMPLEMENTED_IN_RELEASE edge (accurate — ADR-bridge + curated
+   // status ship-patterns); fall back to the version named in status_raw for sprints
+   // that have no edge yet.
+@@ -1292,7 +1310,7 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
+   const prNums  = parsePrRefs(sprint.pr_refs);
+   // ADR-018 §7: compose PR URLs from the project's hosts[] template (not a baked-in
+   // host). Falls back to the GitHub-shaped ghBase for projects with no hosts yet.
+-  const prHosts   = projectHosts[ghSlug] ?? [];
++  const prHosts   = ghSlug ? (projectHosts[ghSlug] ?? []) : [];
+   const prPrimary = primaryHost(prHosts);
+   const prMirrors = prPrimary ? prHosts.filter(h => h !== prPrimary) : [];
+ 
+@@ -1415,6 +1433,16 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
+         const releaseOptions = allReleases.filter(r =>
+           !linkedReleases.includes(r.id) &&
+           (sprintProjects.length === 0 || sprintProjects.includes(r.gitProject)));
++        // RM-P7: репозиторий отвязываемого релиза берём У САМОГО РЕЛИЗА, а не
++        // «первый проект спринта». Версии повторяются между репозиториями (13
++        // пересечений по корпусу), и `release_uid` собирается как
++        // «репозиторий#версия» — ошибка в репозитории отвязывает ЧУЖОЙ релиз,
++        // отвечая при этом ok.
++        const releaseProject = (v: string): string | null => {
++          const cands = allReleases.filter(r => r.id === v
++            && (sprintProjects.length === 0 || sprintProjects.includes(r.gitProject)));
++          return cands.length === 1 ? cands[0].gitProject : null;
++        };
+         const showProjects = linkedProjects.length > 0 || unlinkedProjects.length > 0;
+         const showRelease = displayReleases.length > 0 || releaseOptions.length > 0;
+         const showPr = prNums.length > 0;
+@@ -1477,19 +1505,28 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
+                     <button onClick={() => goToRelease(v)} style={S.releaseBadge} title={t('lore.sprintDetail.releaseBar.goToRelease', 'Перейти к релизу {{v}}', { v })}>
+                       {v}
+                     </button>
+-                    <a
+-                      href={`${ghBase}/releases/tag/${v}`}
+-                      target="_blank" rel="noopener noreferrer"
+-                      style={S.ghLink} title={t('lore.sprintDetail.releaseBar.githubRelease', 'GitHub Release {{v}}', { v })}
+-                    ><GhIcon /></a>
++                    {ghBase
++                      ? <a
++                          href={`${ghBase}/releases/tag/${v}`}
++                          target="_blank" rel="noopener noreferrer"
++                          style={S.ghLink} title={t('lore.sprintDetail.releaseBar.githubRelease', 'GitHub Release {{v}}', { v })}
++                        ><GhIcon /></a>
++                      // Ссылки нет — и это сказано вслух, а не спрятано: молча
++                      // убранная иконка неотличима от «релиз без тега».
++                      : <span style={{ ...S.ghLink, opacity: 0.35, cursor: 'help' }} title={noRepoHint}><GhIcon /></span>}
+                     {linkedReleases.includes(v) && (
+                       <button
+-                        disabled={relLinking}
+-                        title={t('lore.sprintDetail.releaseBar.unlink', 'Отвязать {{v}}', { v })}
++                        disabled={relLinking || releaseProject(v) == null}
++                        title={releaseProject(v) == null
++                          ? t('lore.sprintDetail.releaseBar.unlinkUnknownRepo',
++                              'Не отвязать: непонятно, релиз какого репозитория имеется в виду — версия {{v}} встречается больше чем в одном', { v })
++                          : t('lore.sprintDetail.releaseBar.unlink', 'Отвязать {{v}}', { v })}
+                         onClick={async () => {
++                          const gp = releaseProject(v);
++                          if (gp == null) return;
+                           setRelLinking(true);
+                           try {
+-                            await linkSprintRelease(sprint.sprint_id, v, sprintProjects[0] ?? ghSlug, 'remove');
++                            await linkSprintRelease(sprint.sprint_id, v, gp, 'remove');
+                             setSprint(s => s ? { ...s, release_ids: (s.release_ids ?? []).filter(x => x !== v) } : s);
+                           } catch (e) { onError(e); } finally { setRelLinking(false); }
+                         }}
+@@ -1554,7 +1591,11 @@ export default function LoreSprintDetail({ sprintId, onError, onNavigateToCompon
+                              style={{ ...S.prLink, fontSize: 'var(--fs-2xs)', opacity: 0.7 }}>⧉</a>
+                         ))}
+                       </span>
+-                    : <a key={n} href={`${ghBase}/pull/${n}`} target="_blank" rel="noopener noreferrer" style={S.prLink}>#{n}</a>
++                    : ghBase
++                      ? <a key={n} href={`${ghBase}/pull/${n}`} target="_blank" rel="noopener noreferrer" style={S.prLink}>#{n}</a>
++                      // Номер показываем, ссылку — нет. Номера PR повторяются
++                      // между репозиториями, и «куда-нибудь» здесь хуже, чем никуда.
++                      : <span key={n} style={{ ...S.prLink, opacity: 0.6, cursor: 'help' }} title={noRepoHint}>#{n}</span>
+                 ))}
+               </span>
+             )}
+diff --git a/src/i18n/locales/en/common.json b/src/i18n/locales/en/common.json
+index e3af65c3..570d792f 100644
+--- a/src/i18n/locales/en/common.json
++++ b/src/i18n/locales/en/common.json
+@@ -1382,8 +1382,13 @@
+         "goToRelease": "Go to release {{v}}",
+         "githubRelease": "GitHub Release {{v}}",
+         "unlink": "Unlink {{v}}",
++        "unlinkUnknownRepo": "Cannot unlink: it is unclear which repository's release this is — version {{v}} occurs in more than one",
+         "linkPlaceholder": "+ link release…"
+       },
++      "noRepo": {
++        "none": "This sprint has no linked repository — there is nothing to build the link from",
++        "many": "This sprint is linked to several repositories ({{n}}) — which one is meant is unknown"
++      },
+       "prBar": {
+         "label": "PR",
+         "openInMirror": "Open in mirror"
+diff --git a/src/i18n/locales/ru/common.json b/src/i18n/locales/ru/common.json
+index 6d14aa5a..887c6baf 100644
+--- a/src/i18n/locales/ru/common.json
++++ b/src/i18n/locales/ru/common.json
+@@ -1382,8 +1382,13 @@
+         "goToRelease": "Перейти к релизу {{v}}",
+         "githubRelease": "GitHub-релиз {{v}}",
+         "unlink": "Отвязать {{v}}",
++        "unlinkUnknownRepo": "Не отвязать: непонятно, релиз какого репозитория имеется в виду — версия {{v}} встречается больше чем в одном",
+         "linkPlaceholder": "+ привязать релиз…"
+       },
++      "noRepo": {
++        "none": "У спринта нет привязанного репозитория — ссылку построить не из чего",
++        "many": "Спринт привязан к нескольким репозиториям ({{n}}) — какой из них имеется в виду, неизвестно"
++      },
+       "prBar": {
+         "label": "PR",
+         "openInMirror": "Открыть в зеркале"

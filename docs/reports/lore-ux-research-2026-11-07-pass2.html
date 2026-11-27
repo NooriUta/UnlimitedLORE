@@ -1,0 +1,305 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Юзабилити LORE · заход 2 · финалисты · 07.11.2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({startOnLoad:true,theme:'base',themeVariables:{primaryColor:'#eee9df',primaryTextColor:'#1e1a12',primaryBorderColor:'#A86A10',lineColor:'#5c5240',fontFamily:'Manrope'}});</script>
+<style>
+:root{--bg0:#f5f3ee;--bg1:#faf8f3;--bg2:#ffffff;--bg3:#eee9df;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#76694f;--acc:#A86A10;--wrn:#a06010;--dng:#c03030;--suc:#3d7a38;--inf:#3a7060;
+--fs-2xs:10px;--fs-xs:11px;--fs-sm:12.5px;--fs-base:14px;--fs-lg:17px;--fs-xl:21px;--font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:var(--fs-base)/1.5 var(--font)}.wrap{max-width:960px;margin:0 auto;padding:18px 12px 60px}
+h1{font:800 var(--fs-xl)/1.25 var(--head);margin:0 0 6px;color:var(--acc)}h2{font:800 var(--fs-lg)/1.3 var(--head);margin:28px 0 8px}h3{font:700 var(--fs-base)/1.3 var(--font);margin:16px 0 6px;color:var(--acc);text-transform:uppercase;letter-spacing:.05em}
+.muted{color:var(--t2);font-size:var(--fs-xs)}.mono{font-family:var(--mono);font-size:.9em}.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin:10px 0}.tldr{border-left:3px solid var(--acc)}
+.card ul,.card ol{margin:6px 0 0;padding-left:20px}.card li{margin:4px 0;font-size:var(--fs-sm)}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}th{font:700 var(--fs-2xs)/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px;border-bottom:1px solid var(--bd);background:var(--bg3)}
+td{padding:7px 6px;border-bottom:1px solid var(--bd);vertical-align:top}.tw{overflow-x:auto}
+.id{font-family:var(--mono);color:var(--acc);font-weight:600;white-space:nowrap}
+.ok{color:var(--suc);font-weight:700}.hyp{color:var(--wrn)}.bad{color:var(--dng);font-weight:700}
+.fin{border-left:3px solid var(--inf)}.fin h3{margin-top:0}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;font-size:var(--fs-sm)}.kv b{color:var(--t3);font-weight:700;text-transform:uppercase;font-size:var(--fs-2xs);letter-spacing:.05em;padding-top:2px}
+.mermaid{background:var(--bg2);border-radius:8px;padding:8px;margin:8px 0;overflow-x:auto}
+</style></head><body><div class="wrap">
+<h1>Юзабилити LORE — заход 2: финалисты вглубь</h1>
+<div class="muted">07.11.2026 · финалисты P-01, P-04, P-07, P-08, P-13, P-14, P-19, P-20, P-23, P-33 · сверка с кодом (ветка feat/ve2-volva-embed-sign) и бэкендом; референсы проверены по страницам документации и исходникам, а не по сниппетам · в LORE ничего не записано · предыдущий заход: lore-ux-research-2026-11-07-pass1.html</div>
+
+<div class="card tldr"><b>Коротко</b><ul>
+<li><b>Все десять финалистов реализуемы без смены технологий.</b> Mantine 9.4, @mantine/hooks (useHotkeys) и react-virtuoso уже стоят. Для обратных ссылок нужен <b>один новый эндпоинт</b> бэкенда. Для сохранённых видов бэкенд не нужен: вид — это сериализованная ссылка в localStorage.</li>
+<li><b>Нашлось 9 реальных багов</b>, их стоит чинить до редизайна. 4 перепроверены вручную: поиск по ссылке теряет запрос; релизы из поиска открываются в «Спринтах»; у запросов нет таймаута; скрытое тело записи выглядит как пустое.</li>
+<li><b>Честные состояния — самый недооценённый пункт.</b> В 14 местах «не загрузилось» выглядит как «пусто». Сбой одного необязательного блока (например, истории прогонов QG) <b>заменяет всю страницу</b> на «недоступно». Это прямо PAIN-LORE-SILENT-HALF.</li>
+<li><b>Порядок обязателен.</b> Сначала фундамент (P-33a/b, единый словарь статусов, честный транспорт), потом каркас (боковая панель, фильтр в URL, паспорт), потом скорость (⌘K-действия, peek). Иначе каждую правку придётся делать трижды.</li>
+<li><b>Риск — отсутствие страховки.</b> 59 тестовых файлов (~470 тестов), но ни одного рендер-теста. Около 6 тестов читают исходник как текст и сломаются при переносе кода. Нужен минимальный набор e2e до начала распила.</li>
+</ul></div>
+
+<h2>1. Баги, найденные по дороге</h2>
+<div class="tw"><table><tr><th>ID</th><th>Баг</th><th>Где</th><th>Проверка</th></tr>
+<tr><td class="id">B-01</td><td>Ссылка <span class="mono">?section=search&amp;q=…</span> теряет запрос: экран создаётся без <span class="mono">initialQuery</span>; генератор ссылки <span class="mono">searchScreenHref</span> никем не вызывается, <span class="mono">palQ</span> — мёртвое состояние</td><td>LorePage.tsx:1265, searchRoutes.ts:74, AppShell.tsx:75</td><td class="ok">перепроверено</td></tr>
+<tr><td class="id">B-02</td><td>В <span class="mono">TYPE_SECTION</span> нет <span class="mono">release</span>, поэтому найденный релиз открывается в «Спринтах»</td><td>searchRoutes.ts:14-34, 68</td><td class="ok">перепроверено</td></tr>
+<tr><td class="id">B-03</td><td>Нет таймаута у запросов: зависший запрос даёт вечный спиннер</td><td>api/lore.ts</td><td class="ok">перепроверено</td></tr>
+<tr><td class="id">B-04</td><td>Фронт не читает <span class="mono">body_redacted</span>: скрытая по правам спека показывает «Контент пуст.»</td><td>LoreSpecView.tsx:79, бэкенд AidaLoreResource.java:816-840</td><td class="ok">перепроверено</td></tr>
+<tr><td class="id">B-05</td><td>Сбой одного слайса превращается в 502 LORE_UPSTREAM, и вся страница заменяется на «недоступно», даже для необязательного блока</td><td>AidaLoreResource.java:969, LorePage.tsx:468/534, LoreQGDetail.tsx:200</td><td class="hyp">по коду</td></tr>
+<tr><td class="id">B-06</td><td>Найденные spec/doc/runbook, вероятно, открывают пустую панель: в ссылке <span class="mono">passport=&lt;id&gt;</span> без префикса <span class="mono">doc:</span>, а spec читается из <span class="mono">?spec=</span></td><td>searchRoutes.ts:70, LorePage.tsx:243</td><td class="hyp">гипотеза, проверить на стенде</td></tr>
+<tr><td class="id">B-07</td><td><span class="mono">q</span> перетекает между разделами; фильтры проекта и компонента спринтов и проект ADR не сбрасываются, остальные сбрасываются</td><td>LorePage.tsx:409-416, 475-482</td><td class="hyp">по коду</td></tr>
+<tr><td class="id">B-08</td><td>Клавиша <span class="mono">/</span> в редакторе TipTap открывает палитру поиска: проверка «печатает ли пользователь» видит только INPUT/TEXTAREA</td><td>AppShell.tsx:125</td><td class="hyp">по коду</td></tr>
+<tr><td class="id">B-09</td><td>Строки «Новостей» фокусируются, но Enter ничего не делает; строки QG и Ленты не фокусируются вовсе</td><td>LoreNewsFeed.tsx:231, LoreQualityGateList.tsx:241, LoreTimeline.tsx:231</td><td class="hyp">по коду</td></tr>
+</table></div>
+<div class="muted">Побочно: <span class="mono">LoreModulePassport.tsx</span> — мёртвый код; надпись у выбора проекта «влияет только на План и Вехи» неверна (влияет ещё на Аналитику→Продукт); локальный node_modules отстал (react-router 6.30 установлен при 7.18 в lock) — перед замерами <span class="mono">npm ci</span>.</div>
+
+<h2>2. Финалисты</h2>
+
+<div class="card fin"><h3>P-01 · Боковая панель вместо трёх горизонтальных уровней</h3><div class="kv">
+<b>Сейчас</b><div>Пространство (меню бренда) → глава (табы в шапке) → раздел (подвкладки) → вкладка. На ≤720px: главы в выпадашке «где я», подвкладки иконками, пространства в нижней панели.</div>
+<b>Референс</b><div><b>Atlassian 2025</b> (проверено): верхняя панель только для поиска, «Создать» и утилит; в панели Recent / Starred / группы / «More»; личная настройка (галка + порядок); <b>Ctrl+[</b> сворачивает; вкладки сущности — горизонтально. <b>Linear</b>: Favorites над группами, редкое — в «More».</div>
+<b>Сохраняем</b><div>Все 22 раздела + search + admin (admin только для админа); выбор проекта; поиск по <span class="mono">/</span> и ⌘K; меню «⋯» (тема, язык); меню пользователя; бейдж тестовой базы; <span class="mono">forsetiChapters.ts</span> как единственный источник глав (там задокументирован прошлый крэш раздела search); мобильный двухшаговый master-detail.</div>
+<b>Меняем</b><div>Новый <span class="mono">layout/Sidebar.tsx</span>: главы → разделы, «Недавние», «Избранное», сворачивание Ctrl+[, на мобильном — drawer. Убираем строку подвкладок из LorePage и табы глав из шапки. BRAGI/MUNINN/TYR — отдельное решение (вопрос Q-1 ниже).</div>
+<b>Цена</b><div><b>M</b> (L, если вместе с «Недавними»/«Избранным» и другими пространствами). Файлы: AppShell, Sidebar (новый), shellNav, shellLayout, forsetiChapters, LorePage, CSS, обе локали.</div>
+<b>Риски</b><div>Ломаются <span class="mono">mobileLayout.test.ts</span>, <span class="mono">mobile-layouts.test.ts:37</span>, <span class="mono">tap-targets.test.ts</span> (ищут текст в AppShell). Сайдбар + список 260px на узком десктопе — тесно, нужно сворачивание по умолчанию ниже ~1280px.</div>
+</div></div>
+
+<div class="card fin"><h3>P-04 · Одна сущность — один дом</h3><div class="kv">
+<b>Сейчас</b><div>Спринты в 7 местах, QG в 3, технологии в 2, MCP/Подключения в 2, три ленты.</div>
+<b>Решение по каждому дублю</b><div><ul style="margin:0">
+<li><b>План</b> — это вид «таймлайн» Спринтов; маршрут <span class="mono">section=plan</span> оставляем.</li>
+<li><b>Вехи/Релизы → спринты</b>, <b>паспорт компонента → спринты/QG</b> — контекстные вкладки, оставляем + ссылка «открыть в Спринтах с фильтром».</li>
+<li><b>Аналитика→Спринты</b>: здоровье вехи и drill-down переносим в карточку вехи; групповой список заменяем сохранёнными видами «Активные», «Готово к выкатке»; Σ трудозатрат — в строку статистики Спринтов.</li>
+<li><b>Аналитика→Quality</b> → вид «дашборд» раздела QG; редирект <span class="mono">atab=quality</span>.</li>
+<li><b>Аналитика→Технологии</b> — слабая копия матрицы: удалить, но <b>сначала</b> перенести тултип устаревания; редирект на <span class="mono">section=tech&amp;tview=matrix</span>.</li>
+<li><b>MCP/Подключения</b>: дом — «Основа» (видят все), в Админке ссылка. Если оставить только в Админке, не-админы потеряют доступ.</li>
+<li><b>Лента</b> вливается в «Новости» режимом «Хронология»; <b>История</b> уходит вкладкой в паспорта, раздел остаётся входом «по всем сущностям».</li></ul></div>
+<b>Сохраняем</b><div>Всё уникальное каждого места (таблица 1c в разборе): здоровье вехи, Σ трудозатрат, фильтры групп, HTML-экспорт QG, рекомендации QG, матрица технологий с префиллом формы.</div>
+<b>Цена</b><div><b>M</b>. Ломается <span class="mono">adminMcpGroup.test.ts</span> (утверждает обе отрисовки).</div>
+</div></div>
+
+<div class="card fin"><h3>P-07 · Единый каркас паспорта</h3><div class="kv">
+<b>Сейчас</b><div>13 типов карточек, у каждого своя шапка. «Свежесть» называется по-разному: created_date / date_created / valid_from. Владелец есть только у компонента, проект — только у 5 типов. У решения и релиза нет страницы, только раскрытая строка. У задачи паспорта нет вовсе. QG отрисовывается двумя разными компонентами.</div>
+<b>Референс</b><div><b>Backstage</b> (проверено по исходникам): строка типа «kind — type», заголовок + звёздочка избранного, крошки родителя; справа <b>Owner</b> и <b>Lifecycle</b>, меню «⋯» (скопировать ссылку и т. п.). <b>Баннеры целостности над Overview</b> (сирота, ошибки связей). Вкладки с группировкой в dropdown (v1.37).</div>
+<b>Сохраняем</b><div>Тип-специфичные тела внутри «Обзора»: таблица задач, фазы и burndown спринта; 6 вкладок <span class="mono">?ptab=</span> компонента; история прогонов, спарклайн и рекомендации QG; риск вехи; редактор вариантов BRAGI; все режимы правки (inline, модалки, TipTap).</div>
+<b>Меняем</b><div>Поднимаем уже существующие <span class="mono">product/shared.tsx</span> <span class="mono">PassportHeader</span>/<span class="mono">PSection</span> в общий <span class="mono">EntityFrame</span>: шапка (тип · id · статус · владелец · проект · свежесть · ⋯), баннер целостности, вкладки Обзор / Связи / История / Тело. Пилот — ADR, Spec, Doc/Runbook, QG (заодно сливаем два вида QG).</div>
+<b>Цена</b><div><b>L</b> целиком; пилот на 4 типах — <b>M</b>. Вкладке «История» нужно около 8 новых слайсов по id или один общий по карте <span class="mono">HIST_PARENT</span> (<b>M</b>, бэкенд).</div>
+<b>Риски</b><div>Тесты, читающие исходник: <span class="mono">mobile-layouts.test.ts:21-44</span> (passportLayout, milestonesTwoCol, wrapHeader…), <span class="mono">md-fields-tiptap</span>, <span class="mono">md-previews</span>; внешний e2e <span class="mono">TestPlayGround/…/lore-page.spec.ts</span>. Все ссылки <span class="mono">?passport= ?ptab= ?dec= ?rel=</span> должны продолжать работать.</div>
+</div></div>
+
+<div class="card fin"><h3>P-08 · Обратные ссылки и упоминания</h3><div class="kv">
+<b>Сейчас</b><div>Обратные связи пишутся вручную в отдельных слайсах (у ADR: «заменён», «трассируют UC», «обосновывает задачи»). Общего запроса «кто ссылается на X» нет. В графе около 60 типов рёбер.</div>
+<b>Референс</b><div><b>Obsidian</b> (проверено): правая панель с двумя сворачиваемыми секциями — Linked mentions и Unlinked mentions; «больше контекста»; сортировка; фильтр; закрепление за записью; то же можно показать внизу заметки. Кнопка «связать» есть в панели Outgoing links; в Backlinks — UNCONFIRMED.</div>
+<b>Как сделать</b><div><b>Бэкенд (M):</b> эндпоинт <span class="mono">/lore/backlinks?type&amp;id</span> на основе уже существующей таблицы <span class="mono">Branch</span> из поиска (17 типов, id→@rid), входящие рёбра без структурных (HAS_STATE, BELONGS_TO_PROJECT), только открытые SCD2 (<span class="mono">valid_to IS NULL</span>), со скоупом проекта. <b>Упоминания (S):</b> бэкенд не нужен — <span class="mono">/lore/search mode=exact</span> по id уже находит фразу «ADR 018»; на клиенте вычитаем найденное в backlinks.</div>
+<b>Риски</b><div>Шум от Hist-версий в поиске; голые числовые id решений («133»); обрезка выдачи (<span class="mono">capped_at</span> → помечать «неполно»); хабы вроде проектов (лимит и группировка по типу ребра). <b>Любой</b> <span class="mono">./gradlew test</span> мигрирует прод-схему — тест эндпоинта со своим <span class="mono">LORE_TEST_DB_NAME</span>.</div>
+</div></div>
+
+<div class="card fin"><h3>P-13 · Один механизм фильтра, все фильтры в URL</h3><div class="kv">
+<b>Сейчас</b><div>Пять механизмов. Около 30 useState фильтров в LorePage. В URL только <span class="mono">ss</span>, <span class="mono">snr</span>, <span class="mono">as</span>, и в двух кодировках (через запятую или повтором ключа, как в BRAGI). <span class="mono">q</span> значит четыре разные вещи. Дефолты неявные: у Вопросов «открытые + отложенные», у Аналитики «активные».</div>
+<b>Референс</b><div><b>Plane</b> (проверено): постоянная строка чипов «поле · оператор · значение» под тулбаром, мгновенный результат, «Clear all», «Save view». Операторы зависят от типа поля; OR — только в текстовом языке запросов. <b>Linear</b> display options: группировка, подгруппы, сортировка, видимые свойства; личные с «Set as default / Reset».</div>
+<b>Форма URL</b><div>Без изменений: <span class="mono">section, passport, spec, uc</span> и экранные ключи. <span class="mono">q</span> = текстовый фильтр текущего списка. Повтором ключа: <span class="mono">st, pr, proj, comp, tag, area, kind</span>. Одиночные: <span class="mono">per, norel, sort, group, cols, view, v</span>. Все фильтр-ключи добавляем в <span class="mono">LORE_SCREEN_KEYS</span> (сброс при смене раздела — одним правилом, без ad-hoc эффекта). Однократный нормализатор старых ссылок через <span class="mono">replace</span>: <span class="mono">ss→st</span>, <span class="mono">as→st</span>, <span class="mono">snr→norel</span>, <span class="mono">atab=tech/quality</span>, <span class="mono">section=timeline</span>.</div>
+<b>Сохраняем</b><div>Все фильтры из инвентаризации (34 строки таблицы 1b), включая пресеты «В работе»/«Внимание», HTML-экспорт QG, позиции VP-канвы, ширину списка, отметку «прочитано» в Новостях.</div>
+<b>Цена</b><div><b>L</b> (LorePage ≈300 строк фильтров + ~14 экранов). База есть: <span class="mono">FilterPrimitives</span> (FilterBar/FilterDimensionMulti) уже используется на 7 экранах.</div>
+</div></div>
+
+<div class="card fin"><h3>P-14 · Сохранённые виды</h3><div class="kv">
+<b>Референс</b><div><b>Redmine</b> (проверено по исходникам): имя, описание, видимость «мне / всем / ролям», колонки, группировка, итоги, сортировка до 3 уровней; в боковой панели секция «Запросы». <b>Linear</b>: «Save view» появляется после первого фильтра, звёздочка ставит вид в боковую панель. <b>Notion</b>: у вида свой режим открытия записи (side/center/full).</div>
+<b>Как сделать</b><div><b>MVP (S–M поверх P-13):</b> localStorage <span class="mono">lore.views.v1 = [{id, name, section, query, createdAt}]</span>. Вид — это сериализованная строка URL, поделиться — скопировать ссылку. «Недавние» и «Избранное» из P-01 живут в том же хранилище. <b>Общие командные виды (L):</b> пользовательских настроек на бэкенде нет (проверено) — нужен <span class="mono">/lore/views</span> CRUD с владельцем по <span class="mono">kc_sub</span>.</div>
+<b>Стартовые виды</b><div>Заменяют вкладки-дубли: «Спринты · активные», «Спринты · готово к выкатке», «Вопросы · открытые + отложенные», «Вопросы · блокируют работу», «ADR · proposed», «QG · красные».</div>
+</div></div>
+
+<div class="card fin"><h3>P-19 · Peek и j/k</h3><div class="kv">
+<b>Сейчас</b><div>На десктопе в 5 разделах master-detail и в 4 продуктовых экранах карточка уже рядом со списком — там peek добавляет только j/k. Настоящий выигрыш — в Ленте, Новостях, drill-down Аналитики и на узком экране. Строки QG и Ленты не фокусируются. Список «Знаний» виртуализован, поэтому j/k нужно делать через <span class="mono">scrollToIndex</span>.</div>
+<b>Референс</b><div><b>Linear</b> (проверено): Space открывает и закрывает, удержание Space — превью пока держишь; J/K или ↑/↓ двигают фокус, peek следует за ним; X выделяет, Esc снимает выделение, ⌘K — действия над выделенным, частые массовые действия — панелью снизу. Esc для закрытия peek — UNCONFIRMED.</div>
+<b>Как сделать</b><div>Общий хук <span class="mono">useListKeyNav</span> (на <span class="mono">@mantine/hooks</span> useHotkeys) + хост-Drawer в LorePage. Карточки уже принимают id и колбэки, вставляются как есть: AdrPassportView, SprintDetail, QGDetail, ComponentPassport, ArtifactDoc, SpecView.</div>
+<b>Риски</b><div>Конфликты клавиш: Space уже «активировать» в строках с <span class="mono">a11yClick</span>; j/k и <span class="mono">/</span> внутри contenteditable (сначала чинить B-08); Esc спорит между Mantine Modal/Drawer и обработчиком AppShell.</div>
+<b>Цена</b><div><b>M</b> (хук + 9–12 списков + хост).</div>
+</div></div>
+
+<div class="card fin"><h3>P-20 · ⌘K с действиями</h3><div class="kv">
+<b>Сейчас</b><div>⌘K и <span class="mono">/</span> открывают модалку поиска (900px). По выдаче нельзя ходить стрелками — их убрали намеренно (AppShell:137-144). Enter никуда не ведёт.</div>
+<b>Референс</b><div><b>Linear</b> (проверено): ⌘K предлагает действия для текущего вида или выделения; то же меню открывается у поля (assignee, priority) как dropdown с поиском. <b>Недавние</b> показывает поиск по <span class="mono">/</span>, а не ⌘K; в поиске работают @-уточнения.</div>
+<b>Как сделать</b><div>Разводим так же: <b>⌘K = команды</b> (перейти в раздел, создать сущность, сменить статус, связать — над текущей записью из <span class="mono">?passport=</span>), <b>/ = поиск</b> с недавними. Обёртки мутаций есть: <span class="mono">postLoreStatus</span>, <span class="mono">createLore*</span>, <span class="mono">link*</span>, <span class="mono">loreMutate</span>. Обёрток нет у создания и правки релиза и смены статуса ADR и решения (сейчас это только MCP) — их нужно добавить. Зависимость: <span class="mono">@mantine/spotlight@9.4.2</span> (не установлен) или своё меню.</div>
+<b>Сохраняем</b><div>Все 11 возможностей экрана поиска: три фасета со счётчиками, режимы smart/exact/fuzzy, показ lucene-запроса, легенду, предупреждение о частичном ответе, сводку (найдено, время, «упёрлись в лимит»), разложение ранга, настоящие <span class="mono">&lt;a href&gt;</span> (Ctrl+клик), пагинацию по 50, debounce и отмену запроса, раздел <span class="mono">?section=search</span>.</div>
+<b>Цена</b><div><b>M</b> со Spotlight, <b>L</b> со своим меню. Перед этим — B-01.</div>
+</div></div>
+
+<div class="card fin"><h3>P-23 · Честные состояния на каждом блоке</h3><div class="kv">
+<b>Сейчас</b><div>Ошибки различаются (<span class="mono">describeLoreError</span>: 403, недоступно, не найдено…), есть <span class="mono">LoadError</span>, <span class="mono">SliceLoadWarning</span> и сторож <span class="mono">no-silent-catch</span>. Но: <b>14 мест</b>, где сбой выглядит как пусто («ADR не найден», «Решений пока нет», «Реестр пуст» после исчезновения тоста); <span class="mono">useSlice</span> возвращает error, но его никто не читает; бэкенд присылает маркеры <span class="mono">scope</span> и <span class="mono">truncated</span>, клиент их выбрасывает (<span class="mono">lore.ts:129</span>); нет <span class="mono">fetchedAt</span>, нет таймаута; см. также B-05.</div>
+<b>Референс</b><div><b>Grafana</b> (проверено по исходникам): ошибка — иконка в <b>шапке</b> блока, по клику — список сообщений и кнопка Inspect; пустота — текст «No data» в <b>теле</b>. Это разные места, их нельзя спутать. <b>Atlan</b>: статус доверия (Verified/Draft/Deprecated + обязательное сообщение) отдельно от времени синхронизации; старение по порогам.</div>
+<b>Как сделать</b><div>Шаг 1 (транспорт): <span class="mono">fetchLoreSliceMeta → {rows, fetchedAt, scope, truncated}</span>, таймаут, сбой слайса — ошибка блока, а не страницы (плюс ~2 строки на бэкенде: «база лежит» ≠ «запрос упал»). Шаг 2: примитив <span class="mono">&lt;DataBlockBadge&gt;</span> — иконка-причина в шапке, «пусто (проверено)» в теле, «проверено N мин назад». Шаг 3: раскатка по чек-листу из 14 мест + чтение <span class="mono">body_redacted</span> («скрыто правами», а не «пусто»).</div>
+<b>Цена</b><div><b>M–L</b>. Не дать 403 SCOPE_EMPTY снова стать «пусто». Тесты: <span class="mono">loreErrors.test.ts</span> (семантика pageLevel), <span class="mono">loadState.test.ts</span>, <span class="mono">no-silent-catch</span>, i18n, font-scale.</div>
+</div></div>
+
+<div class="card fin"><h3>P-33 · Фундамент: распил монолитов</h3><div class="kv">
+<b>Маршруты</b><div><b>Оставляем <span class="mono">?section=</span>.</b> Пути <span class="mono">/lore/*</span> nginx и vite-proxy отдают бэкенду, и перезагрузка <span class="mono">/lore/sprints/X</span> ушла бы в API. Цепочку условий заменяем на <span class="mono">SECTION_REGISTRY</span> с <span class="mono">React.lazy</span>; сейчас ленивой загрузки нет вообще.</div>
+<b>Шаги</b><div><span class="id">33a</span> (S) вынести <span class="mono">StatusChip</span> из LorePage (его импортируют 4 компонента — циклическая зависимость), единый словарь статусов: сейчас <b>6+ копий, и они расходятся</b> (палитра пикера ≠ палитра чипов, «В плане» vs «TODO»); расширить <span class="mono">check:statuses</span> на UI-копии. <span class="id">33b</span> (S–M) один master-detail на <span class="mono">startPointerDrag</span> с сохранением ширины. <span class="id">33c</span> (L) реестр разделов, хуки <span class="mono">useLoreNav</span>/<span class="mono">useLoreErrors</span>, модули фильтров. <span class="id">33d</span> (M–L) Аналитика по вкладкам с общим хуком данных — сейчас один эффект грузит 16 слайсов. <span class="id">33e</span> (M) SprintDetail (54 useState). <span class="id">33f</span> (S–M) PlanBoard.</div>
+<b>Страховка</b><div>Рендер-тестов нет (нет testing-library/jsdom). До 33c — e2e на 5 ключевых путей в TestPlayGround и правка ~6 тестов, читающих исходник как текст.</div>
+</div></div>
+
+<h2>3. Порядок работ</h2>
+<div class="mermaid">
+flowchart LR
+  B[Баги B-01…B-09] --> F0
+  subgraph F0[Фундамент]
+    A33a[33a статусы + StatusChip] --> A33b[33b один master-detail]
+    T[P-23 шаг 1: честный транспорт]
+    E2E[e2e-страховка 5 путей]
+  end
+  F0 --> F1
+  subgraph F1[Каркас]
+    C33c[33c реестр разделов] --> P13[P-13 фильтр в URL] --> P14[P-14 виды]
+    C33c --> P01[P-01 боковая панель]
+    P04[P-04 дубли → виды]
+    P07[P-07 паспорт, пилот 4 типа]
+  end
+  P14 --> P01
+  P13 --> P04
+  F1 --> F2
+  subgraph F2[Скорость и связи]
+    P20[P-20 ⌘K-действия]
+    P19[P-19 peek + j/k]
+    P08[P-08 обратные ссылки]
+    P23b[P-23 шаги 2–3 раскатка]
+  end
+  F2 --> F3[33d/e/f распил Аналитики, SprintDetail, Плана]
+</div>
+
+<h2>4. Пути пользователей: было → станет</h2>
+<div class="muted">Оценка 1–5: насколько гладко проходит шаг. «Было» — по коду, в варианте III замерю на стенде кликами и временем.</div>
+
+<h3>Владелица: «утренний статус»</h3>
+<div class="mermaid">
+journey
+  title Было: собрать состояние работ
+  section Вход
+    Открыть LORE (План по умолчанию): 3: Владелица
+  section Сбор
+    Вехи — риск: 3: Владелица
+    Аналитика → Спринты — здоровье: 2: Владелица
+    QG → красные гейты: 2: Владелица
+    Вопросы → что блокирует: 2: Владелица
+    Новости → что изменилось: 3: Владелица
+  section Доверие
+    Пусто — это пусто или сбой?: 1: Владелица
+</div>
+<div class="mermaid">
+journey
+  title Станет: один экран + честные плашки
+  section Вход
+    Мой день (P-03 позже) или вид «Утро»: 4: Владелица
+  section Сбор
+    Избранные виды в панели — 1 клик: 5: Владелица
+    Здоровье вехи в её карточке: 4: Владелица
+    QG · красные — сохранённый вид: 5: Владелица
+  section Доверие
+    Плашка «проверено 2 мин назад» или «не смогли: 403»: 5: Владелица
+</div>
+
+<h3>Разработчик: «почему так решили» (JOB-RECALL-WHY)</h3>
+<div class="mermaid">
+journey
+  title Было
+  section Поиск
+    ⌘K — ввести id: 4: Разработчик
+    Стрелками по выдаче нельзя: 2: Разработчик
+  section Контекст
+    ADR — решения внутри: 4: Разработчик
+    Кто ещё ссылается? Нет панели: 1: Разработчик
+    Упоминания в спринтах и спеках — искать руками: 1: Разработчик
+</div>
+<div class="mermaid">
+journey
+  title Станет
+  section Поиск
+    / — поиск, стрелки, Enter: 5: Разработчик
+  section Контекст
+    Паспорт ADR — шапка + баннер целостности: 4: Разработчик
+    Панель «на это ссылаются» + упоминания: 5: Разработчик
+    Пробел — peek на задаче, j/k по списку: 5: Разработчик
+</div>
+
+<h3>Тестировщик: «что сломано и когда» (PAIN-LORE-QUALITY-UNSEEN)</h3>
+<div class="mermaid">
+journey
+  title Было → станет
+  section Было
+    QG-список без фокуса строк: 2: Тестировщик
+    Сбой истории прогонов роняет всю страницу: 1: Тестировщик
+    QG виден в 3 местах по-разному: 2: Тестировщик
+  section Станет
+    QG — один дом, вид «дашборд»: 4: Тестировщик
+    Ошибка блока — иконка в шапке, страница жива: 5: Тестировщик
+    j/k по гейтам + peek: 5: Тестировщик
+</div>
+
+<h3>Новичок или внешний клиент: «где тут моё»</h3>
+<div class="mermaid">
+journey
+  title Было → станет
+  section Было
+    6 глав × 22 раздела в табах — непонятно, с чего начать: 2: Новичок
+    Глава с одной вкладкой, 4 уровня вложенности: 2: Новичок
+    Выбор проекта влияет только на часть экранов: 1: Новичок
+  section Станет
+    Панель с группами по смыслу + стартовые виды: 4: Новичок
+    Честное пустое состояние объясняет «зачем»: 4: Новичок
+</div>
+<div class="muted">Агент через MCP — не пользователь интерфейса, но P-26 (атрибуция «кто сделал: человек / агент») и журнал сессий агентов остаются в каталоге на будущее.</div>
+
+<h2>5. Черновик спринтов (в LORE пока не заведено)</h2>
+<div class="tw"><table><tr><th>Спринт</th><th>Состав</th><th>Оценка</th></tr>
+<tr><td><b>UX-0 · Баги и страховка</b></td><td>B-01…B-09; e2e на 5 ключевых путей; правка тестов, читающих исходник; <span class="mono">npm ci</span></td><td>S–M</td></tr>
+<tr><td><b>UX-1 · Фундамент</b></td><td>33a статусы + StatusChip; 33b единый master-detail; P-23 шаг 1 (транспорт, таймаут, ошибка блока ≠ страницы, body_redacted)</td><td>M</td></tr>
+<tr><td><b>UX-2 · Каркас</b></td><td>33c реестр разделов; P-13 фильтр в URL + нормализатор старых ссылок; P-14 виды в localStorage; P-04 дубли → виды и редиректы</td><td>L</td></tr>
+<tr><td><b>UX-3 · Навигация и паспорт</b></td><td>P-01 боковая панель (прототип → approve → код); P-07 пилот EntityFrame на ADR/Spec/Doc/QG</td><td>M–L</td></tr>
+<tr><td><b>UX-4 · Скорость и связи</b></td><td>P-20 ⌘K-команды + / поиск; P-19 peek + j/k; P-08 эндпоинт backlinks + панель + упоминания; P-23 шаги 2–3</td><td>L</td></tr>
+<tr><td><b>UX-5 · Распил</b></td><td>33d Аналитика, 33e SprintDetail, 33f План</td><td>L</td></tr>
+</table></div>
+
+<h2>5a. Разложение по слоям: визуал · функции фронта · идеология бэка · хранение</h2>
+<div class="muted">Дополнено 07.11 по просьбе владелицы. Те же финалисты, но разложены по тому, что именно меняется.</div>
+<div class="tw"><table>
+<tr><th>Слой</th><th>Что меняется</th><th>Предложения</th></tr>
+<tr><td><b>Визуал</b><br><span class="muted">дизайн без новой логики; бренд, иконки и токены не трогаем</span></td><td><ul style="margin:0;padding-left:18px">
+<li>Боковая панель вместо трёх рядов табов; на мобильном — drawer.</li>
+<li>Единая шапка паспорта: «тип — подтип», звезда, крошки, владелец · проект · свежесть, меню ⋯.</li>
+<li>Баннер целостности над «Обзором» («нет релиза», «сирота»).</li>
+<li>Строка фильтров-чипов «поле · значение ✕» над любым списком.</li>
+<li>Состояния блока: иконка ошибки в <b>шапке</b>, «пусто (проверено)» в <b>теле</b>, бейдж свежести.</li>
+<li>Один набор цветов статусов: пикер = чипы = таймлайн.</li>
+<li>Мобильный список карточками; подсказки клавиш (<span class="mono">kbd</span>) в меню.</li></ul></td><td class="mono">P-01 P-07 P-13 P-23 33a</td></tr>
+<tr><td><b>Функции фронта</b><br><span class="muted">поведение в браузере</span></td><td><ul style="margin:0;padding-left:18px">
+<li>Все фильтры в URL, одна форма ключей, нормализатор старых ссылок, сброс одним правилом.</li>
+<li>Сохранённые виды, «Избранное», «Недавние».</li>
+<li>Один набор — несколько видов (список / доска / таймлайн); План = вид Спринтов; редиректы <span class="mono">atab=tech/quality</span>.</li>
+<li>⌘K — команды над текущей записью; <span class="mono">/</span> — поиск со стрелками, недавними и Ctrl+Enter.</li>
+<li>Peek по Space, j/k, X и панель массовых действий.</li>
+<li>Транспорт: таймаут, <span class="mono">fetchedAt</span>, не выбрасывать <span class="mono">scope</span>/<span class="mono">truncated</span>, сбой блока ≠ сбой страницы, чтение <span class="mono">body_redacted</span>.</li>
+<li>Реестр разделов с lazy-загрузкой, один master-detail, распил монолитов.</li>
+<li>Баги B-01…B-09.</li></ul></td><td class="mono">P-13 P-14 P-04 P-20 P-19 P-23 P-33</td></tr>
+<tr><td><b>Идеология бэка</b><br><span class="muted">принципы, которые бэкенд гарантирует всем клиентам: UI, MCP, miniLORE</span></td><td><ul style="margin:0;padding-left:18px">
+<li><b>Честный ответ.</b> Каждый ответ несёт метаданные полноты: время, «скрыто скоупом», «обрезано», предупреждения. Сбой одного запроса — ошибка этого запроса, а не 502 на всю страницу. «База лежит» ≠ «запрос упал».</li>
+<li><b>Связи — сервис графа, а не ручной код в каждом слайсе.</b> Один эндпоинт входящих связей (<span class="mono">/lore/backlinks</span>): без структурных рёбер, только открытые SCD2, со скоупом.</li>
+<li><b>История единообразна.</b> Один общий hist-запрос по карте <span class="mono">HIST_PARENT</span> вместо ручных слайсов для каждого типа.</li>
+<li><b>Паритет человека и агента.</b> Всё, что умеет MCP (статус релиза, ADR, решения), доступно UI через тот же сервис записи. Одна правда SCD2, одни проверки.</li>
+<li><b>Скоуп проекта применяет сервер</b>, одинаково ко всем разделам и к человеку и его агенту. Сейчас фронт применяет его местами (PAIN-LORE-SCOPE-MANUAL).</li>
+<li>Упоминания — существующий поиск <span class="mono">mode=exact</span>, нового бэка не нужно.</li></ul></td><td class="mono">P-23 P-08 P-07 P-20</td></tr>
+<tr><td><b>Хранение данных</b><br><span class="muted">что и где лежит</span></td><td><ul style="margin:0;padding-left:18px">
+<li><b>MVP — схема БД не меняется, миграций 0.</b> Виды, избранное и недавние живут в браузере (localStorage); вид = строка URL.</li>
+<li><b>Виды и избранное между устройствами</b> (вы читаете с телефона): нужна вершина <span class="mono">KnowView</span> (владелец по <span class="mono">kc_sub</span>, видимость «я / все / роли», строка запроса) — 1 миграция. Решается вопросом Q-2.</li>
+<li><b>«Связать» из упоминаний</b> создаёт обычное типизированное ребро из существующих. Новый общий тип (например, <span class="mono">REFERENCES</span>) — только если подходящего нет; это вопрос Q-5.</li>
+<li>SCD2 без изменений. Для общего hist-запроса, возможно, понадобится индекс по родителю; проверить замером, а не заранее.</li>
+<li><span class="mono">fetchedAt</span>, свежесть и состояния блока не хранятся — это свойства ответа, а не данных.</li></ul></td><td class="mono">P-14 P-01 P-08 P-07</td></tr>
+</table></div>
+<div class="card"><b>Прототип:</b> <span class="mono">docs/prototypes/ux-redesign-shell-v1.html</span> — боковая панель, строка фильтров, виды «список / доска / таймлайн», peek, ⌘K и <span class="mono">/</span>, паспорт с вкладками Обзор / Связи / История / Тело, состояния блоков, мобильная раскладка. Метки P-xx показывают, где какое предложение.</div>
+
+<h2>6. Вопросы владелице</h2>
+<div class="card"><ol>
+<li><b>Q-1.</b> Боковая панель — только для Forseti или общая для BRAGI/MUNINN/TYR? <b>Решено владелицей 07.11:</b> это разные приложения под одним фронтом. Переключатель приложений — наверху, боковая панель — навигация внутри приложения. Там же: оси навигации — разрезы связей (проект / компонент / проект → компонент), статус — фильтр, а не пункт меню. Записано в LORE: <span class="mono">lore_ux_redesign_principles_2026_11</span>.</li>
+<li><b>Q-2.</b> Сохранённые виды: хватит ли личных (localStorage, делиться ссылкой), или сразу нужны общие командные (бэкенд, L)? Рекомендую: сначала личные.</li>
+<li><b>Q-3.</b> ⌘K = команды, / = поиск (как в Linear) — или оставить ⌘K поиском и добавить команды отдельно? Рекомендую: разделить, как в Linear.</li>
+<li><b>Q-4.</b> Чинить баги B-01…B-09 сразу отдельным PR, не дожидаясь редизайна? Рекомендую: да.</li>
+<li><b>Q-5.</b> «Связать» из упоминаний: выбирать существующий тип ребра или ввести общий <span class="mono">REFERENCES</span>? Рекомендую: существующий тип, а <span class="mono">REFERENCES</span> — только как запасной.</li>
+</ol></div>
+
+<h2>7. Дальше — вариант III</h2>
+<div class="card"><ul>
+<li>Юзабилити-прогон 5 путей на стенде <span class="mono">192.168.3.131:4400</span> (Chrome в вашей сессии): клики, время, тупики; заодно проверка гипотез B-05…B-09.</li>
+<li>axe-core и WCAG 2.2 (цели 24×24, фокус под липкими панелями) по разделам.</li>
+<li>Эвристики Нильсена по каждому из 24 разделов.</li>
+<li>Standalone-прототипы: боковая панель (десктоп + мобильный), EntityFrame, строка фильтров-чипов, peek — на approve.</li>
+</ul></div>
+
+<div class="muted">Проверено по первоисточникам: Linear (select-issues, display-options, custom-views, favorites, personalized sidebar 2024-12, contextual command menu; страница peek — по копии из индекса, сейчас 404) · Atlassian navigation (Jira, Confluence, old-vs-new, design blog) · Backstage v1.37 + исходники EntityLayout · Obsidian help (backlinks, outgoing links, graph) · Notion help (views, linked databases) · Plane docs (views, layouts, universal filtering 2025-10-01) · Redmine (RedmineIssueList, исходники _form.html.erb) · Grafana исходники PanelStatus/PanelDataErrorView · Atlan docs (certificates, timestamps). Помечено UNCONFIRMED: Esc в peek Linear, хоткей сворачивания боковой панели Linear, кнопка «связать» в Backlinks Obsidian, AND/OR в фильтрах Plane, вид бейджей Atlan.</div>
+</div></body></html>

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>aida-lore MCP — как работает и как настроить</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14110d; --bg2: #1c1813; --bg3: #251f18; --bd: #3a3026;
+    --t1: #f2e8da; --t2: #c9b9a3; --t3: #8f806c;
+    --acc: #e8a33d; --suc: #6fbf73; --wrn: #e6b341; --dng: #e0685a; --inf: #5fa8d3;
+    --fs-2xs: 10px; --fs-xs: 11px; --fs-sm: 12px; --fs-md: 13px; --fs-lg: 15px; --fs-xl: 18px; --fs-2xl: 22px;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--t1); font: 400 var(--fs-md)/1.5 Manrope, system-ui, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 16px 14px 48px; }
+  h1 { font: 800 var(--fs-2xl)/1.2 Unbounded, sans-serif; color: var(--acc); margin: 4px 0 6px; letter-spacing: .01em; }
+  h2 { font: 800 var(--fs-lg)/1.3 Unbounded, sans-serif; margin: 28px 0 8px; color: var(--t1); }
+  p, li { color: var(--t2); }
+  .lead { color: var(--t1); font-size: var(--fs-lg); }
+  .meta { color: var(--t3); font-size: var(--fs-xs); font-family: var(--mono); }
+  code, .mono { font-family: var(--mono); font-size: var(--fs-sm); color: var(--acc); }
+  .card { background: var(--bg2); border: 1px solid var(--bd); border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+  .ok { border-left: 3px solid var(--suc); }
+  .warn { border-left: 3px solid var(--wrn); }
+  .bad { border-left: 3px solid var(--dng); }
+  /* Схема: на телефоне — горизонтальная прокрутка, а не ужатие до нечитаемого */
+  .diagram { background: var(--bg2); border: 1px solid var(--bd); border-radius: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 8px; }
+  .diagram pre.mermaid { margin: 0; min-width: 560px; }
+  table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+  th { text-align: left; text-transform: uppercase; font-size: var(--fs-2xs); letter-spacing: .06em; color: var(--t3); border-bottom: 1px solid var(--bd); padding: 6px 6px; }
+  td { border-bottom: 1px solid var(--bd); padding: 6px 6px; vertical-align: top; color: var(--t2); }
+  .tbl { overflow-x: auto; }
+  .pill { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: var(--fs-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+  .p-ok { background: rgba(111,191,115,.15); color: var(--suc); }
+  .p-wrn { background: rgba(230,179,65,.15); color: var(--wrn); }
+  .p-dng { background: rgba(224,104,90,.15); color: var(--dng); }
+</style>
+</head>
+<body>
+<main>
+  <h1>aida-lore MCP</h1>
+  <div class="meta">как работает · какие есть варианты настройки · 13.11.2026</div>
+
+  <p class="lead">Коротко: Claude Code сам запускает MCP-сервер aida-lore отдельным процессом на ноутбуке. Сервер получает токен в Keycloak под клиентом <code>lore-mcp-full</code> и ходит в бэкенд LORE на сервере. Канон настройки — одна запись в <code>~/.claude.json</code> (user-скоуп).</p>
+
+  <div class="card ok">Сейчас: MCP собран из <code>2648f661</code>, бэкенд отвечает, расхождения нет, запись в LORE проходит, машина <code>LORCETUS</code> передаётся.</div>
+
+  <h2>1. Как это работает</h2>
+  <div class="diagram">
+<pre class="mermaid">
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: SIMPLE
+---
+flowchart TB
+  CC["Claude Code<br/>сессия на ноутбуке"]
+  CFG["~/.claude.json<br/>mcpServers.aida-lore<br/>command · args · env"]
+  SRC["C:\AIDA\UnlimitedLORE-mcp<br/>pull develop · npm ci<br/>npm run build"]
+  MCP["aida-lore MCP<br/>свой процесс, stdio<br/>dist\index.js"]
+  KC["Keycloak omilore<br/>клиент lore-mcp-full"]
+  BE["Бэкенд LORE<br/>lore.odal.seidrstudio.pro"]
+  DB[("ArcadeDB прод<br/>system_aida_lore")]
+  CC -->|"1 · читает при старте"| CFG
+  CFG -->|"2 · запускает"| MCP
+  SRC -.->|"сборка"| MCP
+  MCP -->|"3 · id + секрет → токен"| KC
+  KC -->|"4 · Bearer-токен"| BE
+  BE --> DB
+</pre>
+  </div>
+  <p>Шаг 4 делает сам MCP: зовёт <code>/lore/…</code> с токеном и заголовком машины <code>X-Lore-Machine</code>. Ответы приходят в сессию как инструменты: <code>query_slice</code>, <code>entity_upsert</code>, <code>status_set</code> и другие.</p>
+
+  <h2>1а. Хук старта сессии</h2>
+  <div class="diagram">
+<pre class="mermaid">
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: SIMPLE
+---
+flowchart TB
+  S["Старт / резюме сессии"]
+  H["session-start-register.ps1"]
+  C["~/.claude.json<br/>та же учётка, что у MCP"]
+  K["Keycloak<br/>токен lore-mcp-full"]
+  B["Бэкенд LORE<br/>POST /lore/actor/session"]
+  S --> H
+  H -->|"берёт id + секрет"| C
+  H -->|"client_credentials"| K
+  K -->|"регистрирует сессию"| B
+</pre>
+  </div>
+  <p>Процесс держит код, с которым стартовал. После пересборки нужен <b>Reconnect</b> aida-lore или новая сессия. Проверка — инструмент <code>lore_version</code>: <code>commit</code> сборки и <code>drift: ok</code>.</p>
+
+  <h2>2. Где можно настроить и кто главнее</h2>
+  <div class="diagram">
+<pre class="mermaid">
+---
+config:
+  layout: elk
+  elk:
+    nodePlacementStrategy: SIMPLE
+---
+flowchart TB
+  Q["Claude Code ищет<br/>сервер aida-lore"]
+  L["1 · Local<br/>~/.claude.json →<br/>projects[путь]"]
+  P["2 · Проектный<br/>.mcp.json в чекауте<br/>⚠ перекрывает user"]
+  U["3 · User — КАНОН<br/>~/.claude.json →<br/>mcpServers"]
+  N["Нигде нет —<br/>инструментов не будет"]
+  Q --> L
+  L -->|"нет — дальше"| P
+  P -->|"нет — дальше"| U
+  U -->|"нет"| N
+</pre>
+  </div>
+
+  <p>Берётся <b>первый найденный</b> сверху вниз. Поэтому забытый <code>.mcp.json</code> в чекауте молча выигрывает у канона: 13.11 в нём лежал старый секрет, и все вызовы получали 401.</p>
+  <div class="tbl"><table>
+    <tr><th>Вариант</th><th>Где</th><th>Когда брать</th><th></th></tr>
+    <tr><td><b>User-скоуп</b></td><td><code>~/.claude.json → mcpServers</code></td><td>Всегда. Одна запись на машину, работает во всех проектах. Регистрация — <code>claude mcp add --scope user</code></td><td><span class="pill p-ok">канон</span></td></tr>
+    <tr><td><b>Проектный</b></td><td><code>.mcp.json</code> в корне чекаута</td><td>Только осознанно. С #1298 не в git; шаблон — <code>.mcp.json.example</code>. Перекрывает user-скоуп</td><td><span class="pill p-wrn">осторожно</span></td></tr>
+    <tr><td><b>Local</b></td><td><code>~/.claude.json → projects[путь]</code></td><td>Особая учётка для одного проекта на одной машине</td><td><span class="pill p-wrn">редко</span></td></tr>
+  </table></div>
+
+  <h2>3. Переменные сервера (env в записи)</h2>
+  <div class="tbl"><table>
+    <tr><th>Переменная</th><th>Что даёт</th><th></th></tr>
+    <tr><td><code>LORE_BACKEND_URL</code></td><td>адрес бэкенда LORE</td><td><span class="pill p-dng">обяз.</span></td></tr>
+    <tr><td><code>LORE_OIDC_ISSUER</code></td><td>Keycloak realm omilore</td><td><span class="pill p-dng">обяз.</span></td></tr>
+    <tr><td><code>LORE_MCP_CLIENT_ID</code></td><td>клиент harness: <code>lore-mcp-full</code> — Claude Code</td><td><span class="pill p-dng">обяз.</span></td></tr>
+    <tr><td><code>LORE_MCP_CLIENT_SECRET</code></td><td>секрет этого клиента; тот же читает хук</td><td><span class="pill p-dng">обяз.</span></td></tr>
+    <tr><td><code>LORE_BACKEND_FALLBACK_URL</code></td><td>запасной адрес, если основной не отвечает</td><td><span class="pill p-wrn">по желанию</span></td></tr>
+    <tr><td><code>LORE_MACHINE_ID</code></td><td>имя машины в графе; без него — <code>COMPUTERNAME</code></td><td><span class="pill p-wrn">по желанию</span></td></tr>
+    <tr><td><code>LORE_ACTIVE_PROJECT</code></td><td>проект по умолчанию для срезов и записей</td><td><span class="pill p-wrn">по желанию</span></td></tr>
+    <tr><td><code>LORE_MCP_PROFILE</code></td><td>сузить набор инструментов: full, architect, developer, tester, pm, analyst, product-analyst, marketer</td><td><span class="pill p-wrn">по желанию</span></td></tr>
+    <tr><td><code>LORE_MCP_LEGACY=1</code></td><td>вернуть старые имена инструментов (task_new, adr_new…) рядом с entity_*</td><td><span class="pill p-wrn">по желанию</span></td></tr>
+    <tr><td><code>LORE_HTTP_TIMEOUT_MS</code></td><td>таймаут запросов к бэкенду</td><td><span class="pill p-wrn">по желанию</span></td></tr>
+    <tr><td><code>LORE_SEER_ROLE</code></td><td>только локальная разработка без входа (localhost:9100)</td><td><span class="pill p-wrn">dev</span></td></tr>
+  </table></div>
+
+  <h2>4. Клиенты Keycloak — свой у каждого harness</h2>
+  <div class="card"><code>lore-mcp-full</code> — Claude Code · <code>lore-mcp-full_kimi</code> — Kimi · <code>lore-mcp-full_&lt;harness&gt;</code> — остальные. Чужой клиент брать нельзя: действия в графе припишутся не тому агенту.</div>
+
+  <h2>5. Если не работает</h2>
+  <div class="tbl"><table>
+    <tr><th>Симптом</th><th>Причина</th><th>Что делать</th></tr>
+    <tr><td><code>401 unauthorized_client</code></td><td>секрет не тот или устарел; часто — забытый <code>.mcp.json</code> перекрыл user-скоуп</td><td>убрать локальный <code>.mcp.json</code>, сверить секрет клиента в Keycloak, Reconnect</td></tr>
+    <tr><td><code>drift: restart_needed</code></td><td>пересобрано на диске, процесс старый</td><td>Reconnect aida-lore</td></tr>
+    <tr><td><code>drift: mcp_older</code> / «Unrecognized key»</td><td>MCP собран из отстающего чекаута</td><td>pull develop в UnlimitedLORE-mcp → <code>npm ci</code> → <code>npm run build</code> → Reconnect</td></tr>
+    <tr><td>инструментов aida-lore нет</td><td>записи нет ни в одном скоупе, или проектный файл не одобрен</td><td>проверить <code>~/.claude.json</code>, затем <code>/mcp</code></td></tr>
+  </table></div>
+
+  <h2>6. Что убрано 13.11</h2>
+  <ul>
+    <li><b>Проектный <code>.mcp.json</code></b> со старым секретом убран из основного чекаута; копия лежит в <code>~/.claude/backups</code>.</li>
+    <li><b>Мёртвая переменная</b> <code>LORE_MCP_CLIENT_SECRET</code> убрана из окружения; хук теперь читает учётку из <code>~/.claude.json</code>.</li>
+    <li><b>Семь устаревших worktree</b> со старыми копиями <code>.mcp.json</code> удалены; их работа уже в develop.</li>
+    <li><b>В <code>.claude/settings.local.json</code></b> убраны флаг проектных серверов (с мёртвым <code>mobilepoc-channel</code>) и разовые разрешения.</li>
+    <li><b>Документация, шаблон и хук</b> переведены на user-скоуп — PR #1302 влит.</li>
+  </ul>
+</main>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  import elkLayouts from 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs';
+  mermaid.registerLayoutLoaders(elkLayouts);
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    flowchart: { useMaxWidth: false, htmlLabels: true },
+    themeVariables: {
+      darkMode: true, background: '#1c1813', fontFamily: 'Manrope, sans-serif', fontSize: '13px',
+      primaryColor: '#251f18', primaryTextColor: '#f2e8da', primaryBorderColor: '#e8a33d',
+      lineColor: '#c9b9a3', secondaryColor: '#1c1813', tertiaryColor: '#14110d',
+      clusterBkg: '#1c1813', clusterBorder: '#3a3026', edgeLabelBackground: '#14110d', titleColor: '#e8a33d'
+    }
+  });
+  try { await mermaid.run({ querySelector: 'pre.mermaid' }); document.body.dataset.rendered = 'ok'; }
+  catch (e) { document.body.dataset.rendered = 'error'; console.error('mermaid', e); }
+</script>
+</body>
+</html>
