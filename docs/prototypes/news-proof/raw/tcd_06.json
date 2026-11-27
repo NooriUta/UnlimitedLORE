@@ -1,0 +1,5010 @@
+{
+  "rows": [
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-09",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-10",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-11",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-12",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_CHUR_ADMIN_PROD/P-03",
+      "sprint_id": "SPRINT_CHUR_ADMIN_PROD",
+      "valid_from": "2026-06-18T04:26:48.716Z"
+    },
+    {
+      "task_uid": "SPRINT_CHUR_ADMIN_PROD/P-04",
+      "sprint_id": "SPRINT_CHUR_ADMIN_PROD",
+      "valid_from": "2026-06-18T04:26:48.718Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_TENANT/P-01",
+      "sprint_id": "SPRINT_SHUTTLE_TENANT",
+      "valid_from": "2026-06-18T04:26:48.722Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_TENANT/P-02",
+      "sprint_id": "SPRINT_SHUTTLE_TENANT",
+      "valid_from": "2026-06-18T04:26:48.724Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_TENANT/P-03",
+      "sprint_id": "SPRINT_SHUTTLE_TENANT",
+      "valid_from": "2026-06-18T04:26:48.727Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_TENANT/P-04",
+      "sprint_id": "SPRINT_SHUTTLE_TENANT",
+      "valid_from": "2026-06-18T04:26:48.730Z"
+    },
+    {
+      "task_uid": "SPRINT_STAB_DALI_LOOM/P-01",
+      "sprint_id": "SPRINT_STAB_DALI_LOOM",
+      "valid_from": "2026-06-18T04:26:48.733Z"
+    },
+    {
+      "task_uid": "SPRINT_STAB_DALI_LOOM/P-02",
+      "sprint_id": "SPRINT_STAB_DALI_LOOM",
+      "valid_from": "2026-06-18T04:26:48.736Z"
+    },
+    {
+      "task_uid": "SPRINT_STAB_DALI_LOOM/P-03",
+      "sprint_id": "SPRINT_STAB_DALI_LOOM",
+      "valid_from": "2026-06-18T04:26:48.739Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT_BACKLOG/P-01",
+      "sprint_id": "SPRINT_MT_NEXT_BACKLOG",
+      "valid_from": "2026-06-18T04:26:48.742Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT_BACKLOG/P-02",
+      "sprint_id": "SPRINT_MT_NEXT_BACKLOG",
+      "valid_from": "2026-06-18T04:26:48.744Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT_BACKLOG/P-03",
+      "sprint_id": "SPRINT_MT_NEXT_BACKLOG",
+      "valid_from": "2026-06-18T04:26:48.747Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT_BACKLOG/P-04",
+      "sprint_id": "SPRINT_MT_NEXT_BACKLOG",
+      "valid_from": "2026-06-18T04:26:48.750Z"
+    },
+    {
+      "task_uid": "SPRINT_UI_POLISH_ROUND5/P-01",
+      "sprint_id": "SPRINT_UI_POLISH_ROUND5",
+      "valid_from": "2026-06-18T04:26:48.752Z"
+    },
+    {
+      "task_uid": "SPRINT_SHT_VRD_TENANT/P-01",
+      "sprint_id": "SPRINT_SHT_VRD_TENANT",
+      "valid_from": "2026-06-18T04:26:48.755Z"
+    },
+    {
+      "task_uid": "SPRINT_SHT_VRD_TENANT/P-02",
+      "sprint_id": "SPRINT_SHT_VRD_TENANT",
+      "valid_from": "2026-06-18T04:26:48.758Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_TENANT_ADMIN/P-05",
+      "sprint_id": "SPRINT_HEIMDALL_TENANT_ADMIN",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_TENANT_ADMIN/P-06",
+      "sprint_id": "SPRINT_HEIMDALL_TENANT_ADMIN",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_TENANT_ADMIN/P-07",
+      "sprint_id": "SPRINT_HEIMDALL_TENANT_ADMIN",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_TENANT_ADMIN/P-08",
+      "sprint_id": "SPRINT_HEIMDALL_TENANT_ADMIN",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_SHT_VRD_TENANT/P-03",
+      "sprint_id": "SPRINT_SHT_VRD_TENANT",
+      "valid_from": "2026-06-18T04:26:48.760Z"
+    },
+    {
+      "task_uid": "SPRINT_SHT_VRD_TENANT/P-04",
+      "sprint_id": "SPRINT_SHT_VRD_TENANT",
+      "valid_from": "2026-06-18T04:26:48.763Z"
+    },
+    {
+      "task_uid": "SPRINT_UI_POLISH_ROUND5/P-02",
+      "sprint_id": "SPRINT_UI_POLISH_ROUND5",
+      "valid_from": "2026-06-18T04:26:48.766Z"
+    },
+    {
+      "task_uid": "SPRINT_UI_POLISH_ROUND5/P-03",
+      "sprint_id": "SPRINT_UI_POLISH_ROUND5",
+      "valid_from": "2026-06-18T04:26:48.769Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_FOUNDATION/P-05",
+      "sprint_id": "SPRINT_MIMIR_FOUNDATION",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_UI_POLISH_ROUND5/P-04",
+      "sprint_id": "SPRINT_UI_POLISH_ROUND5",
+      "valid_from": "2026-06-18T04:26:48.771Z"
+    },
+    {
+      "task_uid": "SPRINT_YC_DEPLOY_FIXES_APR24/P-01",
+      "sprint_id": "SPRINT_YC_DEPLOY_FIXES_APR24",
+      "valid_from": "2026-06-18T04:26:48.774Z"
+    },
+    {
+      "task_uid": "SPRINT_YC_DEPLOY_FIXES_APR24/P-02",
+      "sprint_id": "SPRINT_YC_DEPLOY_FIXES_APR24",
+      "valid_from": "2026-06-18T04:26:48.777Z"
+    },
+    {
+      "task_uid": "SPRINT_YC_DEPLOY_FIXES_APR24/P-03",
+      "sprint_id": "SPRINT_YC_DEPLOY_FIXES_APR24",
+      "valid_from": "2026-06-18T04:26:48.779Z"
+    },
+    {
+      "task_uid": "SPRINT_YC_DEPLOY_FIXES_APR24/P-04",
+      "sprint_id": "SPRINT_YC_DEPLOY_FIXES_APR24",
+      "valid_from": "2026-06-18T04:26:48.782Z"
+    },
+    {
+      "task_uid": "SPRINT_VERDANDI_UX_MOBILE/P-05",
+      "sprint_id": "SPRINT_VERDANDI_UX_MOBILE",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_VERDANDI_UX_MOBILE/P-06",
+      "sprint_id": "SPRINT_VERDANDI_UX_MOBILE",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_VERDANDI_UX_MOBILE/P-07",
+      "sprint_id": "SPRINT_VERDANDI_UX_MOBILE",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_VERDANDI_UX_MOBILE/P-08",
+      "sprint_id": "SPRINT_VERDANDI_UX_MOBILE",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V1/P-01",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V1",
+      "valid_from": "2026-06-18T04:26:48.785Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V1/P-02",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V1",
+      "valid_from": "2026-06-18T04:26:48.788Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V1/P-03",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V1",
+      "valid_from": "2026-06-18T04:26:48.791Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V1/P-04",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V1",
+      "valid_from": "2026-06-18T04:26:48.794Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V1/P-05",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V1",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V1/P-06",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V1",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V1/P-07",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V1",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V1/P-08",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V1",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V1/P-01",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V1",
+      "valid_from": "2026-06-18T04:26:48.796Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V1/P-02",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V1",
+      "valid_from": "2026-06-18T04:26:48.799Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V1/P-03",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V1",
+      "valid_from": "2026-06-18T04:26:48.802Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V1/P-04",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V1",
+      "valid_from": "2026-06-18T04:26:48.804Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V2/P-05",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V2",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V3/P-04",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V3",
+      "valid_from": "2026-06-18T04:26:48.807Z"
+    },
+    {
+      "task_uid": "SPRINT_STAR_EXPANSION/P-01",
+      "sprint_id": "SPRINT_STAR_EXPANSION",
+      "valid_from": "2026-06-18T04:26:48.809Z"
+    },
+    {
+      "task_uid": "SPRINT_STAR_EXPANSION/P-02",
+      "sprint_id": "SPRINT_STAR_EXPANSION",
+      "valid_from": "2026-06-18T04:26:48.812Z"
+    },
+    {
+      "task_uid": "SPRINT_STAR_EXPANSION/P-03",
+      "sprint_id": "SPRINT_STAR_EXPANSION",
+      "valid_from": "2026-06-18T04:26:48.815Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V3/P-05",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V3",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_STAR_EXPANSION/P-04",
+      "sprint_id": "SPRINT_STAR_EXPANSION",
+      "valid_from": "2026-06-18T04:26:48.817Z"
+    },
+    {
+      "task_uid": "SPRINT_LINEAGE_TAILS/P-01",
+      "sprint_id": "SPRINT_LINEAGE_TAILS",
+      "valid_from": "2026-06-18T04:26:48.820Z"
+    },
+    {
+      "task_uid": "SPRINT_LINEAGE_TAILS/P-02",
+      "sprint_id": "SPRINT_LINEAGE_TAILS",
+      "valid_from": "2026-06-18T04:26:48.823Z"
+    },
+    {
+      "task_uid": "SPRINT_LINEAGE_TAILS/P-03",
+      "sprint_id": "SPRINT_LINEAGE_TAILS",
+      "valid_from": "2026-06-18T04:26:48.825Z"
+    },
+    {
+      "task_uid": "SPRINT_LINEAGE_TAILS/P-04",
+      "sprint_id": "SPRINT_LINEAGE_TAILS",
+      "valid_from": "2026-06-18T04:26:48.828Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_OUT_PARAM/P-01",
+      "sprint_id": "SPRINT_HOUND_OUT_PARAM",
+      "valid_from": "2026-06-18T04:26:48.831Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_OUT_PARAM/P-02",
+      "sprint_id": "SPRINT_HOUND_OUT_PARAM",
+      "valid_from": "2026-06-18T04:26:48.834Z"
+    },
+    {
+      "task_uid": "SPRINT_REMOVE_MODULE_FEDERATION/P-05",
+      "sprint_id": "SPRINT_REMOVE_MODULE_FEDERATION",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-13",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-14",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-15",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-16",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_OUT_PARAM/P-03",
+      "sprint_id": "SPRINT_HOUND_OUT_PARAM",
+      "valid_from": "2026-06-18T04:26:48.836Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_OUT_PARAM/P-04",
+      "sprint_id": "SPRINT_HOUND_OUT_PARAM",
+      "valid_from": "2026-06-18T04:26:48.839Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PREDICATE_FLOW/P-01",
+      "sprint_id": "SPRINT_HOUND_PREDICATE_FLOW",
+      "valid_from": "2026-06-18T04:26:48.842Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PREDICATE_FLOW/P-02",
+      "sprint_id": "SPRINT_HOUND_PREDICATE_FLOW",
+      "valid_from": "2026-06-18T04:26:48.845Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PREDICATE_FLOW/P-03",
+      "sprint_id": "SPRINT_HOUND_PREDICATE_FLOW",
+      "valid_from": "2026-06-18T04:26:48.848Z"
+    },
+    {
+      "task_uid": "SPRINT_REMOVE_MODULE_FEDERATION/P-06",
+      "sprint_id": "SPRINT_REMOVE_MODULE_FEDERATION",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_REMOVE_MODULE_FEDERATION/P-07",
+      "sprint_id": "SPRINT_REMOVE_MODULE_FEDERATION",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PREDICATE_FLOW/P-04",
+      "sprint_id": "SPRINT_HOUND_PREDICATE_FLOW",
+      "valid_from": "2026-06-18T04:26:48.851Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_PHASE3_CLOSE/P-01",
+      "sprint_id": "SPRINT_LOOM_PHASE3_CLOSE",
+      "valid_from": "2026-06-18T04:26:48.854Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_PHASE3_CLOSE/P-02",
+      "sprint_id": "SPRINT_LOOM_PHASE3_CLOSE",
+      "valid_from": "2026-06-18T04:26:48.857Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_PHASE3_CLOSE/P-03",
+      "sprint_id": "SPRINT_LOOM_PHASE3_CLOSE",
+      "valid_from": "2026-06-18T04:26:48.859Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT_BACKLOG/P-05",
+      "sprint_id": "SPRINT_MT_NEXT_BACKLOG",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_PHASE3_CLOSE/P-04",
+      "sprint_id": "SPRINT_LOOM_PHASE3_CLOSE",
+      "valid_from": "2026-06-18T04:26:48.862Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_DIALECTS/P-01",
+      "sprint_id": "SPRINT_HOUND_PG_CH_DIALECTS",
+      "valid_from": "2026-06-18T04:26:48.865Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_DIALECTS/P-02",
+      "sprint_id": "SPRINT_HOUND_PG_CH_DIALECTS",
+      "valid_from": "2026-06-18T04:26:48.868Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_DIALECTS/P-03",
+      "sprint_id": "SPRINT_HOUND_PG_CH_DIALECTS",
+      "valid_from": "2026-06-18T04:26:48.871Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_DIALECTS/P-04",
+      "sprint_id": "SPRINT_HOUND_PG_CH_DIALECTS",
+      "valid_from": "2026-06-18T04:26:48.874Z"
+    },
+    {
+      "task_uid": "SPRINT_BACKEND_DATA_LAYER/P-01",
+      "sprint_id": "SPRINT_BACKEND_DATA_LAYER",
+      "valid_from": "2026-06-18T04:26:48.877Z"
+    },
+    {
+      "task_uid": "SPRINT_BACKEND_DATA_LAYER/P-02",
+      "sprint_id": "SPRINT_BACKEND_DATA_LAYER",
+      "valid_from": "2026-06-18T04:26:48.880Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_TABLE_COLUMNS/P-05",
+      "sprint_id": "SPRINT_LOOM_TABLE_COLUMNS",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_TABLE_COLUMNS/P-06",
+      "sprint_id": "SPRINT_LOOM_TABLE_COLUMNS",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_TABLE_COLUMNS/P-07",
+      "sprint_id": "SPRINT_LOOM_TABLE_COLUMNS",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_TABLE_COLUMNS/P-08",
+      "sprint_id": "SPRINT_LOOM_TABLE_COLUMNS",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_BACKEND_DATA_LAYER/P-03",
+      "sprint_id": "SPRINT_BACKEND_DATA_LAYER",
+      "valid_from": "2026-06-18T04:26:48.882Z"
+    },
+    {
+      "task_uid": "SPRINT_TRACK_B_PRE_M2/P-01",
+      "sprint_id": "SPRINT_TRACK_B_PRE_M2",
+      "valid_from": "2026-06-18T04:26:48.885Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_CORE_S1/P-01",
+      "sprint_id": "SPRINT_DALI_CORE_S1",
+      "valid_from": "2026-06-18T04:26:48.888Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_CORE_S1/P-02",
+      "sprint_id": "SPRINT_DALI_CORE_S1",
+      "valid_from": "2026-06-18T04:26:48.891Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-05",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-06",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-07",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-08",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-09",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-10",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_COLUMNS_REPAIR/T-01",
+      "sprint_id": "SPRINT_LOOM_COLUMNS_REPAIR",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_COLUMNS_REPAIR/T-02",
+      "sprint_id": "SPRINT_LOOM_COLUMNS_REPAIR",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_COLUMNS_REPAIR/T-03",
+      "sprint_id": "SPRINT_LOOM_COLUMNS_REPAIR",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_COLUMNS_REPAIR/T-04",
+      "sprint_id": "SPRINT_LOOM_COLUMNS_REPAIR",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_COLUMNS_REPAIR/T-05",
+      "sprint_id": "SPRINT_LOOM_COLUMNS_REPAIR",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_CORE_S1/P-03",
+      "sprint_id": "SPRINT_DALI_CORE_S1",
+      "valid_from": "2026-06-18T04:26:48.894Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_CORE_S1/P-04",
+      "sprint_id": "SPRINT_DALI_CORE_S1",
+      "valid_from": "2026-06-18T04:26:48.897Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_FRONTEND_TESTS/P-01",
+      "sprint_id": "SPRINT_HEIMDALL_FRONTEND_TESTS",
+      "valid_from": "2026-06-18T04:26:48.899Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_FRONTEND_TESTS/P-02",
+      "sprint_id": "SPRINT_HEIMDALL_FRONTEND_TESTS",
+      "valid_from": "2026-06-18T04:26:48.902Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_NAV_FIX/P-05",
+      "sprint_id": "SPRINT_LOOM_NAV_FIX",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_FRONTEND_TESTS/P-03",
+      "sprint_id": "SPRINT_HEIMDALL_FRONTEND_TESTS",
+      "valid_from": "2026-06-18T04:26:48.905Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_FRONTEND_TESTS/P-04",
+      "sprint_id": "SPRINT_HEIMDALL_FRONTEND_TESTS",
+      "valid_from": "2026-06-18T04:26:48.908Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_NAV_REDESIGN/P-01",
+      "sprint_id": "SPRINT_HEIMDALL_NAV_REDESIGN",
+      "valid_from": "2026-06-18T04:26:48.911Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_NAV_REDESIGN/P-02",
+      "sprint_id": "SPRINT_HEIMDALL_NAV_REDESIGN",
+      "valid_from": "2026-06-18T04:26:48.914Z"
+    },
+    {
+      "task_uid": "SPRINT_VERSION_AUDIT_APR26/P-05",
+      "sprint_id": "SPRINT_VERSION_AUDIT_APR26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_VERSION_AUDIT_APR26/P-06",
+      "sprint_id": "SPRINT_VERSION_AUDIT_APR26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_VERSION_AUDIT_APR26/P-07",
+      "sprint_id": "SPRINT_VERSION_AUDIT_APR26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_VERSION_AUDIT_APR26/P-08",
+      "sprint_id": "SPRINT_VERSION_AUDIT_APR26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_NAV_REDESIGN/P-03",
+      "sprint_id": "SPRINT_HEIMDALL_NAV_REDESIGN",
+      "valid_from": "2026-06-18T04:26:48.917Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_NAV_REDESIGN/P-04",
+      "sprint_id": "SPRINT_HEIMDALL_NAV_REDESIGN",
+      "valid_from": "2026-06-18T04:26:48.919Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN/P-05",
+      "sprint_id": "SPRINT_AUTH_REDESIGN",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN/P-06",
+      "sprint_id": "SPRINT_AUTH_REDESIGN",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN/P-07",
+      "sprint_id": "SPRINT_AUTH_REDESIGN",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN/P-08",
+      "sprint_id": "SPRINT_AUTH_REDESIGN",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN/P-09",
+      "sprint_id": "SPRINT_AUTH_REDESIGN",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_TENANT_ADMIN/P-01",
+      "sprint_id": "SPRINT_HEIMDALL_TENANT_ADMIN",
+      "valid_from": "2026-06-18T04:26:48.933Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_TENANT_ADMIN/P-02",
+      "sprint_id": "SPRINT_HEIMDALL_TENANT_ADMIN",
+      "valid_from": "2026-06-18T04:26:48.935Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER25/P-05",
+      "sprint_id": "SPRINT_MIMIR_TIER25",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-05",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-06",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-07",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-08",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-09",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT_BACKLOG/P-06",
+      "sprint_id": "SPRINT_MT_NEXT_BACKLOG",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_TENANT_ADMIN/P-03",
+      "sprint_id": "SPRINT_HEIMDALL_TENANT_ADMIN",
+      "valid_from": "2026-06-18T04:26:48.938Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_TENANT_ADMIN/P-04",
+      "sprint_id": "SPRINT_HEIMDALL_TENANT_ADMIN",
+      "valid_from": "2026-06-18T04:26:48.941Z"
+    },
+    {
+      "task_uid": "SPRINT_ANVIL_CORE/P-01",
+      "sprint_id": "SPRINT_ANVIL_CORE",
+      "valid_from": "2026-06-18T04:26:48.943Z"
+    },
+    {
+      "task_uid": "SPRINT_ANVIL_CORE/P-02",
+      "sprint_id": "SPRINT_ANVIL_CORE",
+      "valid_from": "2026-06-18T04:26:48.946Z"
+    },
+    {
+      "task_uid": "SPRINT_UI_POLISH_ROUND5/P-05",
+      "sprint_id": "SPRINT_UI_POLISH_ROUND5",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_UI_POLISH_ROUND5/P-06",
+      "sprint_id": "SPRINT_UI_POLISH_ROUND5",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_UI_POLISH_ROUND5/P-07",
+      "sprint_id": "SPRINT_UI_POLISH_ROUND5",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_ANVIL_CORE/P-03",
+      "sprint_id": "SPRINT_ANVIL_CORE",
+      "valid_from": "2026-06-18T04:26:48.948Z"
+    },
+    {
+      "task_uid": "SPRINT_ANVIL_CORE/P-04",
+      "sprint_id": "SPRINT_ANVIL_CORE",
+      "valid_from": "2026-06-18T04:26:48.951Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_FOUNDATION/P-01",
+      "sprint_id": "SPRINT_MIMIR_FOUNDATION",
+      "valid_from": "2026-06-18T04:26:48.954Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_FOUNDATION/P-02",
+      "sprint_id": "SPRINT_MIMIR_FOUNDATION",
+      "valid_from": "2026-06-18T04:26:48.956Z"
+    },
+    {
+      "task_uid": "SPRINT_SHT_VRD_TENANT/P-05",
+      "sprint_id": "SPRINT_SHT_VRD_TENANT",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_SHT_VRD_TENANT/P-06",
+      "sprint_id": "SPRINT_SHT_VRD_TENANT",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-01",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:48.959Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-02",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:48.962Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-03",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:48.965Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-04",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:48.968Z"
+    },
+    {
+      "task_uid": "SPRINT_YC_DEPLOY_FIXES_APR24/P-05",
+      "sprint_id": "SPRINT_YC_DEPLOY_FIXES_APR24",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_YC_DEPLOY_FIXES_APR24/P-06",
+      "sprint_id": "SPRINT_YC_DEPLOY_FIXES_APR24",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-05",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:48.971Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-06",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:48.981Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-07",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:48.984Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-08",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:48.987Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V1/P-05",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V1",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V2/P-06",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V2",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V2/P-07",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V2",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V3/P-06",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V3",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-09",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:48.989Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-10",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:48.992Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-11",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:48.995Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-12",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:48.998Z"
+    },
+    {
+      "task_uid": "SPRINT_RBAC_SVC_USERS/P-05",
+      "sprint_id": "SPRINT_RBAC_SVC_USERS",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_RBAC_SVC_USERS/P-06",
+      "sprint_id": "SPRINT_RBAC_SVC_USERS",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_RBAC_SVC_USERS/P-07",
+      "sprint_id": "SPRINT_RBAC_SVC_USERS",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_RBAC_SVC_USERS/P-08",
+      "sprint_id": "SPRINT_RBAC_SVC_USERS",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_RBAC_SVC_USERS/P-09",
+      "sprint_id": "SPRINT_RBAC_SVC_USERS",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-13",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.002Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-14",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.005Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-15",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.008Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-16",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.010Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-11",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-12",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-13",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-14",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-15",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-16",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-17",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_RETEST_FIXES_JUN26/P-18",
+      "sprint_id": "SPRINT_LOOM_RETEST_FIXES_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-17",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.014Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-18",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.016Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-19",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.019Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-20",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.022Z"
+    },
+    {
+      "task_uid": "SPRINT_DATA_MODELING_METHODOLOGY/P-05",
+      "sprint_id": "SPRINT_DATA_MODELING_METHODOLOGY",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_DEMO_TENANT_MODULE/P-05",
+      "sprint_id": "SPRINT_DEMO_TENANT_MODULE",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_DEMO_TENANT_MODULE/P-06",
+      "sprint_id": "SPRINT_DEMO_TENANT_MODULE",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_DEMO_TENANT_MODULE/P-07",
+      "sprint_id": "SPRINT_DEMO_TENANT_MODULE",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_CORE/MC-01",
+      "sprint_id": "SPRINT_MIMIR_CORE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_CORE/MC-07",
+      "sprint_id": "SPRINT_MIMIR_CORE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_CORE/MC-08",
+      "sprint_id": "SPRINT_MIMIR_CORE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_CORE/MC-09",
+      "sprint_id": "SPRINT_MIMIR_CORE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SECURITY_DEPS_MAY26/P-05",
+      "sprint_id": "SPRINT_SECURITY_DEPS_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_SECURITY_DEPS_MAY26/P-06",
+      "sprint_id": "SPRINT_SECURITY_DEPS_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_SECURITY_DEPS_MAY26/P-07",
+      "sprint_id": "SPRINT_SECURITY_DEPS_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_PREP/MP-01",
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_PREP/MP-02",
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_PREP/MP-03",
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_PREP/MP-04",
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_PREP/MP-05",
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_PREP/MP-06",
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SECURITY_DEPS_MAY26/P-08",
+      "sprint_id": "SPRINT_SECURITY_DEPS_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_SECURITY_DEPS_MAY26/P-09",
+      "sprint_id": "SPRINT_SECURITY_DEPS_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_SECURITY_DEPS_MAY26/P-10",
+      "sprint_id": "SPRINT_SECURITY_DEPS_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-21",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.027Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-22",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.029Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-23",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.032Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-24",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.035Z"
+    },
+    {
+      "task_uid": "SPRINT_DEPS_JUNE26/P-05",
+      "sprint_id": "SPRINT_DEPS_JUNE26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_DEPS_JUNE26/P-06",
+      "sprint_id": "SPRINT_DEPS_JUNE26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_DEPS_JUNE26/P-07",
+      "sprint_id": "SPRINT_DEPS_JUNE26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_DEPS_JUNE26/P-08",
+      "sprint_id": "SPRINT_DEPS_JUNE26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_DEPS_JUNE26/P-09",
+      "sprint_id": "SPRINT_DEPS_JUNE26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_DEPS_JUNE26/P-10",
+      "sprint_id": "SPRINT_DEPS_JUNE26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-25",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.037Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-26",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.040Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-27",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.043Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/T-28",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-18T04:26:49.045Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-05",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-06",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-07",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-08",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-09",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-10",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-11",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-12",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-13",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-10",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-11",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-12",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-13",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-14",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-15",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_5K/T-01",
+      "sprint_id": "SPRINT_LOOM_5K",
+      "valid_from": "2026-06-18T04:26:49.048Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_5K/T-02",
+      "sprint_id": "SPRINT_LOOM_5K",
+      "valid_from": "2026-06-18T04:26:49.050Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_5K/T-03",
+      "sprint_id": "SPRINT_LOOM_5K",
+      "valid_from": "2026-06-18T04:26:49.053Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_5K/T-04",
+      "sprint_id": "SPRINT_LOOM_5K",
+      "valid_from": "2026-06-18T04:26:49.055Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_5K/T-05",
+      "sprint_id": "SPRINT_LOOM_5K",
+      "valid_from": "2026-06-18T04:26:49.058Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_5K/T-09",
+      "sprint_id": "SPRINT_LOOM_5K",
+      "valid_from": "2026-06-18T04:26:49.061Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_5K/T-10",
+      "sprint_id": "SPRINT_LOOM_5K",
+      "valid_from": "2026-06-18T04:26:49.063Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_5K/T-11",
+      "sprint_id": "SPRINT_LOOM_5K",
+      "valid_from": "2026-06-18T04:26:49.066Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_5K/T-12",
+      "sprint_id": "SPRINT_LOOM_5K",
+      "valid_from": "2026-06-18T04:26:49.069Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_5K/T-15",
+      "sprint_id": "SPRINT_LOOM_5K",
+      "valid_from": "2026-06-18T04:26:49.071Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_5K/T-16",
+      "sprint_id": "SPRINT_LOOM_5K",
+      "valid_from": "2026-06-18T04:26:49.074Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_MT04_FIX/T-01",
+      "sprint_id": "SPRINT_OL_MT04_FIX",
+      "valid_from": "2026-06-18T04:26:49.077Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_MAPPER_V2/P-05",
+      "sprint_id": "SPRINT_OL_MAPPER_V2",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_MAPPER_V2/P-06",
+      "sprint_id": "SPRINT_OL_MAPPER_V2",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_MT04_FIX/T-02",
+      "sprint_id": "SPRINT_OL_MT04_FIX",
+      "valid_from": "2026-06-18T04:26:49.080Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_MT04_FIX/T-03",
+      "sprint_id": "SPRINT_OL_MT04_FIX",
+      "valid_from": "2026-06-18T04:26:49.083Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_MT04_FIX/T-04",
+      "sprint_id": "SPRINT_OL_MT04_FIX",
+      "valid_from": "2026-06-18T04:26:49.086Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_MT04_FIX/T-05",
+      "sprint_id": "SPRINT_OL_MT04_FIX",
+      "valid_from": "2026-06-18T04:26:49.088Z"
+    },
+    {
+      "task_uid": "SPRINT_DOCS_ARCH_JUN26/P-05",
+      "sprint_id": "SPRINT_DOCS_ARCH_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_DOCS_ARCH_JUN26/P-06",
+      "sprint_id": "SPRINT_DOCS_ARCH_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_DOCS_ARCH_JUN26/P-07",
+      "sprint_id": "SPRINT_DOCS_ARCH_JUN26",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_MT04_FIX/T-06",
+      "sprint_id": "SPRINT_OL_MT04_FIX",
+      "valid_from": "2026-06-18T04:26:49.091Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE2_SAAS_ENABLERS/T-01",
+      "sprint_id": "SPRINT_WAVE2_SAAS_ENABLERS",
+      "valid_from": "2026-06-18T04:26:49.094Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE2_SAAS_ENABLERS/T-02",
+      "sprint_id": "SPRINT_WAVE2_SAAS_ENABLERS",
+      "valid_from": "2026-06-18T04:26:49.097Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE2_SAAS_ENABLERS/T-03",
+      "sprint_id": "SPRINT_WAVE2_SAAS_ENABLERS",
+      "valid_from": "2026-06-18T04:26:49.100Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE4/P-05",
+      "sprint_id": "SPRINT_OL_XREF_PHASE4",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE4/P-06",
+      "sprint_id": "SPRINT_OL_XREF_PHASE4",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE4/P-07",
+      "sprint_id": "SPRINT_OL_XREF_PHASE4",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE4/P-08",
+      "sprint_id": "SPRINT_OL_XREF_PHASE4",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE2_SAAS_ENABLERS/T-04",
+      "sprint_id": "SPRINT_WAVE2_SAAS_ENABLERS",
+      "valid_from": "2026-06-18T04:26:49.102Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE2_SAAS_ENABLERS/T-05",
+      "sprint_id": "SPRINT_WAVE2_SAAS_ENABLERS",
+      "valid_from": "2026-06-18T04:26:49.105Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE2_SAAS_ENABLERS/T-06",
+      "sprint_id": "SPRINT_WAVE2_SAAS_ENABLERS",
+      "valid_from": "2026-06-18T04:26:49.107Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE2_SAAS_ENABLERS/T-07",
+      "sprint_id": "SPRINT_WAVE2_SAAS_ENABLERS",
+      "valid_from": "2026-06-18T04:26:49.110Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE5/P-05",
+      "sprint_id": "SPRINT_OL_XREF_PHASE5",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-01",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.412Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-02",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.447Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-03",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.464Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-04",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.482Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-05",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.499Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-06",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.521Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-07",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.537Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-08",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.553Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-09",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.568Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-10",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.585Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-11",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.602Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-12",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.617Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-13",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.634Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-14",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.650Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-15",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.668Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-16",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.684Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-17",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.700Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-18",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.718Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-19",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.741Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-20",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.762Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-21",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.784Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-22",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.800Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-37",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.820Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE3_NEW_UCS/T-01",
+      "sprint_id": "SPRINT_WAVE3_NEW_UCS",
+      "valid_from": "2026-06-18T04:26:49.112Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE3_NEW_UCS/T-02",
+      "sprint_id": "SPRINT_WAVE3_NEW_UCS",
+      "valid_from": "2026-06-18T04:26:49.115Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE3_NEW_UCS/T-03",
+      "sprint_id": "SPRINT_WAVE3_NEW_UCS",
+      "valid_from": "2026-06-18T04:26:49.118Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE3_NEW_UCS/T-04",
+      "sprint_id": "SPRINT_WAVE3_NEW_UCS",
+      "valid_from": "2026-06-18T04:26:49.120Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE3_NEW_UCS/T-05",
+      "sprint_id": "SPRINT_WAVE3_NEW_UCS",
+      "valid_from": "2026-06-18T04:26:49.123Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE3_NEW_UCS/T-06",
+      "sprint_id": "SPRINT_WAVE3_NEW_UCS",
+      "valid_from": "2026-06-18T04:26:49.125Z"
+    },
+    {
+      "task_uid": "SPRINT_DEP_UPGRADES_JUN26/P-01",
+      "sprint_id": "SPRINT_DEP_UPGRADES_JUN26",
+      "valid_from": "2026-06-18T04:26:49.128Z"
+    },
+    {
+      "task_uid": "SPRINT_DEP_UPGRADES_JUN26/P-02",
+      "sprint_id": "SPRINT_DEP_UPGRADES_JUN26",
+      "valid_from": "2026-06-18T04:26:49.130Z"
+    },
+    {
+      "task_uid": "SPRINT_DEP_UPGRADES_JUN26/P-03",
+      "sprint_id": "SPRINT_DEP_UPGRADES_JUN26",
+      "valid_from": "2026-06-18T04:26:49.133Z"
+    },
+    {
+      "task_uid": "SPRINT_DEP_UPGRADES_JUN26/P-04",
+      "sprint_id": "SPRINT_DEP_UPGRADES_JUN26",
+      "valid_from": "2026-06-18T04:26:49.135Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_FOUNDATION/P-03",
+      "sprint_id": "SPRINT_MIMIR_FOUNDATION",
+      "valid_from": "2026-06-18T04:26:49.148Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_FOUNDATION/P-04",
+      "sprint_id": "SPRINT_MIMIR_FOUNDATION",
+      "valid_from": "2026-06-18T04:26:49.151Z"
+    },
+    {
+      "task_uid": "SPRINT_ELK_M2_KNOT/P-01",
+      "sprint_id": "SPRINT_ELK_M2_KNOT",
+      "valid_from": "2026-06-18T04:26:49.154Z"
+    },
+    {
+      "task_uid": "SPRINT_ELK_M2_KNOT/P-02",
+      "sprint_id": "SPRINT_ELK_M2_KNOT",
+      "valid_from": "2026-06-18T04:26:49.156Z"
+    },
+    {
+      "task_uid": "SPRINT_ELK_M2_KNOT/P-03",
+      "sprint_id": "SPRINT_ELK_M2_KNOT",
+      "valid_from": "2026-06-18T04:26:49.158Z"
+    },
+    {
+      "task_uid": "SPRINT_VERDANDI_UX_MOBILE/P-01",
+      "sprint_id": "SPRINT_VERDANDI_UX_MOBILE",
+      "valid_from": "2026-06-18T04:26:49.161Z"
+    },
+    {
+      "task_uid": "SPRINT_VERDANDI_UX_MOBILE/P-02",
+      "sprint_id": "SPRINT_VERDANDI_UX_MOBILE",
+      "valid_from": "2026-06-18T04:26:49.163Z"
+    },
+    {
+      "task_uid": "SPRINT_VERDANDI_UX_MOBILE/P-03",
+      "sprint_id": "SPRINT_VERDANDI_UX_MOBILE",
+      "valid_from": "2026-06-18T04:26:49.166Z"
+    },
+    {
+      "task_uid": "SPRINT_VERDANDI_UX_MOBILE/P-04",
+      "sprint_id": "SPRINT_VERDANDI_UX_MOBILE",
+      "valid_from": "2026-06-18T04:26:49.168Z"
+    },
+    {
+      "task_uid": "SPRINT_INFRA_BACKLOG/P-01",
+      "sprint_id": "SPRINT_INFRA_BACKLOG",
+      "valid_from": "2026-06-18T04:26:49.171Z"
+    },
+    {
+      "task_uid": "SPRINT_INFRA_BACKLOG/P-02",
+      "sprint_id": "SPRINT_INFRA_BACKLOG",
+      "valid_from": "2026-06-18T04:26:49.174Z"
+    },
+    {
+      "task_uid": "SPRINT_INFRA_BACKLOG/P-03",
+      "sprint_id": "SPRINT_INFRA_BACKLOG",
+      "valid_from": "2026-06-18T04:26:49.176Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V2/P-01",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V2",
+      "valid_from": "2026-06-18T04:26:49.179Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V2/P-02",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V2",
+      "valid_from": "2026-06-18T04:26:49.182Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V2/P-03",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V2",
+      "valid_from": "2026-06-18T04:26:49.184Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V2/P-04",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V2",
+      "valid_from": "2026-06-18T04:26:49.187Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V3/P-01",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V3",
+      "valid_from": "2026-06-18T04:26:49.190Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V3/P-02",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V3",
+      "valid_from": "2026-06-18T04:26:49.192Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_LINEAGE_V3/P-03",
+      "sprint_id": "SPRINT_HOUND_ATOM_LINEAGE_V3",
+      "valid_from": "2026-06-18T04:26:49.195Z"
+    },
+    {
+      "task_uid": "SPRINT_RBAC_SVC_USERS/P-01",
+      "sprint_id": "SPRINT_RBAC_SVC_USERS",
+      "valid_from": "2026-06-18T04:26:49.197Z"
+    },
+    {
+      "task_uid": "SPRINT_RBAC_SVC_USERS/P-02",
+      "sprint_id": "SPRINT_RBAC_SVC_USERS",
+      "valid_from": "2026-06-18T04:26:49.200Z"
+    },
+    {
+      "task_uid": "SPRINT_RBAC_SVC_USERS/P-03",
+      "sprint_id": "SPRINT_RBAC_SVC_USERS",
+      "valid_from": "2026-06-18T04:26:49.203Z"
+    },
+    {
+      "task_uid": "SPRINT_RBAC_SVC_USERS/P-04",
+      "sprint_id": "SPRINT_RBAC_SVC_USERS",
+      "valid_from": "2026-06-18T04:26:49.205Z"
+    },
+    {
+      "task_uid": "SPRINT_SECURITY_DEPS_MAY26/P-01",
+      "sprint_id": "SPRINT_SECURITY_DEPS_MAY26",
+      "valid_from": "2026-06-18T04:26:49.208Z"
+    },
+    {
+      "task_uid": "SPRINT_SECURITY_DEPS_MAY26/P-02",
+      "sprint_id": "SPRINT_SECURITY_DEPS_MAY26",
+      "valid_from": "2026-06-18T04:26:49.210Z"
+    },
+    {
+      "task_uid": "SPRINT_SECURITY_DEPS_MAY26/P-03",
+      "sprint_id": "SPRINT_SECURITY_DEPS_MAY26",
+      "valid_from": "2026-06-18T04:26:49.214Z"
+    },
+    {
+      "task_uid": "SPRINT_SECURITY_DEPS_MAY26/P-04",
+      "sprint_id": "SPRINT_SECURITY_DEPS_MAY26",
+      "valid_from": "2026-06-18T04:26:49.216Z"
+    },
+    {
+      "task_uid": "SPRINT_DEPS_JUNE26/P-01",
+      "sprint_id": "SPRINT_DEPS_JUNE26",
+      "valid_from": "2026-06-18T04:26:49.219Z"
+    },
+    {
+      "task_uid": "SPRINT_DEPS_JUNE26/P-02",
+      "sprint_id": "SPRINT_DEPS_JUNE26",
+      "valid_from": "2026-06-18T04:26:49.221Z"
+    },
+    {
+      "task_uid": "SPRINT_DEPS_JUNE26/P-03",
+      "sprint_id": "SPRINT_DEPS_JUNE26",
+      "valid_from": "2026-06-18T04:26:49.224Z"
+    },
+    {
+      "task_uid": "SPRINT_DEPS_JUNE26/P-04",
+      "sprint_id": "SPRINT_DEPS_JUNE26",
+      "valid_from": "2026-06-18T04:26:49.226Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-01",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-18T04:26:49.229Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-02",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-18T04:26:49.232Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-03",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-18T04:26:49.234Z"
+    },
+    {
+      "task_uid": "SPRINT_PIPELINE_FIXES_MAY26/P-04",
+      "sprint_id": "SPRINT_PIPELINE_FIXES_MAY26",
+      "valid_from": "2026-06-18T04:26:49.237Z"
+    },
+    {
+      "task_uid": "SPRINT_DOCS_ARCH_JUN26/P-01",
+      "sprint_id": "SPRINT_DOCS_ARCH_JUN26",
+      "valid_from": "2026-06-18T04:26:49.239Z"
+    },
+    {
+      "task_uid": "SPRINT_DOCS_ARCH_JUN26/P-02",
+      "sprint_id": "SPRINT_DOCS_ARCH_JUN26",
+      "valid_from": "2026-06-18T04:26:49.242Z"
+    },
+    {
+      "task_uid": "SPRINT_DOCS_ARCH_JUN26/P-03",
+      "sprint_id": "SPRINT_DOCS_ARCH_JUN26",
+      "valid_from": "2026-06-18T04:26:49.244Z"
+    },
+    {
+      "task_uid": "SPRINT_DOCS_ARCH_JUN26/P-04",
+      "sprint_id": "SPRINT_DOCS_ARCH_JUN26",
+      "valid_from": "2026-06-18T04:26:49.247Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-01",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-18T04:26:49.250Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-02",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-18T04:26:49.253Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-03",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-18T04:26:49.255Z"
+    },
+    {
+      "task_uid": "SPRINT_HEIMDALL_ADMIN_UX/P-04",
+      "sprint_id": "SPRINT_HEIMDALL_ADMIN_UX",
+      "valid_from": "2026-06-18T04:26:49.258Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_NAV_FIX/P-01",
+      "sprint_id": "SPRINT_LOOM_NAV_FIX",
+      "valid_from": "2026-06-18T04:26:49.260Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_NAV_FIX/P-02",
+      "sprint_id": "SPRINT_LOOM_NAV_FIX",
+      "valid_from": "2026-06-18T04:26:49.263Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_NAV_FIX/P-03",
+      "sprint_id": "SPRINT_LOOM_NAV_FIX",
+      "valid_from": "2026-06-18T04:26:49.266Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_NAV_FIX/P-04",
+      "sprint_id": "SPRINT_LOOM_NAV_FIX",
+      "valid_from": "2026-06-18T04:26:49.268Z"
+    },
+    {
+      "task_uid": "SPRINT_VERSION_AUDIT_APR26/P-01",
+      "sprint_id": "SPRINT_VERSION_AUDIT_APR26",
+      "valid_from": "2026-06-18T04:26:49.271Z"
+    },
+    {
+      "task_uid": "SPRINT_VERSION_AUDIT_APR26/P-02",
+      "sprint_id": "SPRINT_VERSION_AUDIT_APR26",
+      "valid_from": "2026-06-18T04:26:49.273Z"
+    },
+    {
+      "task_uid": "SPRINT_VERSION_AUDIT_APR26/P-03",
+      "sprint_id": "SPRINT_VERSION_AUDIT_APR26",
+      "valid_from": "2026-06-18T04:26:49.276Z"
+    },
+    {
+      "task_uid": "SPRINT_VERSION_AUDIT_APR26/P-04",
+      "sprint_id": "SPRINT_VERSION_AUDIT_APR26",
+      "valid_from": "2026-06-18T04:26:49.279Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN/P-01",
+      "sprint_id": "SPRINT_AUTH_REDESIGN",
+      "valid_from": "2026-06-18T04:26:49.281Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN/P-02",
+      "sprint_id": "SPRINT_AUTH_REDESIGN",
+      "valid_from": "2026-06-18T04:26:49.284Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN/P-03",
+      "sprint_id": "SPRINT_AUTH_REDESIGN",
+      "valid_from": "2026-06-18T04:26:49.286Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN/P-04",
+      "sprint_id": "SPRINT_AUTH_REDESIGN",
+      "valid_from": "2026-06-18T04:26:49.289Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER25/P-01",
+      "sprint_id": "SPRINT_MIMIR_TIER25",
+      "valid_from": "2026-06-18T04:26:49.292Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER25/P-02",
+      "sprint_id": "SPRINT_MIMIR_TIER25",
+      "valid_from": "2026-06-18T04:26:49.295Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER25/P-03",
+      "sprint_id": "SPRINT_MIMIR_TIER25",
+      "valid_from": "2026-06-18T04:26:49.298Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER25/P-04",
+      "sprint_id": "SPRINT_MIMIR_TIER25",
+      "valid_from": "2026-06-18T04:26:49.300Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_INTEGRATION/P-01",
+      "sprint_id": "SPRINT_OL_INTEGRATION",
+      "valid_from": "2026-06-18T04:26:49.316Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_INTEGRATION/P-02",
+      "sprint_id": "SPRINT_OL_INTEGRATION",
+      "valid_from": "2026-06-18T04:26:49.319Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_INTEGRATION/P-03",
+      "sprint_id": "SPRINT_OL_INTEGRATION",
+      "valid_from": "2026-06-18T04:26:49.322Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_INTEGRATION/P-04",
+      "sprint_id": "SPRINT_OL_INTEGRATION",
+      "valid_from": "2026-06-18T04:26:49.326Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_TESTSTAND/P-01",
+      "sprint_id": "SPRINT_OL_TESTSTAND",
+      "valid_from": "2026-06-18T04:26:49.329Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_TESTSTAND/P-02",
+      "sprint_id": "SPRINT_OL_TESTSTAND",
+      "valid_from": "2026-06-18T04:26:49.333Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_TESTSTAND/P-03",
+      "sprint_id": "SPRINT_OL_TESTSTAND",
+      "valid_from": "2026-06-18T04:26:49.336Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_TESTSTAND/P-04",
+      "sprint_id": "SPRINT_OL_TESTSTAND",
+      "valid_from": "2026-06-18T04:26:49.339Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_DEPRECATIONS_MAY26/P-01",
+      "sprint_id": "SPRINT_SHUTTLE_DEPRECATIONS_MAY26",
+      "valid_from": "2026-06-18T04:26:49.342Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_DEPRECATIONS_MAY26/P-02",
+      "sprint_id": "SPRINT_SHUTTLE_DEPRECATIONS_MAY26",
+      "valid_from": "2026-06-18T04:26:49.345Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_DEPRECATIONS_MAY26/P-03",
+      "sprint_id": "SPRINT_SHUTTLE_DEPRECATIONS_MAY26",
+      "valid_from": "2026-06-18T04:26:49.348Z"
+    },
+    {
+      "task_uid": "SPRINT_ALERTS/P-01",
+      "sprint_id": "SPRINT_ALERTS",
+      "valid_from": "2026-06-18T04:26:49.351Z"
+    },
+    {
+      "task_uid": "SPRINT_ALERTS/P-02",
+      "sprint_id": "SPRINT_ALERTS",
+      "valid_from": "2026-06-18T04:26:49.354Z"
+    },
+    {
+      "task_uid": "SPRINT_ALERTS/P-03",
+      "sprint_id": "SPRINT_ALERTS",
+      "valid_from": "2026-06-18T04:26:49.357Z"
+    },
+    {
+      "task_uid": "SPRINT_ALERTS/P-04",
+      "sprint_id": "SPRINT_ALERTS",
+      "valid_from": "2026-06-18T04:26:49.361Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE4/P-01",
+      "sprint_id": "SPRINT_OL_XREF_PHASE4",
+      "valid_from": "2026-06-18T04:26:49.364Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE4/P-02",
+      "sprint_id": "SPRINT_OL_XREF_PHASE4",
+      "valid_from": "2026-06-18T04:26:49.367Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE4/P-03",
+      "sprint_id": "SPRINT_OL_XREF_PHASE4",
+      "valid_from": "2026-06-18T04:26:49.370Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE4/P-04",
+      "sprint_id": "SPRINT_OL_XREF_PHASE4",
+      "valid_from": "2026-06-18T04:26:49.373Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE5/P-01",
+      "sprint_id": "SPRINT_OL_XREF_PHASE5",
+      "valid_from": "2026-06-18T04:26:49.376Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE5/P-02",
+      "sprint_id": "SPRINT_OL_XREF_PHASE5",
+      "valid_from": "2026-06-18T04:26:49.380Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE5/P-03",
+      "sprint_id": "SPRINT_OL_XREF_PHASE5",
+      "valid_from": "2026-06-18T04:26:49.383Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE5/P-04",
+      "sprint_id": "SPRINT_OL_XREF_PHASE5",
+      "valid_from": "2026-06-18T04:26:49.386Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_TIMEREWIND/SB-L3",
+      "sprint_id": "SPRINT_LOOM_TIMEREWIND",
+      "valid_from": "2026-06-18T04:26:49.389Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_TIMEREWIND/SB-L4",
+      "sprint_id": "SPRINT_LOOM_TIMEREWIND",
+      "valid_from": "2026-06-18T04:26:49.392Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_TIMEREWIND/SB-L5",
+      "sprint_id": "SPRINT_LOOM_TIMEREWIND",
+      "valid_from": "2026-06-18T04:26:49.396Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_TIMEREWIND/SB-L6",
+      "sprint_id": "SPRINT_LOOM_TIMEREWIND",
+      "valid_from": "2026-06-18T04:26:49.399Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT/MTN-17",
+      "sprint_id": "SPRINT_MT_NEXT",
+      "valid_from": "2026-06-18T04:26:49.402Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT/MTN-19",
+      "sprint_id": "SPRINT_MT_NEXT",
+      "valid_from": "2026-06-18T04:26:49.406Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT/MTN-20",
+      "sprint_id": "SPRINT_MT_NEXT",
+      "valid_from": "2026-06-18T04:26:49.409Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT/MTN-45",
+      "sprint_id": "SPRINT_MT_NEXT",
+      "valid_from": "2026-06-18T04:26:49.412Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT/MTN-50",
+      "sprint_id": "SPRINT_MT_NEXT",
+      "valid_from": "2026-06-18T04:26:49.415Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT/MTN-52",
+      "sprint_id": "SPRINT_MT_NEXT",
+      "valid_from": "2026-06-18T04:26:49.418Z"
+    },
+    {
+      "task_uid": "SPRINT_MT_NEXT/MTN-63-FE",
+      "sprint_id": "SPRINT_MT_NEXT",
+      "valid_from": "2026-06-18T04:26:49.422Z"
+    },
+    {
+      "task_uid": "SPRINT_INFRA_V3/INFRA-TF-01",
+      "sprint_id": "SPRINT_INFRA_V3",
+      "valid_from": "2026-06-18T04:26:49.425Z"
+    },
+    {
+      "task_uid": "SPRINT_INFRA_V3/INFRA-TF-02",
+      "sprint_id": "SPRINT_INFRA_V3",
+      "valid_from": "2026-06-18T04:26:49.428Z"
+    },
+    {
+      "task_uid": "SPRINT_INFRA_V3/INFRA-GHE-01",
+      "sprint_id": "SPRINT_INFRA_V3",
+      "valid_from": "2026-06-18T04:26:49.432Z"
+    },
+    {
+      "task_uid": "SPRINT_INFRA_V3/INFRA-GHE-02",
+      "sprint_id": "SPRINT_INFRA_V3",
+      "valid_from": "2026-06-18T04:26:49.435Z"
+    },
+    {
+      "task_uid": "SPRINT_INFRA_V3/Q-SEC-1",
+      "sprint_id": "SPRINT_INFRA_V3",
+      "valid_from": "2026-06-18T04:26:49.438Z"
+    },
+    {
+      "task_uid": "SPRINT_INFRA_V3/INFRA-DIAG",
+      "sprint_id": "SPRINT_INFRA_V3",
+      "valid_from": "2026-06-18T04:26:49.442Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_DIAGNOSTICS/AD-1",
+      "sprint_id": "SPRINT_HOUND_ATOM_DIAGNOSTICS",
+      "valid_from": "2026-06-18T04:26:49.448Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_DIAGNOSTICS/AD-2",
+      "sprint_id": "SPRINT_HOUND_ATOM_DIAGNOSTICS",
+      "valid_from": "2026-06-18T04:26:49.451Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_DIAGNOSTICS/AD-3",
+      "sprint_id": "SPRINT_HOUND_ATOM_DIAGNOSTICS",
+      "valid_from": "2026-06-18T04:26:49.454Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ATOM_DIAGNOSTICS/AD-4",
+      "sprint_id": "SPRINT_HOUND_ATOM_DIAGNOSTICS",
+      "valid_from": "2026-06-18T04:26:49.457Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-15",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-18T06:01:39.502Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-14",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-18T06:01:45.563Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-16",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-18T06:01:53.565Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-8",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-18T11:27:23.912Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER2/MT-02",
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER2/MT-04",
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER2/MT-05",
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER2/MT-06",
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER2/MT-07",
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER2/MT-08",
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_VTABLE_SESSION_SCOPE/VS-9",
+      "sprint_id": "SPRINT_HOUND_VTABLE_SESSION_SCOPE",
+      "valid_from": "2026-06-14T15:59:36.435Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/HND-015",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/TC-5",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-07",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-08",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-14",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-15",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-16",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-51",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-52",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-53",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-59",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-60",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/TC-4",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/TC-3",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/TC-2",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/TC-1",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_PREP/MP-06",
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_PREP/MP-05",
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_PREP/MP-04",
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_PREP/MP-03",
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_PREP/MP-02",
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_PREP/MP-01",
+      "sprint_id": "SPRINT_MIMIR_PREP",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-58",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-57",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-56",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-55",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-54",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-50",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-49",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-48",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-47",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY/T-01",
+      "sprint_id": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY/T-02",
+      "sprint_id": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY/T-03",
+      "sprint_id": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY/T-04",
+      "sprint_id": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY/T-05",
+      "sprint_id": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY/T-06",
+      "sprint_id": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY/T-07",
+      "sprint_id": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY/T-08",
+      "sprint_id": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_Q29_MCP_EVAL/OQ1",
+      "sprint_id": "SPRINT_Q29_MCP_EVAL",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_Q29_MCP_EVAL/OQ2",
+      "sprint_id": "SPRINT_Q29_MCP_EVAL",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_Q29_MCP_EVAL/OQ3",
+      "sprint_id": "SPRINT_Q29_MCP_EVAL",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_Q29_MCP_EVAL/OQ4",
+      "sprint_id": "SPRINT_Q29_MCP_EVAL",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_Q29_MCP_EVAL/OQ5",
+      "sprint_id": "SPRINT_Q29_MCP_EVAL",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-46",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-45",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-44",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-43",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-42",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-41",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-40",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-39",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_C2X/SC-01",
+      "sprint_id": "SPRINT_SHUTTLE_C2X",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_C2X/SC-02",
+      "sprint_id": "SPRINT_SHUTTLE_C2X",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_C2X/SC-02b",
+      "sprint_id": "SPRINT_SHUTTLE_C2X",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_C2X/SC-02c",
+      "sprint_id": "SPRINT_SHUTTLE_C2X",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_C2X/SC-03",
+      "sprint_id": "SPRINT_SHUTTLE_C2X",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_C2X/SC-04",
+      "sprint_id": "SPRINT_SHUTTLE_C2X",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-38",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-37",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-36",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-35",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-34",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-33",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-32",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-31",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-30",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-29",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-28",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-27",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-26",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-25",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-24",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-23",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-01",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-02",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-03",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-04",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-05",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-06",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-07",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-08",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-09",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-10",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-11",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-12",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-13",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-14",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SKADI_IFACE/T-15",
+      "sprint_id": "SPRINT_SKADI_IFACE",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_FILE_DENORM/T-01",
+      "sprint_id": "SPRINT_SOURCE_FILE_DENORM",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_FILE_DENORM/T-02",
+      "sprint_id": "SPRINT_SOURCE_FILE_DENORM",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_FILE_DENORM/T-03",
+      "sprint_id": "SPRINT_SOURCE_FILE_DENORM",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_FILE_DENORM/T-04",
+      "sprint_id": "SPRINT_SOURCE_FILE_DENORM",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_FILE_DENORM/T-05",
+      "sprint_id": "SPRINT_SOURCE_FILE_DENORM",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_FILE_DENORM/T-06",
+      "sprint_id": "SPRINT_SOURCE_FILE_DENORM",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_FILE_DENORM/T-07",
+      "sprint_id": "SPRINT_SOURCE_FILE_DENORM",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-22",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-21",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-20",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-19",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-18",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-17",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-13",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-12",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-11",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-10",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-09",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-06",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-05",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-04",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE0_5MIN_DEMO/T-01",
+      "sprint_id": "SPRINT_WAVE0_5MIN_DEMO",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE0_5MIN_DEMO/T-02",
+      "sprint_id": "SPRINT_WAVE0_5MIN_DEMO",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE0_5MIN_DEMO/T-03",
+      "sprint_id": "SPRINT_WAVE0_5MIN_DEMO",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE0_5MIN_DEMO/T-04",
+      "sprint_id": "SPRINT_WAVE0_5MIN_DEMO",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE0_5MIN_DEMO/T-05",
+      "sprint_id": "SPRINT_WAVE0_5MIN_DEMO",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE0_5MIN_DEMO/T-06",
+      "sprint_id": "SPRINT_WAVE0_5MIN_DEMO",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE0_5MIN_DEMO/T-07",
+      "sprint_id": "SPRINT_WAVE0_5MIN_DEMO",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE0_5MIN_DEMO/T-08",
+      "sprint_id": "SPRINT_WAVE0_5MIN_DEMO",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE0_5MIN_DEMO/T-09",
+      "sprint_id": "SPRINT_WAVE0_5MIN_DEMO",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE0_5MIN_DEMO/T-10",
+      "sprint_id": "SPRINT_WAVE0_5MIN_DEMO",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-03",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-02",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MULTITENANT_DESIGN/T-01",
+      "sprint_id": "SPRINT_MULTITENANT_DESIGN",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-22",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-48",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-12",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-32",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-23",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-21",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-19",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-61",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-15",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-54",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-53",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-38",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-01",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-02",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-03",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-04",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-05",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-06",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-07",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LINEAGE_TAILS/P-05",
+      "sprint_id": "SPRINT_LINEAGE_TAILS",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LINEAGE_TAILS/P-06",
+      "sprint_id": "SPRINT_LINEAGE_TAILS",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-08",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-09",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-10",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-11",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-12",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-13",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-14",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-15",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PREDICATE_FLOW/P-05",
+      "sprint_id": "SPRINT_HOUND_PREDICATE_FLOW",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PREDICATE_FLOW/P-06",
+      "sprint_id": "SPRINT_HOUND_PREDICATE_FLOW",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-16",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-17",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-18",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-19",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_PHASE3_CLOSE/P-05",
+      "sprint_id": "SPRINT_LOOM_PHASE3_CLOSE",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-20",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-21",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-22",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-23",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-24",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-25",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-26",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-27",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-62",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-56",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-42",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-34",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-33",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-27",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-28",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-55",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-05",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-41",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-44",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-67",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-66",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-64",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-37",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-60",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-13",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-07",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-08",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-57",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-46",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-39",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MTN_AUDIT_JUN26/MTN-35",
+      "sprint_id": "SPRINT_MTN_AUDIT_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_STATIC_RUNTIME_XREF/T-09",
+      "sprint_id": "SPRINT_OL_STATIC_RUNTIME_XREF",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_STATIC_RUNTIME_XREF/T-08",
+      "sprint_id": "SPRINT_OL_STATIC_RUNTIME_XREF",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_STATIC_RUNTIME_XREF/T-07",
+      "sprint_id": "SPRINT_OL_STATIC_RUNTIME_XREF",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_STATIC_RUNTIME_XREF/T-06",
+      "sprint_id": "SPRINT_OL_STATIC_RUNTIME_XREF",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_STATIC_RUNTIME_XREF/T-05",
+      "sprint_id": "SPRINT_OL_STATIC_RUNTIME_XREF",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_STATIC_RUNTIME_XREF/T-04",
+      "sprint_id": "SPRINT_OL_STATIC_RUNTIME_XREF",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_STATIC_RUNTIME_XREF/T-03",
+      "sprint_id": "SPRINT_OL_STATIC_RUNTIME_XREF",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_STATIC_RUNTIME_XREF/T-02",
+      "sprint_id": "SPRINT_OL_STATIC_RUNTIME_XREF",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_STATIC_RUNTIME_XREF/T-01",
+      "sprint_id": "SPRINT_OL_STATIC_RUNTIME_XREF",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_BIRTHDAY_HOUSEKEEPING/DU-4",
+      "sprint_id": "SPRINT_BIRTHDAY_HOUSEKEEPING",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_BIRTHDAY_HOUSEKEEPING/DU-3",
+      "sprint_id": "SPRINT_BIRTHDAY_HOUSEKEEPING",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_BIRTHDAY_HOUSEKEEPING/DU-1",
+      "sprint_id": "SPRINT_BIRTHDAY_HOUSEKEEPING",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/HA-8",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/HA-7",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/HA-6",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/HA-5",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/HA-4",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/HA-3",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/HA-2",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/HA-1",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/MVP-5",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/MVP-4",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/MVP-3",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/MVP-2",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_HA_RESILIENCE/MVP-1",
+      "sprint_id": "SPRINT_HOUND_HA_RESILIENCE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER2/MT-08",
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER2/MT-07",
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER2/MT-06",
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER2/MT-05",
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER2/MT-04",
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_TIER2/MT-02",
+      "sprint_id": "SPRINT_MIMIR_TIER2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-28",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-29",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-30",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-31",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE1_UI/T-07",
+      "sprint_id": "SPRINT_WAVE1_UI",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE1_UI/T-06",
+      "sprint_id": "SPRINT_WAVE1_UI",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE1_UI/T-05",
+      "sprint_id": "SPRINT_WAVE1_UI",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE1_UI/T-04",
+      "sprint_id": "SPRINT_WAVE1_UI",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE1_UI/T-03",
+      "sprint_id": "SPRINT_WAVE1_UI",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE1_UI/T-02",
+      "sprint_id": "SPRINT_WAVE1_UI",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_WAVE1_UI/T-01",
+      "sprint_id": "SPRINT_WAVE1_UI",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-32",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-33",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-34",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-19T11:54:31.419Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_SCALAR_BRIDGE/SB-09",
+      "sprint_id": "SPRINT_HOUND_SCALAR_BRIDGE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DEP_UPGRADES_JUN26/P-08",
+      "sprint_id": "SPRINT_DEP_UPGRADES_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DEP_UPGRADES_JUN26/P-07",
+      "sprint_id": "SPRINT_DEP_UPGRADES_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DEP_UPGRADES_JUN26/P-06",
+      "sprint_id": "SPRINT_DEP_UPGRADES_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DEP_UPGRADES_JUN26/P-05",
+      "sprint_id": "SPRINT_DEP_UPGRADES_JUN26",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_COMBINED_TRACKB_LOOM_S2_APR2026/T-05",
+      "sprint_id": "SPRINT_COMBINED_TRACKB_LOOM_S2_APR2026",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_COMBINED_TRACKB_LOOM_S2_APR2026/T-04",
+      "sprint_id": "SPRINT_COMBINED_TRACKB_LOOM_S2_APR2026",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_COMBINED_TRACKB_LOOM_S2_APR2026/T-03",
+      "sprint_id": "SPRINT_COMBINED_TRACKB_LOOM_S2_APR2026",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_COMBINED_TRACKB_LOOM_S2_APR2026/T-02",
+      "sprint_id": "SPRINT_COMBINED_TRACKB_LOOM_S2_APR2026",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_COMBINED_TRACKB_LOOM_S2_APR2026/T-01",
+      "sprint_id": "SPRINT_COMBINED_TRACKB_LOOM_S2_APR2026",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-12",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-11",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-10",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-09",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-08",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-07",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-06",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-05",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-04",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-03",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-02",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_MULTITENANT/DMT-00",
+      "sprint_id": "SPRINT_DALI_MULTITENANT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_C2X/SC-04",
+      "sprint_id": "SPRINT_SHUTTLE_C2X",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_C2X/SC-03",
+      "sprint_id": "SPRINT_SHUTTLE_C2X",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_C2X/SC-02",
+      "sprint_id": "SPRINT_SHUTTLE_C2X",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SHUTTLE_C2X/SC-01",
+      "sprint_id": "SPRINT_SHUTTLE_C2X",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PARSER_HARDENING/TGA-09",
+      "sprint_id": "SPRINT_HOUND_PARSER_HARDENING",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PARSER_HARDENING/TGA-08",
+      "sprint_id": "SPRINT_HOUND_PARSER_HARDENING",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PARSER_HARDENING/TGA-07",
+      "sprint_id": "SPRINT_HOUND_PARSER_HARDENING",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PARSER_HARDENING/TGA-06",
+      "sprint_id": "SPRINT_HOUND_PARSER_HARDENING",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PARSER_HARDENING/TGA-05",
+      "sprint_id": "SPRINT_HOUND_PARSER_HARDENING",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PARSER_HARDENING/TGA-04",
+      "sprint_id": "SPRINT_HOUND_PARSER_HARDENING",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PARSER_HARDENING/TGA-03",
+      "sprint_id": "SPRINT_HOUND_PARSER_HARDENING",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PARSER_HARDENING/TGA-02",
+      "sprint_id": "SPRINT_HOUND_PARSER_HARDENING",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PARSER_HARDENING/TGA-01",
+      "sprint_id": "SPRINT_HOUND_PARSER_HARDENING",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-45",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-44",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-43",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-42",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-41",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-40",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-39",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-38",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-37",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-36",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-35",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-34",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-33",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-32",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-31",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-30",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-29",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-28",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-27",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-26",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-25",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-24",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-23",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-22",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-21",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-20",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-19",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-18",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-17",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-16",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-15",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-14",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-13",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-12",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-11",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-10",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-09",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-08",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-07",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-06",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-05",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-04",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-03",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-02",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PG_CH_AUDIT/T-01",
+      "sprint_id": "SPRINT_HOUND_PG_CH_AUDIT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-18",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-17",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-12",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-11",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-10",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-09",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-08",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-07",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-06",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-05",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-04",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-03",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-02",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_PLTYPE_V2/T-01",
+      "sprint_id": "SPRINT_HOUND_PLTYPE_V2",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_CORE/MC-09",
+      "sprint_id": "SPRINT_MIMIR_CORE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_CORE/MC-08",
+      "sprint_id": "SPRINT_MIMIR_CORE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_CORE/MC-07",
+      "sprint_id": "SPRINT_MIMIR_CORE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_MIMIR_CORE/MC-01",
+      "sprint_id": "SPRINT_MIMIR_CORE",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY/T-09",
+      "sprint_id": "SPRINT_PLSQL_GRAMMAR_CONNECT_BY",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUSEKEEPING_JUN26/HK-1",
+      "sprint_id": "SPRINT_HOUSEKEEPING_JUN26",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUSEKEEPING_JUN26/HK-2",
+      "sprint_id": "SPRINT_HOUSEKEEPING_JUN26",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUSEKEEPING_JUN26/HK-3",
+      "sprint_id": "SPRINT_HOUSEKEEPING_JUN26",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE3/X3-1",
+      "sprint_id": "SPRINT_OL_XREF_PHASE3",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE3/X3-2",
+      "sprint_id": "SPRINT_OL_XREF_PHASE3",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_APR13_MAY9_M1/T-10",
+      "sprint_id": "SPRINT_APR13_MAY9_M1",
+      "valid_from": "2026-06-14T18:09:14.118Z"
+    },
+    {
+      "task_uid": "SPRINT_APR13_MAY9_M1/T-09",
+      "sprint_id": "SPRINT_APR13_MAY9_M1",
+      "valid_from": "2026-06-14T18:09:14.118Z"
+    },
+    {
+      "task_uid": "SPRINT_APR13_MAY9_M1/T-08",
+      "sprint_id": "SPRINT_APR13_MAY9_M1",
+      "valid_from": "2026-06-14T18:09:14.118Z"
+    },
+    {
+      "task_uid": "SPRINT_APR13_MAY9_M1/T-07",
+      "sprint_id": "SPRINT_APR13_MAY9_M1",
+      "valid_from": "2026-06-14T18:09:14.118Z"
+    },
+    {
+      "task_uid": "SPRINT_APR13_MAY9_M1/T-06",
+      "sprint_id": "SPRINT_APR13_MAY9_M1",
+      "valid_from": "2026-06-14T18:09:14.118Z"
+    },
+    {
+      "task_uid": "SPRINT_APR13_MAY9_M1/T-05",
+      "sprint_id": "SPRINT_APR13_MAY9_M1",
+      "valid_from": "2026-06-14T18:09:14.118Z"
+    },
+    {
+      "task_uid": "SPRINT_APR13_MAY9_M1/T-04",
+      "sprint_id": "SPRINT_APR13_MAY9_M1",
+      "valid_from": "2026-06-14T18:09:14.118Z"
+    },
+    {
+      "task_uid": "SPRINT_APR13_MAY9_M1/T-03",
+      "sprint_id": "SPRINT_APR13_MAY9_M1",
+      "valid_from": "2026-06-14T18:09:14.118Z"
+    },
+    {
+      "task_uid": "SPRINT_APR13_MAY9_M1/T-02",
+      "sprint_id": "SPRINT_APR13_MAY9_M1",
+      "valid_from": "2026-06-14T18:09:14.118Z"
+    },
+    {
+      "task_uid": "SPRINT_APR13_MAY9_M1/T-01",
+      "sprint_id": "SPRINT_APR13_MAY9_M1",
+      "valid_from": "2026-06-14T18:09:14.118Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-1.5",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-20T20:55:58.978Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-1.6",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-20T20:56:07.731Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/F0-1",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/F0-2",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/F0-3",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/F0-4",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/F0-5",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/C1-1",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/C1-2",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/C1-3",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/C1-4",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/C1-5",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/CO2-1",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_DEVELOP_CONSOLIDATION_JUN13/CONS-1",
+      "sprint_id": "SPRINT_DEVELOP_CONSOLIDATION_JUN13",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_DEVELOP_CONSOLIDATION_JUN13/CONS-2",
+      "sprint_id": "SPRINT_DEVELOP_CONSOLIDATION_JUN13",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_DEVELOP_CONSOLIDATION_JUN13/CONS-3",
+      "sprint_id": "SPRINT_DEVELOP_CONSOLIDATION_JUN13",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_DEVELOP_CONSOLIDATION_JUN13/CONS-4",
+      "sprint_id": "SPRINT_DEVELOP_CONSOLIDATION_JUN13",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_DEVELOP_CONSOLIDATION_JUN13/CONS-5",
+      "sprint_id": "SPRINT_DEVELOP_CONSOLIDATION_JUN13",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_DEVELOP_CONSOLIDATION_JUN13/CONS-6",
+      "sprint_id": "SPRINT_DEVELOP_CONSOLIDATION_JUN13",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/MVP-1",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/MVP-2",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/MVP-3",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/MVP-4",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/MVP-5",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/CO2-2",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/CO2-3",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/CO2-4",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/CO2-5",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/CO2-6",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/F3-1",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/F3-2",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/F3-3",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_MYSQL_LISTENER/ML-00",
+      "sprint_id": "SPRINT_HOUND_MYSQL_LISTENER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/F3-4",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/D4-1",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/D4-2",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/D4-3",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/D4-4",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/X5-1",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/X5-2",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/X5-3",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/X5-4",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/X5-5",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/R6-1",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/R6-2",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/R6-3",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/R6-4",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/R6-5",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/A7-1",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/A7-2",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/A7-3",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/A7-4",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_ROWSET_V2/A7-5",
+      "sprint_id": "SPRINT_HOUND_ROWSET_V2",
+      "valid_from": "2026-06-20T20:57:32.119Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-34",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T21:00:55.190Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-43",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T21:02:44.678Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-102",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T21:25:17.909Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-103",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T21:25:17.909Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-104",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T21:25:17.909Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-105",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T21:25:17.909Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-106",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T21:25:17.909Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-107",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T21:25:17.909Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-108",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T21:25:17.909Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_VTABLE_SESSION_SCOPE/VS-4",
+      "sprint_id": "SPRINT_HOUND_VTABLE_SESSION_SCOPE",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/MVP-5",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T17:20:14.606Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/MVP-4",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T17:20:14.606Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/MVP-3",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T17:20:14.606Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/MVP-2",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T17:20:14.606Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_AS_SERVICE/MVP-1",
+      "sprint_id": "SPRINT_HOUND_AS_SERVICE",
+      "valid_from": "2026-06-14T17:20:14.606Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE2/OLX-1",
+      "sprint_id": "SPRINT_OL_XREF_PHASE2",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE2/OLX-2",
+      "sprint_id": "SPRINT_OL_XREF_PHASE2",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE2/OLX-3",
+      "sprint_id": "SPRINT_OL_XREF_PHASE2",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE2/OLX-4",
+      "sprint_id": "SPRINT_OL_XREF_PHASE2",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_OL_XREF_PHASE2/OLX-5",
+      "sprint_id": "SPRINT_OL_XREF_PHASE2",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_CI_SELECTIVE_FAST/CI-A",
+      "sprint_id": "SPRINT_CI_SELECTIVE_FAST",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_CI_SELECTIVE_FAST/CI-B",
+      "sprint_id": "SPRINT_CI_SELECTIVE_FAST",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_CI_SELECTIVE_FAST/CI-C",
+      "sprint_id": "SPRINT_CI_SELECTIVE_FAST",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_CI_SELECTIVE_FAST/CI-D",
+      "sprint_id": "SPRINT_CI_SELECTIVE_FAST",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_LOC_REFACTOR/LR-1",
+      "sprint_id": "SPRINT_LOC_REFACTOR",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_LOC_REFACTOR/LR-2",
+      "sprint_id": "SPRINT_LOC_REFACTOR",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_LOC_REFACTOR/LR-3",
+      "sprint_id": "SPRINT_LOC_REFACTOR",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_LOC_REFACTOR/LR-4",
+      "sprint_id": "SPRINT_LOC_REFACTOR",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_LOC_REFACTOR/LR-5",
+      "sprint_id": "SPRINT_LOC_REFACTOR",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_LOC_REFACTOR/LR-6",
+      "sprint_id": "SPRINT_LOC_REFACTOR",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_Q30_ARCADEDB_SURVEY/Q30-1",
+      "sprint_id": "SPRINT_Q30_ARCADEDB_SURVEY",
+      "valid_from": "2026-06-14T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUSEKEEPING_JUL26/HK-11",
+      "sprint_id": "SPRINT_HOUSEKEEPING_JUL26",
+      "valid_from": "2026-06-14T21:36:01.119Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUSEKEEPING_JUL26/HK-12",
+      "sprint_id": "SPRINT_HOUSEKEEPING_JUL26",
+      "valid_from": "2026-06-14T21:36:01.154Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUSEKEEPING_JUL26/HK-13",
+      "sprint_id": "SPRINT_HOUSEKEEPING_JUL26",
+      "valid_from": "2026-06-14T21:36:01.164Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/HS3-06",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-19",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T19:36:26.178Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_VTABLE_SESSION_SCOPE/VS-4",
+      "sprint_id": "SPRINT_HOUND_VTABLE_SESSION_SCOPE",
+      "valid_from": "2026-06-15T00:23:14.990Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-A",
+      "sprint_id": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26",
+      "valid_from": "2026-07-21T18:16:07.000Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-B",
+      "sprint_id": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26",
+      "valid_from": "2026-07-21T18:16:07.000Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-C",
+      "sprint_id": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26",
+      "valid_from": "2026-07-21T18:16:07.000Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-D",
+      "sprint_id": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26",
+      "valid_from": "2026-07-21T18:16:07.000Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-E",
+      "sprint_id": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26",
+      "valid_from": "2026-07-21T18:16:07.000Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-F",
+      "sprint_id": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26",
+      "valid_from": "2026-07-21T18:16:07.000Z"
+    },
+    {
+      "task_uid": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26/P1-G",
+      "sprint_id": "SPRINT_DALI_PARSE_MEM_PARALLEL_JUN26",
+      "valid_from": "2026-07-21T18:16:07.000Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/GV-01",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/GV-02",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/GV-03",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/GV-04",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/GV-05",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/MX-01",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/MX-02",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/MX-03",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/MX-04",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/MX-05",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/CO-01",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/CO-02",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/CO-03",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/CO-04",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/CO-05",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/CO-06",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/TS-01",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/TS-02",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/TS-03",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/TS-04",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/TS-05",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/DC-01",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/DC-02",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_CUTOVER/DC-03",
+      "sprint_id": "SPRINT_AUTH_CUTOVER",
+      "valid_from": "2026-06-15T06:15:13.656Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-23",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.834Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-24",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.849Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-25",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.864Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-26",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.878Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-27",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.893Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-28",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.908Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-29",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.923Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-30",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.939Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-31",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:15.962Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-32",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:16.008Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-33",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:16.031Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-34",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:16.047Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-35",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:16.063Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-36",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:16.077Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-38",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:16.092Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-39",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T06:46:16.108Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-31",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T07:04:21.012Z"
+    },
+    {
+      "task_uid": "SPRINT_AUTH_REDESIGN_PLAN/T-23",
+      "sprint_id": "SPRINT_AUTH_REDESIGN_PLAN",
+      "valid_from": "2026-06-15T07:04:38.437Z"
+    },
+    {
+      "task_uid": "PLAN_HOUND_D4_PARITY/D4P-1",
+      "sprint_id": "PLAN_HOUND_D4_PARITY",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_S3/KI-HINT-1",
+      "sprint_id": "SPRINT_HOUND_S3",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-10",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-1.1",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-1.2",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-1.3",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-2.1",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-2.2",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-4.1",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-4.2",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-6.1",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-6.2",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-10.1",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-10.2",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-3.1",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-3.2",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-8.1",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-8.2",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-9.1",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-9.2",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-1.4",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-1.5",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-1.6",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-1.7",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-1.8",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-1.9",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-1.10",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_HARMONIZATION/SH-11",
+      "sprint_id": "SPRINT_SOURCE_HARMONIZATION",
+      "valid_from": "2026-06-15T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-1",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-2",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-3",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-4",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-5",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-6",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-7",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-8",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-9",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-10",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-11",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-12",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-13",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-14",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-15",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-16",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T18:05:35.462Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-1",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-2",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-3",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-4",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-5",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-6",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-7",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-8",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-9",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-10",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-11",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-12",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SCHEMA_MIGRATION/SM-13",
+      "sprint_id": "SPRINT_SCHEMA_MIGRATION",
+      "valid_from": "2026-06-15T19:04:46.057Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-18",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T19:36:26.205Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-21",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-15T21:25:08.557Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-23",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T00:22:49.738Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-24",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T00:22:49.738Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-25",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T00:22:49.738Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-26",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T00:22:49.738Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-27",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T00:22:49.738Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-28",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T00:22:49.738Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-29",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T00:22:49.738Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-30",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T00:22:49.738Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-31",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T06:35:19.123Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-32",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T08:42:48.730Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-33",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T19:28:44.382Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-34",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T19:28:44.430Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-35",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T19:28:44.440Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-36",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T19:28:44.450Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-37",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T19:28:44.458Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-38",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T19:28:44.467Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-39",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T19:28:44.475Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-40",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T19:28:44.482Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-41",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T19:28:44.493Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-42",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T22:48:56.805Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-43",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-16T22:49:17.761Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-42",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-17T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-43",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-17T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-44",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-17T00:00:00.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-17",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-17T10:21:52.178Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-20",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-17T10:21:52.178Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-22",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-17T10:21:52.178Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-15",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-17T10:33:09.151Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-16",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-17T10:33:15.575Z"
+    },
+    {
+      "task_uid": "SPRINT_SOURCE_IDENTITY/SI-14",
+      "sprint_id": "SPRINT_SOURCE_IDENTITY",
+      "valid_from": "2026-06-17T10:33:33.385Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-35",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T09:50:57.711Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-36",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T09:50:57.711Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-37",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T09:50:57.711Z"
+    },
+    {
+      "task_uid": "SPRINT_LOOM_L2_REDESIGN/L2R-38",
+      "sprint_id": "SPRINT_LOOM_L2_REDESIGN",
+      "valid_from": "2026-06-20T09:50:57.711Z"
+    },
+    {
+      "task_uid": "SPRINT_PROD_OBSERVABILITY/OBS-6",
+      "sprint_id": "SPRINT_PROD_OBSERVABILITY",
+      "valid_from": "2026-06-18T04:12:05.997Z"
+    },
+    {
+      "task_uid": "SPRINT_PROD_OBSERVABILITY/OBS-7",
+      "sprint_id": "SPRINT_PROD_OBSERVABILITY",
+      "valid_from": "2026-06-18T04:12:06.157Z"
+    }
+  ],
+  "_page": {
+    "limit": 1000,
+    "offset": 6000,
+    "total": 13267,
+    "has_more": true
+  }
+}

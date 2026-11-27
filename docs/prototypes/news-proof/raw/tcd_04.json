@@ -1,0 +1,5010 @@
+{
+  "rows": [
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-01",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T20:26:51.459Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-01",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-23T20:47:25.572Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-16",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-24T05:37:34.366Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-16",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-24T17:50:43.915Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-28",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-23T21:15:59.545Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-29",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-09-24T02:58:49.475Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-42W",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-09-24T05:52:26.429Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-17",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-24T18:39:36.358Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-18",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-24T18:39:41.029Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-19",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-24T18:39:47.782Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-03",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-24T18:39:50.536Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-03",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-09-24T20:28:28.189Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_LLM_GPU/GP-01",
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "valid_from": "2026-10-06T11:37:41.308Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_LLM_GPU/GP-02",
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "valid_from": "2026-10-06T11:37:41.706Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_LLM_GPU/GP-03",
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "valid_from": "2026-10-06T11:37:41.822Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_LLM_GPU/GP-04",
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "valid_from": "2026-10-06T11:37:41.915Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_LLM_GPU/GP-05",
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "valid_from": "2026-10-06T11:37:42.022Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_LLM_GPU/GP-01",
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "valid_from": "2026-10-06T11:39:43.797Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_LLM_GPU/GP-02",
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "valid_from": "2026-10-06T11:39:43.946Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_LLM_GPU/GP-03",
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "valid_from": "2026-10-06T11:39:44.076Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_LLM_GPU/GP-04",
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "valid_from": "2026-10-06T11:39:44.213Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_LLM_GPU/GP-05",
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "valid_from": "2026-10-06T11:39:44.371Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_LLM_GPU/GP-06",
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "valid_from": "2026-10-06T12:21:28.474Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_LLM_GPU/GP-06",
+      "sprint_id": "SPRINT_GLADSHEIM_LLM_GPU",
+      "valid_from": "2026-10-06T12:21:45.929Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_AGENT_HARNESS/AH-01",
+      "sprint_id": "SPRINT_GLADSHEIM_AGENT_HARNESS",
+      "valid_from": "2026-10-06T12:48:14.212Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_AGENT_HARNESS/AH-02",
+      "sprint_id": "SPRINT_GLADSHEIM_AGENT_HARNESS",
+      "valid_from": "2026-10-06T12:48:14.338Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_AGENT_HARNESS/AH-03",
+      "sprint_id": "SPRINT_GLADSHEIM_AGENT_HARNESS",
+      "valid_from": "2026-10-06T12:48:14.417Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_AGENT_HARNESS/AH-03",
+      "sprint_id": "SPRINT_GLADSHEIM_AGENT_HARNESS",
+      "valid_from": "2026-10-06T13:21:49.768Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_AGENT_HARNESS/AH-01",
+      "sprint_id": "SPRINT_GLADSHEIM_AGENT_HARNESS",
+      "valid_from": "2026-10-07T19:53:22.085Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-12",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-10-08T06:23:38.266Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_ANALYSIS_GAPS/AN-12",
+      "sprint_id": "SPRINT_MIDGARD_ANALYSIS_GAPS",
+      "valid_from": "2026-10-08T06:32:46.305Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-66",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-11-05T20:33:19.430Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_REPLY/VR-04",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "valid_from": "2026-11-05T20:37:57.451Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-24",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-11-05T20:37:57.549Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_CLIMATE/CLIM-01",
+      "sprint_id": "SPRINT_MIDGARD_CLIMATE",
+      "valid_from": "2026-11-05T07:10:29.983Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-25",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-11-05T07:17:07.586Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_REVIEW_FIXES/RV-30",
+      "sprint_id": "SPRINT_MIDGARD_REVIEW_FIXES",
+      "valid_from": "2026-11-05T07:20:19.071Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_AGENT_HARNESS/AH-02",
+      "sprint_id": "SPRINT_GLADSHEIM_AGENT_HARNESS",
+      "valid_from": "2026-11-05T07:24:26.036Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_AGENT_HARNESS/AH-02",
+      "sprint_id": "SPRINT_GLADSHEIM_AGENT_HARNESS",
+      "valid_from": "2026-11-05T07:35:33.056Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-01",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T07:51:12.034Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-03",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T07:51:12.888Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-16",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T07:51:13.665Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-105",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-11-05T08:01:26.370Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-82",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-11-05T09:36:27.616Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-01",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T11:22:54.047Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-03",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T11:22:55.761Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-16",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T11:22:57.616Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_KORVO/KV-02",
+      "sprint_id": "SPRINT_MIDGARD_KORVO",
+      "valid_from": "2026-11-05T11:39:14.717Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-42W",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-11-05T20:07:47.987Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-39",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-11-05T20:10:50.979Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_VOICE_REPLY/VR-03",
+      "sprint_id": "SPRINT_GJALLARHORN_VOICE_REPLY",
+      "valid_from": "2026-11-05T20:10:51.120Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-30",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-11-05T20:35:50.403Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_NET_AUDIO/NA-43",
+      "sprint_id": "SPRINT_GJALLARHORN_NET_AUDIO",
+      "valid_from": "2026-11-05T20:35:50.504Z"
+    },
+    {
+      "task_uid": "SPRINT_GJALLARHORN_WAKEWORD/WW-23",
+      "sprint_id": "SPRINT_GJALLARHORN_WAKEWORD",
+      "valid_from": "2026-11-05T20:35:50.569Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-08",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T21:54:36.156Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-07",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T21:54:36.256Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-19",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T22:00:46.950Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-05",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T22:03:18.110Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-08",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T23:01:32.523Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-07",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T23:01:32.664Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_ADMIN_UI/AU-19",
+      "sprint_id": "SPRINT_GLADSHEIM_ADMIN_UI",
+      "valid_from": "2026-11-05T23:01:32.773Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-105",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-11-06T04:13:07.692Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-06",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-11-06T04:32:20.797Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_SERVER_CORE/SR-07",
+      "sprint_id": "SPRINT_GLADSHEIM_SERVER_CORE",
+      "valid_from": "2026-11-06T12:19:41.238Z"
+    },
+    {
+      "task_uid": "SPRINT_MIDGARD_COMPETITORS/CA-20",
+      "sprint_id": "SPRINT_MIDGARD_COMPETITORS",
+      "valid_from": "2026-11-06T13:15:55.272Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-01",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:47:49.950Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-02",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:47:57.698Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-03",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:48:00.386Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-04",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:48:20.575Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-05",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:48:35.609Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-06",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:48:39.569Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-07",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:48:43.754Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-08",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:48:58.779Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-09",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:49:04.143Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-10",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:49:07.716Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-11",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:49:22.735Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-12",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:49:27.479Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-01",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:50:45.150Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-02",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:50:47.386Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-03",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:50:49.461Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-04",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:50:52.014Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-05",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:50:57.097Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-06",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:50:59.865Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-13",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:55:13.038Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-13",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T12:59:15.173Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-14",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T13:24:09.995Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-15",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T13:25:14.534Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-14",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T13:51:28.240Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-17",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T15:26:42.991Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-16",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T15:26:49.537Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-17",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T18:24:21.877Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-18",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T18:24:45.523Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-18",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-08-23T18:25:27.142Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-06",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-10T21:14:47.287Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-15",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-10T21:17:19.648Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-19",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-10T21:40:45.571Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-09",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-11T03:04:58.676Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-20",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-11T05:29:32.346Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-19",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-11T07:25:05.527Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-12",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-11T07:28:41.640Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-20",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-11T08:25:59.485Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-20",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-11T08:57:20.152Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-21",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-11T16:38:04.879Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-22",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-14T18:08:09.479Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-12",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-15T09:44:09.370Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-09",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-15T09:48:01.962Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-21",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-15T11:12:58.575Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-06",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-09-22T10:56:35.995Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-06",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-09-22T12:03:58.064Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-08",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-15T18:47:50.538Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-23",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-15T22:03:30.193Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-24",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-15T22:03:40.035Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-01",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-21T05:08:04.057Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-02",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-21T05:09:04.203Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-03",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-21T05:09:28.557Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-04",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-21T05:09:58.877Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-05",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-21T05:10:22.776Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-01",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-21T05:49:42.332Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-02",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-21T08:17:52.766Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-05",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-21T08:22:52.164Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-05",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-21T12:54:25.913Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-01",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-09-21T20:33:46.863Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-02",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-09-21T20:33:54.512Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-03",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-09-21T20:34:01.320Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-04",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-09-21T20:34:10.088Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-05",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-09-21T20:45:11.185Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-06",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-09-21T21:17:29.994Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-07",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-09-21T21:17:39.538Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-25",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-21T21:27:48.216Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-06",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-21T21:33:34.013Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-01",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-09-21T22:14:26.781Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-08",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-09-22T05:41:15.300Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-07",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-22T06:07:45.408Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-08",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-22T07:07:50.363Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-08",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-09-22T07:24:23.925Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-19",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-22T08:24:25.252Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-07",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-22T09:31:02.568Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-07",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-22T12:46:11.953Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-21",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-09-22T12:47:18.984Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-08",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-22T14:27:43.879Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-08",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-22T14:58:10.076Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-06",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-22T15:02:20.522Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-06",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-22T15:21:51.591Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-01",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-09-23T18:39:06.860Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-02",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-09-23T18:39:06.975Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-03",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-09-23T18:39:39.844Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-04",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-09-23T18:39:39.932Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-05",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-09-23T18:40:11.829Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-06",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-09-23T18:40:11.931Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-01",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-09-23T19:05:23.516Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-03",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-09-23T19:05:43.384Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-02",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-09-23T19:06:22.276Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-04",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-09-23T19:06:22.428Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-09",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-09-23T19:06:33.344Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_INTENTS/IN-01",
+      "sprint_id": "SPRINT_GLADSHEIM_INTENTS",
+      "valid_from": "2026-09-24T17:52:47.072Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_INTENTS/IN-02",
+      "sprint_id": "SPRINT_GLADSHEIM_INTENTS",
+      "valid_from": "2026-09-24T17:53:05.562Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_INTENTS/IN-03",
+      "sprint_id": "SPRINT_GLADSHEIM_INTENTS",
+      "valid_from": "2026-09-24T17:53:24.332Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_INTENTS/IN-04",
+      "sprint_id": "SPRINT_GLADSHEIM_INTENTS",
+      "valid_from": "2026-09-24T17:53:38.679Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_INTENTS/IN-05",
+      "sprint_id": "SPRINT_GLADSHEIM_INTENTS",
+      "valid_from": "2026-09-24T17:53:54.339Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-01",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-11-05T20:07:47.292Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-02",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-11-05T20:07:47.444Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-03",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-11-05T20:07:47.614Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-04",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-11-05T20:07:47.811Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-23",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-11-06T04:29:22.009Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-04",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-11-06T04:34:34.538Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_OUTSIDE_DOOR/OD-05",
+      "sprint_id": "SPRINT_GLADSHEIM_OUTSIDE_DOOR",
+      "valid_from": "2026-11-06T04:38:55.038Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-03",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-11-06T08:37:04.028Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-04",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-11-06T08:41:07.621Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-03",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-11-06T08:47:22.965Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_INTENTS/IN-03",
+      "sprint_id": "SPRINT_GLADSHEIM_INTENTS",
+      "valid_from": "2026-11-06T09:09:34.986Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_HUB/GH-10",
+      "sprint_id": "SPRINT_GLADSHEIM_HUB",
+      "valid_from": "2026-11-06T12:18:11.216Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-03",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-11-06T16:01:43.488Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-02",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-11-06T16:03:26.715Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-02",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-11-06T16:26:29.612Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_ARCH/VA-03",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_ARCH",
+      "valid_from": "2026-11-06T17:16:48.886Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-02",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-11-06T17:45:07.793Z"
+    },
+    {
+      "task_uid": "SPRINT_GLADSHEIM_VOICE_TOOLS/VT-02",
+      "sprint_id": "SPRINT_GLADSHEIM_VOICE_TOOLS",
+      "valid_from": "2026-11-06T18:30:47.827Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_ORDER/SO-1",
+      "sprint_id": "SPRINT_SITE_V2_ORDER",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_ORDER/SO-2",
+      "sprint_id": "SPRINT_SITE_V2_ORDER",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_ORDER/SO-3",
+      "sprint_id": "SPRINT_SITE_V2_ORDER",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_ORDER/SO-4",
+      "sprint_id": "SPRINT_SITE_V2_ORDER",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_ORDER/SO-5",
+      "sprint_id": "SPRINT_SITE_V2_ORDER",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_ORDER/SO-6",
+      "sprint_id": "SPRINT_SITE_V2_ORDER",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_ORDER/SO-8",
+      "sprint_id": "SPRINT_SITE_V2_ORDER",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_ORDER/SO-9",
+      "sprint_id": "SPRINT_SITE_V2_ORDER",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_ORDER/SO-10",
+      "sprint_id": "SPRINT_SITE_V2_ORDER",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_ORDER/SO-11",
+      "sprint_id": "SPRINT_SITE_V2_ORDER",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-1",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-2",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-3",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-4",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-5",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-6",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-7",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-9",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-10",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-11",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-12",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-8",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V3_CONTENT/T-01",
+      "sprint_id": "SPRINT_SITE_V3_CONTENT",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V3_CONTENT/T-02",
+      "sprint_id": "SPRINT_SITE_V3_CONTENT",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V3_CONTENT/T-03",
+      "sprint_id": "SPRINT_SITE_V3_CONTENT",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V3_CONTENT/T-04",
+      "sprint_id": "SPRINT_SITE_V3_CONTENT",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V4_DOCS_DEPTH/P-05",
+      "sprint_id": "SPRINT_SITE_V4_DOCS_DEPTH",
+      "valid_from": "2026-06-13T14:36:55.742Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V4_DOCS_DEPTH/P-01",
+      "sprint_id": "SPRINT_SITE_V4_DOCS_DEPTH",
+      "valid_from": "2026-06-18T04:26:49.138Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V4_DOCS_DEPTH/P-02",
+      "sprint_id": "SPRINT_SITE_V4_DOCS_DEPTH",
+      "valid_from": "2026-06-18T04:26:49.140Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V4_DOCS_DEPTH/P-03",
+      "sprint_id": "SPRINT_SITE_V4_DOCS_DEPTH",
+      "valid_from": "2026-06-18T04:26:49.143Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V4_DOCS_DEPTH/P-04",
+      "sprint_id": "SPRINT_SITE_V4_DOCS_DEPTH",
+      "valid_from": "2026-06-18T04:26:49.145Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V1/T-01",
+      "sprint_id": "SPRINT_SITE_V1",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V1/T-02",
+      "sprint_id": "SPRINT_SITE_V1",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V1/T-03",
+      "sprint_id": "SPRINT_SITE_V1",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V1/T-04",
+      "sprint_id": "SPRINT_SITE_V1",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V1/T-05",
+      "sprint_id": "SPRINT_SITE_V1",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V1/T-06",
+      "sprint_id": "SPRINT_SITE_V1",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V1/T-07",
+      "sprint_id": "SPRINT_SITE_V1",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V1/T-08",
+      "sprint_id": "SPRINT_SITE_V1",
+      "valid_from": "2026-06-13T13:35:45.874Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-8",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-12",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-11",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-10",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-9",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-7",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-6",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-5",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-4",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-3",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-2",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V2_TESTS/ST-1",
+      "sprint_id": "SPRINT_SITE_V2_TESTS",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V3_CONTENT/T-06",
+      "sprint_id": "SPRINT_SITE_V3_CONTENT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_V3_CONTENT/T-05",
+      "sprint_id": "SPRINT_SITE_V3_CONTENT",
+      "valid_from": "2026-06-14T16:03:55.166Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/PRE-01",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/PRE-02",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/PRE-04",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/PRE-05",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/PRE-06",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/META-01",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/META-02",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/META-03",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/META-04",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/META-05",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/ROB-01",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/ROB-02",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/ROB-03",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/ROB-04",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/NGX-01",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/NGX-02",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/HOME-01",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/HOME-02",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/HOME-03",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/WWW-01",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/WWW-02",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/WWW-03",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/NIDX-01",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/META-05",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T20:16:24.000Z"
+    },
+    {
+      "task_uid": "SPRINT_HOUND_DIALECT_MODEL_DEPTH/HD-4",
+      "sprint_id": "SPRINT_HOUND_DIALECT_MODEL_DEPTH",
+      "valid_from": "2026-06-14T20:23:39.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/ROB-01",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T21:55:01.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/ROB-02",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T21:55:01.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/ROB-03",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T21:55:01.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/NGX-01",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T21:55:01.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/NGX-02",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T21:55:01.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/HOME-01",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T21:55:01.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/HOME-02",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T21:55:01.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/HOME-03",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T21:55:01.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/NIDX-01",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-06-14T21:55:01.000Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V2/ABS-01",
+      "sprint_id": "SPRINT_SITE_SEO_V2",
+      "valid_from": "2026-06-21T05:35:47.005Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V2/DEM-01",
+      "sprint_id": "SPRINT_SITE_SEO_V2",
+      "valid_from": "2026-06-21T05:35:47.005Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V2/SMP-01",
+      "sprint_id": "SPRINT_SITE_SEO_V2",
+      "valid_from": "2026-06-21T05:35:47.005Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V2/SMP-02",
+      "sprint_id": "SPRINT_SITE_SEO_V2",
+      "valid_from": "2026-06-21T05:35:47.005Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V2/ROB-04",
+      "sprint_id": "SPRINT_SITE_SEO_V2",
+      "valid_from": "2026-06-21T05:35:47.005Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V2/H1-01",
+      "sprint_id": "SPRINT_SITE_SEO_V2",
+      "valid_from": "2026-06-21T05:35:47.005Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V2/WWW-01",
+      "sprint_id": "SPRINT_SITE_SEO_V2",
+      "valid_from": "2026-06-21T05:35:47.005Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V2/WWW-02",
+      "sprint_id": "SPRINT_SITE_SEO_V2",
+      "valid_from": "2026-06-21T05:35:47.005Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V2/WWW-03",
+      "sprint_id": "SPRINT_SITE_SEO_V2",
+      "valid_from": "2026-06-21T05:35:47.005Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-01",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:28:24.886Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-02",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:28:29.327Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-03",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:28:32.094Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-04",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:28:42.239Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-05",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:28:44.972Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-06",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:28:46.589Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-07",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:28:52.682Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-08",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:28:55.573Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-09",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:28:58.309Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-10",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:28:59.629Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-11",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:29:01.785Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-12",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:29:04.308Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-13",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:29:06.360Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-14",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:29:09.260Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-01",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:29:24.523Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-02",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:29:25.961Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-03",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:29:28.157Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-01",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:41:54.293Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-02",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:41:57.333Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-03",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:42:03.193Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-04",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:42:05.985Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-05",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:42:09.825Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-06",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:42:13.269Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-04",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:43:29.185Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-05",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:43:30.959Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-06",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:43:32.624Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-07",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:43:34.054Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-08",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:43:35.502Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-09",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:43:37.080Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-07",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:45:39.263Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-08",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:45:40.869Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-09",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:45:42.356Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-10",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:45:43.680Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-11",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:45:45.066Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-12",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:45:46.413Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-10",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:47:20.203Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-11",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:47:23.300Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-12",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:47:26.292Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-13",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:47:27.892Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-13",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:49:13.144Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-14",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:49:15.477Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-14",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-24T23:53:37.402Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-15",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-25T00:24:20.705Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-16",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-25T00:24:24.648Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-15",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-25T00:24:41.756Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-16",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-25T00:24:43.296Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-17",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-25T00:48:29.982Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_BLOG_V1/B-17",
+      "sprint_id": "SPRINT_SITE_BLOG_V1",
+      "valid_from": "2026-06-25T00:48:35.014Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-01",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:15:54.645Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-02",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:15:59.742Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-03",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:16:04.634Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-04",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:16:09.592Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-05",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:16:14.543Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-06",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:16:19.929Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-07",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:16:26.121Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-08",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:35:33.619Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-01",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:36:34.897Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-01",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:55:07.193Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-02",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:55:13.719Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-02",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:55:40.260Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-03",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T06:59:06.399Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-04",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T07:17:56.066Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-06",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T08:47:08.014Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-07",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T08:47:09.935Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-WEBMASTER",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:51:55.232Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-OG-DEMO",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:51:58.732Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-IMG",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:52:02.601Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-SCHEMA",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:52:06.042Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-XLINK",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:52:08.237Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-OGIMG",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:52:23.549Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-AUDIENCE-PAGE",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:52:31.565Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-CWV",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:52:34.708Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-DEMO-LANDING",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:52:38.482Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-TITLE",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:52:40.757Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-CLUSTER",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:52:43.609Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-LINKBUILD",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:52:46.221Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-CLEANUP",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T08:52:49.322Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-CLEANUP",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T09:32:13.347Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-SCHEMA",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T09:32:13.411Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-XLINK",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T09:32:13.463Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-CLEANUP",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T10:06:52.418Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-SCHEMA",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T10:06:57.613Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-XLINK",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T10:07:00.426Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-01",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T10:16:12.972Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-02",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T10:16:15.558Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-03",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T10:16:18.099Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-04",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T10:16:22.701Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-05",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T10:16:31.744Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-06",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T10:16:48.300Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-CLEANUP",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T10:20:02.145Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-SCHEMA",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T10:20:02.216Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-XLINK",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T10:20:02.272Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-OGIMG",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T10:26:47.139Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-IMG",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T10:26:47.220Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-WEBMASTER",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T10:58:28.417Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-WEBMASTER",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T10:59:26.234Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-IMG-CODE",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:05:33.599Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-DEMO-LANDING",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:05:52.481Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-AUDIENCE-PAGE",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:05:57.557Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-TITLE",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:38:25.517Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-CLUSTER",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:38:25.719Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-LINKBUILD",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:38:25.784Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-IMG-CODE",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:39:07.581Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-OG-DEMO",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:39:09.230Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-LINKBUILD",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:47:08.671Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-05",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T12:33:38.111Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_EXTRACT/SE-08",
+      "sprint_id": "SPRINT_SITE_EXTRACT",
+      "valid_from": "2026-06-25T12:33:44.383Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-OG-DEMO",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T13:19:20.441Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-IMG",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T16:55:02.558Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-CLUSTER",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T17:10:47.526Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-CWV",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:52:45.898Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-AUDIENCE-PAGE",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:57:12.150Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-OG-DEMO",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:57:12.220Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-CLUSTER",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T11:57:12.293Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-META-BLOG",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T12:02:06.370Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-TITLE",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T12:02:09.177Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-AUDIENCE-PAGE",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T13:19:27.364Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-TITLE",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T13:21:54.486Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-META-BLOG",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T14:08:39.474Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-OGIMG",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T16:16:00.971Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-OGIMG",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T16:54:43.645Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-OGIMG",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T21:15:00.481Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-WEBMASTER",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T21:19:28.502Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-SCHEMA",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T22:38:29.342Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-XLINK",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-25T22:41:30.078Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-01",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-26T20:58:27.183Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-02",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-26T20:58:32.908Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-03",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-26T20:58:37.317Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-04",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-26T20:58:43.066Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-05",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-26T20:58:45.516Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-06",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-26T20:58:48.302Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-07",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-26T20:58:51.950Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-08",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-26T20:58:55.595Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_V3/SEO-RUBRIC-AITEAM",
+      "sprint_id": "SPRINT_SITE_SEO_V3",
+      "valid_from": "2026-06-27T08:37:50.274Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-09",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T08:58:44.150Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-10",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T08:58:49.277Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-11",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T08:58:56.430Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-09",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T09:19:31.396Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-10",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T09:19:37.705Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-11",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T09:19:39.809Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-12",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T09:29:32.338Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-13",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T09:30:17.064Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-02",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T11:12:17.843Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-04",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T11:12:17.936Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-05",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T11:12:17.964Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-06",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T11:12:17.986Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-07",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T11:12:18.009Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-12",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T11:12:18.033Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-01",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T11:19:58.335Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-03",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T11:19:58.378Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-08",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T16:57:25.084Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-13",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T17:00:22.608Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-01",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T17:06:57.828Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-02",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T17:07:00.012Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-03",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T17:07:02.210Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-04",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T17:07:06.446Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-05",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T17:07:08.846Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-06",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T17:07:11.939Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-07",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T17:07:14.085Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-08",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T17:07:16.412Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-09",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T18:59:06.134Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-10",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T18:59:06.226Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-11",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T18:59:06.280Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-13",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T19:05:31.603Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_ONPAGE/SEO-SITE-12",
+      "sprint_id": "SPRINT_SEO_SITE_ONPAGE",
+      "valid_from": "2026-06-27T19:10:31.041Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_INFRA",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-06-28T07:15:38.600Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_HUB",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-06-28T07:15:41.583Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_STORY",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-06-28T07:15:52.028Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_HUNT",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-06-28T07:15:55.850Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_RAVENS",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-06-28T07:15:58.220Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_LORE",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-06-28T07:16:00.337Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_TPG",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-06-28T07:16:03.245Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_ERP",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-06-28T07:16:06.634Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_VECTOR",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-06-28T07:16:08.415Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_PANTHEON",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-06-28T07:16:10.604Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE2/SITE2-01",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "valid_from": "2026-06-29T15:26:13.921Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE2/SITE2-02",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "valid_from": "2026-06-29T15:48:59.041Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE2/SITE2-02",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "valid_from": "2026-06-30T09:24:47.796Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE2/SITE2-01",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "valid_from": "2026-06-30T09:27:44.253Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE2/SITE2-01",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "valid_from": "2026-06-30T09:30:02.623Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE2/SITE2-02",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "valid_from": "2026-06-30T09:30:41.364Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE2/SITE2-01",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "valid_from": "2026-06-30T09:49:35.920Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE2/SITE2-02",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "valid_from": "2026-06-30T10:52:16.632Z"
+    },
+    {
+      "task_uid": "SPRINT_DIALECT_MATURITY_ASSESSMENT/DM-01",
+      "sprint_id": "SPRINT_DIALECT_MATURITY_ASSESSMENT",
+      "valid_from": "2026-06-30T14:12:21.023Z"
+    },
+    {
+      "task_uid": "SPRINT_DIALECT_MATURITY_ASSESSMENT/DM-01",
+      "sprint_id": "SPRINT_DIALECT_MATURITY_ASSESSMENT",
+      "valid_from": "2026-06-30T14:13:31.691Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE2/SITE2-03",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "valid_from": "2026-07-03T22:01:17.830Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE3/SITE3-01",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE3",
+      "valid_from": "2026-07-03T22:31:07.540Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE3/SITE3-02",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE3",
+      "valid_from": "2026-07-03T22:31:11.747Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE3/SITE3-03",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE3",
+      "valid_from": "2026-07-03T22:31:21.587Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE2/SITE2-01",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "valid_from": "2026-07-03T22:31:24.642Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE2/SITE2-02",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "valid_from": "2026-07-03T22:31:24.674Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE2/SITE2-03",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE2",
+      "valid_from": "2026-07-03T22:31:24.703Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE3/SITE3-02",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE3",
+      "valid_from": "2026-07-04T09:46:14.375Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE3/SITE3-01",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE3",
+      "valid_from": "2026-07-04T09:46:26.009Z"
+    },
+    {
+      "task_uid": "SPRINT_SEO_SITE_WAVE3/SITE3-03",
+      "sprint_id": "SPRINT_SEO_SITE_WAVE3",
+      "valid_from": "2026-07-04T09:46:32.014Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_PRESTAGE/SITE-01",
+      "sprint_id": "SPRINT_SEIDR_SITE_PRESTAGE",
+      "valid_from": "2026-07-29T09:17:04.214Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_PRESTAGE/SITE-01",
+      "sprint_id": "SPRINT_SEIDR_SITE_PRESTAGE",
+      "valid_from": "2026-07-29T09:17:12.324Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_PRESTAGE/SITE-02",
+      "sprint_id": "SPRINT_SEIDR_SITE_PRESTAGE",
+      "valid_from": "2026-07-29T09:17:27.890Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_PRESTAGE/SITE-02",
+      "sprint_id": "SPRINT_SEIDR_SITE_PRESTAGE",
+      "valid_from": "2026-07-29T09:17:38.626Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_PRESTAGE/SITE-03",
+      "sprint_id": "SPRINT_SEIDR_SITE_PRESTAGE",
+      "valid_from": "2026-07-29T09:18:07.651Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_PRESTAGE/SITE-03",
+      "sprint_id": "SPRINT_SEIDR_SITE_PRESTAGE",
+      "valid_from": "2026-07-29T09:18:15.665Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_PRESTAGE/SITE-04",
+      "sprint_id": "SPRINT_SEIDR_SITE_PRESTAGE",
+      "valid_from": "2026-07-29T09:18:34.545Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_PRESTAGE/SITE-04",
+      "sprint_id": "SPRINT_SEIDR_SITE_PRESTAGE",
+      "valid_from": "2026-08-01T12:43:34.590Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV/TR-01",
+      "sprint_id": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV",
+      "valid_from": "2026-11-05T19:06:55.279Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV/TR-02",
+      "sprint_id": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV",
+      "valid_from": "2026-11-05T19:06:55.388Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV/TR-03",
+      "sprint_id": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV",
+      "valid_from": "2026-11-05T19:07:28.428Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV/TR-04",
+      "sprint_id": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV",
+      "valid_from": "2026-11-05T19:07:28.586Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV/TR-05",
+      "sprint_id": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV",
+      "valid_from": "2026-11-05T19:07:52.960Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV/TR-01",
+      "sprint_id": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV",
+      "valid_from": "2026-11-05T19:08:46.569Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV/TR-02",
+      "sprint_id": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV",
+      "valid_from": "2026-11-05T19:08:47.487Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV/TR-03",
+      "sprint_id": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV",
+      "valid_from": "2026-11-05T19:08:48.257Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV/TR-04",
+      "sprint_id": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV",
+      "valid_from": "2026-11-05T19:31:19.652Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV/TR-05",
+      "sprint_id": "SPRINT_SEIDR_SITE_TECH_RELEASE_NOV",
+      "valid_from": "2026-11-05T19:31:20.610Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_RELEASE_NOTES/RN-01",
+      "sprint_id": "SPRINT_SEIDR_SITE_RELEASE_NOTES",
+      "valid_from": "2026-11-06T06:11:40.894Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_RELEASE_NOTES/RN-02",
+      "sprint_id": "SPRINT_SEIDR_SITE_RELEASE_NOTES",
+      "valid_from": "2026-11-06T06:11:56.785Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_RELEASE_NOTES/RN-03",
+      "sprint_id": "SPRINT_SEIDR_SITE_RELEASE_NOTES",
+      "valid_from": "2026-11-06T06:12:21.685Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_RELEASE_NOTES/RN-04",
+      "sprint_id": "SPRINT_SEIDR_SITE_RELEASE_NOTES",
+      "valid_from": "2026-11-06T06:12:58.294Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_RELEASE_NOTES/RN-05",
+      "sprint_id": "SPRINT_SEIDR_SITE_RELEASE_NOTES",
+      "valid_from": "2026-11-06T06:14:08.805Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_RELEASE_NOTES/RN-02",
+      "sprint_id": "SPRINT_SEIDR_SITE_RELEASE_NOTES",
+      "valid_from": "2026-11-06T06:24:39.979Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_RELEASE_NOTES/RN-03",
+      "sprint_id": "SPRINT_SEIDR_SITE_RELEASE_NOTES",
+      "valid_from": "2026-11-06T06:24:40.902Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_RELEASE_NOTES/RN-05",
+      "sprint_id": "SPRINT_SEIDR_SITE_RELEASE_NOTES",
+      "valid_from": "2026-11-06T06:24:45.030Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_RELEASE_NOTES/RN-01",
+      "sprint_id": "SPRINT_SEIDR_SITE_RELEASE_NOTES",
+      "valid_from": "2026-11-06T06:31:07.228Z"
+    },
+    {
+      "task_uid": "SPRINT_SEIDR_SITE_RELEASE_NOTES/RN-04",
+      "sprint_id": "SPRINT_SEIDR_SITE_RELEASE_NOTES",
+      "valid_from": "2026-11-06T06:31:08.088Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_INFRA",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-11-06T16:57:33.548Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_HUNT",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-11-06T16:57:37.528Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_LORE",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-11-06T16:57:38.362Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_TPG",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-11-06T16:57:39.142Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_ERP",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-11-06T16:57:39.928Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_RAVENS",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-11-06T16:57:40.797Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_VECTOR",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-11-06T16:57:41.420Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/WWW-03",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-11-06T17:03:30.410Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/WWW-01",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-11-06T17:03:37.956Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/WWW-02",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-11-06T17:03:45.264Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/ROB-04",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-11-06T17:03:53.585Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_INFRA",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-11-06T17:04:03.422Z"
+    },
+    {
+      "task_uid": "SPRINT_BRAGI_ABOUT_PUB/ABOUT_INFRA",
+      "sprint_id": "SPRINT_BRAGI_ABOUT_PUB",
+      "valid_from": "2026-11-06T17:04:30.088Z"
+    },
+    {
+      "task_uid": "SPRINT_SITE_SEO_PRERENDER/ROB-04",
+      "sprint_id": "SPRINT_SITE_SEO_PRERENDER",
+      "valid_from": "2026-11-06T17:05:03.196Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T01",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T04:55:09.489Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T02",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T04:55:24.690Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T03",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T04:55:39.533Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T04",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T04:55:55.708Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T01",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T04:56:03.867Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T02",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T04:56:03.967Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T03",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T04:56:04.091Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T04",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T04:56:04.214Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T05",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:03:46.411Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T06",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:04:02.385Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T07",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:04:18.758Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T08",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:04:39.966Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T09",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:04:56.040Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T10",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:05:22.972Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T05",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:05:30.975Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T06",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:05:31.050Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T07",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:05:31.127Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T08",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:05:31.199Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T09",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:05:31.270Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T10",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:05:31.339Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T10",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T05:37:57.973Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T11",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T07:53:57.085Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T12",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T07:54:00.398Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T13",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T07:54:03.213Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T14",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T07:54:07.610Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T07:54:28.281Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T16",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T07:54:30.876Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T17",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T07:54:33.309Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T18",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T07:54:36.517Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T19",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T07:54:39.914Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T20",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T07:54:45.575Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T08:32:27.421Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15B",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T09:56:20.897Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15C",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T09:56:30.112Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15B",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T09:57:04.421Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15B",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T10:21:49.322Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15B",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T10:22:14.866Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15D",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-11T10:23:21.369Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15B",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-12T13:21:10.453Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15C",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-12T13:27:00.556Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-12T13:41:44.234Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15C",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-12T13:41:52.818Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T20",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:24:31.097Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T07",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:32:22.882Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T08",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:32:23.077Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T11",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:32:23.343Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T12",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:32:23.597Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T13",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:32:24.103Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T14",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:32:24.263Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T16",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:32:24.388Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T17",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:32:24.501Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T18",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:32:24.607Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T19",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:32:24.727Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T21",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:43:41.705Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T22",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:43:52.736Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T21",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:44:12.191Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T22",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T14:44:12.293Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T23",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T17:10:47.463Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T23",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T17:11:15.545Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T06",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T17:53:19.485Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T24",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T18:14:15.117Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T24",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T18:14:45.278Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T25",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T18:50:11.260Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T25",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-14T18:50:39.949Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B01",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-14T22:35:22.314Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B02",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-14T22:35:37.141Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B03",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-14T22:35:52.900Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B04",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-14T22:36:07.102Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B05",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-14T22:36:22.897Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B06",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-14T22:36:40.010Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B01",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-14T22:36:54.264Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B02",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-14T22:36:54.402Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B06",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-14T23:20:36.782Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B05",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-15T00:27:58.544Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B07",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-15T00:29:22.925Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B08",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-15T00:29:45.055Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-ICONS",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T00:08:56.008Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-ADMIN-HDR",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T00:09:00.703Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-META-LAYOUT",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T00:09:09.200Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-ICONS",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T00:09:18.641Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-ADMIN-HDR",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T00:09:20.617Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-META-LAYOUT",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T00:09:22.706Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-META-LAYOUT",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T00:27:55.957Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-META-LAYOUT",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T00:36:16.105Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-META-MOBILE",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T05:53:42.603Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-META-PREVIEW",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T05:53:47.428Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-META-MOBILE",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T05:54:02.897Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-META-PREVIEW",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T05:54:05.296Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-META-PREVIEW",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T05:55:28.047Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-META-MOBILE",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T05:55:31.116Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-META-PREVIEW",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T06:10:44.305Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-META-MOBILE",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T06:10:48.107Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-PEOPLE",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:43:03.621Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-DATABASES",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:43:07.727Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-SETTINGS",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:43:12.387Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-SHELL",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:42:57.573Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-DATAMODEL",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:43:00.855Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-PERMISSIONS",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:43:09.799Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-EMBEDDING",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:43:14.875Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-PERFORMANCE",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:43:17.061Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-METABOT",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:43:19.308Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-TOOLS",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:43:23.171Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-SHELL",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:43:34.292Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-SHELL",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:51:07.803Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-DATAMODEL",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T06:51:22.451Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-DATABASES",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:06:53.708Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-DATABASES",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:08:30.654Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-PERMISSIONS",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:08:34.537Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-PERMISSIONS",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:19:24.178Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-PEOPLE",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:19:39.820Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-PEOPLE",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:21:35.664Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-EMBEDDING",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:21:56.135Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-EMBEDDING",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:28:38.636Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-SETTINGS",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:28:48.741Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-TOOLS",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:28:57.872Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-PERFORMANCE",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:30:30.531Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-METABOT",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:30:35.154Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-METABOT",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:31:17.369Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-PERFORMANCE",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:31:37.778Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-PERFORMANCE",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-16T08:31:52.245Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-1",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-16T09:27:49.939Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-2",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-16T09:28:04.479Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-3",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-16T09:28:13.322Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-3",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-16T10:23:07.072Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-1",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-16T11:07:04.416Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-1",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-16T11:18:37.819Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-2",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-16T11:20:19.629Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-1",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-16T11:53:15.310Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-1",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-16T12:01:48.688Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-2",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-16T12:03:49.433Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_SSO_OIDC/S01",
+      "sprint_id": "SPRINT_VOLVA_SSO_OIDC",
+      "valid_from": "2026-07-16T13:11:25.832Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B07",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-16T13:11:25.832Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/A1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T17:48:57.656Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/A2",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T17:49:01.099Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/B1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T17:49:04.630Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/B2",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T17:49:06.889Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/C1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T17:49:09.181Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/C2",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T17:49:12.581Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/C3",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T17:49:15.457Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/D1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T17:49:18.698Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T17:49:21.755Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E2",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T17:49:24.831Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E3",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T17:49:27.592Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/F1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T17:49:29.824Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/A1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T18:44:28.905Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/A1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T19:18:58.573Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/B1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T19:19:02.590Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/B1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T19:23:52.363Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/B2",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T19:23:54.932Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/C1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T20:16:59.591Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/C2",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T20:16:59.686Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/C3",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T20:17:09.990Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/C3",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T20:41:24.123Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/B2",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T20:47:08.452Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/D1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T20:47:08.555Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T20:51:42.230Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T21:09:40.119Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T22:30:52.434Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E4",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T23:16:19.937Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-16T23:19:42.415Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E4",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-17T05:21:26.075Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E2",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-17T05:56:22.295Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DRIVER_XRAY_SQL/D1",
+      "sprint_id": "SPRINT_VOLVA_DRIVER_XRAY_SQL",
+      "valid_from": "2026-07-17T06:04:40.834Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DRIVER_XRAY_SQL/D2",
+      "sprint_id": "SPRINT_VOLVA_DRIVER_XRAY_SQL",
+      "valid_from": "2026-07-17T06:04:47.051Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DRIVER_XRAY_SQL/D3",
+      "sprint_id": "SPRINT_VOLVA_DRIVER_XRAY_SQL",
+      "valid_from": "2026-07-17T06:04:52.810Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/A2",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-17T06:20:18.467Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E5",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-17T06:29:18.542Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E5",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-17T06:39:20.311Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E5",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-17T06:40:07.405Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K1",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-17T09:07:19.511Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K2",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-17T09:07:24.565Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K3",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-17T09:07:32.621Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K4",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-17T09:07:36.963Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K5",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-17T09:07:40.196Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DRIVER_XRAY_SQL/D1",
+      "sprint_id": "SPRINT_VOLVA_DRIVER_XRAY_SQL",
+      "valid_from": "2026-07-17T09:08:02.939Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K6",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-17T10:00:26.794Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K0",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-17T11:34:36.019Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K0",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-17T11:34:39.645Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K0",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-17T11:48:13.681Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DRIVER_XRAY_SQL/D1",
+      "sprint_id": "SPRINT_VOLVA_DRIVER_XRAY_SQL",
+      "valid_from": "2026-07-17T13:13:39.709Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_HOUND_BRIDGE/H1",
+      "sprint_id": "SPRINT_VOLVA_HOUND_BRIDGE",
+      "valid_from": "2026-07-18T00:04:29.347Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_HOUND_BRIDGE/H2",
+      "sprint_id": "SPRINT_VOLVA_HOUND_BRIDGE",
+      "valid_from": "2026-07-18T00:04:32.975Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_HOUND_BRIDGE/H3",
+      "sprint_id": "SPRINT_VOLVA_HOUND_BRIDGE",
+      "valid_from": "2026-07-18T00:04:37.601Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_HOUND_BRIDGE/H4",
+      "sprint_id": "SPRINT_VOLVA_HOUND_BRIDGE",
+      "valid_from": "2026-07-18T00:04:39.502Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_HOUND_BRIDGE/H5",
+      "sprint_id": "SPRINT_VOLVA_HOUND_BRIDGE",
+      "valid_from": "2026-07-18T00:04:41.515Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_HOUND_BRIDGE/H6",
+      "sprint_id": "SPRINT_VOLVA_HOUND_BRIDGE",
+      "valid_from": "2026-07-18T00:04:45.127Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_HOUND_BRIDGE/H7",
+      "sprint_id": "SPRINT_VOLVA_HOUND_BRIDGE",
+      "valid_from": "2026-07-18T00:04:47.891Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_HOUND_BRIDGE/H1",
+      "sprint_id": "SPRINT_VOLVA_HOUND_BRIDGE",
+      "valid_from": "2026-07-18T00:05:07.217Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K0",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-18T00:06:38.923Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DRIVER_XRAY_SQL/D1",
+      "sprint_id": "SPRINT_VOLVA_DRIVER_XRAY_SQL",
+      "valid_from": "2026-07-18T00:06:39.045Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E5",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-18T00:06:39.154Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DRIVER_XRAY_SQL/D2",
+      "sprint_id": "SPRINT_VOLVA_DRIVER_XRAY_SQL",
+      "valid_from": "2026-07-18T00:11:58.421Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DRIVER_XRAY_SQL/D2",
+      "sprint_id": "SPRINT_VOLVA_DRIVER_XRAY_SQL",
+      "valid_from": "2026-07-18T11:17:52.650Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DRIVER_XRAY_SQL/D3",
+      "sprint_id": "SPRINT_VOLVA_DRIVER_XRAY_SQL",
+      "valid_from": "2026-07-18T11:17:56.005Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DRIVER_XRAY_SQL/D3",
+      "sprint_id": "SPRINT_VOLVA_DRIVER_XRAY_SQL",
+      "valid_from": "2026-07-18T11:23:31.256Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T05",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-24T05:50:37.522Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15D",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-24T05:52:04.154Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-PERFORMANCE",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-24T05:52:17.826Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E4",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-24T07:02:59.666Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T09",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-24T07:36:05.592Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T05",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-24T08:07:43.626Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T15D",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-24T08:07:46.190Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T25",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-24T08:07:46.264Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME/T20",
+      "sprint_id": "SPRINT_VOLVA_GRAPH_CATEGORY_THEME",
+      "valid_from": "2026-07-24T08:07:46.333Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_MOBILE_ADMIN/MA-PERFORMANCE",
+      "sprint_id": "SPRINT_VOLVA_MOBILE_ADMIN",
+      "valid_from": "2026-07-24T08:07:46.402Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B04",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-24T08:09:58.227Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-24T08:10:00.751Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/E3",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-24T08:10:00.844Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_REACT19/F1",
+      "sprint_id": "SPRINT_VOLVA_REACT19",
+      "valid_from": "2026-07-24T08:10:00.906Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/T-PROD-RESTORE-062",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-24T08:52:06.922Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/T-PROD-RESTORE-062",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-24T08:52:21.609Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/T-PROD-RESTORE-062",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-25T08:10:19.544Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/T-FONTS-APPLY-FIX",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-25T13:17:29.802Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/T-FONTS-APPLY-FIX",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-25T13:17:22.697Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/T-FONTS-APPLY-FIX",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-25T13:46:56.530Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/T-PROD-RESTORE-062",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-30T09:29:31.543Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/T-FONTS-APPLY-FIX",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-30T09:29:40.757Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/C1",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-30T12:46:05.896Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/C2",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-30T12:46:28.488Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/C3",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-30T12:46:47.493Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/C4",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-30T12:48:08.034Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/T-THEME-POLISH",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-30T13:05:29.899Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/T-PROD-RESTORE-062",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-30T13:12:56.299Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/T-FONTS-APPLY-FIX",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-30T13:13:09.712Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC1",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-30T13:14:02.098Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC2",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-30T13:14:19.655Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC3",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-30T13:14:40.594Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC4",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-30T13:14:57.590Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/C2",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-30T18:47:53.201Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/C3",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-30T18:47:53.284Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/C4",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-30T18:47:53.362Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/C1",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-30T23:39:57.592Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC1",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-07-30T20:17:19.907Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/VB-RAIL",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-30T20:18:43.798Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/C2",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-30T22:19:58.102Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/C3",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-30T22:19:58.247Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/C4",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-30T23:39:57.683Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/T-THEME-POLISH",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-07-31T00:13:20.648Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/FLAKE-CACHING-SPEC",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T11:15:34.746Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/FLAKE-CACHING-SPEC",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T11:15:08.926Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_FORGEJO_DIR",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:13:03.210Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_LINT_WAVE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:13:11.688Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_BACKEND_TESTS",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:13:22.630Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_CLJS_APPDB",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:13:35.838Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_DRIVER_ARCADEDB",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:13:41.726Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_VISUAL_I18N",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:13:46.729Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_API_SERDES",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:13:51.611Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_E2E",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:14:05.655Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_UPGRADE_TESTS",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:14:10.376Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_FLAKE_TOOLING",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:14:13.668Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_WINDOWS_PRECOMMIT",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:14:22.325Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_FORGEJO_DIR",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:16:49.396Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_LINT_WAVE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:16:52.799Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_MIGRATION_MISPLACED",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T13:40:18.228Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_BASELINE_PRESTAGE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T15:01:35.113Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_BASELINE_PRESTAGE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T15:01:53.268Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_PRESTAGE_DOWN_INCIDENT",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T15:16:27.646Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_PRESTAGE_DOWN_INCIDENT",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T15:16:34.340Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_BASELINE_PRESTAGE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T15:16:38.151Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_PRESTAGE_DOWN_INCIDENT",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T16:15:36.584Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_BASELINE_PRESTAGE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T16:15:43.142Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_VAULT_BASE64_ROOT_CAUSE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T16:16:21.912Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_VAULT_BASE64_ROOT_CAUSE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T23:08:03.591Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_VERSION_SCHEME",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T16:46:58.480Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_VERSION_SCHEME",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T16:51:32.578Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_VERSION_SCHEME",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T17:45:46.252Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_BACKEND_TESTS",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T17:47:03.737Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_APP_DB_TEST_FAILURES",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T18:07:28.285Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_BACKEND_TESTS",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T18:08:24.348Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_APP_DB_TEST_FAILURES",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T18:08:27.944Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_APP_DB_TEST_FAILURES",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T19:44:16.945Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_BACKEND_TESTS",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T19:44:19.610Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_PRESTAGE_DOWN_INCIDENT",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T19:44:22.469Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_BASELINE_PRESTAGE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T19:46:09.257Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_CLJS_APPDB",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T19:49:38.397Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_API_SERDES",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T20:35:05.709Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_FLAKE_TOOLING",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T20:35:11.410Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_CLJS_APPDB",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T20:35:23.519Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_VISUAL_I18N",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T20:35:28.727Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_RUNNER_CAPACITY_4",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T21:01:45.377Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_RUNNER_CAPACITY_4",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T21:01:52.701Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_E2E",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T21:35:12.307Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_UPGRADE_TESTS",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T21:35:12.380Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_DRIVER_ARCADEDB",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T21:35:12.438Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_LINT_WAVE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T21:35:14.482Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_VISUAL_I18N",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T21:35:24.236Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_RERUN_WORKFLOWS",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T21:42:32.818Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_RERUN_WORKFLOWS",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T21:42:40.490Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_DEPSCLJ_CACHE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T21:54:10.758Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_OWN_DOCS_LINKCHECK",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T22:00:36.260Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_LINT_WAVE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T22:05:38.328Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_WINDOWS_PRECOMMIT",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T22:05:44.447Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_VERSION_SCHEME",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T22:06:07.131Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-1",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-31T22:08:13.277Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-3",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-31T22:08:16.183Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_MIGRATION_MISPLACED",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T22:15:58.232Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_BASELINE_PRESTAGE",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-07-31T22:17:07.940Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_ARCADEDB_DRIVER/AD-2",
+      "sprint_id": "SPRINT_VOLVA_ARCADEDB_DRIVER",
+      "valid_from": "2026-07-31T22:29:35.850Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC1",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T00:08:16.040Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC-LOGIN-THEME",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T00:01:00.700Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC5",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T00:27:44.956Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC6",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T00:27:52.078Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC5",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T00:27:57.383Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC7",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T00:35:24.840Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC5",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T00:53:36.187Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC6",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T00:53:42.156Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC8",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T00:53:58.739Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC8",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T00:54:04.621Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC5",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T01:26:09.861Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC6",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T01:26:19.777Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC8",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T01:26:56.542Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC6",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-01T19:47:17.350Z"
+    },
+    {
+      "task_uid": "SPRINT_KC_THEMES_VOLVA_LORE/KCT-01",
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "valid_from": "2026-08-02T09:18:39.407Z"
+    },
+    {
+      "task_uid": "SPRINT_KC_THEMES_VOLVA_LORE/KCT-02",
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "valid_from": "2026-08-02T09:18:43.724Z"
+    },
+    {
+      "task_uid": "SPRINT_KC_THEMES_VOLVA_LORE/KCT-03",
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "valid_from": "2026-08-02T09:18:54.657Z"
+    },
+    {
+      "task_uid": "SPRINT_KC_THEMES_VOLVA_LORE/KCT-04",
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "valid_from": "2026-08-02T09:18:58.220Z"
+    },
+    {
+      "task_uid": "SPRINT_KC_THEMES_VOLVA_LORE/KCT-05",
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "valid_from": "2026-08-02T09:19:09.422Z"
+    },
+    {
+      "task_uid": "SPRINT_KC_THEMES_VOLVA_LORE/KCT-03",
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "valid_from": "2026-08-02T13:06:38.008Z"
+    },
+    {
+      "task_uid": "SPRINT_KC_THEMES_VOLVA_LORE/KCT-04",
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "valid_from": "2026-08-02T14:03:19.711Z"
+    },
+    {
+      "task_uid": "SPRINT_KC_THEMES_VOLVA_LORE/KCT-06",
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "valid_from": "2026-08-02T17:13:51.794Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC2",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-02T20:52:56.235Z"
+    },
+    {
+      "task_uid": "SPRINT_KC_THEMES_VOLVA_LORE/KCT-07",
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "valid_from": "2026-08-15T20:19:42.362Z"
+    },
+    {
+      "task_uid": "SPRINT_KC_THEMES_VOLVA_LORE/KCT-07",
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "valid_from": "2026-08-15T20:20:31.057Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K1",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-31T06:05:58.437Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K2",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-31T06:05:58.543Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K3",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-31T06:05:58.659Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K4",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-31T06:05:58.753Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K5",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-31T06:05:58.856Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K1",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-31T08:17:28.386Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K2",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-31T08:17:35.796Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/K3",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-31T08:17:46.102Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC2",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-31T08:18:49.871Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_SSO_OIDC/S01",
+      "sprint_id": "SPRINT_VOLVA_SSO_OIDC",
+      "valid_from": "2026-08-31T08:18:55.541Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_HOUND_BRIDGE/H8",
+      "sprint_id": "SPRINT_VOLVA_HOUND_BRIDGE",
+      "valid_from": "2026-08-31T08:19:38.955Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC9",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-31T08:20:05.624Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_HOUND_BRIDGE/H9",
+      "sprint_id": "SPRINT_VOLVA_HOUND_BRIDGE",
+      "valid_from": "2026-08-31T08:20:26.463Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC-LOGIN-THEME",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-31T08:22:38.624Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_KC_AUTH/KC2",
+      "sprint_id": "SPRINT_VOLVA_KC_AUTH",
+      "valid_from": "2026-08-31T10:18:12.577Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_LINT_BASEREF",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-08-31T10:33:36.275Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_LINT_BASEREF",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-08-31T10:47:12.711Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_CI/CI_PRESTAGE_DOWN",
+      "sprint_id": "SPRINT_VOLVA_CI",
+      "valid_from": "2026-09-04T06:32:01.512Z"
+    },
+    {
+      "task_uid": "SPRINT_KC_THEMES_VOLVA_LORE/KCT-07",
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "valid_from": "2026-10-20T16:12:32.673Z"
+    },
+    {
+      "task_uid": "SPRINT_KC_THEMES_VOLVA_LORE/KCT-07",
+      "sprint_id": "SPRINT_KC_THEMES_VOLVA_LORE",
+      "valid_from": "2026-10-20T16:25:58.944Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B-RU-VIZ-NAMES",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-11-02T08:20:57.524Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B-STATICVIZ-PARITY",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-11-02T08:24:44.730Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U1",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:27:21.580Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U2",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:27:22.896Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U3",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:27:24.227Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U4",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:27:25.400Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U5",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:27:26.692Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U6",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:27:27.853Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U7",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:27:29.271Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U8",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:27:30.423Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U1",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:27:39.090Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U2",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:36:14.193Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_062_BRANDING/B-ECHARTS-REG-CLEANUP",
+      "sprint_id": "SPRINT_VOLVA_062_BRANDING",
+      "valid_from": "2026-11-02T08:37:12.750Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U1",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:45:49.474Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U2",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:45:50.249Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U4",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T08:45:51.100Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U3",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:01:19.538Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U4",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:01:20.315Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U5",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:01:21.001Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U9",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:01:36.239Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U10",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:01:37.473Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U11",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:01:38.736Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U12",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:01:40.072Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U13",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:01:41.330Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U14",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:01:42.571Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U14",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:29:59.131Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U9",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:30:04.457Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U9",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:33:42.521Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U10",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:33:43.352Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U10",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:40:20.703Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U11",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:40:21.541Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U13",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:43:01.280Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U11",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:47:20.359Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U13",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:47:21.123Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U12",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:47:21.925Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U12",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T09:51:13.640Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U15",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T10:11:05.879Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U16",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T10:11:07.529Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U17",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T10:17:55.005Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-00",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:00:44.408Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-HEATMAP",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:02:02.941Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREEMAP",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:02:19.777Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GRAPH",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:02:41.129Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREE",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:03:07.880Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-RADAR",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:03:23.527Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PARALLEL",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:03:41.212Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CHORD",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:04:01.270Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-THEMERIVER",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:04:29.778Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CANDLE",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:04:50.555Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-ROSE",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:05:15.086Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PARKED",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:05:47.997Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U18",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T15:06:05.049Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U18",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T15:06:55.045Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-HEATMAP-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:12:27.647Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-HEATMAP-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:12:41.619Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREEMAP-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:12:55.853Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREEMAP-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:13:10.027Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GRAPH-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:13:24.100Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GRAPH-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:13:39.530Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREE-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:13:52.309Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREE-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:14:03.234Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-RADAR-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:14:15.304Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-RADAR-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:14:25.751Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PARALLEL-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:14:41.072Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PARALLEL-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:14:54.721Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CHORD-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:15:08.991Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CHORD-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:15:24.116Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-THEMERIVER-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:15:39.150Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-THEMERIVER-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:15:52.547Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CANDLE-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:16:08.555Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CANDLE-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:16:23.387Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-ROSE-D",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T15:16:37.438Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U19",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T15:26:33.819Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U19",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T15:26:37.268Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U19",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T15:29:38.285Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U12",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-02T15:30:59.965Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-065-SYNC",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-02T16:57:31.367Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U20",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-03T10:23:30.850Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U21",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-03T10:23:32.504Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U22",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-03T10:46:12.141Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_UPSTREAM_065/U20",
+      "sprint_id": "SPRINT_VOLVA_UPSTREAM_065",
+      "valid_from": "2026-11-03T11:00:22.459Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GANTT-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T16:27:50.349Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GANTT",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T16:27:52.067Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GANTT-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T16:27:53.880Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GANTT-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T17:14:33.676Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-00",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T17:14:34.430Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-065-SYNC",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T17:14:35.290Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GANTT-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T19:09:52.266Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GANTT",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T19:09:53.012Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GANTT-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T19:24:25.900Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-EMAIL-MSGCHANNEL",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T19:45:38.160Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-EMAIL-MSGCHANNEL",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T19:45:41.748Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-EMAIL-MSGCHANNEL",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T20:04:17.448Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GANTT-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-03T20:04:18.226Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREE-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T02:52:46.761Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREE",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T02:52:48.277Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREE-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T02:52:49.378Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CI-FE-RED",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T03:17:38.559Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREE-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T03:17:41.006Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREE",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T03:17:42.033Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREE-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T03:17:43.422Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-ROSE-D",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T03:17:44.533Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GRAPH-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T03:44:53.578Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GRAPH",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T03:44:54.616Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GRAPH-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T03:44:55.387Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CANDLE-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T04:10:38.650Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CANDLE",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T04:10:40.203Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CANDLE-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T04:10:41.697Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GAUGE-STATIC",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T04:13:22.703Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-RADAR-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T04:39:03.502Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-RADAR",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T04:39:04.462Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-RADAR-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T04:39:05.327Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CHORD-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:06:55.913Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CHORD",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:06:56.728Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-CHORD-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:06:57.481Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-GAUGE-STATIC",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:06:58.264Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PICKER",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:33:21.171Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-THEMERIVER-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:37:24.259Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-THEMERIVER",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:37:25.370Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-THEMERIVER-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:37:26.373Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREEMAP-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:38:15.770Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREEMAP",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:38:16.766Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-TREEMAP-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:38:17.799Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PICTO-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:53:40.579Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PICTO",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:53:42.235Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PICTO-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:53:43.790Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-HEATMAP-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:54:52.514Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-HEATMAP",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:54:53.284Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-HEATMAP-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:54:54.009Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PARALLEL-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:54:54.768Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PARALLEL",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:54:55.497Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PARALLEL-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T05:54:56.210Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-HEATMAP-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T06:00:33.758Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-HEATMAP",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T06:00:34.629Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-HEATMAP-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T06:00:35.425Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PARALLEL-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T06:00:36.202Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PARALLEL",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T06:00:36.976Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PARALLEL-M",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T06:00:37.870Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-XRAY",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T06:07:49.761Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DATASTORY/DS-00",
+      "sprint_id": "SPRINT_VOLVA_DATASTORY",
+      "valid_from": "2026-11-04T06:39:42.301Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DATASTORY/DS-INV-1",
+      "sprint_id": "SPRINT_VOLVA_DATASTORY",
+      "valid_from": "2026-11-04T06:39:44.053Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DATASTORY/DS-INV-2",
+      "sprint_id": "SPRINT_VOLVA_DATASTORY",
+      "valid_from": "2026-11-04T06:39:45.786Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DATASTORY/DS-INV-3",
+      "sprint_id": "SPRINT_VOLVA_DATASTORY",
+      "valid_from": "2026-11-04T06:40:16.693Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DATASTORY/DS-INV-4",
+      "sprint_id": "SPRINT_VOLVA_DATASTORY",
+      "valid_from": "2026-11-04T06:40:18.337Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_DATASTORY/DS-PLAN",
+      "sprint_id": "SPRINT_VOLVA_DATASTORY",
+      "valid_from": "2026-11-04T06:40:19.862Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-ROSE",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T06:51:41.437Z"
+    },
+    {
+      "task_uid": "SPRINT_VOLVA_VIZ_ECHARTS/VE-PICTO-P",
+      "sprint_id": "SPRINT_VOLVA_VIZ_ECHARTS",
+      "valid_from": "2026-11-04T07:28:30.376Z"
+    }
+  ],
+  "_page": {
+    "limit": 1000,
+    "offset": 4000,
+    "total": 13267,
+    "has_more": true
+  }
+}

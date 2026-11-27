@@ -1,0 +1,4 @@
+{"_src":"MCP query_slice 2026-11-07","probes":[
+{"slice":"release_tasks_by_tag","params":{"tag":"v1.16.0","project":"NooriUta/UnlimitedLORE"},"total":0},
+{"slice":"release_tasks_by_tag","params":{"tag":"v0.1.6-m0.65.2.5","project":"NooriUta/volva"},"total":0},
+{"slice":"release_prs_by_tag","params":{"tag":"v1.16.0","project":"NooriUta/UnlimitedLORE"},"total":45,"note":"положительный контроль: PR у релиза есть, но title/merged_at = null и связи PR→задача срез не отдаёт"}]}
