@@ -24,10 +24,10 @@ describe('web-next ← @seidr/kit', () => {
     expect(kitPkg().version).toBe(pkg.dependencies['@seidr/kit']);
   });
 
-  it('адрес реестра @seidr — в web-next/.npmrc, ключа в репозитории нет', () => {
-    // строки-пояснения (#) не в счёт: в них описано, КУДА класть ключ, но самого ключа нет
+  // 27.11: реестр — npm-прокси kkRepo, анонимное чтение (SPRINT_CICD_OPS_2611/CO-KKREPO-NPM-KIT).
+  it('адрес реестра @seidr — npm-прокси kkRepo в web-next/.npmrc, ключа в репозитории нет', () => {
     const rc = read('.npmrc').split(/\r?\n/).filter(l => !/^\s*[#;]/.test(l)).join('\n');
-    expect(rc).toMatch(/^@seidr:registry=https:\/\/\S+\/api\/packages\/AIDA\/npm\/$/m);
+    expect(rc).toMatch(/^@seidr:registry=http:\/\/192\.168\.3\.131:8081\/repository\/npm-aida-proxy\/$/m);
     expect(rc).not.toMatch(/_authToken|_auth\s*=|_password/);
   });
 
@@ -104,10 +104,9 @@ describe('образ web-next берёт kit пакетом', () => {
     expect(df).toMatch(/^COPY web-next\/package\.json web-next\/package-lock\.json web-next\/\.npmrc /m);
   });
 
-  it('ключ чтения реестра — секретом сборки, а не build-arg (в слой образа не попадает)', () => {
+  it('сборка не берёт ключей реестра: ни секрета, ни build-arg с токеном', () => {
     const df = read('Dockerfile');
-    expect(df).toMatch(/--mount=type=secret,id=npm_token/);
+    expect(df).not.toMatch(/npm_token|_authToken/);
     expect(df).not.toMatch(/ARG\s+\w*TOKEN/i);
-    expect(df).toMatch(/rm -f \/root\/\.npmrc/);
   });
 });

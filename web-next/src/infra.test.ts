@@ -82,20 +82,16 @@ describe('CI: образ v2 собирается', () => {
     expect(job).toMatch(/npm run typecheck/);
     expect(job).toMatch(/npm test/);
     expect(job).toMatch(/npm run build/);
-    expect(job).toMatch(/docker build \$ARGS --secret id=npm_token,env=KIT_NPM_READ_TOKEN -f web-next\/Dockerfile -t lore-app-next:ci \./);
+    expect(job).toMatch(/docker build \$ARGS -f web-next\/Dockerfile -t lore-app-next:ci \./);
   });
 
   // S4-00a, D-2026-UXR-KIT-REACT → K5-PACKAGE-DELIVERY (25.11): kit — пакет @seidr/kit из
   // AIDA/lorekit; его типы, тесты, CSS-слой и паритет i18n гоняет kit-ci.yml того репозитория.
-  // Здесь — только ключ чтения реестра до установки web-next, и никакого шага над kit/.
-  it('job не гоняет kit/ (он в AIDA/lorekit) и до установки web-next даёт ключ чтения реестра', () => {
+  // 27.11: пакет ставится через npm-прокси kkRepo (SPRINT_CICD_OPS_2611/CO-KKREPO-NPM-KIT) — без
+  // ключа: ключ чтения реестра Forgejo держит сам прокси. Ни ключа, ни шага над kit/ в job нет.
+  it('job не гоняет kit/ (он в AIDA/lorekit) и не требует ключа чтения реестра', () => {
     const job = ci().split(/^ {2}web-next:\s*$/m)[1] ?? '';
     expect(job).not.toMatch(/working-directory: kit\b/);
-    const steps = job.split(/- name: /);
-    const key = steps.findIndex(s => /KIT_NPM_READ_TOKEN:\s*\$\{\{\s*secrets\./.test(s));
-    const install = steps.findIndex(s => /working-directory: web-next/.test(s) && /npm-retry\.sh ci/.test(s));
-    expect(key, 'нет шага с ключом чтения реестра').toBeGreaterThan(-1);
-    expect(key).toBeLessThan(install);
-    expect(steps[key]).toMatch(/BLOCKED/);
+    expect(job).not.toMatch(/KIT_NPM_READ_TOKEN|npm_token|_authToken/);
   });
 });

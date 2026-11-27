@@ -56,15 +56,10 @@ jobs:
           command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
           node --version
 
-      # K5-PACKAGE-DELIVERY: @seidr/kit — из закрытого реестра AIDA (разбор — frontend-ci.yml).
+      # K5-PACKAGE-DELIVERY: @seidr/kit — через npm-прокси kkRepo (web-next/.npmrc), без ключа.
       - name: Install web-next
         working-directory: web-next
-        env:
-          KIT_NPM_READ_TOKEN: ${{ secrets.KIT_NPM_READ_TOKEN || secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
-        run: |
-          [ -n "${KIT_NPM_READ_TOKEN:-}" ] || { echo "::error::BLOCKED: нет ключа чтения реестра AIDA — @seidr/kit не скачается (секрет KIT_NPM_READ_TOKEN, даёт CICDGitHub)"; exit 1; }
-          echo '//git.seidrstudio.pro/api/packages/AIDA/npm/:_authToken=${KIT_NPM_READ_TOKEN}' >> ~/.npmrc
-          bash ../.github/scripts/npm-retry.sh ci
+        run: bash ../.github/scripts/npm-retry.sh ci
 
       # Chromium (~100 МБ) качается на каждом прогоне по более быстрому из двух путей (шаг
       # «Сеть» ниже). Кеша нет: actions/cache в локальном Forgejo не зеркалирован — прогон

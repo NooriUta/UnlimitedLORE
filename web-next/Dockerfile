@@ -16,9 +16,8 @@
 #
 # Seiðr-kit — пакет @seidr/kit с точной версией из npm-реестра Forgejo организации AIDA
 # (репозиторий AIDA/lorekit, SPRINT_UXR_S14_KIT5/K5-PACKAGE-DELIVERY). Папки kit/ в репозитории нет.
-# Реестр закрыт для анонима (401), поэтому ключ чтения приходит секретом сборки BuildKit
-# (id=npm_token): в слой образа и в историю он не попадает, .npmrc с ключом живёт только
-# на время одного RUN. Нет ключа — npm ci упадёт на @seidr/kit с 401: громко, а не молча.
+# Ставится через npm-прокси kkRepo (адрес — в web-next/.npmrc), чтение анонимное: ключей в
+# сборке нет (SPRINT_CICD_OPS_2611/CO-KKREPO-NPM-KIT, 27.11.2026).
 FROM node:26-alpine AS build
 WORKDIR /app/web-next
 COPY web-next/package.json web-next/package-lock.json web-next/.npmrc ./
@@ -26,12 +25,7 @@ COPY web-next/package.json web-next/package-lock.json web-next/.npmrc ./
 # @rolldown/binding-linux-x64-musl).
 # Адрес реестра берётся из web-next/.npmrc (строка @seidr:registry=), а не вписан сюда: имён наших
 # хостов в образе быть не должно (сторож web-next/src/noBakedHosts.test.ts).
-RUN --mount=type=secret,id=npm_token,required=false \
-    reg="$(sed -n 's#^@seidr:registry=https\{0,1\}:##p' .npmrc)"; \
-    if [ -s /run/secrets/npm_token ]; then \
-      printf '%s:_authToken=%s\n' "$reg" "$(cat /run/secrets/npm_token)" > /root/.npmrc; \
-    else echo "BLOCKED: нет секрета сборки npm_token — @seidr/kit из реестра не скачается (нужен токен read:package)"; fi; \
-    npm ci; rc=$?; rm -f /root/.npmrc; exit $rc
+RUN npm ci
 COPY web-next/tsconfig.json web-next/vite.config.ts web-next/index.html ./
 COPY web-next/src ./src
 

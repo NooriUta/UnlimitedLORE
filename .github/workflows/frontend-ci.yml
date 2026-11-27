@@ -285,16 +285,8 @@ jobs:
 
       # Seiðr-kit живёт в AIDA/lorekit (SPRINT_UXR_S14_KIT5/K5-PACKAGE-DELIVERY): его тесты, CSS-слой,
       # снимок голого HTML, паритет i18n и контраст гоняет kit-ci.yml там. Здесь kit — пакет @seidr/kit
-      # из npm-реестра AIDA. Реестр закрыт для анонима (401): ключ чтения — секрет, в ~/.npmrc уходит
-      # ССЫЛКА ${KIT_NPM_READ_TOKEN}, npm раскрывает её сам, значение на диск не пишется.
-      - name: Ключ чтения реестра пакетов AIDA (@seidr/kit)
-        if: steps.scope.outputs.v2 == 'true'
-        env:
-          KIT_NPM_READ_TOKEN: ${{ secrets.KIT_NPM_READ_TOKEN || secrets.PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
-        run: |
-          [ -n "${KIT_NPM_READ_TOKEN:-}" ] || { echo "::error::BLOCKED: нет ключа чтения реестра AIDA — @seidr/kit не скачается. Как разблокировать: секрет KIT_NPM_READ_TOKEN (токен read:package организации AIDA) — даёт CICDGitHub"; exit 1; }
-          echo '//git.seidrstudio.pro/api/packages/AIDA/npm/:_authToken=${KIT_NPM_READ_TOKEN}' >> ~/.npmrc
-          echo "KIT_NPM_READ_TOKEN=$KIT_NPM_READ_TOKEN" >> "$GITHUB_ENV"
+      # через npm-прокси kkRepo (адрес — web-next/.npmrc; SPRINT_CICD_OPS_2611/CO-KKREPO-NPM-KIT):
+      # чтение анонимное, ключ реестра Forgejo держит прокси — шага с ключом здесь нет.
 
       # SPRINT_UXR_S11_TEST_OPT/CT-KIT-FIXTURES: скрипт снятия живых ответов
       # сервера в shared/fixtures (из них читают тесты kit и web-next). Здесь —
@@ -371,9 +363,8 @@ jobs:
             eval "val=\${$v:-}"
             [ -n "$val" ] && ARGS="$ARGS --build-arg $v=$val"
           done
-          # K5-PACKAGE-DELIVERY: ключ чтения реестра — секретом BuildKit, не build-arg (в слой не попадает).
           # shellcheck disable=SC2086
-          DOCKER_BUILDKIT=1 docker build $ARGS --secret id=npm_token,env=KIT_NPM_READ_TOKEN -f web-next/Dockerfile -t lore-app-next:ci .
+          docker build $ARGS -f web-next/Dockerfile -t lore-app-next:ci .
 
       # Образ должен реально отдавать v2 через nginx, а не просто собраться:
       # синтаксис собранного конфига (`nginx -T`, апстримы объявлены заглушками,

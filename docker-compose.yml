@@ -348,10 +348,6 @@ services:
         # workflow не нужно, иначе у одной выкатки появилось бы две правды о
         # собственном коммите.
         VITE_LORE_BUILD_COMMIT: ${LORE_BUILD_COMMIT:-}
-      # K5-PACKAGE-DELIVERY: @seidr/kit ставится из закрытого реестра AIDA — ключ чтения секретом
-      # сборки (в слой образа не попадает). Источник — переменная KIT_NPM_READ_TOKEN среды сборки.
-      secrets:
-        - npm_token
     environment:
       # Runtime-подстановка в общий шаблон nginx — смысл каждой см. у lore-app.
       LORE_PUBLIC_URL: ${LORE_PUBLIC_URL:-}
@@ -410,10 +406,3 @@ services:
 
 volumes:
   lore-minio-data:
-
-
-# K5-PACKAGE-DELIVERY: ключ чтения npm-реестра AIDA для сборки lore-app-next (@seidr/kit из AIDA/lorekit).
-# Значение — из переменной среды сборки; пусто — сборка образа v2 падает на npm ci с 401 и словом BLOCKED.
-secrets:
-  npm_token:
-    environment: KIT_NPM_READ_TOKEN
