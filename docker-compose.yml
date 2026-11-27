@@ -4,7 +4,7 @@ services:
   # #22), so a future Dali/Heimdall S3 rollout can reuse the same env-var
   # shape even though no service currently runs this in the monorepo.
   minio:
-    image: minio/minio:latest
+    image: pgsty/silo:RELEASE.2026-11-12T00-00-00Z
     command: server /data --console-address ":9001"
     # unless-stopped, а НЕ always: при снятии бэкапов контейнеры останавливают
     # намеренно, и always поднял бы их обратно посреди снимка, испортив его.
@@ -30,8 +30,8 @@ services:
   # готовом хранилище ничего не меняет и не падает.
   minio-init:
     # PL-04 (08.11.2026): образа minio/mc больше нет ни на Docker Hub, ни на
-    # Quay — клиент mc той же версии лежит внутри minio/minio (/usr/bin/mc).
-    image: minio/minio:latest
+    # Quay — клиент mc лежит внутри образа сервера (/usr/bin/mc); с 27.11 сервер — Silo (D-2026-S3-MINIO-TO-SILO).
+    image: pgsty/silo:RELEASE.2026-11-12T00-00-00Z
     depends_on:
       - minio
     restart: "no"
