@@ -7,6 +7,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { axeViolations } from '../../test/axe';
+import { KIT_CSS } from '../../test/kitPaths';
 import { registerGameIcons } from '@seidr/kit';
 import { KitLangProvider } from '@seidr/kit';
 import { NEWS_FIXTURE, NewsActivity, NewsFeed, type NewsResponse, type NewsSource } from './index';
@@ -691,7 +692,7 @@ describe('S7A-12 · строка ленты: код — переход, без �
 describe('ширина ленты', () => {
   it('у .sk-news нет своего max-width — лента занимает всю область содержимого', async () => {
     const { readFileSync } = await import('node:fs');
-    const css = readFileSync(`${process.cwd()}/../kit/src/styles/seidr.css`, 'utf8');
+    const css = readFileSync(KIT_CSS, 'utf8');
     const rules = [...css.matchAll(/(^|\n)\.sk-news\s*\{([^}]*)\}/g)].map(m => m[2]);
     expect(rules.length).toBeGreaterThan(0);
     expect(rules.filter(r => /max-width/.test(r))).toEqual([]);

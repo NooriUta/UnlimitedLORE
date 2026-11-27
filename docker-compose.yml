@@ -406,4 +406,3 @@ services:
 
 volumes:
   lore-minio-data:
-

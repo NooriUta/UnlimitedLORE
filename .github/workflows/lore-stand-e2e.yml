@@ -56,6 +56,7 @@ jobs:
           command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
           node --version
 
+      # K5-PACKAGE-DELIVERY: @seidr/kit — через npm-прокси kkRepo (web-next/.npmrc), без ключа.
       - name: Install web-next
         working-directory: web-next
         run: bash ../.github/scripts/npm-retry.sh ci

@@ -17,9 +17,9 @@ const { engine } = vi.hoisted(() => ({
       ...p.nodes.map(n => createElement('span', { key: n.id, 'data-node': n.id }))) };
   },
 }));
-vi.mock('../../../kit/src/graph/ForceEngine', engine);
-vi.mock('../../../kit/src/graph/ObsidianEngine', engine);
-vi.mock('../../../kit/src/graph/ReactFlowEngine', engine);
+vi.mock('../../node_modules/@seidr/kit/dist/src/graph/ForceEngine.js', engine);
+vi.mock('../../node_modules/@seidr/kit/dist/src/graph/ObsidianEngine.js', engine);
+vi.mock('../../node_modules/@seidr/kit/dist/src/graph/ReactFlowEngine.js', engine);
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 beforeEach(() => window.history.replaceState(null, '', '/?tab=graph&gdepth=2'));

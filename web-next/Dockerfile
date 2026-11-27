@@ -14,20 +14,18 @@
 # файла v1 (src/, корневой package.json) в образе v2 быть не должно — это
 # сторожит web-next/src/infra.test.ts.
 #
-# Seiðr-kit (kit/, D-2026-UXR-KIT-REACT, S4-00a) — зависимость file:../kit,
-# поэтому раскладка повторяет репозиторий: /app/kit рядом с /app/web-next.
-# Тоже поимённо: kit/node_modules (локальный, для тестов kit) в образ не идёт.
+# Seiðr-kit — пакет @seidr/kit с точной версией из npm-реестра Forgejo организации AIDA
+# (репозиторий AIDA/lorekit, SPRINT_UXR_S14_KIT5/K5-PACKAGE-DELIVERY). Папки kit/ в репозитории нет.
+# Ставится через npm-прокси kkRepo (адрес — в web-next/.npmrc), чтение анонимное: ключей в
+# сборке нет (SPRINT_CICD_OPS_2611/CO-KKREPO-NPM-KIT, 27.11.2026).
 FROM node:26-alpine AS build
 WORKDIR /app/web-next
-COPY kit/package.json /app/kit/package.json
-COPY web-next/package.json web-next/package-lock.json ./
-# Установка — только по манифестам: kit — file:-зависимость (симлинк), его
-# исходники npm ci не нужны. Правка kit/src не должна сбрасывать этот слой
-# (PR #882: свежий npm ci в образе потерял @rolldown/binding-linux-x64-musl).
+COPY web-next/package.json web-next/package-lock.json web-next/.npmrc ./
+# Установка — только по манифестам (PR #882: свежий npm ci в образе потерял
+# @rolldown/binding-linux-x64-musl).
+# Адрес реестра берётся из web-next/.npmrc (строка @seidr:registry=), а не вписан сюда: имён наших
+# хостов в образе быть не должно (сторож web-next/src/noBakedHosts.test.ts).
 RUN npm ci
-COPY kit/src /app/kit/src
-# Демо-конфиги и фикстуры kit (K-03): страницы /kit/demo/* импортируют @seidr/kit/demo/*.
-COPY kit/demo /app/kit/demo
 COPY web-next/tsconfig.json web-next/vite.config.ts web-next/index.html ./
 COPY web-next/src ./src
 

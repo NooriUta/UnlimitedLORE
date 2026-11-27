@@ -5,18 +5,16 @@
 // слово «новое» не писать на каждой строке — линией; непрочитанное вверх, прочитанное в конце; справа выровнять
 // переходы статусов с множителем и без»; телефон — «места переноса времени выровнены».
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { act, render, screen, within } from '@testing-library/react';
 import gameIcons from '@iconify-json/game-icons/icons.json';
 import { KitLangProvider, registerGameIcons } from '@seidr/kit';
 import { NEWS_FIXTURE, NewsFeed, type NewsResponse, type NewsSource } from './index';
+import { KIT_CSS } from '../../test/kitPaths';
 
 beforeAll(() => { registerGameIcons(gameIcons); });
 
-const here = dirname(fileURLToPath(import.meta.url));
-const css = readFileSync(resolve(here, '../../../../kit/src/styles/seidr.css'), 'utf8');
+const css = readFileSync(KIT_CSS, 'utf8');
 /** Тело правила CSS по точному селектору (первое вхождение). */
 const rule = (sel: string, from = css) => {
   const i = from.indexOf(`${sel} {`);

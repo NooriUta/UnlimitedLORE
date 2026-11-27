@@ -391,6 +391,7 @@ jobs:
       # той же команде: упавший v2 должен быть виден как упавший v2.
       - name: Build frontend image (v2, lore-app-next)
         if: steps.mode.outputs.live == 'true' && steps.which.outputs.frontend_next == 'true'
+        # K5-PACKAGE-DELIVERY: @seidr/kit — через npm-прокси kkRepo (web-next/.npmrc), без ключа.
         run: bash .github/scripts/compose-build-retry.sh lore-app-next
 
       # AO-MCP-HOSTED (владелица 19.11.2026: «мне надоело локально mcp пересобирать»):

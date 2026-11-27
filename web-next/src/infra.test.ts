@@ -48,17 +48,17 @@ describe('web-next/Dockerfile: свой образ', () => {
   // PR #882 (08.11): правка kit/src сбросила кэш слоя `npm ci` — он стоял ПОСЛЕ
   // `COPY kit/src`. Свежая установка в образе прошла без optional-модуля
   // @rolldown/binding-linux-x64-musl, и `vite build` упал «Cannot find native
-  // binding». Установка зависимостей не должна зависеть от исходников kit:
-  // kit — file:-зависимость (симлинк), npm ci нужен только его package.json.
-  // Тогда слой установки меняется лишь при смене манифестов.
-  it('npm ci — до копирования исходников kit: слой установки зависит только от манифестов', () => {
+  // binding». Установка зависимостей не должна зависеть от исходников.
+  // С K5-PACKAGE-DELIVERY (25.11) kit — пакет из реестра: исходников kit в образе нет вовсе,
+  // а слой установки меняется лишь при смене манифестов (package.json, lock, .npmrc).
+  it('npm ci — по одним манифестам, до копирования исходников; kit/ в образ не копируется', () => {
     const lines = df().split('\n');
     const at = (re: RegExp) => lines.findIndex(l => re.test(l));
-    const ci = at(/^RUN npm ci\b/);
-    expect(ci, 'RUN npm ci').toBeGreaterThan(-1);
-    expect(at(/^COPY kit\/package\.json /)).toBeLessThan(ci);
-    expect(at(/^COPY kit\/src /)).toBeGreaterThan(ci);
-    expect(at(/^COPY kit\/demo /)).toBeGreaterThan(ci);
+    const ci = lines.findIndex(l => /\bnpm ci\b/.test(l) && !/^\s*#/.test(l));
+    expect(ci, 'npm ci').toBeGreaterThan(-1);
+    expect(at(/^COPY web-next\/package\.json web-next\/package-lock\.json web-next\/\.npmrc /)).toBeLessThan(ci);
+    expect(at(/^COPY web-next\/src /)).toBeGreaterThan(ci);
+    expect(at(/^COPY kit\//)).toBe(-1);
   });
 
   it('отдаётся nginx с тем же прокси /lore/, что у v1 (MCP и телефон ходят через него)', () => {
@@ -85,14 +85,13 @@ describe('CI: образ v2 собирается', () => {
     expect(job).toMatch(/docker build \$ARGS -f web-next\/Dockerfile -t lore-app-next:ci \./);
   });
 
-  // S4-00a, D-2026-UXR-KIT-REACT: kit — отдельный пакет со своими тестами;
-  // тесты web-next их не запускают, поэтому у kit свой шаг в том же джобе.
-  it('job ставит, проверяет типы и тестирует Seiðr-kit (kit/)', () => {
+  // S4-00a, D-2026-UXR-KIT-REACT → K5-PACKAGE-DELIVERY (25.11): kit — пакет @seidr/kit из
+  // AIDA/lorekit; его типы, тесты, CSS-слой и паритет i18n гоняет kit-ci.yml того репозитория.
+  // 27.11: пакет ставится через npm-прокси kkRepo (SPRINT_CICD_OPS_2611/CO-KKREPO-NPM-KIT) — без
+  // ключа: ключ чтения реестра Forgejo держит сам прокси. Ни ключа, ни шага над kit/ в job нет.
+  it('job не гоняет kit/ (он в AIDA/lorekit) и не требует ключа чтения реестра', () => {
     const job = ci().split(/^ {2}web-next:\s*$/m)[1] ?? '';
-    const step = job.split(/- name: /).find(s => /working-directory: kit\b/.test(s)) ?? '';
-    expect(step, 'нет шага с working-directory: kit').not.toBe('');
-    expect(step).toMatch(/npm-retry\.sh ci/);
-    expect(step).toMatch(/npm run typecheck/);
-    expect(step).toMatch(/npm test/);
+    expect(job).not.toMatch(/working-directory: kit\b/);
+    expect(job).not.toMatch(/KIT_NPM_READ_TOKEN|npm_token|_authToken/);
   });
 });

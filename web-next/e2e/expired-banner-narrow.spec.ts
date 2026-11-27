@@ -2,10 +2,11 @@
 // по 2–3 буквы, а «Войти снова» занимала всю ширину. Проверка — настоящий CSS kit, ширина 360.
 // Запуск: npx playwright test e2e/expired-banner-narrow.spec.ts (сервер не нужен).
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { expect, test } from '@playwright/test';
 
-const css = readFileSync(fileURLToPath(new URL('../../kit/src/styles/seidr.css', import.meta.url)), 'utf8');
+// K5-PACKAGE-DELIVERY: CSS kit — из установленного пакета @seidr/kit (то, что уедет в бандл).
+const css = readFileSync(createRequire(import.meta.url).resolve('@seidr/kit/styles/seidr.css'), 'utf8');
 const html = `<!doctype html><html><head><style>${css}</style></head><body>
 <div class="sk-auth-expired" role="alert" data-auth="expired">
   <span class="sk-icon sk-auth-expired__icon" style="width:16px;height:16px;display:inline-block"></span>
