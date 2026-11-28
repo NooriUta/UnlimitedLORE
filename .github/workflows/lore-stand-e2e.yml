@@ -26,6 +26,12 @@ on:
         description: 'Только эти сценарии (имя файла, например releaseRepoDryRun); пусто — все'
         required: false
         default: ''
+      rr_apply:
+        description: 'Применить миграцию «релиз → репозиторий» (пишет в базу!) — только preprod и только по слову владелицы'
+        required: false
+        default: 'no'
+        type: choice
+        options: ['no', 'preprod']
 
 concurrency:
   group: lore-stand-e2e
@@ -160,6 +166,7 @@ jobs:
         working-directory: web-next
         env:
           STAND_ONLY: ${{ inputs.only }}
+          LORE_RR_APPLY: ${{ inputs.rr_apply || 'no' }}
         run: npm run e2e:stand -- ${STAND_ONLY}
 
       - name: Отчёт
