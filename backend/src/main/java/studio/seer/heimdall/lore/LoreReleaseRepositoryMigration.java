@@ -210,6 +210,86 @@ final class LoreReleaseRepositoryMigration {
         return new Plan(List.copyOf(items), ambiguous, unresolved, unchecked, missing, uncheckedRepos);
     }
 
+    // ── PR → репозиторий (ребро {@link #PR_EDGE}, доводка v7) ─────────────────────────────────────────────────
+    // Репозиторий PR однозначен из его адреса: …/owner/repo/pulls/N (Forgejo) или …/pull/N (GitHub). Forgejo
+    // не спрашивается. Адрес без /pulls/ или репозиторий, которого нет в LORE, — в отчёт; связь не выдумывается.
+
+    static final String PR_EDGE = "PR_OF";
+
+    record Pr(String uid, String url) { }
+
+    record PrItem(String uid, String repo, boolean exists) {
+        Map<String, Object> toMap() {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("pr_uid", uid);
+            m.put("repository", repo);
+            m.put("edge_exists", exists);
+            return m;
+        }
+    }
+
+    record PrPlan(List<PrItem> items, List<Map<String, Object>> unresolved) {
+        int toCreate() { return (int) items.stream().filter(i -> !i.exists()).count(); }
+
+        /** Счёты раньше списков — их берёт разбор в workflow (первое вхождение поля). */
+        Map<String, Object> toMap() {
+            Map<String, Object> out = new LinkedHashMap<>();
+            out.put("prs_edge", PR_EDGE);
+            out.put("prs_resolved", items.size());
+            out.put("prs_to_create", toCreate());
+            out.put("prs_already", items.size() - toCreate());
+            out.put("prs_unresolved_count", unresolved.size());
+            Map<String, Integer> byRepo = new TreeMap<>();
+            for (PrItem i : items) byRepo.merge(i.repo(), 1, Integer::sum);
+            out.put("prs_by_repository", byRepo);
+            out.put("prs_unresolved", unresolved);
+            return out;
+        }
+    }
+
+    private static final java.util.regex.Pattern PR_PATH = java.util.regex.Pattern.compile("^(.+?)/pulls?/\\d+/?$");
+
+    /** url репозитория по адресу PR (нормализованный); не адрес PR — null. */
+    static String repoUrlOfPr(String prUrl) {
+        if (blank(prUrl) == null) return null;
+        java.util.regex.Matcher m = PR_PATH.matcher(prUrl.trim());
+        return m.matches() ? norm(m.group(1)) : null;
+    }
+
+    /**
+     * План PR_OF.
+     *
+     * @param prs      все PR (uid, адрес)
+     * @param repoUrls url всех KnowRepository — ключ вершины, как есть
+     * @param existing уже стоящие рёбра, «pr_uid|нормализованный url»
+     */
+    static PrPlan planPrs(List<Pr> prs, java.util.Collection<String> repoUrls, Set<String> existing) {
+        Map<String, String> byNorm = new LinkedHashMap<>();
+        for (String u : repoUrls) if (u != null) byNorm.putIfAbsent(norm(u).toLowerCase(java.util.Locale.ROOT), u);
+        List<PrItem> items = new ArrayList<>();
+        List<Map<String, Object>> unresolved = new ArrayList<>();
+        for (Pr pr : prs) {
+            if (pr.uid() == null) continue;
+            String reason = null, repo = null;
+            if (blank(pr.url()) == null) reason = "у PR нет адреса";
+            else {
+                String r = repoUrlOfPr(pr.url());
+                if (r == null) reason = "адрес PR без /pulls/";
+                else if ((repo = byNorm.get(r.toLowerCase(java.util.Locale.ROOT))) == null) reason = "репозитория нет в LORE";
+            }
+            if (reason != null) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("pr_uid", pr.uid());
+                row.put("url", pr.url());
+                row.put("reason", reason);
+                unresolved.add(row);
+                continue;
+            }
+            items.add(new PrItem(pr.uid(), repo, existing.contains(pr.uid() + "|" + norm(repo))));
+        }
+        return new PrPlan(List.copyOf(items), unresolved);
+    }
+
     static String norm(String url) {
         return url == null ? null : url.trim().replaceAll("/+$", "").replaceAll("\\.git$", "");
     }

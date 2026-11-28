@@ -47,11 +47,15 @@ judge() {
   echo "по основанию: $(raw by_basis "$body")"
   echo "по репозиторию: $(raw by_repository "$body")"
   echo "неоднозначных: ${am:-?}, нерешённых: ${un}, непроверенных (Forgejo не ответил): ${uc:-?}, Release в Forgejo без записи в LORE: ${mi:-?}"
+  # PR → репозиторий (PR_OF, доводка v7): раздела может не быть у старого бэкенда — тогда строки нет
+  local pr pc pu
+  pr=$(num prs_resolved "$body"); pc=$(num prs_to_create "$body"); pu=$(num prs_unresolved_count "$body")
+  [ -n "$pr" ] && echo "PR с репозиторием: ${pr} (поставить PR_OF: ${pc:-?}), нерешённых PR: ${pu:-?}; по репозиторию: $(raw prs_by_repository "$body")"
   if [ "$mode" = dry_run ]; then echo "СУХОЙ ПРОГОН — ничего не записано"; return 0; fi
   local x
   x=$(num failed "$body"); c=$(num created "$body")
   if [ -z "$x" ]; then echo "в ответе нет счёта провалов"; return 1; fi
-  echo "ИТОГ: поставлено RELEASE_OF ${c:-?}, провалов ${x}"
+  echo "ИТОГ: поставлено RELEASE_OF ${c:-?}, PR_OF $(num prs_created "$body" || true), провалов ${x}"
   if [ "$x" != 0 ] || [ "$code" != 200 ]; then
     echo "провалы: $(printf '%s' "$body" | tr -d '
 ' | grep -oE '"failed_items"[[:space:]]*:.*' | head -c 4000)"
@@ -136,6 +140,11 @@ if [ "${1:-}" = "--selftest" ]; then
   bad apply   000 ''
   bad dry_run 200 '{"migration_id":"release-of-repository"}'
   [ "$(num unresolved_count "$P")" = 1 ] || { echo "::error::selftest FAIL — unresolved_count"; rc=1; }
+  # раздел PR: его счёты не путаются с релизными (prs_resolved ≠ resolved)
+  PP='{"migration_id":"release-of-repository","dry_run":true,"resolved":3,"to_create":2,"already":1,"ambiguous_count":0,"unresolved_count":1,"prs_edge":"PR_OF","prs_resolved":7,"prs_to_create":5,"prs_unresolved_count":2}'
+  [ "$(num resolved "$PP")" = 3 ] || { echo "::error::selftest FAIL — resolved спутан с prs_resolved"; rc=1; }
+  [ "$(num prs_resolved "$PP")" = 7 ] || { echo "::error::selftest FAIL — prs_resolved"; rc=1; }
+  ok dry_run 200 "$PP"
   ( unset MIG_TOKEN PROBE_CLIENT_ID PROBE_CLIENT_SECRET
     LORE_OIDC_ISSUER=https://kc.invalid/realms/x run dry_run "http://127.0.0.1:1" >/dev/null 2>&1 ) \
     && { echo "::error::selftest FAIL — без секретов прошло зелёным"; rc=1; }
