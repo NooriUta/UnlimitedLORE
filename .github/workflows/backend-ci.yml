@@ -224,16 +224,16 @@ jobs:
       # host intermittently fails ("socket disconnected before secure TLS") and
       # reliably red-lit backend-ci. Point JAVA_HOME straight at the baked JDK: no
       # download, no flake. Discovered by path so it survives a JDK patch bump.
-      # 28.11.2026: в образе раннера два JDK (21 и 25) — выбор по мажору из build.gradle, а не первый
-      # найденный (порядок обхода каталога не гарантирован). Сторож — web-next/src/ci-jdk.test.ts.
+      # 28.11.2026: в образе раннера два JDK — 21 в /opt/acttoolcache, 25 в /usr/lib/jvm/temurin-25 (CICD).
+      # Выбор по мажору из build.gradle, а не первый найденный. Сторож — web-next/src/ci-jdk.test.ts.
       - name: Use runner-image JDK (self-hosted)
         if: runner.environment != 'github-hosted'
         env:
           JDK_MAJOR: '25'
         run: |
-          JAVA_BIN="$(ls -d /opt/acttoolcache/Java_Temurin-Hotspot_jdk/${JDK_MAJOR}.*/x64/bin/java 2>/dev/null | sort -V | tail -1)"
+          JAVA_BIN="$(ls -d /usr/lib/jvm/temurin-${JDK_MAJOR}/bin/java /opt/acttoolcache/Java_Temurin-Hotspot_jdk/${JDK_MAJOR}.*/x64/bin/java 2>/dev/null | head -1)"
           JH="$(dirname "$(dirname "$JAVA_BIN")")"
-          test -x "$JH/bin/java" || { echo "::error::в образе раннера нет JDK ${JDK_MAJOR} под /opt/acttoolcache/Java_Temurin-Hotspot_jdk — нужен forgejo-ci-runtime с Temurin ${JDK_MAJOR}"; ls -d /opt/acttoolcache/Java_Temurin-Hotspot_jdk/*/ 2>/dev/null; exit 1; }
+          test -x "$JH/bin/java" || { echo "::error::в образе раннера нет JDK ${JDK_MAJOR} (ни /usr/lib/jvm/temurin-${JDK_MAJOR}, ни /opt/acttoolcache) — нужен forgejo-ci-runtime с Temurin ${JDK_MAJOR}"; ls -d /usr/lib/jvm/*/ /opt/acttoolcache/Java_Temurin-Hotspot_jdk/*/ 2>/dev/null; exit 1; }
           echo "JAVA_HOME=$JH" >> "$GITHUB_ENV"
           echo "$JH/bin" >> "$GITHUB_PATH"
           "$JH/bin/java" -version

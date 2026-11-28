@@ -24,9 +24,11 @@ describe('Backend CI: JDK совпадает с версией компиляц�
   it('self-hosted: JDK выбирается по мажору, а не первым попавшимся', () => {
     const ci = read('.github/workflows/backend-ci.yml');
     const step = ci.slice(ci.indexOf('Use runner-image JDK'), ci.indexOf('Gradle retry selftest'));
-    expect(step).not.toMatch(/head -1\)"\n\s*JH=/);
+    // прежний шаг: первая попавшаяся java под /opt — при двух JDK выбор случаен
+    expect(step).not.toMatch(/find \/opt/);
     expect(step).toContain(`JDK_MAJOR: '${target()}'`);
-    expect(step).toMatch(/Java_Temurin-Hotspot_jdk\/\$\{JDK_MAJOR\}\./);
+    // 25 лежит в /usr/lib/jvm/temurin-25 (CICD 28.11), прежние мажоры — в /opt/acttoolcache
+    expect(step).toMatch(/\/usr\/lib\/jvm\/temurin-\$\{JDK_MAJOR\}\/bin\/java/);
   });
 
   it('github-hosted: setup-java той же версии', () => {
