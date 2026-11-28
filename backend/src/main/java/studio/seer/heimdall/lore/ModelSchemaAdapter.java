@@ -94,7 +94,8 @@ final class ModelSchemaAdapter {
         Map.entry("APPLIES_TO_ROLE", SKILL_TYPES),
         Map.entry("SKILL_EXTENDS", SKILL_TYPES),
         // ADR-LORE-066 фаза А (доводка v6): релиз принадлежит репозиторию; в модель войдёт следующим её релизом
-        Map.entry("RELEASE_OF", "ADR-LORE-066: ребро релиз → репозиторий появилось после модели 1.18" + ADDITIVE));
+        Map.entry("RELEASE_OF", "ADR-LORE-066: ребро релиз → репозиторий появилось после модели 1.18" + ADDITIVE),
+        Map.entry("PR_OF", "ADR-LORE-066: ребро PR → репозиторий появилось после модели 1.18" + ADDITIVE));
 
 
     /**
