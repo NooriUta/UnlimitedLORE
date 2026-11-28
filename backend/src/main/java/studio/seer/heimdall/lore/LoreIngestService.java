@@ -145,8 +145,9 @@ public class LoreIngestService {
     private List<Map<String, Object>> queryRows(String sql, Map<String, Object> params) {
         // MIG-03: под новую схему запрос и ответ приводит ModelSchemaClientFilter (клиент mart-api).
         try {
+            // limit=-1: без него база молча обрезает выдачу на 20 000 строк (LoreReadUncappedTest).
             LoreCommandClient.LoreCommandResult r = client.command(db, basicAuth(),
-                    new LoreCommandClient.LoreCommand("sql", sql, params)).await().indefinitely();
+                    new LoreCommandClient.LoreCommand("sql", sql, params, -1)).await().indefinitely();
             return r.result() instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
         } catch (RuntimeException e) {
             // DBR-05: тело ответа ArcadeDB несёт настоящую причину («Index not
