@@ -164,6 +164,8 @@
   "lists.field.components": "Components",
   "lists.field.component": "Component",
   "lists.field.release": "Release",
+  "lists.field.repository": "Repository",
+  "lists.repository.undetermined": "not determined",
   "lists.field.milestone": "Milestone",
   "lists.field.tasks": "Tasks",
   "lists.field.sprint": "Sprint",

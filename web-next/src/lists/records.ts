@@ -358,6 +358,16 @@ export function qualityGateRecord(row: Row, ctx?: RowMapCtx): KitRecord {
 const noScheme = (u: string): string => u.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
 const strList = (v: unknown): string[] => (Array.isArray(v) ? v.filter(x => x !== null && x !== undefined && x !== '').map(String) : str(v) ? [str(v)] : []);
 
+/**
+ * ADR-LORE-066 фаза А: репозиторий релиза / PR (рёбра RELEASE_OF / PR_OF) — ссылка на паспорт репозитория,
+ * подпись — путь. Нет ребра — «не определён» текстом без ссылки (id пуст), а не проект вместо репозитория.
+ */
+function repositoryRef(row: Row, lang: KitLang): { id: string; label: string }[] {
+  const url = str(row.repository);
+  if (!url) return [{ id: '', label: appT(lang, 'lists.repository.undetermined') }];
+  return [{ id: url, label: str(row.repository_path) || noScheme(url) }];
+}
+
 /** Роль репозитория в разделе: основной у проекта, репозиторий компонента, зеркало или не привязан. */
 export type RepoRole = 'primary' | 'component' | 'mirror' | 'none';
 
@@ -505,7 +515,7 @@ function prProjects(row: Row): { id: string; label: string }[] {
   return [...new Set(own.filter(Boolean))].map(id => ({ id, label: id }));
 }
 
-export function prRecord(row: Row): KitRecord {
+export function prRecord(row: Row, ctx?: RowMapCtx): KitRecord {
   const id = str(row.pr_uid);
   // Признак — значком, а не словом: фильтр «Быстро» одинаков на любом языке; нет признака — пусто.
   const yesNo = (b: boolean) => (b ? '✓' : '');
@@ -523,6 +533,7 @@ export function prRecord(row: Row): KitRecord {
       merged_at: str(row.merged_at),
       branches: head || base ? `${head || '?'} → ${base || '?'}` : '',
       releases: uids.map(u => ({ id: u, label: u.slice(u.lastIndexOf('#') + 1) })),
+      repository: repositoryRef(row, ctx?.lang ?? 'ru'),
       no_title: yesNo(!str(row.title)),
       no_release: yesNo(uids.length === 0),
     },
@@ -530,7 +541,7 @@ export function prRecord(row: Row): KitRecord {
   };
 }
 
-export function releaseRecord(row: Row): KitRecord {
+export function releaseRecord(row: Row, ctx?: RowMapCtx): KitRecord {
   const id = str(row.release_uid) || str(row.release_id);
   return {
     id,
@@ -545,6 +556,7 @@ export function releaseRecord(row: Row): KitRecord {
       project: list(row.projects),
       sprints: num(row.sprint_count),
       prs: num(row.pr_count),
+      repository: repositoryRef(row, ctx?.lang ?? 'ru'),
       // Дата выпуска — поле календаря (K2-VIEW-CALENDAR); updated_at — время правки, не дата события.
       released: str(row.release_date),
     },

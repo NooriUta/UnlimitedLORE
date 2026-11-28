@@ -437,6 +437,7 @@ const REF_KIND: Record<string, string> = {
   project: 'project', component: 'component', components: 'component', release: 'release', milestone: 'milestone',
   sprint: 'sprint', sprints: 'sprint', products: 'product', product: 'product', adr: 'adr', adrs: 'adr',
   tech: 'tech', actors: 'actor', owner: 'person', gates: 'quality_gate', releases: 'release',
+  repository: 'repository',
 };
 function refKindOf(kind: string, key: string): string | undefined {
   return key === 'parent' || key === 'children' ? kind : REF_KIND[key];
@@ -486,14 +487,14 @@ function sectionConfig(lang: KitLang, spec: SectionSpec): KitConfig {
  */
 const prsSpec: SectionSpec = {
   kind: 'pr', titleKey: 'lists.prs.title', icon: 'branch-arrow',
-  fields: [['project', 'ref'], ['state', 'text'], ['merged_at', 'date'], ['branches', 'text'], ['releases', 'ref'],
+  fields: [['project', 'ref'], ['repository', 'ref'], ['state', 'text'], ['merged_at', 'date'], ['branches', 'text'], ['releases', 'ref'],
     ['no_title', 'text'], ['no_release', 'text']],
   statuses: [],
   views: ['list', 'cards'],
   quick: [['no-title', 'lists.quick.prNoTitle', { no_title: '✓' }], ['no-release', 'lists.quick.prNoRelease', { no_release: '✓' }]],
   filters: [LORE_FILTER_FIELDS.project, 'fields.state', 'fields.no_title', 'fields.no_release'],
   groupings: [LORE_FILTER_FIELDS.project, 'fields.state'],
-  columns: ['title', 'project', 'state', 'merged_at', 'branches', 'releases'],
+  columns: ['title', 'project', 'repository', 'state', 'merged_at', 'branches', 'releases'],
 };
 
 /** Решения: статусов девять видов, у 46 строк из 778 статуса нет вовсе. */
@@ -650,13 +651,13 @@ const releasesSpec: SectionSpec = {
   kind: 'release', titleKey: 'lists.releases.title', icon: 'open-book',
   fields: [
     ['version', 'text'], ['type', 'text'], ['week', 'number'], ['current', 'text'], ['released', 'date'],
-    ['project', 'ref'], ['sprints', 'number'], ['prs', 'number'],
+    ['project', 'ref'], ['repository', 'ref'], ['sprints', 'number'], ['prs', 'number'],
   ],
   views: ['list', 'cards', 'feed', 'timeline'],
   quick: [['current', 'lists.quick.current', { current: 'true' }], ['hotfix', 'lists.quick.hotfix', { type: 'hotfix' }]],
   filters: [LORE_FILTER_FIELDS.project, 'fields.type'],
   groupings: [LORE_FILTER_FIELDS.project, 'fields.type'],
-  columns: ['id', 'title', 'version', 'type', 'project', 'sprints', 'prs', 'updated_at'],
+  columns: ['id', 'title', 'version', 'type', 'project', 'repository', 'sprints', 'prs', 'updated_at'],
 };
 
 /** Компоненты: СТАТУСА НЕТ — это справочник. */
