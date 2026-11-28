@@ -7946,18 +7946,6 @@
           "place": "link_tab"
         },
         {
-          "key": "organizations",
-          "label": "Организации",
-          "labelKey": "pp.rel.organizations",
-          "labelEn": "Organizations",
-          "labelPl": "Organizacje",
-          "rel": "ORG_HAS_REPOSITORY",
-          "dir": "in",
-          "targetType": "organization",
-          "relation": "association",
-          "place": "link_tab"
-        },
-        {
           "key": "releases",
           "label": "Релизы",
           "labelKey": "pp.rel.releases",
@@ -7973,11 +7961,23 @@
           "key": "prs",
           "label": "PR",
           "labelKey": "pp.rel.prs",
-          "labelEn": "PR",
+          "labelEn": "PRs",
           "labelPl": "PR",
           "rel": "PR_OF",
           "dir": "in",
           "targetType": "pr",
+          "relation": "association",
+          "place": "link_tab"
+        },
+        {
+          "key": "organizations",
+          "label": "Организации",
+          "labelKey": "pp.rel.organizations",
+          "labelEn": "Organizations",
+          "labelPl": "Organizacje",
+          "rel": "ORG_HAS_REPOSITORY",
+          "dir": "in",
+          "targetType": "organization",
           "relation": "association",
           "place": "link_tab"
         }
