@@ -22,6 +22,10 @@ on:
         description: 'Адрес стенда (только препрод)'
         required: false
         default: 'https://preprod.lore.odal.seidrstudio.pro'
+      only:
+        description: 'Только эти сценарии (имя файла, например releaseRepoDryRun); пусто — все'
+        required: false
+        default: ''
 
 concurrency:
   group: lore-stand-e2e
@@ -154,7 +158,9 @@ jobs:
 
       - name: RBAC + смоук + брокеринг на стенде
         working-directory: web-next
-        run: npm run e2e:stand
+        env:
+          STAND_ONLY: ${{ inputs.only }}
+        run: npm run e2e:stand -- ${STAND_ONLY}
 
       - name: Отчёт
         if: always()
