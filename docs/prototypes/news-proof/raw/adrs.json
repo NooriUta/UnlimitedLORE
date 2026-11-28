@@ -1,0 +1,3130 @@
+{
+  "rows": [
+    {
+      "adr_id": "ADR-ANVIL-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-20",
+      "components": [
+        "YGG",
+        "ANVIL"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 10
+    },
+    {
+      "adr_id": "ADR-ARCH-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-12",
+      "components": [
+        "AIDA"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-ARCH-002",
+      "status": "PROPOSED",
+      "date_created": "2026-10-20",
+      "components": [
+        "DALI",
+        "HND",
+        "AIDA"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-CHART-LIB",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-01",
+      "components": [
+        "OBS",
+        "HEIMDALL_FE"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-CHUR-MULTITORG-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "CHUR"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-CI-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-12",
+      "components": [
+        "INFRA"
+      ],
+      "git_projects": [
+        "AIDA/forgejo-mcp"
+      ],
+      "decision_count": 8
+    },
+    {
+      "adr_id": "ADR-DA-001",
+      "status": "SUPERSEDED",
+      "date_created": "2026-04-15",
+      "components": [
+        "HEIMDALL"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-DA-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-20",
+      "components": [
+        "SKULD",
+        "MIMIR"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-DA-003",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-12",
+      "components": [
+        "OBS",
+        "HEIMDALL_BE"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-DA-004",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-12",
+      "components": [
+        "VERDANDI",
+        "LOOM"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-DA-005",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-12",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-DA-006",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-12",
+      "components": [
+        "MIMIR"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-DA-007",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-12",
+      "components": [
+        "ANVIL"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-DA-008",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-11",
+      "components": [
+        "DALI"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-DA-009",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-11",
+      "components": [
+        "SHT"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-DA-010",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-15",
+      "components": [
+        "HEIMDALL_BE",
+        "HEIMDALL_FE",
+        "HEIMDALL"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-DA-011",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-12",
+      "components": [
+        "YGG",
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-DA-012",
+      "status": "DEPRECATED",
+      "date_created": "2026-04-15",
+      "components": [
+        "HEIMDALL_FE",
+        "VERDANDI",
+        "FE"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-DA-013",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-15",
+      "components": [
+        "SHT",
+        "VERDANDI",
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-DALI-CRON-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "DALI"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-DALI-JOBENGINE-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-11",
+      "components": [
+        "DALI"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-DALI-JOBENGINE-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-11-06",
+      "components": [
+        "DALI"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-DALI-PARSE-SCALE",
+      "status": "PROPOSED",
+      "date_created": "2026-05-29",
+      "components": [
+        "OBS",
+        "HND",
+        "DALI"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 8
+    },
+    {
+      "adr_id": "ADR-DEDUP-AST-MIGRATION",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-08",
+      "components": [
+        "DEDUP"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-DWL-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-10-23",
+      "components": [],
+      "git_projects": [
+        "AIDA/Datawanderers-Unity",
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-DWL-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-10-22",
+      "components": [],
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-DWL-003",
+      "status": "ACCEPTED",
+      "date_created": "2026-10-22",
+      "components": [],
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-DWL-004",
+      "status": "SUPERSEDED",
+      "date_created": "2026-10-23",
+      "components": [],
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-DWL-005",
+      "status": "ACCEPTED",
+      "date_created": "2026-10-23",
+      "components": [],
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-DWL-006",
+      "status": "ACCEPTED",
+      "date_created": "2026-10-24",
+      "components": [],
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "ADR-DWL-007",
+      "status": "PROPOSED",
+      "date_created": "2026-11-06",
+      "components": [
+        "DW_SRV"
+      ],
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-DWL-008",
+      "status": "PROPOSED",
+      "date_created": "2026-11-07",
+      "components": [
+        "DW_SRV"
+      ],
+      "git_projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-ENG-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-05",
+      "components": [
+        "SHT",
+        "DALI",
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-FE-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-29",
+      "components": [
+        "SEIDR"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-FE-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-29",
+      "components": [
+        "SEIDR"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-FE-003",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-29",
+      "components": [
+        "VERDANDI"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-HND-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-23",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-HND-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-HND-003",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-004",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-005",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-006",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-007",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-008",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-HND-009",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-010",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-011",
+      "status": "SUPERSEDED",
+      "date_created": "2026-05-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-012",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-01",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-HND-013",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-01",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-HND-014",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-015",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-HND-016",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-017",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-018",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-02",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-HND-019",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-09",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-HND-020",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-09",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 5
+    },
+    {
+      "adr_id": "ADR-HND-021",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-23",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-022",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-30",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-HND-023",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-01",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 10
+    },
+    {
+      "adr_id": "ADR-HND-024",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-04",
+      "components": [
+        "SHT",
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "ADR-HND-025",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-06",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 5
+    },
+    {
+      "adr_id": "ADR-HND-026",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-07",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 9
+    },
+    {
+      "adr_id": "ADR-HND-027",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-08",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-HND-028",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-17",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "ADR-HND-029",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-08",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-HND-030",
+      "status": "PROPOSED",
+      "date_created": "2026-08-12",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-HND-031",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-15",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-HND-032",
+      "status": "ACCEPTED",
+      "date_created": "2026-10-20",
+      "components": [
+        "TUNGA",
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-033",
+      "status": "ACCEPTED",
+      "date_created": "2026-10-20",
+      "components": [
+        "VERDANDI",
+        "SHT",
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-HND-034",
+      "status": "ACCEPTED",
+      "date_created": "2026-10-20",
+      "components": [
+        "VERDANDI",
+        "SHT",
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "ADR-HND-035",
+      "status": "PROPOSED",
+      "date_created": "2026-10-20",
+      "components": [
+        "VERDANDI",
+        "SHT",
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-036",
+      "status": "PROPOSED",
+      "date_created": "2026-10-20",
+      "components": [
+        "TUNGA",
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-037",
+      "status": "ACCEPTED",
+      "date_created": "2026-10-20",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-HND-038",
+      "status": "PROPOSED",
+      "date_created": "2026-11-06",
+      "components": [
+        "VERDANDI",
+        "SHT",
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-HND-039",
+      "status": "PROPOSED",
+      "date_created": "2026-11-06",
+      "components": [
+        "VERDANDI",
+        "SHT",
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-HND-FULLSCAN-VANISHING",
+      "status": "PROPOSED",
+      "date_created": "2026-06-07",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-HND-GEOID-IDENTITY",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-01",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 9
+    },
+    {
+      "adr_id": "ADR-HND-STMTGEOID-STABILITY",
+      "status": "SUPERSEDED",
+      "date_created": "2026-06-07",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-INFRA-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-19",
+      "components": [
+        "INFRA"
+      ],
+      "git_projects": [
+        "AIDA/forgejo-mcp"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-INFRA-K8S-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-05",
+      "components": [
+        "AIDA",
+        "INFRA"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-INFRA-PG-WIRE",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-10",
+      "components": [
+        "FRIGG",
+        "YGG"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-INFRA-SHARED-COMPONENTS",
+      "status": "PROPOSED",
+      "date_created": "2026-08-17",
+      "components": [],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE",
+        "AIDA/miniLORE"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-INFRA-SHARED-CREDENTIAL-LOCKOUT",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-31",
+      "components": [
+        "SECURITY",
+        "VAULT",
+        "HEIMDALL",
+        "MIMIR",
+        "DALI",
+        "YGG",
+        "FRIGG"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-INFRA-TELEGRAM-ORG-TOKEN",
+      "status": "ACCEPTED",
+      "date_created": "2026-11-06",
+      "components": [
+        "SECURITY"
+      ],
+      "git_projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen",
+        "AIDA/udwe-engine",
+        "NooriUta/AIDA-TestPlayGround",
+        "AIDA/forgejo-mcp",
+        "AIDA/BOKVIT",
+        "AIDA/TEIKN",
+        "AIDA/miniLore_serverside",
+        "AIDA/miniLORE",
+        "AIDA/Datawanderers-Unity",
+        "AIDA/Datawanderers-ServerandLore",
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD",
+        "NooriUta/seidr-site",
+        "NooriUta/volva",
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-LORE-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-06",
+      "components": [
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-LORE-009",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "ADR-LORE-010",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 5
+    },
+    {
+      "adr_id": "ADR-LORE-011",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-30",
+      "components": [
+        "QG"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-LORE-012",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-07",
+      "components": [
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-LORE-013",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-10",
+      "components": [
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-LORE-014",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-12",
+      "components": [
+        "LORE",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 10
+    },
+    {
+      "adr_id": "ADR-LORE-015",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-12",
+      "components": [
+        "LORE",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 5
+    },
+    {
+      "adr_id": "ADR-LORE-016",
+      "status": "SUPERSEDED",
+      "date_created": "2026-07-14",
+      "components": [
+        "FORSETI",
+        "FORSETI_MCP",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-LORE-017",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-14",
+      "components": [
+        "OMILORE",
+        "FORSETI_MCP"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 5
+    },
+    {
+      "adr_id": "ADR-LORE-018",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-14",
+      "components": [
+        "FORSETI_MCP",
+        "FORSETI",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "ADR-LORE-019",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-14",
+      "components": [
+        "OMILORE",
+        "FORSETI",
+        "FORSETI_MCP"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "ADR-LORE-020",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-14",
+      "components": [
+        "FORSETI_MCP",
+        "FORSETI",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 5
+    },
+    {
+      "adr_id": "ADR-LORE-021",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-15",
+      "components": [
+        "FORSETI_MCP",
+        "FORSETI",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 10
+    },
+    {
+      "adr_id": "ADR-LORE-022",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-16",
+      "components": [
+        "FORSETI_MCP",
+        "FORSETI",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 27
+    },
+    {
+      "adr_id": "ADR-LORE-023",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-16",
+      "components": [
+        "FRIGG",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 10
+    },
+    {
+      "adr_id": "ADR-LORE-024",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-16",
+      "components": [
+        "FORGEJO",
+        "FORSETI_MCP",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 14
+    },
+    {
+      "adr_id": "ADR-LORE-025",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-16",
+      "components": [
+        "LORE",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 24
+    },
+    {
+      "adr_id": "ADR-LORE-026",
+      "status": "PROPOSED",
+      "date_created": "2026-07-16",
+      "components": [
+        "FORSETI",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 7
+    },
+    {
+      "adr_id": "ADR-LORE-027",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-17",
+      "components": [],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 8
+    },
+    {
+      "adr_id": "ADR-LORE-028",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-17",
+      "components": [],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-LORE-029",
+      "status": "PROPOSED",
+      "date_created": "2026-07-17",
+      "components": [],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-LORE-030",
+      "status": "PROPOSED",
+      "date_created": "2026-07-17",
+      "components": [],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-LORE-031",
+      "status": "PROPOSED",
+      "date_created": "2026-07-17",
+      "components": [],
+      "git_projects": [
+        "AIDA/miniLORE",
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-LORE-032",
+      "status": "PROPOSED",
+      "date_created": "2026-07-17",
+      "components": [],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-LORE-033",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-18",
+      "components": [
+        "FORSETI_MCP",
+        "FORSETI",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 16
+    },
+    {
+      "adr_id": "ADR-LORE-034",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-22",
+      "components": [
+        "FORSETI"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-LORE-036",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-26",
+      "components": [
+        "OMILORE",
+        "SECURITY",
+        "FORSETI"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 15
+    },
+    {
+      "adr_id": "ADR-LORE-037",
+      "status": "PROPOSED",
+      "date_created": "2026-08-16",
+      "components": [
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-LORE-038",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-16",
+      "components": [
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-LORE-039",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-23",
+      "components": [
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 11
+    },
+    {
+      "adr_id": "ADR-LORE-040",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-24",
+      "components": [
+        "FORSETI",
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 7
+    },
+    {
+      "adr_id": "ADR-LORE-041",
+      "status": "PROPOSED",
+      "date_created": "2026-08-30",
+      "components": [
+        "FORSETI_MCP",
+        "SCHEMA_MIGRATE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-LORE-042",
+      "status": "PROPOSED",
+      "date_created": "2026-08-30",
+      "components": [
+        "LORE",
+        "SCHEMA_MIGRATE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-LORE-043",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-30",
+      "components": [
+        "LORE",
+        "FORSETI_MCP"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-LORE-044",
+      "status": "ACCEPTED",
+      "date_created": "2026-11-06",
+      "components": [
+        "OMILORE",
+        "FORSETI"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 7
+    },
+    {
+      "adr_id": "ADR-LORE-045",
+      "status": "PROPOSED",
+      "date_created": "2026-11-07",
+      "components": [
+        "OMILORE",
+        "FORSETI"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 19
+    },
+    {
+      "adr_id": "ADR-LORE-VERSIONING-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MIDGARD-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-22",
+      "components": [
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MIDGARD-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-22",
+      "components": [
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-MIDGARD-003",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-22",
+      "components": [
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-MIDGARD-004",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-22",
+      "components": [
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-MIDGARD-005",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-22",
+      "components": [
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MIDGARD-006",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-22",
+      "components": [
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MIDGARD-007",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-23",
+      "components": [
+        "HANDSAL",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "ADR-MIDGARD-008",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-23",
+      "components": [
+        "GLADSHEIM",
+        "HANDSAL",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MIDGARD-009",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-23",
+      "components": [
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-MIDGARD-010",
+      "status": "SUPERSEDED",
+      "date_created": "2026-08-23",
+      "components": [
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIDGARD-011",
+      "status": "ACCEPTED",
+      "date_created": "2026-09-01",
+      "components": [
+        "GJALLARHORN"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 7
+    },
+    {
+      "adr_id": "ADR-MIDGARD-012",
+      "status": "ACCEPTED",
+      "date_created": "2026-09-10",
+      "components": [
+        "GLADSHEIM",
+        "GJALLARHORN"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 29
+    },
+    {
+      "adr_id": "ADR-MIDGARD-013",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-23",
+      "components": [
+        "EITRI",
+        "GARD",
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-MIDGARD-014",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-23",
+      "components": [
+        "VOLVA_AUTH",
+        "VOLVA_EMBED",
+        "VEBAND",
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MIDGARD-015",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-23",
+      "components": [
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-MIDGARD-016",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-23",
+      "components": [
+        "VEBAND",
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 13
+    },
+    {
+      "adr_id": "ADR-MIDGARD-017",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-23",
+      "components": [
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-MIDGARD-018",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-23",
+      "components": [
+        "VEBAND",
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MIDGARD-019",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-23",
+      "components": [
+        "VEBAND",
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MIDGARD-020",
+      "status": "PROPOSED",
+      "date_created": "2026-08-24",
+      "components": [
+        "VEBAND",
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 8
+    },
+    {
+      "adr_id": "ADR-MIDGARD-021",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-30",
+      "components": [
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 5
+    },
+    {
+      "adr_id": "ADR-MIDGARD-022",
+      "status": "ACCEPTED",
+      "date_created": "2026-09-11",
+      "components": [
+        "HANDSAL",
+        "MIDGARD",
+        "GLADSHEIM"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 10
+    },
+    {
+      "adr_id": "ADR-MIDGARD-023",
+      "status": "ACCEPTED",
+      "date_created": "2026-09-11",
+      "components": [
+        "MIDGARD",
+        "GLADSHEIM",
+        "VEBAND"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 7
+    },
+    {
+      "adr_id": "ADR-MIDGARD-024",
+      "status": "ACCEPTED",
+      "date_created": "2026-09-11",
+      "components": [
+        "SJON",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-MIDGARD-025",
+      "status": "PROPOSED",
+      "date_created": "2026-09-14",
+      "components": [
+        "MIDGARD",
+        "GLADSHEIM"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 5
+    },
+    {
+      "adr_id": "ADR-MIDGARD-026",
+      "status": "ACCEPTED",
+      "date_created": "2026-09-14",
+      "components": [
+        "SJON"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MIDGARD-027",
+      "status": "PROPOSED",
+      "date_created": "2026-09-15",
+      "components": [
+        "MIDGARD",
+        "GJALLARHORN",
+        "GLADSHEIM"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "ADR-MIDGARD-028",
+      "status": "PROPOSED",
+      "date_created": "2026-09-15",
+      "components": [
+        "GLADSHEIM",
+        "HANDSAL"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MIDGARD-029",
+      "status": "PROPOSED",
+      "date_created": "2026-09-15",
+      "components": [
+        "GLADSHEIM"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "ADR-MIDGARD-030",
+      "status": "ACCEPTED",
+      "date_created": "2026-09-15",
+      "components": [
+        "MIDGARD",
+        "GJALLARHORN",
+        "GLADSHEIM"
+      ],
+      "git_projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MIDGARD-031",
+      "status": "PROPOSED",
+      "date_created": "2026-09-15",
+      "components": [
+        "MIDGARD",
+        "GJALLARHORN",
+        "GLADSHEIM"
+      ],
+      "git_projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MIDGARD-032",
+      "status": "PROPOSED",
+      "date_created": "2026-09-21",
+      "components": [
+        "KVASIR",
+        "GJALLARHORN",
+        "MIDGARD",
+        "GLADSHEIM"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "ADR-MIDGARD-033",
+      "status": "PROPOSED",
+      "date_created": "2026-09-21",
+      "components": [
+        "MIDGARD",
+        "GLADSHEIM",
+        "KVASIR"
+      ],
+      "git_projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-MIDGARD-034",
+      "status": "PROPOSED",
+      "date_created": "2026-09-21",
+      "components": [
+        "MIDGARD",
+        "KVASIR",
+        "GLADSHEIM",
+        "THING"
+      ],
+      "git_projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 5
+    },
+    {
+      "adr_id": "ADR-MIDGARD-035",
+      "status": "PROPOSED",
+      "date_created": "2026-09-22",
+      "components": [
+        "SJON",
+        "VEBAND",
+        "GLADSHEIM",
+        "MIDGARD"
+      ],
+      "git_projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIDGARD-036",
+      "status": "ACCEPTED",
+      "date_created": "2026-10-06",
+      "components": [
+        "KVASIR",
+        "GLADSHEIM"
+      ],
+      "git_projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIDGARD-ZIGBEE-GATEWAY",
+      "status": "ACCEPTED",
+      "date_created": "2026-09-14",
+      "components": [
+        "GLADSHEIM"
+      ],
+      "git_projects": [
+        "AIDA/MIDGARD"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MIG-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-01",
+      "components": [
+        "MIGPDM",
+        "MIGGEN"
+      ],
+      "git_projects": [
+        "ivanovalex32/UDWE"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIG-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-01",
+      "components": [
+        "MIGGEN",
+        "MIGPIPE"
+      ],
+      "git_projects": [
+        "ivanovalex32/UDWE"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIG-003",
+      "status": "PROPOSED",
+      "date_created": "2026-08-01",
+      "components": [
+        "MIGPIPE",
+        "MIGGEN"
+      ],
+      "git_projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIGGEN-001",
+      "status": "PROPOSED",
+      "date_created": "2026-08-06",
+      "components": [
+        "MIGGEN"
+      ],
+      "git_projects": [
+        "ivanovalex32/UDWE"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MIGGEN-004",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-08",
+      "components": [
+        "MIGAUDIT",
+        "MIGPIPE"
+      ],
+      "git_projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIGGEN-005",
+      "status": "SUPERSEDED",
+      "date_created": "2026-08-08",
+      "components": [
+        "MIGUI",
+        "MIGPIPE"
+      ],
+      "git_projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIGGEN-006",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-08",
+      "components": [
+        "MIGPDM",
+        "MIGPARSER"
+      ],
+      "git_projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIGGEN-007",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-08",
+      "components": [
+        "MIGPIPE",
+        "MIGAIRFLOW"
+      ],
+      "git_projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIGGEN-008",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-08",
+      "components": [
+        "MIGPIPE",
+        "MIGGEN"
+      ],
+      "git_projects": [
+        "ivanovalex32/UDWE"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIGGEN-009",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-09",
+      "components": [
+        "MIGPIPE",
+        "MIGGEN"
+      ],
+      "git_projects": [
+        "ivanovalex32/UDWE"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIGGEN-010",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-15",
+      "components": [
+        "MIGGEN"
+      ],
+      "git_projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIGGEN-011",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-15",
+      "components": [
+        "MIGGEN"
+      ],
+      "git_projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIGGEN-012",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-15",
+      "components": [
+        "MIGGEN"
+      ],
+      "git_projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIGGEN-013",
+      "status": "PROPOSED",
+      "date_created": "2026-08-15",
+      "components": [
+        "MIGGEN"
+      ],
+      "git_projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIGGEN-014",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-15",
+      "components": [
+        "MIGPIPE",
+        "MIGGEN"
+      ],
+      "git_projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MIMIR-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-02",
+      "components": [
+        "MIMIR"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MIMIR-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-02",
+      "components": [
+        "MIMIR"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-MIMIR-003",
+      "status": "DEFERRED",
+      "date_created": "2026-05-02",
+      "components": [
+        "MIMIR"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MIMIR-004",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-02",
+      "components": [
+        "MIMIR"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MIMIR-005",
+      "status": "PROPOSED",
+      "date_created": "2026-07-16",
+      "components": [
+        "VOLVA",
+        "MIMIR"
+      ],
+      "git_projects": [
+        "AIDA/forgejo-mcp"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MIMIR-AGENT-CORE",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-28",
+      "components": [
+        "MIMIR"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-MINILORE-001",
+      "status": "PROPOSED",
+      "date_created": "2026-08-15",
+      "components": [],
+      "git_projects": [
+        "AIDA/miniLORE"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MINILORE-002",
+      "status": "PROPOSED",
+      "date_created": "2026-08-15",
+      "components": [],
+      "git_projects": [
+        "AIDA/miniLORE"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-MINILORE-003",
+      "status": "PROPOSED",
+      "date_created": "2026-08-15",
+      "components": [
+        "MINILORE_SRV",
+        "MINILORE_LINK"
+      ],
+      "git_projects": [
+        "AIDA/miniLORE"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MINILORE-004",
+      "status": "PROPOSED",
+      "date_created": "2026-08-17",
+      "components": [
+        "MINILORE_LINK",
+        "MINILORE_SRV"
+      ],
+      "git_projects": [
+        "AIDA/miniLORE"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MINILORE-005",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-17",
+      "components": [
+        "MINILORE_SRV",
+        "MINILORE_LINK"
+      ],
+      "git_projects": [
+        "AIDA/miniLORE"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-MINILORE-030",
+      "status": "PROPOSED",
+      "date_created": "2026-08-17",
+      "components": [
+        "MINILORE_APP"
+      ],
+      "git_projects": [
+        "AIDA/miniLORE"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MINILORE-031",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-23",
+      "components": [
+        "MINILORE_LINK",
+        "MINILORE_APP",
+        "MINILORE_SRV",
+        "MINILORE"
+      ],
+      "git_projects": [
+        "AIDA/miniLORE"
+      ],
+      "decision_count": 35
+    },
+    {
+      "adr_id": "ADR-MINILORE-032",
+      "status": "ACCEPTED",
+      "date_created": "2026-10-20",
+      "components": [
+        "MINILORE_APP",
+        "MINILORE_SRV"
+      ],
+      "git_projects": [
+        "AIDA/miniLORE"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MT-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "KC"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MT-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "FRIGG",
+        "YGG",
+        "SECURITY"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-MT-003",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "YGG",
+        "SECURITY"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MT-004",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "SECURITY"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-MT-005",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "SECURITY"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MT-006",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "FRIGG",
+        "SECURITY"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-MT-007",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-29",
+      "components": [
+        "SECURITY"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-MT-008",
+      "status": "SUPERSEDED",
+      "date_created": "2026-06-28",
+      "components": [
+        "VAULT",
+        "SECURITY"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-MT-009",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "SECURITY"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-MT-010",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "CHUR"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-MT-011",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-02",
+      "components": [
+        "VAULT",
+        "SECURITY"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "ADR-MT-012",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-10",
+      "components": [
+        "VAULT",
+        "SECURITY"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-OBS-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-28",
+      "components": [
+        "OBS"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-OBS-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-28",
+      "components": [
+        "OBS"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-OBS-003",
+      "status": "SUPERSEDED",
+      "date_created": "2026-06-04",
+      "components": [
+        "OBS"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-OBS-CMC-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "OBS"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-OBS-CMC-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-28",
+      "components": [
+        "OBS"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-OL-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-05-26",
+      "components": [
+        "OL"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-OL-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-05",
+      "components": [
+        "OL"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-QG-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-30",
+      "components": [
+        "QG"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 7
+    },
+    {
+      "adr_id": "ADR-QG-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-30",
+      "components": [
+        "QG"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 4
+    },
+    {
+      "adr_id": "ADR-QG-003",
+      "status": "PROPOSED",
+      "date_created": "2026-06-30",
+      "components": [
+        "QG"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 3
+    },
+    {
+      "adr_id": "ADR-QG-004",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-30",
+      "components": [
+        "QG"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 5
+    },
+    {
+      "adr_id": "ADR-SEM-001",
+      "status": "PROPOSED",
+      "date_created": "2026-08-01",
+      "components": [
+        "SHT",
+        "HND",
+        "DALI"
+      ],
+      "git_projects": [
+        "NooriUta/volva",
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-SEM-002",
+      "status": "PROPOSED",
+      "date_created": "2026-08-01",
+      "components": [
+        "SHT",
+        "HND",
+        "DALI"
+      ],
+      "git_projects": [
+        "NooriUta/volva",
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-SEM-003",
+      "status": "PROPOSED",
+      "date_created": "2026-08-01",
+      "components": [
+        "MIMIR",
+        "SHT",
+        "HND",
+        "DALI"
+      ],
+      "git_projects": [
+        "NooriUta/volva",
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-SEM-004",
+      "status": "PROPOSED",
+      "date_created": "2026-08-01",
+      "components": [
+        "DALI",
+        "SHT",
+        "VOLVA_DRIVER",
+        "VOLVA_META"
+      ],
+      "git_projects": [
+        "NooriUta/volva",
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-SEM-005",
+      "status": "PROPOSED",
+      "date_created": "2026-08-01",
+      "components": [
+        "VERDANDI",
+        "SHT",
+        "HND",
+        "DALI"
+      ],
+      "git_projects": [
+        "NooriUta/volva",
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-SHT-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-05",
+      "components": [
+        "SHT"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-SKULD-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-20",
+      "components": [
+        "SKULD"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 11
+    },
+    {
+      "adr_id": "ADR-SOURCE-IDENTITY-001",
+      "status": "SUPERSEDED",
+      "date_created": "2026-04-18",
+      "components": [
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-SVC-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-29",
+      "components": [
+        "AIDA"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-SVC-002",
+      "status": "PROPOSED",
+      "date_created": "2026-07-30",
+      "components": [
+        "INFRA",
+        "SVC",
+        "HEIMDALL"
+      ],
+      "git_projects": [
+        "AIDA/forgejo-mcp"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-TREE-HASH-MERKLE-001",
+      "status": "SUPERSEDED",
+      "date_created": "2026-04-18",
+      "components": [
+        "DEDUP",
+        "HND"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-TS-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-01",
+      "components": [
+        "OBS"
+      ],
+      "git_projects": [
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-TS-MODULES-STACK",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-15",
+      "components": [
+        "SEIDR",
+        "FRIGG",
+        "FE",
+        "INFRA",
+        "AIDA"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ],
+      "decision_count": 8
+    },
+    {
+      "adr_id": "ADR-UDWE-010",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-12",
+      "components": [
+        "MIGPDM",
+        "MIGPIPE",
+        "MIGUI"
+      ],
+      "git_projects": [
+        "ivanovalex32/UDWE"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-VOLVA-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-14",
+      "components": [
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-VOLVA-002",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-16",
+      "components": [
+        "SEIDR",
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-VOLVA-003",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-16",
+      "components": [
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-VOLVA-004",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-16",
+      "components": [
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-VOLVA-005",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-16",
+      "components": [
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-VOLVA-006",
+      "status": "PROPOSED",
+      "date_created": "2026-07-16",
+      "components": [
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-VOLVA-007",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-16",
+      "components": [
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-VOLVA-008",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-16",
+      "components": [
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-VOLVA-009",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-17",
+      "components": [
+        "VOLVA_EMBED",
+        "VOLVA_AUTH"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-VOLVA-010",
+      "status": "PROPOSED",
+      "date_created": "2026-07-17",
+      "components": [
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-VOLVA-011",
+      "status": "ACCEPTED",
+      "date_created": "2026-08-01",
+      "components": [
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-VOLVA-012",
+      "status": "ACCEPTED",
+      "date_created": "2026-11-04",
+      "components": [
+        "VOLVA_FE",
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-VOLVA-013",
+      "status": "PROPOSED",
+      "date_created": "2026-11-04",
+      "components": [
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 2
+    },
+    {
+      "adr_id": "ADR-VOLVA-014",
+      "status": "ACCEPTED",
+      "date_created": "2026-11-06",
+      "components": [
+        "VOLVA",
+        "VOLVA_FE"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-VOLVA-ARTIFACT-001",
+      "status": "ACCEPTED",
+      "date_created": "2026-07-30",
+      "components": [
+        "VOLVA"
+      ],
+      "git_projects": [
+        "NooriUta/volva"
+      ],
+      "decision_count": 0
+    },
+    {
+      "adr_id": "ADR-YGG-ARROW-FLIGHT",
+      "status": "DEFERRED",
+      "date_created": "2026-04-15",
+      "components": [
+        "YGG"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 1
+    },
+    {
+      "adr_id": "ADR-YGG-REST-ONLY",
+      "status": "ACCEPTED",
+      "date_created": "2026-04-20",
+      "components": [
+        "ANVIL",
+        "YGG"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 6
+    },
+    {
+      "adr_id": "D-126",
+      "status": "ACCEPTED",
+      "date_created": "2026-06-12",
+      "components": [
+        "OMILORE"
+      ],
+      "git_projects": [
+        "NooriUta/UnlimitedLORE"
+      ],
+      "decision_count": 1
+    }
+  ],
+  "_page": {
+    "limit": 1000,
+    "offset": 0,
+    "total": 243,
+    "has_more": false,
+    "fields": [
+      "adr_id",
+      "status",
+      "date_created",
+      "components",
+      "git_projects",
+      "decision_count"
+    ],
+    "fields_checked": true
+  }
+}

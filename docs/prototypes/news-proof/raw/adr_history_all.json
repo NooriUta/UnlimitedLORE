@@ -1,0 +1,3087 @@
+{
+  "rows": [
+    {
+      "adr_id": "ADR-DWL-008",
+      "valid_from": "2026-11-07T16:06:55.303Z",
+      "valid_to": null,
+      "content_hash": "46670b943a8718e9",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-DWL-008",
+      "valid_from": "2026-11-07T15:38:43.473Z",
+      "valid_to": "2026-11-07T16:06:55.303Z",
+      "content_hash": "94e3b958faa80e3b",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-045",
+      "valid_from": "2026-11-07T12:43:51.051Z",
+      "valid_to": null,
+      "content_hash": "4f200123f3917acd",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-045",
+      "valid_from": "2026-11-07T12:36:49.041Z",
+      "valid_to": "2026-11-07T12:43:51.051Z",
+      "content_hash": "620845b056fd7713",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-012",
+      "valid_from": "2026-11-06T17:37:37.030Z",
+      "valid_to": null,
+      "content_hash": "1cc6fcc61d545304",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-014",
+      "valid_from": "2026-11-06T17:25:16.632Z",
+      "valid_to": null,
+      "content_hash": "8d9e88207a51f0fe",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-020",
+      "valid_from": "2026-11-06T17:15:56.208Z",
+      "valid_to": null,
+      "content_hash": "66c6533592349387",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-039",
+      "valid_from": "2026-11-06T13:59:50.814Z",
+      "valid_to": null,
+      "content_hash": "2ee08f10b7aaf2fd",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-039",
+      "valid_from": "2026-11-06T13:58:25.463Z",
+      "valid_to": "2026-11-06T13:59:50.814Z",
+      "content_hash": "a17f01a17857c64a",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-044",
+      "valid_from": "2026-11-06T09:32:09.796Z",
+      "valid_to": null,
+      "content_hash": "14861a703a2ccd4b",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-DALI-JOBENGINE-002",
+      "valid_from": "2026-11-06T07:45:34.131Z",
+      "valid_to": null,
+      "content_hash": "e814a16dc4946f69",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-INFRA-TELEGRAM-ORG-TOKEN",
+      "valid_from": "2026-11-06T06:30:12.362Z",
+      "valid_to": null,
+      "content_hash": "9018b0361baeb631",
+      "source_commit": null,
+      "projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen",
+        "AIDA/udwe-engine",
+        "NooriUta/AIDA-TestPlayGround",
+        "AIDA/forgejo-mcp",
+        "AIDA/BOKVIT",
+        "AIDA/TEIKN",
+        "AIDA/miniLore_serverside",
+        "AIDA/miniLORE",
+        "AIDA/Datawanderers-Unity",
+        "AIDA/Datawanderers-ServerandLore",
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD",
+        "NooriUta/seidr-site",
+        "NooriUta/volva",
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-DALI-JOBENGINE-002",
+      "valid_from": "2026-11-06T06:25:55.448Z",
+      "valid_to": "2026-11-06T07:45:34.131Z",
+      "content_hash": "d0035e028a316657",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DWL-007",
+      "valid_from": "2026-11-06T05:48:00.808Z",
+      "valid_to": null,
+      "content_hash": "0dc2883a5886ed51",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-DWL-007",
+      "valid_from": "2026-11-06T05:36:27.212Z",
+      "valid_to": "2026-11-06T05:48:00.808Z",
+      "content_hash": "265a51ef8dfd0188",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-038",
+      "valid_from": "2026-11-06T05:20:44.588Z",
+      "valid_to": null,
+      "content_hash": "bc47af34ab28f0ab",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-038",
+      "valid_from": "2026-11-06T05:06:43.091Z",
+      "valid_to": "2026-11-06T05:20:44.588Z",
+      "content_hash": "737d2d1de32bd18a",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-010",
+      "valid_from": "2026-11-05T10:10:30.003Z",
+      "valid_to": null,
+      "content_hash": "02f9dc38611366a2",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-010",
+      "valid_from": "2026-11-05T09:32:30.361Z",
+      "valid_to": "2026-11-05T10:10:30.003Z",
+      "content_hash": "912e31e574ec0bda",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-INFRA-002",
+      "valid_from": "2026-11-05T08:42:18.050Z",
+      "valid_to": null,
+      "content_hash": "d73eca245d2c37fb",
+      "source_commit": null,
+      "projects": [
+        "AIDA/forgejo-mcp"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-016",
+      "valid_from": "2026-11-05T08:42:17.255Z",
+      "valid_to": null,
+      "content_hash": "60d77fb7a99d3a16",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-013",
+      "valid_from": "2026-11-04T09:08:52.098Z",
+      "valid_to": null,
+      "content_hash": "29438e1b29973025",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-012",
+      "valid_from": "2026-11-04T06:37:05.473Z",
+      "valid_to": "2026-11-06T17:37:37.030Z",
+      "content_hash": "81ae664d748aac3b",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-DWL-006",
+      "valid_from": "2026-11-01T09:08:08.506Z",
+      "valid_to": null,
+      "content_hash": "6daa29692240f489",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-DWL-006",
+      "valid_from": "2026-10-27T11:11:57.721Z",
+      "valid_to": "2026-11-01T09:08:08.506Z",
+      "content_hash": "f30cc7d70552bb73",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-DWL-006",
+      "valid_from": "2026-10-26T09:18:48.591Z",
+      "valid_to": "2026-10-27T11:11:57.721Z",
+      "content_hash": "c4396edb2f554729",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-DWL-006",
+      "valid_from": "2026-10-24T09:25:53.929Z",
+      "valid_to": "2026-10-26T09:18:48.591Z",
+      "content_hash": "dbd22b7e9add104b",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-DWL-005",
+      "valid_from": "2026-10-23T17:24:47.079Z",
+      "valid_to": null,
+      "content_hash": "eda9966abe3ece20",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-DWL-004",
+      "valid_from": "2026-10-23T14:47:04.047Z",
+      "valid_to": null,
+      "content_hash": "269799e5602a793e",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-DWL-003",
+      "valid_from": "2026-10-23T14:47:02.706Z",
+      "valid_to": null,
+      "content_hash": "2e7768fc97b5b918",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-DWL-002",
+      "valid_from": "2026-10-23T14:47:01.099Z",
+      "valid_to": null,
+      "content_hash": "dadb1d6335fb96ba",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-DWL-001",
+      "valid_from": "2026-10-23T14:47:00.109Z",
+      "valid_to": null,
+      "content_hash": "3bc8430b47161c96",
+      "source_commit": null,
+      "projects": [
+        "AIDA/Datawanderers-Unity",
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-032",
+      "valid_from": "2026-10-20T18:55:58.693Z",
+      "valid_to": null,
+      "content_hash": "7dcb8b26c3e95a35",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-MT-002",
+      "valid_from": "2026-10-20T18:49:39.666Z",
+      "valid_to": null,
+      "content_hash": "88c663f917b2ef44",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIMIR-001",
+      "valid_from": "2026-10-20T18:45:27.252Z",
+      "valid_to": null,
+      "content_hash": "feabe65212489882",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-037",
+      "valid_from": "2026-10-20T18:42:25.742Z",
+      "valid_to": null,
+      "content_hash": "8682c2aabf749af3",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-ARCH-002",
+      "valid_from": "2026-10-20T18:14:28.793Z",
+      "valid_to": null,
+      "content_hash": "ca7e4bca85f74dcf",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-036",
+      "valid_from": "2026-10-20T18:13:56.925Z",
+      "valid_to": null,
+      "content_hash": "39f8831687b0a50b",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-MINILORE-032",
+      "valid_from": "2026-10-20T16:45:24.572Z",
+      "valid_to": null,
+      "content_hash": "3186f65b5be80e39",
+      "source_commit": null,
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MINILORE-032",
+      "valid_from": "2026-10-20T16:37:37.603Z",
+      "valid_to": "2026-10-20T16:45:24.572Z",
+      "content_hash": "8c817022f989415d",
+      "source_commit": null,
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-035",
+      "valid_from": "2026-10-20T15:23:15.999Z",
+      "valid_to": null,
+      "content_hash": "3df86ab63115a84b",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-035",
+      "valid_from": "2026-10-20T15:11:58.207Z",
+      "valid_to": "2026-10-20T15:23:15.999Z",
+      "content_hash": "6856dc5a1187dd52",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-034",
+      "valid_from": "2026-10-20T14:02:25.482Z",
+      "valid_to": null,
+      "content_hash": "faa8acd82d742db5",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-033",
+      "valid_from": "2026-10-20T13:55:14.351Z",
+      "valid_to": null,
+      "content_hash": "a148c842720bdcfd",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-032",
+      "valid_from": "2026-10-20T13:31:37.159Z",
+      "valid_to": "2026-10-20T18:55:58.693Z",
+      "content_hash": "0697ef1769f90df1",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-036",
+      "valid_from": "2026-10-06T12:49:29.533Z",
+      "valid_to": null,
+      "content_hash": "016243c65b459fb4",
+      "source_commit": null,
+      "projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-032",
+      "valid_from": "2026-10-06T11:45:26.880Z",
+      "valid_to": null,
+      "content_hash": "043a5203eb8e1742",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-027",
+      "valid_from": "2026-10-06T11:44:44.767Z",
+      "valid_to": null,
+      "content_hash": "b75c88c4da9766f9",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-012",
+      "valid_from": "2026-09-23T19:10:48.344Z",
+      "valid_to": null,
+      "content_hash": "4504326ac65c1fb9",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-010",
+      "valid_from": "2026-09-22T08:05:20.399Z",
+      "valid_to": null,
+      "content_hash": "24a83868720a7477",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-012",
+      "valid_from": "2026-09-22T07:14:01.611Z",
+      "valid_to": "2026-09-23T19:10:48.344Z",
+      "content_hash": "4d7771eb61b945f7",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-012",
+      "valid_from": "2026-09-22T06:28:36.317Z",
+      "valid_to": "2026-09-22T07:14:01.611Z",
+      "content_hash": "a2d8bd684c21e1c8",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-035",
+      "valid_from": "2026-09-22T06:21:24.908Z",
+      "valid_to": null,
+      "content_hash": "758e3ecc95cda229",
+      "source_commit": null,
+      "projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-034",
+      "valid_from": "2026-09-21T17:44:42.705Z",
+      "valid_to": null,
+      "content_hash": "e5a658cecb32e23b",
+      "source_commit": null,
+      "projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-033",
+      "valid_from": "2026-09-21T17:44:15.613Z",
+      "valid_to": null,
+      "content_hash": "11d7afc41e9fc85b",
+      "source_commit": null,
+      "projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-034",
+      "valid_from": "2026-09-21T17:37:14.797Z",
+      "valid_to": "2026-09-21T17:44:42.705Z",
+      "content_hash": "22216a0f7240ee89",
+      "source_commit": null,
+      "projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-032",
+      "valid_from": "2026-09-21T17:36:22.807Z",
+      "valid_to": "2026-10-06T11:45:26.880Z",
+      "content_hash": "75dc029ac2aedcc4",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-034",
+      "valid_from": "2026-09-21T16:50:28.317Z",
+      "valid_to": "2026-09-21T17:37:14.797Z",
+      "content_hash": "f004ce3d1de14d9b",
+      "source_commit": null,
+      "projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-033",
+      "valid_from": "2026-09-21T16:49:46.668Z",
+      "valid_to": "2026-09-21T17:44:15.613Z",
+      "content_hash": "3b75b6c640da0597",
+      "source_commit": null,
+      "projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-034",
+      "valid_from": "2026-09-21T16:47:38.972Z",
+      "valid_to": "2026-09-21T16:50:28.317Z",
+      "content_hash": "cbfaabae1972e9f8",
+      "source_commit": null,
+      "projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-033",
+      "valid_from": "2026-09-21T16:39:10.546Z",
+      "valid_to": "2026-09-21T16:49:46.668Z",
+      "content_hash": "ec380251f2d1f984",
+      "source_commit": null,
+      "projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-032",
+      "valid_from": "2026-09-21T16:14:46.879Z",
+      "valid_to": "2026-09-21T17:36:22.807Z",
+      "content_hash": "347501937a78b32b",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-032",
+      "valid_from": "2026-09-21T15:39:27.564Z",
+      "valid_to": "2026-09-21T16:14:46.879Z",
+      "content_hash": "21c00970e455075e",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-032",
+      "valid_from": "2026-09-21T12:45:36.893Z",
+      "valid_to": "2026-09-21T15:39:27.564Z",
+      "content_hash": "8cd9147ad34566fb",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-032",
+      "valid_from": "2026-09-21T12:28:21.328Z",
+      "valid_to": "2026-09-21T12:45:36.893Z",
+      "content_hash": "91980e1f44fd2e52",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-032",
+      "valid_from": "2026-09-21T08:05:32.433Z",
+      "valid_to": "2026-09-21T12:28:21.328Z",
+      "content_hash": "23e40a502ac11812",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-029",
+      "valid_from": "2026-09-21T05:06:28.390Z",
+      "valid_to": null,
+      "content_hash": "cd592569b11c1e0d",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-031",
+      "valid_from": "2026-09-15T21:36:16.233Z",
+      "valid_to": null,
+      "content_hash": "5819ed289dd1a817",
+      "source_commit": null,
+      "projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-030",
+      "valid_from": "2026-09-15T18:53:14.180Z",
+      "valid_to": null,
+      "content_hash": "36bbdd4d08a09cb5",
+      "source_commit": null,
+      "projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-030",
+      "valid_from": "2026-09-15T18:44:03.797Z",
+      "valid_to": "2026-09-15T18:53:14.180Z",
+      "content_hash": "0e546ea65192b3d1",
+      "source_commit": null,
+      "projects": [
+        "AIDA/GLADSHEIM",
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-028",
+      "valid_from": "2026-09-15T10:32:05.562Z",
+      "valid_to": null,
+      "content_hash": "087a3a9a07cc4f36",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-029",
+      "valid_from": "2026-09-15T09:35:55.134Z",
+      "valid_to": "2026-09-21T05:06:28.390Z",
+      "content_hash": "f010a89c7a458f76",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-028",
+      "valid_from": "2026-09-15T09:34:31.451Z",
+      "valid_to": "2026-09-15T10:32:05.562Z",
+      "content_hash": "f7e3c0c96df5ee14",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-012",
+      "valid_from": "2026-09-15T09:22:33.503Z",
+      "valid_to": "2026-09-22T06:28:36.317Z",
+      "content_hash": "138887cd008d9252",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-027",
+      "valid_from": "2026-09-15T08:32:25.840Z",
+      "valid_to": "2026-10-06T11:44:44.767Z",
+      "content_hash": "6869530832b52438",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD",
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-ZIGBEE-GATEWAY",
+      "valid_from": "2026-09-14T17:49:44.464Z",
+      "valid_to": null,
+      "content_hash": "c6cb53c90fbc7373",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-026",
+      "valid_from": "2026-09-14T17:42:50.327Z",
+      "valid_to": null,
+      "content_hash": "bdf0cf6b9c29a8b7",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-025",
+      "valid_from": "2026-09-14T05:24:24.619Z",
+      "valid_to": null,
+      "content_hash": "e26af0fb8b6e3d76",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-011",
+      "valid_from": "2026-09-11T17:59:11.230Z",
+      "valid_to": null,
+      "content_hash": "4e70d8dbd515dc99",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-023",
+      "valid_from": "2026-09-11T17:58:45.781Z",
+      "valid_to": null,
+      "content_hash": "1422169fd84d901d",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-024",
+      "valid_from": "2026-09-11T17:01:13.230Z",
+      "valid_to": null,
+      "content_hash": "221b137226260470",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-023",
+      "valid_from": "2026-09-11T07:23:53.994Z",
+      "valid_to": "2026-09-11T17:58:45.781Z",
+      "content_hash": "1ebc83a1427e4b85",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-022",
+      "valid_from": "2026-09-11T05:27:53.185Z",
+      "valid_to": null,
+      "content_hash": "2d662e4c924002db",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-012",
+      "valid_from": "2026-09-10T17:15:54.377Z",
+      "valid_to": "2026-09-15T09:22:33.503Z",
+      "content_hash": "fbf9d2a6d8c64d8c",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-012",
+      "valid_from": "2026-09-10T05:30:44.192Z",
+      "valid_to": "2026-09-10T17:15:54.377Z",
+      "content_hash": "ed605140c11b88f3",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-007",
+      "valid_from": "2026-09-08T16:29:17.582Z",
+      "valid_to": null,
+      "content_hash": "dc0abfc2cedb45d7",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-021",
+      "valid_from": "2026-09-01T17:18:02.078Z",
+      "valid_to": null,
+      "content_hash": "dd6e3cdeefd2d485",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-043",
+      "valid_from": "2026-08-30T16:30:33.866Z",
+      "valid_to": null,
+      "content_hash": "8799f0fda2b034b1",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-042",
+      "valid_from": "2026-08-30T15:56:45.132Z",
+      "valid_to": null,
+      "content_hash": "98543e21d1ba4c44",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-041",
+      "valid_from": "2026-08-30T08:32:57.524Z",
+      "valid_to": null,
+      "content_hash": "b46b530e2d21cca9",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-041",
+      "valid_from": "2026-08-30T07:36:55.551Z",
+      "valid_to": "2026-08-30T08:32:57.524Z",
+      "content_hash": "a5368970e5ed0089",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-021",
+      "valid_from": "2026-08-30T07:28:28.733Z",
+      "valid_to": "2026-09-01T17:18:02.078Z",
+      "content_hash": "cd366bb8316d9310",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-040",
+      "valid_from": "2026-08-27T14:34:57.008Z",
+      "valid_to": null,
+      "content_hash": "870547fb6e092953",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-038",
+      "valid_from": "2026-08-27T14:33:29.953Z",
+      "valid_to": null,
+      "content_hash": "3237ce025f34aaeb",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-040",
+      "valid_from": "2026-08-24T08:18:16.101Z",
+      "valid_to": "2026-08-27T14:34:57.008Z",
+      "content_hash": "ccdce3d14ce9a7e2",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-020",
+      "valid_from": "2026-08-23T23:06:53.505Z",
+      "valid_to": null,
+      "content_hash": "017ffa16f37ddd1d",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-019",
+      "valid_from": "2026-08-23T18:56:58.145Z",
+      "valid_to": null,
+      "content_hash": "e24c45d1fa13bf15",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-018",
+      "valid_from": "2026-08-23T18:47:54.952Z",
+      "valid_to": null,
+      "content_hash": "4c01f75180801abb",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-017",
+      "valid_from": "2026-08-23T18:35:52.924Z",
+      "valid_to": null,
+      "content_hash": "57db9c0c53379e15",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-016",
+      "valid_from": "2026-08-23T18:19:24.511Z",
+      "valid_to": null,
+      "content_hash": "c05967cca23a2249",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MINILORE-031",
+      "valid_from": "2026-08-23T15:04:08.592Z",
+      "valid_to": null,
+      "content_hash": "006ba4cc85890e45",
+      "source_commit": null,
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-015",
+      "valid_from": "2026-08-23T12:58:52.729Z",
+      "valid_to": null,
+      "content_hash": "26a3b93ebbe6139f",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-014",
+      "valid_from": "2026-08-23T12:43:08.826Z",
+      "valid_to": null,
+      "content_hash": "363d8a3c77956ff8",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-013",
+      "valid_from": "2026-08-23T12:34:40.405Z",
+      "valid_to": null,
+      "content_hash": "21d6bac3d238523d",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-012",
+      "valid_from": "2026-08-23T12:30:58.897Z",
+      "valid_to": "2026-09-10T05:30:44.192Z",
+      "content_hash": "f902bcc611b74441",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-011",
+      "valid_from": "2026-08-23T12:07:22.230Z",
+      "valid_to": "2026-09-11T17:59:11.230Z",
+      "content_hash": "e6ab735ccb157459",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-010",
+      "valid_from": "2026-08-23T11:34:26.575Z",
+      "valid_to": "2026-09-22T08:05:20.399Z",
+      "content_hash": "ffaf1082cd5fa1f6",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-039",
+      "valid_from": "2026-08-23T11:26:55.460Z",
+      "valid_to": null,
+      "content_hash": "a30b4fe6e868e897",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-009",
+      "valid_from": "2026-08-23T11:06:08.627Z",
+      "valid_to": null,
+      "content_hash": "b9921a1e2d905765",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-008",
+      "valid_from": "2026-08-23T09:23:34.116Z",
+      "valid_to": null,
+      "content_hash": "751d4052bbbe3a65",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-007",
+      "valid_from": "2026-08-23T09:23:27.943Z",
+      "valid_to": "2026-09-08T16:29:17.582Z",
+      "content_hash": "9540e4bab8365e25",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-006",
+      "valid_from": "2026-08-23T09:23:00.394Z",
+      "valid_to": null,
+      "content_hash": "3ee640cb98f16ee2",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-005",
+      "valid_from": "2026-08-23T09:22:54.600Z",
+      "valid_to": null,
+      "content_hash": "666cbd5b613c8a76",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-004",
+      "valid_from": "2026-08-23T09:22:35.403Z",
+      "valid_to": null,
+      "content_hash": "a6ce6d12df28ab87",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-003",
+      "valid_from": "2026-08-23T09:22:28.488Z",
+      "valid_to": null,
+      "content_hash": "e0e0e8f3697748ce",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-002",
+      "valid_from": "2026-08-23T09:22:05.704Z",
+      "valid_to": null,
+      "content_hash": "7f7d6e6c99ce2e6b",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIDGARD-001",
+      "valid_from": "2026-08-23T09:21:58.206Z",
+      "valid_to": null,
+      "content_hash": "0798f25faa4b9e92",
+      "source_commit": null,
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "adr_id": "ADR-MINILORE-005",
+      "valid_from": "2026-08-17T20:32:51.411Z",
+      "valid_to": null,
+      "content_hash": "a6bcde7533ec0490",
+      "source_commit": null,
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MINILORE-004",
+      "valid_from": "2026-08-17T13:02:27.654Z",
+      "valid_to": null,
+      "content_hash": "1ca205dab5153be1",
+      "source_commit": null,
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MINILORE-030",
+      "valid_from": "2026-08-17T11:18:52.169Z",
+      "valid_to": null,
+      "content_hash": "78d07bccc7aec197",
+      "source_commit": null,
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-INFRA-SHARED-COMPONENTS",
+      "valid_from": "2026-08-17T09:57:04.401Z",
+      "valid_to": null,
+      "content_hash": "2073ce7c583479af",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE",
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-038",
+      "valid_from": "2026-08-16T19:12:37.554Z",
+      "valid_to": "2026-08-27T14:33:29.953Z",
+      "content_hash": "2f9583cb06462d94",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-037",
+      "valid_from": "2026-08-16T05:40:55.119Z",
+      "valid_to": null,
+      "content_hash": "72a8d5764a999cf9",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIGGEN-014",
+      "valid_from": "2026-08-15T20:20:49.795Z",
+      "valid_to": null,
+      "content_hash": "e2dc8a7ec70333cb",
+      "source_commit": null,
+      "projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-031",
+      "valid_from": "2026-08-15T20:05:22.008Z",
+      "valid_to": null,
+      "content_hash": "0ed2b214b650a0e3",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-MINILORE-003",
+      "valid_from": "2026-08-15T05:58:27.751Z",
+      "valid_to": null,
+      "content_hash": "c149de60e519ef67",
+      "source_commit": null,
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIGGEN-013",
+      "valid_from": "2026-08-15T04:57:26.383Z",
+      "valid_to": null,
+      "content_hash": "41eb0ab58555cc73",
+      "source_commit": null,
+      "projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "adr_id": "ADR-MINILORE-002",
+      "valid_from": "2026-08-15T00:14:47.335Z",
+      "valid_to": null,
+      "content_hash": "326a5a995fed0bf4",
+      "source_commit": null,
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MINILORE-001",
+      "valid_from": "2026-08-14T23:32:08.720Z",
+      "valid_to": null,
+      "content_hash": "2296253e007d9e28",
+      "source_commit": null,
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIGGEN-012",
+      "valid_from": "2026-08-14T21:47:08.522Z",
+      "valid_to": null,
+      "content_hash": "8ac56522653c575b",
+      "source_commit": null,
+      "projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIGGEN-011",
+      "valid_from": "2026-08-14T21:46:42.816Z",
+      "valid_to": null,
+      "content_hash": "8f9c2b2de20b0fbf",
+      "source_commit": null,
+      "projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIGGEN-010",
+      "valid_from": "2026-08-14T21:46:20.619Z",
+      "valid_to": null,
+      "content_hash": "424f46eaac6b9b67",
+      "source_commit": null,
+      "projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "adr_id": "ADR-UDWE-010",
+      "valid_from": "2026-08-12T14:51:29.784Z",
+      "valid_to": null,
+      "content_hash": "97841740338f1cf6",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-030",
+      "valid_from": "2026-08-12T14:11:29.531Z",
+      "valid_to": null,
+      "content_hash": "a325b46426f6a93b",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-UDWE-010",
+      "valid_from": "2026-08-12T12:35:40.905Z",
+      "valid_to": "2026-08-12T14:51:29.784Z",
+      "content_hash": "251ac51e06a923a5",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-UDWE-010",
+      "valid_from": "2026-08-12T10:50:45.858Z",
+      "valid_to": "2026-08-12T12:35:40.905Z",
+      "content_hash": "fadeaeffd622f611",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-UDWE-010",
+      "valid_from": "2026-08-12T10:14:03.358Z",
+      "valid_to": "2026-08-12T10:50:45.858Z",
+      "content_hash": "f14f83316006540d",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-UDWE-010",
+      "valid_from": "2026-08-12T07:49:19.075Z",
+      "valid_to": "2026-08-12T10:14:03.358Z",
+      "content_hash": "fe240da52ea5407a",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-UDWE-010",
+      "valid_from": "2026-08-12T06:14:22.815Z",
+      "valid_to": "2026-08-12T07:49:19.075Z",
+      "content_hash": "ff3b5d35808e620a",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIGGEN-009",
+      "valid_from": "2026-08-08T22:52:05.333Z",
+      "valid_to": null,
+      "content_hash": "a18928eceb800655",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-029",
+      "valid_from": "2026-08-08T20:35:21.640Z",
+      "valid_to": null,
+      "content_hash": "e93988fa7b3d45ae",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIGGEN-008",
+      "valid_from": "2026-08-08T18:47:21.196Z",
+      "valid_to": null,
+      "content_hash": "1b3b94ac2ee37475",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIGGEN-007",
+      "valid_from": "2026-08-08T16:49:51.801Z",
+      "valid_to": null,
+      "content_hash": "24130b3874e97136",
+      "source_commit": null,
+      "projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIGGEN-006",
+      "valid_from": "2026-08-08T16:49:21.267Z",
+      "valid_to": null,
+      "content_hash": "8439b3a0f1e71593",
+      "source_commit": null,
+      "projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIGGEN-005",
+      "valid_from": "2026-08-08T03:20:18.437Z",
+      "valid_to": null,
+      "content_hash": "8274e2e2299949ee",
+      "source_commit": null,
+      "projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIGGEN-004",
+      "valid_from": "2026-08-08T03:19:19.538Z",
+      "valid_to": null,
+      "content_hash": "6f0bcf9e0ab3ea0f",
+      "source_commit": null,
+      "projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIGGEN-001",
+      "valid_from": "2026-08-06T14:11:53.701Z",
+      "valid_to": null,
+      "content_hash": "b01168fde6080896",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIG-003",
+      "valid_from": "2026-08-01T17:56:15.604Z",
+      "valid_to": null,
+      "content_hash": "310decf718d634c6",
+      "source_commit": null,
+      "projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIG-003",
+      "valid_from": "2026-08-01T13:30:24.301Z",
+      "valid_to": "2026-08-01T17:56:15.604Z",
+      "content_hash": "c11139d39da4beb1",
+      "source_commit": null,
+      "projects": [
+        "AIDA/udwe-rollout",
+        "AIDA/udwe-mig-gen"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIG-002",
+      "valid_from": "2026-08-01T13:00:13.511Z",
+      "valid_to": null,
+      "content_hash": "1e18ed273f472860",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-SEM-005",
+      "valid_from": "2026-08-01T11:07:38.123Z",
+      "valid_to": null,
+      "content_hash": "a8f3e2ba56e806fe",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-SEM-004",
+      "valid_from": "2026-08-01T08:36:46.186Z",
+      "valid_to": null,
+      "content_hash": "3f76c5e6039a25e0",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-SEM-003",
+      "valid_from": "2026-08-01T08:35:22.724Z",
+      "valid_to": null,
+      "content_hash": "dc04dd42b36bf78d",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-SEM-002",
+      "valid_from": "2026-08-01T08:34:36.177Z",
+      "valid_to": null,
+      "content_hash": "baea38b1e27d38d6",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-SEM-001",
+      "valid_from": "2026-08-01T08:33:11.385Z",
+      "valid_to": null,
+      "content_hash": "922370d7faa8a401",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIG-001",
+      "valid_from": "2026-07-31T23:45:45.538Z",
+      "valid_to": null,
+      "content_hash": "38b1c10a6607c061",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIG-002",
+      "valid_from": "2026-07-31T23:05:51.558Z",
+      "valid_to": "2026-08-01T13:00:13.511Z",
+      "content_hash": "6d9be349fc4fa8c5",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIG-002",
+      "valid_from": "2026-07-31T23:00:09.011Z",
+      "valid_to": "2026-07-31T23:05:51.558Z",
+      "content_hash": "728e10acc0b68c66",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIG-002",
+      "valid_from": "2026-07-31T22:56:02.117Z",
+      "valid_to": "2026-07-31T23:00:09.011Z",
+      "content_hash": "155b3b1fb6a130af",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIG-001",
+      "valid_from": "2026-07-31T21:57:27.144Z",
+      "valid_to": "2026-07-31T23:45:45.538Z",
+      "content_hash": "637cb3d336967a5c",
+      "source_commit": null,
+      "projects": [
+        "ivanovalex32/UDWE"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-011",
+      "valid_from": "2026-07-31T21:17:19.899Z",
+      "valid_to": null,
+      "content_hash": "60a42ff04a089977",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-INFRA-SHARED-CREDENTIAL-LOCKOUT",
+      "valid_from": "2026-07-31T15:18:20.711Z",
+      "valid_to": null,
+      "content_hash": "612cdc7dbdcfc191",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-ARTIFACT-001",
+      "valid_from": "2026-07-30T17:08:43.297Z",
+      "valid_to": null,
+      "content_hash": "725006965737f06a",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-ARTIFACT-001",
+      "valid_from": "2026-07-30T14:10:20.164Z",
+      "valid_to": "2026-07-30T17:08:43.297Z",
+      "content_hash": "7b7ad31a84326390",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-036",
+      "valid_from": "2026-07-26T08:30:59.676Z",
+      "valid_to": null,
+      "content_hash": "7e6157c241693eee",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-034",
+      "valid_from": "2026-07-22T10:59:31.651Z",
+      "valid_to": null,
+      "content_hash": "4ae69659ab1d6895",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-033",
+      "valid_from": "2026-07-20T22:43:35.793Z",
+      "valid_to": null,
+      "content_hash": "9f43c23b90f87744",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-INFRA-002",
+      "valid_from": "2026-07-19T20:09:32.989Z",
+      "valid_to": "2026-11-05T08:42:18.050Z",
+      "content_hash": "c481b49e85e5f476",
+      "source_commit": null,
+      "projects": [
+        "AIDA/forgejo-mcp"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-033",
+      "valid_from": "2026-07-18T09:24:16.594Z",
+      "valid_to": "2026-07-20T22:43:35.793Z",
+      "content_hash": "4e168bb47481e457",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-031",
+      "valid_from": "2026-07-17T11:42:56.502Z",
+      "valid_to": null,
+      "content_hash": "2c4c57de5f2d98b6",
+      "source_commit": null,
+      "projects": [
+        "AIDA/miniLORE",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-027",
+      "valid_from": "2026-07-17T11:42:39.871Z",
+      "valid_to": null,
+      "content_hash": "872900abf85e3e18",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-032",
+      "valid_from": "2026-07-17T11:42:39.817Z",
+      "valid_to": null,
+      "content_hash": "8951475e72516a5e",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-028",
+      "valid_from": "2026-07-17T11:33:29.445Z",
+      "valid_to": null,
+      "content_hash": "7e7eb144a54c7b3a",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-010",
+      "valid_from": "2026-07-17T11:31:40.927Z",
+      "valid_to": "2026-11-05T09:32:30.361Z",
+      "content_hash": "d1edcc528a0908c9",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-032",
+      "valid_from": "2026-07-17T11:30:28.496Z",
+      "valid_to": "2026-07-17T11:42:39.817Z",
+      "content_hash": "c7dd5d411ef88117",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-027",
+      "valid_from": "2026-07-17T11:30:28.436Z",
+      "valid_to": "2026-07-17T11:42:39.871Z",
+      "content_hash": "ef85a5e929b7325d",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-031",
+      "valid_from": "2026-07-17T11:26:54.834Z",
+      "valid_to": "2026-07-17T11:42:56.502Z",
+      "content_hash": "b90e8305d2129612",
+      "source_commit": null,
+      "projects": [
+        "AIDA/miniLORE",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-027",
+      "valid_from": "2026-07-17T11:22:57.544Z",
+      "valid_to": "2026-07-17T11:30:28.436Z",
+      "content_hash": "7e2554d6cc6dd9c6",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-022",
+      "valid_from": "2026-07-17T10:59:14.708Z",
+      "valid_to": null,
+      "content_hash": "55bad70755447a9d",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-030",
+      "valid_from": "2026-07-17T10:58:28.574Z",
+      "valid_to": null,
+      "content_hash": "e0bb6b585fcee6b3",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-027",
+      "valid_from": "2026-07-17T10:56:53.375Z",
+      "valid_to": "2026-07-17T11:22:57.544Z",
+      "content_hash": "b8c593f0b1d87acb",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-027",
+      "valid_from": "2026-07-17T10:53:31.721Z",
+      "valid_to": "2026-07-17T10:56:53.375Z",
+      "content_hash": "18f18881503f6e05",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-027",
+      "valid_from": "2026-07-17T10:48:48.892Z",
+      "valid_to": "2026-07-17T10:53:31.721Z",
+      "content_hash": "ad2e5ddf6994b351",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-027",
+      "valid_from": "2026-07-17T10:29:36.860Z",
+      "valid_to": "2026-07-17T10:48:48.892Z",
+      "content_hash": "457c8d38fcf34aa5",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-022",
+      "valid_from": "2026-07-17T10:01:04.840Z",
+      "valid_to": "2026-07-17T10:59:14.708Z",
+      "content_hash": "c0084f4c6e4a17b3",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-029",
+      "valid_from": "2026-07-17T09:58:29.040Z",
+      "valid_to": null,
+      "content_hash": "eedd96c36aae42de",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-028",
+      "valid_from": "2026-07-17T09:58:14.382Z",
+      "valid_to": null,
+      "content_hash": "3d5a4acff2de6948",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-027",
+      "valid_from": "2026-07-17T09:57:52.607Z",
+      "valid_to": "2026-07-17T10:29:36.860Z",
+      "content_hash": "ba06fda8e9bdf52b",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-009",
+      "valid_from": "2026-07-17T09:04:55.406Z",
+      "valid_to": null,
+      "content_hash": "7213ac2c63734b78",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-022",
+      "valid_from": "2026-07-17T08:48:51.084Z",
+      "valid_to": "2026-07-17T10:01:04.840Z",
+      "content_hash": "6e883a5cbb1b054d",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-022",
+      "valid_from": "2026-07-17T08:26:52.199Z",
+      "valid_to": "2026-07-17T08:48:51.084Z",
+      "content_hash": "343b5dde82d5bc46",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-024",
+      "valid_from": "2026-07-17T05:59:41.835Z",
+      "valid_to": null,
+      "content_hash": "ac42f9cfc1187d47",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-008",
+      "valid_from": "2026-07-16T22:26:37.892Z",
+      "valid_to": null,
+      "content_hash": "8dba1a5cdeb36d29",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-026",
+      "valid_from": "2026-07-16T19:08:38.392Z",
+      "valid_to": null,
+      "content_hash": "9e84e6b8264f3070",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-026",
+      "valid_from": "2026-07-16T19:07:17.136Z",
+      "valid_to": "2026-07-16T19:08:38.392Z",
+      "content_hash": "189abd015bcb7e8d",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-025",
+      "valid_from": "2026-07-16T18:28:13.022Z",
+      "valid_to": null,
+      "content_hash": "d62b6b2a251d0cb0",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-024",
+      "valid_from": "2026-07-16T18:28:12.978Z",
+      "valid_to": "2026-07-17T05:59:41.835Z",
+      "content_hash": "8d38815f3717a3bf",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-023",
+      "valid_from": "2026-07-16T18:28:12.931Z",
+      "valid_to": null,
+      "content_hash": "19d14aed4fd89e97",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-022",
+      "valid_from": "2026-07-16T18:28:12.882Z",
+      "valid_to": "2026-07-17T08:26:52.199Z",
+      "content_hash": "34e4deaadb10bde5",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-021",
+      "valid_from": "2026-07-16T18:28:12.826Z",
+      "valid_to": null,
+      "content_hash": "0acc5bf0f844ffc0",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-007",
+      "valid_from": "2026-07-16T14:22:42.988Z",
+      "valid_to": null,
+      "content_hash": "366962e2ce5b5f10",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-001",
+      "valid_from": "2026-07-16T13:07:31.172Z",
+      "valid_to": null,
+      "content_hash": "2c18ea694fd2f333",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-006",
+      "valid_from": "2026-07-16T13:05:10.633Z",
+      "valid_to": null,
+      "content_hash": "2541a3bfa8a5337d",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-005",
+      "valid_from": "2026-07-16T11:08:38.318Z",
+      "valid_to": null,
+      "content_hash": "01379be7eddf4c2e",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIMIR-005",
+      "valid_from": "2026-07-16T11:02:40.000Z",
+      "valid_to": null,
+      "content_hash": "a6c1bf7709630139",
+      "source_commit": null,
+      "projects": [
+        "AIDA/forgejo-mcp"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-004",
+      "valid_from": "2026-07-16T11:02:28.230Z",
+      "valid_to": null,
+      "content_hash": "9e9f0d55ba7ddc4b",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-003",
+      "valid_from": "2026-07-16T11:02:17.327Z",
+      "valid_to": null,
+      "content_hash": "f59114d2da245a59",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-002",
+      "valid_from": "2026-07-16T11:02:07.835Z",
+      "valid_to": null,
+      "content_hash": "66bec48bbce31998",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-024",
+      "valid_from": "2026-07-16T08:36:25.370Z",
+      "valid_to": "2026-07-16T18:28:12.978Z",
+      "content_hash": "3175ac59347cf5a0",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-025",
+      "valid_from": "2026-07-16T06:30:42.680Z",
+      "valid_to": "2026-07-16T18:28:13.022Z",
+      "content_hash": "29124bf36e5f9cda",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-025",
+      "valid_from": "2026-07-16T06:22:06.980Z",
+      "valid_to": "2026-07-16T06:30:42.680Z",
+      "content_hash": "199d0afd30c55292",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-024",
+      "valid_from": "2026-07-16T06:17:11.758Z",
+      "valid_to": "2026-07-16T08:36:25.370Z",
+      "content_hash": "eaa50ad7f9b0fef3",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-QG-004",
+      "valid_from": "2026-07-16T06:12:17.422Z",
+      "valid_to": null,
+      "content_hash": "eaac8c0bb2dba3f0",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-013",
+      "valid_from": "2026-07-16T06:10:37.239Z",
+      "valid_to": null,
+      "content_hash": "aa4e06be9013ef8a",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-025",
+      "valid_from": "2026-07-16T05:21:53.951Z",
+      "valid_to": "2026-07-16T06:22:06.980Z",
+      "content_hash": "ea07b804889d5c29",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-024",
+      "valid_from": "2026-07-16T05:12:49.594Z",
+      "valid_to": "2026-07-16T06:17:11.758Z",
+      "content_hash": "0e42076f8a6e02a8",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-CHART-LIB",
+      "valid_from": "2026-07-15T23:45:48.343Z",
+      "valid_to": null,
+      "content_hash": "e170263c2f4812e4",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-023",
+      "valid_from": "2026-07-15T23:37:07.726Z",
+      "valid_to": "2026-07-16T18:28:12.931Z",
+      "content_hash": "7ecbbe67a53a1a4e",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-010",
+      "valid_from": "2026-07-15T23:36:47.187Z",
+      "valid_to": null,
+      "content_hash": "4bfbc6ad3724e7a9",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-009",
+      "valid_from": "2026-07-15T23:36:39.023Z",
+      "valid_to": null,
+      "content_hash": "2df8dcb558bda891",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-008",
+      "valid_from": "2026-07-15T23:36:32.701Z",
+      "valid_to": null,
+      "content_hash": "d6731463ef3dc8ef",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-007",
+      "valid_from": "2026-07-15T23:36:10.452Z",
+      "valid_to": null,
+      "content_hash": "7396197a3256f881",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-006",
+      "valid_from": "2026-07-15T23:36:03.785Z",
+      "valid_to": null,
+      "content_hash": "0ad072c051306dbc",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-005",
+      "valid_from": "2026-07-15T23:35:57.377Z",
+      "valid_to": null,
+      "content_hash": "e94f0c95c90a1bd2",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-004",
+      "valid_from": "2026-07-15T23:35:50.771Z",
+      "valid_to": null,
+      "content_hash": "2e9ff42ae513ef51",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-003",
+      "valid_from": "2026-07-15T23:35:45.314Z",
+      "valid_to": null,
+      "content_hash": "321965f455d8bcf8",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-OBS-003",
+      "valid_from": "2026-07-15T23:09:05.102Z",
+      "valid_to": null,
+      "content_hash": "0e8744fa328f4827",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-012",
+      "valid_from": "2026-07-15T23:08:37.910Z",
+      "valid_to": null,
+      "content_hash": "92c8cd4235ec96a3",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-001",
+      "valid_from": "2026-07-15T23:08:15.523Z",
+      "valid_to": null,
+      "content_hash": "be831ad87b45f4b3",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-022",
+      "valid_from": "2026-07-15T22:56:00.154Z",
+      "valid_to": "2026-07-16T18:28:12.882Z",
+      "content_hash": "bccea087b8a359d9",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIMIR-AGENT-CORE",
+      "valid_from": "2026-07-15T22:55:57.357Z",
+      "valid_to": null,
+      "content_hash": "459bbf202fb1baab",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-021",
+      "valid_from": "2026-07-14T22:43:52.187Z",
+      "valid_to": "2026-07-16T18:28:12.826Z",
+      "content_hash": "49938bec9544dc19",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-TS-MODULES-STACK",
+      "valid_from": "2026-07-14T22:23:29.543Z",
+      "valid_to": null,
+      "content_hash": "7b090f1a3f396061",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DALI-PARSE-SCALE",
+      "valid_from": "2026-07-14T22:18:58.364Z",
+      "valid_to": null,
+      "content_hash": "52545974c12a6551",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-020",
+      "valid_from": "2026-07-14T22:12:19.343Z",
+      "valid_to": null,
+      "content_hash": "65e09504d9bab827",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE",
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-ANVIL-001",
+      "valid_from": "2026-07-14T16:09:23.225Z",
+      "valid_to": null,
+      "content_hash": "acd0cadfb67508a7",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-SKULD-001",
+      "valid_from": "2026-07-14T16:08:55.516Z",
+      "valid_to": null,
+      "content_hash": "067511ec8287dc88",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-CI-001",
+      "valid_from": "2026-07-14T16:08:25.208Z",
+      "valid_to": null,
+      "content_hash": "89852b12bc052c9d",
+      "source_commit": null,
+      "projects": [
+        "AIDA/forgejo-mcp"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-013",
+      "valid_from": "2026-07-14T16:07:58.851Z",
+      "valid_to": null,
+      "content_hash": "0f911477a51608da",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-TS-001",
+      "valid_from": "2026-07-14T16:07:22.212Z",
+      "valid_to": null,
+      "content_hash": "8ae59d4d545baf4f",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-YGG-REST-ONLY",
+      "valid_from": "2026-07-14T16:06:52.828Z",
+      "valid_to": null,
+      "content_hash": "b7f3ccac249c3e71",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-002",
+      "valid_from": "2026-07-14T16:06:23.497Z",
+      "valid_to": null,
+      "content_hash": "0a0052777924f0cf",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DA-011",
+      "valid_from": "2026-07-14T16:05:54.869Z",
+      "valid_to": null,
+      "content_hash": "8979f366ea572650",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-ARCH-001",
+      "valid_from": "2026-07-14T16:05:27.050Z",
+      "valid_to": null,
+      "content_hash": "cd80ab1d2c1813dd",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-YGG-ARROW-FLIGHT",
+      "valid_from": "2026-07-14T14:16:24.764Z",
+      "valid_to": null,
+      "content_hash": "064fa265490030ad",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-019",
+      "valid_from": "2026-07-14T13:55:00.202Z",
+      "valid_to": null,
+      "content_hash": "90557cb1b37da024",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "D-126",
+      "valid_from": "2026-07-14T10:38:21.121Z",
+      "valid_to": null,
+      "content_hash": "965e352a7f8f55e8",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-VOLVA-001",
+      "valid_from": "2026-07-14T10:29:50.090Z",
+      "valid_to": "2026-07-16T13:07:31.172Z",
+      "content_hash": "2318daaec6ea9e3f",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-018",
+      "valid_from": "2026-07-14T09:44:53.398Z",
+      "valid_to": null,
+      "content_hash": "93905851ad6b9df5",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-017",
+      "valid_from": "2026-07-14T09:44:03.305Z",
+      "valid_to": null,
+      "content_hash": "50ad1c11202bb02d",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-016",
+      "valid_from": "2026-07-14T09:43:07.624Z",
+      "valid_to": null,
+      "content_hash": "6e6f3179c2bbdd28",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-015",
+      "valid_from": "2026-07-12T17:48:06.505Z",
+      "valid_to": null,
+      "content_hash": "7a2516e875871aad",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-014",
+      "valid_from": "2026-07-12T13:28:57.198Z",
+      "valid_to": null,
+      "content_hash": "14fb372d49dea2d5",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-013",
+      "valid_from": "2026-07-10T17:30:03.601Z",
+      "valid_to": "2026-07-16T06:10:37.239Z",
+      "content_hash": "122756e740032921",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-MT-012",
+      "valid_from": "2026-07-10T15:41:32.859Z",
+      "valid_to": null,
+      "content_hash": "4a564d2b5a8d88b9",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-INFRA-PG-WIRE",
+      "valid_from": "2026-07-10T11:53:03.294Z",
+      "valid_to": null,
+      "content_hash": "63d362e46cc4fc6f",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-027",
+      "valid_from": "2026-07-08T05:28:51.048Z",
+      "valid_to": null,
+      "content_hash": "8967cfb44412e656",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-012",
+      "valid_from": "2026-07-07T14:12:30.137Z",
+      "valid_to": null,
+      "content_hash": "4ef25ecaa74ddfa5",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-026",
+      "valid_from": "2026-07-06T21:16:18.743Z",
+      "valid_to": null,
+      "content_hash": "85a091c7a09786c6",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-025",
+      "valid_from": "2026-07-06T19:47:57.160Z",
+      "valid_to": null,
+      "content_hash": "4883068a7e21a976",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-001",
+      "valid_from": "2026-07-06T10:44:31.327Z",
+      "valid_to": null,
+      "content_hash": "d8c22ad4d5c02189",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-INFRA-K8S-001",
+      "valid_from": "2026-07-05T11:55:36.142Z",
+      "valid_to": null,
+      "content_hash": "165866b1904ecc6a",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-ENG-001",
+      "valid_from": "2026-07-05T08:29:28.005Z",
+      "valid_to": null,
+      "content_hash": "5b712d4c3550d2d2",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-024",
+      "valid_from": "2026-07-04T18:02:02.930Z",
+      "valid_to": null,
+      "content_hash": "b72d8ebb2adaad5d",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-MT-011",
+      "valid_from": "2026-07-02T17:48:11.471Z",
+      "valid_to": null,
+      "content_hash": "405f352a85dd81a6",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-GEOID-IDENTITY",
+      "valid_from": "2026-07-01T20:19:22.995Z",
+      "valid_to": null,
+      "content_hash": "faf20f0bcdd503ad",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-QG-004",
+      "valid_from": "2026-06-30T20:15:03.569Z",
+      "valid_to": "2026-07-16T06:12:17.422Z",
+      "content_hash": "0b875c32e09f408a",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-023",
+      "valid_from": "2026-06-30T18:01:59.777Z",
+      "valid_to": null,
+      "content_hash": "4badbb9158d6e40b",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-022",
+      "valid_from": "2026-06-30T15:41:30.641Z",
+      "valid_to": null,
+      "content_hash": "3c8dde6c2cc84ba9",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-QG-003",
+      "valid_from": "2026-06-30T15:36:32.466Z",
+      "valid_to": null,
+      "content_hash": "484c3acadfc8ffd8",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-QG-002",
+      "valid_from": "2026-06-30T13:50:02.563Z",
+      "valid_to": null,
+      "content_hash": "6113b9ae0714f513",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-QG-001",
+      "valid_from": "2026-06-30T13:48:47.402Z",
+      "valid_to": null,
+      "content_hash": "c5b75a36f2b2b451",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-011",
+      "valid_from": "2026-06-30T05:52:55.578Z",
+      "valid_to": null,
+      "content_hash": "bea03da14ffd22db",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-FE-003",
+      "valid_from": "2026-06-29T01:43:12.103Z",
+      "valid_to": null,
+      "content_hash": "44946ec80ceb3a59",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-010",
+      "valid_from": "2026-06-28T18:32:28.462Z",
+      "valid_to": null,
+      "content_hash": "61c59abe6cee6f34",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-DALI-CRON-001",
+      "valid_from": "2026-06-28T16:19:53.418Z",
+      "valid_to": null,
+      "content_hash": "29620abf7d5401a5",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-VERSIONING-001",
+      "valid_from": "2026-06-28T16:16:18.344Z",
+      "valid_to": null,
+      "content_hash": "86708af05550d2ce",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-DALI-CRON-001",
+      "valid_from": "2026-06-28T13:13:07.785Z",
+      "valid_to": "2026-07-02T08:00:00.000Z",
+      "content_hash": "29620abf7d5401a5",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-CHUR-MULTITORG-001",
+      "valid_from": "2026-06-28T12:55:31.201Z",
+      "valid_to": null,
+      "content_hash": "5ae00c8766d1507f",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-LORE-009",
+      "valid_from": "2026-06-28T11:56:04.107Z",
+      "valid_to": null,
+      "content_hash": "3b92976b5064611c",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "adr_id": "ADR-OBS-CMC-002",
+      "valid_from": "2026-06-28T06:51:16.114Z",
+      "valid_to": null,
+      "content_hash": "fde7993bc6939f45",
+      "source_commit": "c15c558b",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-OBS-CMC-001",
+      "valid_from": "2026-06-28T06:51:15.478Z",
+      "valid_to": null,
+      "content_hash": "81220bef2876b8d8",
+      "source_commit": "c15c558b",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-021",
+      "valid_from": "2026-06-23T00:00:00.000Z",
+      "valid_to": null,
+      "content_hash": "238930c450b7f040",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-SOURCE-IDENTITY-001",
+      "valid_from": "2026-06-15T00:00:00.000Z",
+      "valid_to": null,
+      "content_hash": "1c95187a02265170",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-TREE-HASH-MERKLE-001",
+      "valid_from": "2026-06-15T00:00:00.000Z",
+      "valid_to": null,
+      "content_hash": "a3ccb87491274dc8",
+      "source_commit": null,
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-015",
+      "valid_from": "2026-06-11T22:26:41.000Z",
+      "valid_to": null,
+      "content_hash": "4b06c7d9d294b52c",
+      "source_commit": "4f032cd",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-016",
+      "valid_from": "2026-06-11T22:26:41.000Z",
+      "valid_to": "2026-11-05T08:42:17.255Z",
+      "content_hash": "5d77c74a121d0009",
+      "source_commit": "4f032cd",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-017",
+      "valid_from": "2026-06-11T22:26:41.000Z",
+      "valid_to": null,
+      "content_hash": "e113fd6fcd73c880",
+      "source_commit": "4f032cd",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-018",
+      "valid_from": "2026-06-11T22:26:41.000Z",
+      "valid_to": null,
+      "content_hash": "32d876a6d19c7edb",
+      "source_commit": "4f032cd",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-SVC-001",
+      "valid_from": "2026-06-11T22:26:41.000Z",
+      "valid_to": null,
+      "content_hash": "43a1b2a0315932bb",
+      "source_commit": "4f032cd",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-DALI-JOBENGINE-001",
+      "valid_from": "2026-06-11T13:51:37.000Z",
+      "valid_to": null,
+      "content_hash": "7fb99a0f453b6ef0",
+      "source_commit": "41bebed",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-FE-001",
+      "valid_from": "2026-06-11T13:51:37.000Z",
+      "valid_to": null,
+      "content_hash": "97facfe559401321",
+      "source_commit": "41bebed",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-FE-002",
+      "valid_from": "2026-06-11T13:51:37.000Z",
+      "valid_to": null,
+      "content_hash": "7c2c0ef40a5037cf",
+      "source_commit": "41bebed",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-FULLSCAN-VANISHING",
+      "valid_from": "2026-06-11T13:51:37.000Z",
+      "valid_to": null,
+      "content_hash": "df63c18ac807e4c2",
+      "source_commit": "41bebed",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-STMTGEOID-STABILITY",
+      "valid_from": "2026-06-11T13:51:37.000Z",
+      "valid_to": null,
+      "content_hash": "ee9acb260e2cc1e3",
+      "source_commit": "41bebed",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIMIR-002",
+      "valid_from": "2026-06-11T13:51:37.000Z",
+      "valid_to": null,
+      "content_hash": "7fb99a0f453b6ef0",
+      "source_commit": "41bebed",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIMIR-003",
+      "valid_from": "2026-06-11T13:51:37.000Z",
+      "valid_to": null,
+      "content_hash": "7fb99a0f453b6ef0",
+      "source_commit": "41bebed",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-MIMIR-004",
+      "valid_from": "2026-06-11T13:51:37.000Z",
+      "valid_to": null,
+      "content_hash": "7fb99a0f453b6ef0",
+      "source_commit": "41bebed",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "adr_id": "ADR-SVC-002",
+      "valid_from": "2026-06-11T13:51:37.000Z",
+      "valid_to": null,
+      "content_hash": "c26e6c68cc61cf7c",
+      "source_commit": "41bebed",
+      "projects": [
+        "AIDA/forgejo-mcp"
+      ]
+    },
+    {
+      "adr_id": "ADR-HND-011",
+      "valid_from": "2026-06-11T11:08:47.000Z",
+      "valid_to": "2026-06-11T22:26:41.000Z",
+      "content_hash": "91914451827c11a1",
+      "source_commit": "5f5c42d",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    }
+  ],
+  "_page": {
+    "limit": 1000,
+    "offset": 0,
+    "total": 300,
+    "has_more": false
+  }
+}

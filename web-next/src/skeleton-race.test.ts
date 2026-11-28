@@ -22,7 +22,12 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const webNext = resolve(here, '..');
 const repo = resolve(webNext, '..');
-const ROOTS = [resolve(webNext, 'src'), resolve(repo, 'kit', 'src')];
+const ROOTS = [resolve(webNext, 'src')];
+// K5-PACKAGE-DELIVERY: исходников kit в репозитории больше нет (пакет @seidr/kit из AIDA/lorekit), а в его dist
+// JSX уже скомпилирован — разбор по отступам там не работает. Контейнеры kit со скелетоном внутри — снимком,
+// снятым той же функцией с исходников kit 0.2.0 (src/**/*.tsx без тестов). Поднимаете версию kit — пересоберите
+// снимок; правило для тестов самого kit живёт в его репозитории.
+const KIT_SKELETON_CONTAINERS = ['kit-chart'];
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
@@ -140,8 +145,9 @@ describe('S11-SECRET-ROTATION-RACE · сторож «findBy контейнера
     for (const id of ['adm-oldsecret', 'adm-log-batch-panel', 'adm-pf']) expect(ids.has(id), id).toBe(true);
   });
 
-  it('ни один тест web-next и kit не читает синхронно внутри контейнера со скелетоном', () => {
+  it('ни один тест web-next не читает синхронно внутри контейнера со скелетоном (своего или kit)', () => {
     const ids = skeletonContainers(files.filter((f) => /\.tsx$/.test(f) && !isTest(f)).map((f) => ({ text: read(f) })));
+    for (const id of KIT_SKELETON_CONTAINERS) ids.add(id);
     const self = fileURLToPath(import.meta.url);
     const offenders = files
       .filter((f) => isTest(f) && resolve(f) !== resolve(self))

@@ -4,8 +4,9 @@
 // же текст выглядел по-разному. Правило: каждая жирность из seidr.css — с файлом.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { KIT_CSS } from './test/kitPaths';
 
-const css = readFileSync(`${process.cwd()}/../kit/src/styles/seidr.css`, 'utf8');
+const css = readFileSync(KIT_CSS, 'utf8');
 const app = readFileSync(`${process.cwd()}/src/App.tsx`, 'utf8');
 const imported = (pkg: string) => new Set([...app.matchAll(new RegExp(String.raw`@fontsource/${pkg}/(\d{3})\.css`, 'g'))].map(m => Number(m[1])));
 

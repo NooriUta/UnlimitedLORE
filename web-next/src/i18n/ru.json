@@ -164,6 +164,8 @@
   "lists.field.components": "Компоненты",
   "lists.field.component": "Компонент",
   "lists.field.release": "Релиз",
+  "lists.field.repository": "Репозиторий",
+  "lists.repository.undetermined": "не определён",
   "lists.field.milestone": "Веха",
   "lists.field.tasks": "Задачи",
   "lists.field.sprint": "Спринт",

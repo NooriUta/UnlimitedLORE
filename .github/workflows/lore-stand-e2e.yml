@@ -22,6 +22,16 @@ on:
         description: 'Адрес стенда (только препрод)'
         required: false
         default: 'https://preprod.lore.odal.seidrstudio.pro'
+      only:
+        description: 'Только эти сценарии (имя файла, например releaseRepoDryRun); пусто — все'
+        required: false
+        default: ''
+      rr_apply:
+        description: 'Применить миграцию «релиз → репозиторий» (пишет в базу!) — только preprod и только по слову владелицы'
+        required: false
+        default: 'no'
+        type: choice
+        options: ['no', 'preprod']
 
 concurrency:
   group: lore-stand-e2e
@@ -56,6 +66,7 @@ jobs:
           command -v node >/dev/null || { echo "::error::в образе раннера нет node"; exit 1; }
           node --version
 
+      # K5-PACKAGE-DELIVERY: @seidr/kit — через npm-прокси kkRepo (web-next/.npmrc), без ключа.
       - name: Install web-next
         working-directory: web-next
         run: bash ../.github/scripts/npm-retry.sh ci
@@ -153,7 +164,10 @@ jobs:
 
       - name: RBAC + смоук + брокеринг на стенде
         working-directory: web-next
-        run: npm run e2e:stand
+        env:
+          STAND_ONLY: ${{ inputs.only }}
+          LORE_RR_APPLY: ${{ inputs.rr_apply || 'no' }}
+        run: npm run e2e:stand -- ${STAND_ONLY}
 
       - name: Отчёт
         if: always()
@@ -166,6 +180,15 @@ jobs:
       - name: Отчёт — в видимую папку
         if: always()
         run: mkdir -p stand-report && cp -r web-next/e2e/.stand-report/. stand-report/ 2>/dev/null; ls stand-report | head -50 || true
+
+      # 26.11.2026 (Forgejo 17, прогон 11182): 77/77 pass, а джоба красная — выгрузка упала
+      # «Create Artifact Container: socket hang up» ×5. Гипотеза: адрес сервиса артефактов —
+      # внутреннее имя, которое контейнер джобы перестал разрешать (та же причина, что у
+      # preprod.lore). Диагностика адреса — до выгрузки; сама выгрузка не роняет итог тестов.
+      - name: Сервис артефактов — адрес и достижимость (диагностика)
+        if: always()
+        continue-on-error: true
+        run: bash .github/scripts/artifact-endpoint-diag.sh
 
       # Прогон 11265 (26.11.2026, v1.19.1): 76/76 pass, а джоба красная — «Create Artifact Container: socket hang up» ×5.
       # Итог смоука = итог тестов (их шаг выше не защищён); выгрузка скринов — не повод держать шлагбаум прода.

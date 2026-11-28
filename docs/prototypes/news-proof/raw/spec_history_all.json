@@ -1,0 +1,2714 @@
+{
+  "rows": [
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-ALGORITHMS",
+      "valid_from": "2026-11-07T17:28:46.898Z",
+      "valid_to": null,
+      "content_hash": "890c0396be6f7a13",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-ALGORITHMS",
+      "valid_from": "2026-11-07T17:10:56.202Z",
+      "valid_to": "2026-11-07T17:28:46.898Z",
+      "content_hash": "b03e809e6dc87708",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-ALGORITHMS",
+      "valid_from": "2026-11-07T17:09:57.004Z",
+      "valid_to": "2026-11-07T17:10:56.202Z",
+      "content_hash": "8ceb4d6c35311932",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-ALGORITHMS",
+      "valid_from": "2026-11-07T17:05:50.879Z",
+      "valid_to": "2026-11-07T17:09:57.004Z",
+      "content_hash": "2e224cd36eae3a00",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-ALGORITHMS",
+      "valid_from": "2026-11-07T17:05:01.573Z",
+      "valid_to": "2026-11-07T17:05:50.879Z",
+      "content_hash": "6ca16ece7782fccd",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-PARITY",
+      "valid_from": "2026-11-07T16:59:49.113Z",
+      "valid_to": null,
+      "content_hash": "91932554daf3e488",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-S2-CONTRACTS",
+      "valid_from": "2026-11-07T16:56:16.810Z",
+      "valid_to": null,
+      "content_hash": "d6ba754793a8cc4c",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-S1-CONTRACTS",
+      "valid_from": "2026-11-07T15:22:17.624Z",
+      "valid_to": null,
+      "content_hash": "ca9497689590cbe5",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-S1-CONTRACTS",
+      "valid_from": "2026-11-07T15:02:44.117Z",
+      "valid_to": "2026-11-07T15:22:17.624Z",
+      "content_hash": "0540d89ef3fbe657",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-PROTO-NEWS",
+      "valid_from": "2026-11-07T13:23:01.071Z",
+      "valid_to": null,
+      "content_hash": "ded2f70dd6d54921",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-PROTO-WHY",
+      "valid_from": "2026-11-07T13:22:54.789Z",
+      "valid_to": null,
+      "content_hash": "265d4e6ed0d0c5d1",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-COMPOSITE-OBJECTS",
+      "valid_from": "2026-11-07T13:22:53.281Z",
+      "valid_to": null,
+      "content_hash": "0287b4ccda207fd8",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-PROTO-ADMIN",
+      "valid_from": "2026-11-07T13:22:48.140Z",
+      "valid_to": null,
+      "content_hash": "c7bf6fed702ef3e9",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-SPRINT-CHAIN",
+      "valid_from": "2026-11-07T13:22:45.878Z",
+      "valid_to": null,
+      "content_hash": "802ce6db02695410",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-PROTOTYPES",
+      "valid_from": "2026-11-07T13:22:41.293Z",
+      "valid_to": null,
+      "content_hash": "5616740107583fa5",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-EMBED-BLOCKS",
+      "valid_from": "2026-11-07T13:22:35.807Z",
+      "valid_to": null,
+      "content_hash": "3b1b9c71401ce00a",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-WHY-CANVAS-TECH",
+      "valid_from": "2026-11-07T13:22:32.801Z",
+      "valid_to": null,
+      "content_hash": "df3c5120a16eaf5c",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-CRITIQUE-R3-SCALE",
+      "valid_from": "2026-11-07T13:22:29.337Z",
+      "valid_to": null,
+      "content_hash": "32e27456d166b7fb",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-WHY-PROPOSAL",
+      "valid_from": "2026-11-07T13:22:24.561Z",
+      "valid_to": null,
+      "content_hash": "0a99d611be37742e",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-CRITIQUE-R2",
+      "valid_from": "2026-11-07T13:22:22.297Z",
+      "valid_to": null,
+      "content_hash": "aab4859c281ddf89",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-ADMIN-REVIEW",
+      "valid_from": "2026-11-07T13:22:16.831Z",
+      "valid_to": null,
+      "content_hash": "5d46896e9b654cbe",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-CRITIQUE-R1",
+      "valid_from": "2026-11-07T13:22:12.107Z",
+      "valid_to": null,
+      "content_hash": "80bb16afaa7bc64a",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-V2-PARALLEL",
+      "valid_from": "2026-11-07T13:22:09.436Z",
+      "valid_to": null,
+      "content_hash": "615776bdd671b35a",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-VS-CHAMPIONS",
+      "valid_from": "2026-11-07T13:22:04.713Z",
+      "valid_to": null,
+      "content_hash": "b543a1a9cb862b16",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-FEEDS",
+      "valid_from": "2026-11-07T13:22:00.402Z",
+      "valid_to": null,
+      "content_hash": "9f872372a92fb4ee",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-CHAMPION-INSIGHTS",
+      "valid_from": "2026-11-07T13:21:58.650Z",
+      "valid_to": null,
+      "content_hash": "37c24ee53a63c971",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-NEWS-OBJECTS",
+      "valid_from": "2026-11-07T13:21:53.651Z",
+      "valid_to": null,
+      "content_hash": "756bc2c55cc27600",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-RESEARCH-PASS2",
+      "valid_from": "2026-11-07T13:21:52.087Z",
+      "valid_to": null,
+      "content_hash": "3bdc8737650a149b",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UXR-RESEARCH-PASS1",
+      "valid_from": "2026-11-07T13:21:43.999Z",
+      "valid_to": null,
+      "content_hash": "5488a260e80b3b47",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UX-GRAPH-VIEWS",
+      "valid_from": "2026-11-07T10:39:50.269Z",
+      "valid_to": null,
+      "content_hash": "d11a88bbda7868b5",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-UX-GRAPH-VIEWS",
+      "valid_from": "2026-11-07T10:33:24.039Z",
+      "valid_to": "2026-11-07T10:39:50.269Z",
+      "content_hash": "b12bf28b82f566a0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-APP-DESIGN",
+      "valid_from": "2026-11-07T10:32:58.017Z",
+      "valid_to": null,
+      "content_hash": "c1207aaeb83f1573",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DW-UNIT-GAIT",
+      "valid_from": "2026-11-07T10:05:39.404Z",
+      "valid_to": null,
+      "content_hash": "21c19040085c1823",
+      "projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-EXPORT",
+      "valid_from": "2026-11-07T10:04:09.622Z",
+      "valid_to": null,
+      "content_hash": "6c94c60a3b23ba6c",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-RUNE-DREAMS",
+      "valid_from": "2026-11-07T10:03:45.710Z",
+      "valid_to": null,
+      "content_hash": "e0a1fced66c7d831",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DW-UNIT-GAIT",
+      "valid_from": "2026-11-07T09:24:19.463Z",
+      "valid_to": "2026-11-07T10:05:39.404Z",
+      "content_hash": "8ea054838e650b28",
+      "projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DW-UNIT-GAIT",
+      "valid_from": "2026-11-07T08:39:01.906Z",
+      "valid_to": "2026-11-07T09:24:19.463Z",
+      "content_hash": "eb42e95d7e09e81a",
+      "projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-ARCHIVE",
+      "valid_from": "2026-11-06T22:23:01.992Z",
+      "valid_to": null,
+      "content_hash": "67c1f74182e811e6",
+      "projects": [
+        "AIDA/miniLore_serverside"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-ARCHIVE",
+      "valid_from": "2026-11-06T21:34:07.351Z",
+      "valid_to": "2026-11-06T22:23:01.992Z",
+      "content_hash": "b834f82e532c6dd8",
+      "projects": [
+        "AIDA/miniLore_serverside"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-RELEASE-NOTES",
+      "valid_from": "2026-11-06T13:32:37.283Z",
+      "valid_to": null,
+      "content_hash": "4723e8e2a74734d7",
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/volva",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-WORK-ANY-KIND",
+      "valid_from": "2026-11-06T09:33:31.936Z",
+      "valid_to": null,
+      "content_hash": "992fd777c3904ea2",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-SITE-RELEASE-NOTES",
+      "valid_from": "2026-11-06T06:14:53.959Z",
+      "valid_to": null,
+      "content_hash": "1dbba6686847760c",
+      "projects": [
+        "NooriUta/seidr-site"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-RELEASE-NOTES",
+      "valid_from": "2026-11-06T05:54:36.128Z",
+      "valid_to": "2026-11-06T13:32:37.283Z",
+      "content_hash": "20e7eb2522c39a6e",
+      "projects": [
+        "NooriUta/AIDA",
+        "NooriUta/volva",
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-LOADTEST",
+      "valid_from": "2026-11-06T05:42:37.657Z",
+      "valid_to": null,
+      "content_hash": "488c33cefdb5e8d9",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-LOADTEST",
+      "valid_from": "2026-11-06T05:36:27.331Z",
+      "valid_to": "2026-11-06T05:42:37.657Z",
+      "content_hash": "3046a76772d94b28",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-KC-001",
+      "valid_from": "2026-11-05T17:53:40.676Z",
+      "valid_to": null,
+      "content_hash": "53661a12e671e805",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "LORE_DB_SCHEMA_MERMAID",
+      "valid_from": "2026-11-05T16:02:50.234Z",
+      "valid_to": null,
+      "content_hash": "9cbf61fed0cd1565",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-SECRETS-001",
+      "valid_from": "2026-11-05T15:37:14.226Z",
+      "valid_to": null,
+      "content_hash": "064cbed8f6727572",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-OMILORE-JRE",
+      "valid_from": "2026-11-05T13:52:07.834Z",
+      "valid_to": null,
+      "content_hash": "18772bbb504c7ef2",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-GLADSHEIM-JAVA",
+      "valid_from": "2026-11-05T13:37:28.950Z",
+      "valid_to": null,
+      "content_hash": "1cc2d550204f9e71",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-GLADSHEIM-QUARKUS",
+      "valid_from": "2026-11-05T13:37:19.678Z",
+      "valid_to": null,
+      "content_hash": "ad283f8be37fc7f9",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VOLVA_DRIVER-PGJDBC",
+      "valid_from": "2026-11-05T13:37:08.525Z",
+      "valid_to": null,
+      "content_hash": "4924f3e6d12d8e36",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VOLVA-JVM",
+      "valid_from": "2026-11-05T13:36:52.725Z",
+      "valid_to": null,
+      "content_hash": "aa37af1663aa63dc",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-VOLVA-METABASE",
+      "valid_from": "2026-11-05T13:36:10.208Z",
+      "valid_to": null,
+      "content_hash": "4fb0ab478341e61c",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-GLADSHEIM-ARCADEDB",
+      "valid_from": "2026-11-05T09:32:28.279Z",
+      "valid_to": null,
+      "content_hash": "2560cc92bb6867fe",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "spec_id": "SPEC-INFRA-NET-001",
+      "valid_from": "2026-11-05T08:43:52.640Z",
+      "valid_to": null,
+      "content_hash": "21047f9fee019d62",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-INFRA-ODAL-DNS",
+      "valid_from": "2026-11-05T08:42:34.713Z",
+      "valid_to": null,
+      "content_hash": "9ad44b9f0378cf04",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SECRETS_MANAGEMENT",
+      "valid_from": "2026-11-05T08:41:53.367Z",
+      "valid_to": null,
+      "content_hash": "4376f5790569179d",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MULTISENSOR-PINOUT",
+      "valid_from": "2026-11-04T14:39:58.755Z",
+      "valid_to": null,
+      "content_hash": "d21af04b6d07a08e",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-VOLVA-DATASTORY",
+      "valid_from": "2026-11-04T06:38:21.543Z",
+      "valid_to": null,
+      "content_hash": "56798faa6664d2d4",
+      "projects": [
+        "NooriUta/volva"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-LORE-DB",
+      "valid_from": "2026-11-01T09:11:26.835Z",
+      "valid_to": null,
+      "content_hash": "91f2915bc1774190",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-SERVER",
+      "valid_from": "2026-11-01T09:09:01.527Z",
+      "valid_to": null,
+      "content_hash": "e288d84e68962ac7",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-LORE-DB",
+      "valid_from": "2026-11-01T07:48:46.496Z",
+      "valid_to": "2026-11-01T09:11:26.835Z",
+      "content_hash": "cf32ff3061f3128a",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-LORE-DB",
+      "valid_from": "2026-11-01T06:07:33.248Z",
+      "valid_to": "2026-11-01T07:48:46.496Z",
+      "content_hash": "719f495f8409dfae",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-LORE-DB",
+      "valid_from": "2026-11-01T06:02:11.922Z",
+      "valid_to": "2026-11-01T06:07:33.248Z",
+      "content_hash": "a062084473b80e1a",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-LORE-DB",
+      "valid_from": "2026-11-01T05:55:44.582Z",
+      "valid_to": "2026-11-01T06:02:11.922Z",
+      "content_hash": "b2aa3eff5468d557",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DW-HY3D-UNITS",
+      "valid_from": "2026-10-28T20:51:20.223Z",
+      "valid_to": null,
+      "content_hash": "24483baf8e81a2ad",
+      "projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DW-HY3D-UNITS",
+      "valid_from": "2026-10-28T13:15:41.065Z",
+      "valid_to": "2026-10-28T20:51:20.223Z",
+      "content_hash": "72f45182f750785b",
+      "projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWU-LORE-READ",
+      "valid_from": "2026-10-28T05:17:02.966Z",
+      "valid_to": null,
+      "content_hash": "06f25231f1af4ed5",
+      "projects": [
+        "AIDA/Datawanderers-Unity"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-SERVER",
+      "valid_from": "2026-10-27T14:36:28.469Z",
+      "valid_to": "2026-11-01T09:09:01.527Z",
+      "content_hash": "ab54b687c7554bbc",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-EXPORT",
+      "valid_from": "2026-10-26T09:44:56.544Z",
+      "valid_to": "2026-11-07T10:04:09.622Z",
+      "content_hash": "0125ec025490535f",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-EXPORT",
+      "valid_from": "2026-10-23T17:37:37.662Z",
+      "valid_to": "2026-10-26T09:44:56.544Z",
+      "content_hash": "9502d4483a51728f",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-EXPORT",
+      "valid_from": "2026-10-23T17:26:54.693Z",
+      "valid_to": "2026-10-23T17:37:37.662Z",
+      "content_hash": "3d57838710c3957b",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-RUNE-DREAMS",
+      "valid_from": "2026-10-23T17:10:14.314Z",
+      "valid_to": "2026-11-07T10:03:45.710Z",
+      "content_hash": "fcafa3fe1d3f586d",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-EXPORT",
+      "valid_from": "2026-10-23T17:03:04.361Z",
+      "valid_to": "2026-10-23T17:26:54.693Z",
+      "content_hash": "b186f3b7b0f341ab",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-LORE-DB",
+      "valid_from": "2026-10-23T17:03:03.834Z",
+      "valid_to": "2026-11-01T05:55:44.582Z",
+      "content_hash": "f7b52906554ab5fb",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-EXPORT",
+      "valid_from": "2026-10-23T14:47:33.431Z",
+      "valid_to": "2026-10-23T17:03:04.361Z",
+      "content_hash": "0ec10abe8b7dc9f7",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DWL-LORE-DB",
+      "valid_from": "2026-10-23T14:47:33.023Z",
+      "valid_to": "2026-10-23T17:03:03.834Z",
+      "content_hash": "3ae33eee210d0442",
+      "projects": [
+        "AIDA/Datawanderers-ServerandLore"
+      ]
+    },
+    {
+      "spec_id": "HOUND_GEOID_SPEC",
+      "valid_from": "2026-10-20T21:50:52.143Z",
+      "valid_to": null,
+      "content_hash": "b52d291791005442",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_POSTGRESQL_DIALECT",
+      "valid_from": "2026-10-20T21:48:50.365Z",
+      "valid_to": null,
+      "content_hash": "81ae7d30a8c81d67",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "OL_ALGORITHMS_SPEC",
+      "valid_from": "2026-10-20T21:47:16.857Z",
+      "valid_to": null,
+      "content_hash": "9f94df39a5c0cafa",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "OL_CONNECTION_MAPPING_SPEC",
+      "valid_from": "2026-10-20T21:45:23.014Z",
+      "valid_to": null,
+      "content_hash": "cbce105f8fd56fc8",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "OL_IDENTIFIER_MAPPING_SPEC",
+      "valid_from": "2026-10-20T21:43:35.525Z",
+      "valid_to": null,
+      "content_hash": "76b210ee438f8f15",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-HOUND-DIALECT-ONBOARDING-001",
+      "valid_from": "2026-10-20T20:04:19.440Z",
+      "valid_to": null,
+      "content_hash": "43708a49c4e60717",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MODULES_TECH_STACK",
+      "valid_from": "2026-10-20T19:01:12.032Z",
+      "valid_to": null,
+      "content_hash": "79a0f28ec3d12d84",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SKADI_SPEC",
+      "valid_from": "2026-10-20T18:54:05.036Z",
+      "valid_to": null,
+      "content_hash": "13daee7f3ccf6741",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "FRONTEND_ARCHITECTURE",
+      "valid_from": "2026-10-20T18:53:03.055Z",
+      "valid_to": null,
+      "content_hash": "ab347c91062aa6dd",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "CHUR_SERVICE",
+      "valid_from": "2026-10-20T18:52:54.161Z",
+      "valid_to": null,
+      "content_hash": "9dddf7f3e3c1e971",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MIMIR_SPEC",
+      "valid_from": "2026-10-20T18:52:47.257Z",
+      "valid_to": null,
+      "content_hash": "d0e4b9bc1e306b64",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MODULES_TECH_STACK",
+      "valid_from": "2026-10-20T18:51:57.829Z",
+      "valid_to": "2026-10-20T19:01:12.032Z",
+      "content_hash": "ee61e8973f0773bd",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "DALI_OVERVIEW",
+      "valid_from": "2026-10-20T18:51:39.037Z",
+      "valid_to": null,
+      "content_hash": "2297ba2115ac5ff8",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_INDEX",
+      "valid_from": "2026-10-20T18:51:03.958Z",
+      "valid_to": null,
+      "content_hash": "c05787f793336e46",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "VERDANDI_ARCHITECTURE",
+      "valid_from": "2026-10-20T18:50:23.252Z",
+      "valid_to": null,
+      "content_hash": "5bbc0e7f15c3afce",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MULTI_APP_TOPOLOGY",
+      "valid_from": "2026-10-20T18:50:08.792Z",
+      "valid_to": null,
+      "content_hash": "43c5cfe87f89fc31",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MIMIR_SPEC",
+      "valid_from": "2026-10-20T18:48:35.882Z",
+      "valid_to": "2026-10-20T18:52:47.257Z",
+      "content_hash": "2113a35f6b8da24f",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "HOUND_INDEX",
+      "valid_from": "2026-10-20T18:48:03.336Z",
+      "valid_to": "2026-10-20T18:51:03.958Z",
+      "content_hash": "603ca1f3277a4243",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "ANVIL_SERVICE",
+      "valid_from": "2026-10-20T18:47:55.838Z",
+      "valid_to": null,
+      "content_hash": "afc5ab8dccf4623c",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "CHUR_SERVICE",
+      "valid_from": "2026-10-20T18:47:48.512Z",
+      "valid_to": "2026-10-20T18:52:54.161Z",
+      "content_hash": "ee8e01cbc1d03daf",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "RBAC_MULTITENANT",
+      "valid_from": "2026-10-20T18:47:11.352Z",
+      "valid_to": null,
+      "content_hash": "4339b0fbf92b1f8c",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SHUTTLE_SERVICE",
+      "valid_from": "2026-10-20T18:47:07.514Z",
+      "valid_to": null,
+      "content_hash": "29fa7ab38732bc0e",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "DALI_OVERVIEW",
+      "valid_from": "2026-10-20T18:46:32.978Z",
+      "valid_to": "2026-10-20T18:51:39.037Z",
+      "content_hash": "0cdb8d0d51244481",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "FRONTEND_ARCHITECTURE",
+      "valid_from": "2026-10-20T18:44:55.682Z",
+      "valid_to": "2026-10-20T18:53:03.055Z",
+      "content_hash": "9f7dd34bbf66e310",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "MULTI_APP_TOPOLOGY",
+      "valid_from": "2026-10-20T18:44:45.899Z",
+      "valid_to": "2026-10-20T18:50:08.792Z",
+      "content_hash": "7e590ecd72e8e070",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "BACKEND_ARCHITECTURE",
+      "valid_from": "2026-10-20T18:44:36.970Z",
+      "valid_to": null,
+      "content_hash": "12916b0a3ba4e655",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "INTEGRATIONS_MATRIX",
+      "valid_from": "2026-10-20T18:43:51.899Z",
+      "valid_to": null,
+      "content_hash": "a6bec8f03521516f",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "specs_INDEX",
+      "valid_from": "2026-10-20T18:43:19.957Z",
+      "valid_to": null,
+      "content_hash": "c3fef0a90ac2f045",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-INFRA-NET-001",
+      "valid_from": "2026-10-20T18:42:45.956Z",
+      "valid_to": "2026-11-05T08:43:52.640Z",
+      "content_hash": "044e55e8b4e1c899",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "AIDA_DB_TOPOLOGY",
+      "valid_from": "2026-10-20T18:42:33.981Z",
+      "valid_to": null,
+      "content_hash": "2347e26c3f6a123a",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "VERDANDI_ARCHITECTURE",
+      "valid_from": "2026-10-20T18:42:12.863Z",
+      "valid_to": "2026-10-20T18:50:23.252Z",
+      "content_hash": "2c3589795e2661d6",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DIALECT-IDENT-001",
+      "valid_from": "2026-10-20T18:35:34.371Z",
+      "valid_to": null,
+      "content_hash": "62c054faff7002af",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DIALECT-IDENT-METRICS-001",
+      "valid_from": "2026-10-20T18:35:04.552Z",
+      "valid_to": null,
+      "content_hash": "e885ac674a6356d8",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TUNGA-001",
+      "valid_from": "2026-10-20T18:27:14.766Z",
+      "valid_to": null,
+      "content_hash": "c26ec6f42a0447c3",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-QG-JOB-CONTRACT",
+      "valid_from": "2026-10-20T12:06:07.674Z",
+      "valid_to": null,
+      "content_hash": "ef2c9688bc0de2c0",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-PLAN-MODEL",
+      "valid_from": "2026-10-20T12:03:27.195Z",
+      "valid_to": null,
+      "content_hash": "cf40f34a009fb311",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DIALECT-IDENT-METRICS-001",
+      "valid_from": "2026-10-20T11:13:45.025Z",
+      "valid_to": "2026-10-20T18:35:04.552Z",
+      "content_hash": "76f9a08ca9e26ef4",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DIALECT-IDENT-METRICS-001",
+      "valid_from": "2026-10-20T09:08:24.489Z",
+      "valid_to": "2026-10-20T11:13:45.025Z",
+      "content_hash": "446c74e3b0255ea1",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DIALECT-IDENT-METRICS-001",
+      "valid_from": "2026-10-20T07:54:25.246Z",
+      "valid_to": "2026-10-20T09:08:24.489Z",
+      "content_hash": "1bf11e72cbd46097",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DIALECT-IDENT-METRICS-001",
+      "valid_from": "2026-10-20T07:50:32.379Z",
+      "valid_to": "2026-10-20T07:54:25.246Z",
+      "content_hash": "71c775de04bd5196",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-DIALECT-IDENT-001",
+      "valid_from": "2026-10-20T06:12:14.541Z",
+      "valid_to": "2026-10-20T18:35:34.371Z",
+      "content_hash": "f7129347d9867c56",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-LINK-DAEMON",
+      "valid_from": "2026-10-19T09:49:54.737Z",
+      "valid_to": null,
+      "content_hash": "ae0b0072fcca598b",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-LINK-DAEMON",
+      "valid_from": "2026-10-19T07:46:51.369Z",
+      "valid_to": "2026-10-19T09:49:54.737Z",
+      "content_hash": "ff018dcfc39e50c0",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-HW-OPTIONS",
+      "valid_from": "2026-10-07T19:57:00.591Z",
+      "valid_to": null,
+      "content_hash": "f340395a3527502c",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-LLM-001",
+      "valid_from": "2026-10-06T11:39:01.572Z",
+      "valid_to": null,
+      "content_hash": "1d10291ae003f4af",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-NODE-PROTOCOL",
+      "valid_from": "2026-09-23T19:14:15.180Z",
+      "valid_to": null,
+      "content_hash": "68892e15843c0886",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-GLADSHEIM-VOICE-ACT-RULE",
+      "valid_from": "2026-09-22T15:51:57.792Z",
+      "valid_to": null,
+      "content_hash": "5e5d55c342fbfb36",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "spec_id": "SPEC-GLADSHEIM-VOICE-ACT-RULE",
+      "valid_from": "2026-09-22T12:34:21.965Z",
+      "valid_to": "2026-09-22T15:51:57.792Z",
+      "content_hash": "7a4bb4b3dfa15e92",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "spec_id": "SPEC-GLADSHEIM-VOICE-ACT-RULE",
+      "valid_from": "2026-09-22T10:59:20.685Z",
+      "valid_to": "2026-09-22T12:34:21.965Z",
+      "content_hash": "d9dd8c1dc70ade3a",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BEHAVIOR-001",
+      "valid_from": "2026-09-21T17:43:39.154Z",
+      "valid_to": null,
+      "content_hash": "f69da5fabb5ce972",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BEHAVIOR-001",
+      "valid_from": "2026-09-21T17:38:05.051Z",
+      "valid_to": "2026-09-21T17:43:39.154Z",
+      "content_hash": "b2993fa0b973a014",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BEHAVIOR-001",
+      "valid_from": "2026-09-21T17:23:10.217Z",
+      "valid_to": "2026-09-21T17:38:05.051Z",
+      "content_hash": "78a931a583d03124",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-GLADSHEIM-VOICE-ACT-RULE",
+      "valid_from": "2026-09-21T08:17:17.537Z",
+      "valid_to": "2026-09-22T10:59:20.685Z",
+      "content_hash": "957a606db020396e",
+      "projects": [
+        "AIDA/GLADSHEIM"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BOM",
+      "valid_from": "2026-09-21T05:28:57.848Z",
+      "valid_to": null,
+      "content_hash": "ee0b04e1e1ef3212",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-NODE-PROTOCOL",
+      "valid_from": "2026-09-21T05:19:02.731Z",
+      "valid_to": "2026-09-23T19:14:15.180Z",
+      "content_hash": "73b0ff8bf4d60937",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-ZIGBEE-CRATE-BOUNDARIES",
+      "valid_from": "2026-09-21T05:08:35.173Z",
+      "valid_to": null,
+      "content_hash": "704bba1a2aac3f34",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-HW-OPTIONS",
+      "valid_from": "2026-09-17T09:57:59.471Z",
+      "valid_to": "2026-10-07T19:57:00.591Z",
+      "content_hash": "8839f491421bec13",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-HW-OPTIONS",
+      "valid_from": "2026-09-17T09:21:04.024Z",
+      "valid_to": "2026-09-17T09:57:59.471Z",
+      "content_hash": "d64d4da4b80847ed",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-HW-OPTIONS",
+      "valid_from": "2026-09-17T09:10:34.922Z",
+      "valid_to": "2026-09-17T09:21:04.024Z",
+      "content_hash": "f6b6d93f88b1dde2",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-ZIGBEE-CRATE-BOUNDARIES",
+      "valid_from": "2026-09-16T20:17:10.702Z",
+      "valid_to": "2026-09-21T05:08:35.173Z",
+      "content_hash": "53b4c11551d2c26b",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BOM",
+      "valid_from": "2026-09-15T19:43:24.904Z",
+      "valid_to": "2026-09-21T05:28:57.848Z",
+      "content_hash": "86aee087cbe3ab9e",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-OUTAGE-CASES",
+      "valid_from": "2026-09-15T19:15:28.897Z",
+      "valid_to": null,
+      "content_hash": "453ad0683be86224",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITOR-CARDS",
+      "valid_from": "2026-09-15T18:26:40.415Z",
+      "valid_to": null,
+      "content_hash": "e9be663898d19f79",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BOM",
+      "valid_from": "2026-09-15T17:54:02.637Z",
+      "valid_to": "2026-09-15T19:43:24.904Z",
+      "content_hash": "f10bc33f6991c8ae",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BOM",
+      "valid_from": "2026-09-15T17:37:54.819Z",
+      "valid_to": "2026-09-15T17:54:02.637Z",
+      "content_hash": "20815108eff4b3e0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BOM",
+      "valid_from": "2026-09-15T17:29:04.535Z",
+      "valid_to": "2026-09-15T17:37:54.819Z",
+      "content_hash": "8fc4fc84c568f796",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BOM",
+      "valid_from": "2026-09-15T14:28:48.761Z",
+      "valid_to": "2026-09-15T17:29:04.535Z",
+      "content_hash": "da95b5295d6b2183",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BOM",
+      "valid_from": "2026-09-15T14:12:13.657Z",
+      "valid_to": "2026-09-15T14:28:48.761Z",
+      "content_hash": "9e4583c342363c02",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-ZIGBEE-CRATE-BOUNDARIES",
+      "valid_from": "2026-09-15T11:06:56.969Z",
+      "valid_to": "2026-09-16T20:17:10.702Z",
+      "content_hash": "fd0e6f8701ebce6b",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-NODE-PROTOCOL",
+      "valid_from": "2026-09-15T09:38:40.083Z",
+      "valid_to": "2026-09-21T05:19:02.731Z",
+      "content_hash": "ef70f492de9089d2",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-NODE-PROTOCOL",
+      "valid_from": "2026-09-15T08:50:09.218Z",
+      "valid_to": "2026-09-15T09:38:40.083Z",
+      "content_hash": "03229a0a192d61a4",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITOR-CARDS",
+      "valid_from": "2026-09-14T21:24:54.138Z",
+      "valid_to": "2026-09-15T18:26:40.415Z",
+      "content_hash": "edc8698b6ffe21fe",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BOM",
+      "valid_from": "2026-09-14T21:24:42.886Z",
+      "valid_to": "2026-09-15T14:12:13.657Z",
+      "content_hash": "26f11d074e87c46c",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "valid_from": "2026-09-14T21:24:26.103Z",
+      "valid_to": null,
+      "content_hash": "095c939bdc25e621",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BOM",
+      "valid_from": "2026-09-14T18:31:52.032Z",
+      "valid_to": "2026-09-14T21:24:42.886Z",
+      "content_hash": "378bbf4376ba6008",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-BOM",
+      "valid_from": "2026-09-14T18:17:00.005Z",
+      "valid_to": "2026-09-14T18:31:52.032Z",
+      "content_hash": "e42aac360950fbab",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-NODE-PROTOCOL",
+      "valid_from": "2026-09-14T10:19:53.155Z",
+      "valid_to": "2026-09-15T08:50:09.218Z",
+      "content_hash": "caa37b7050742a8e",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "valid_from": "2026-09-11T19:22:18.064Z",
+      "valid_to": "2026-09-14T21:24:26.103Z",
+      "content_hash": "feffbfe2e2acaa0f",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITOR-CARDS",
+      "valid_from": "2026-09-11T19:20:00.591Z",
+      "valid_to": "2026-09-14T21:24:54.138Z",
+      "content_hash": "49596c8fb2fc0f5d",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PANEL-HW-001",
+      "valid_from": "2026-09-11T18:24:02.248Z",
+      "valid_to": null,
+      "content_hash": "e679a51ef1a9c8b7",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-TRUST-LEVELS",
+      "valid_from": "2026-09-11T17:59:53.957Z",
+      "valid_to": null,
+      "content_hash": "e4be6cfb3970d252",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PANEL-HW-001",
+      "valid_from": "2026-09-11T17:24:47.661Z",
+      "valid_to": "2026-09-11T18:24:02.248Z",
+      "content_hash": "d5631b8a0fb312a6",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PANEL-HW-001",
+      "valid_from": "2026-09-11T16:32:42.961Z",
+      "valid_to": "2026-09-11T17:24:47.661Z",
+      "content_hash": "739d62ee1f1823fe",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-NODE-PROTOCOL",
+      "valid_from": "2026-09-11T09:22:20.236Z",
+      "valid_to": "2026-09-14T10:19:53.155Z",
+      "content_hash": "ac5a21df2340cea2",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-LLM-001",
+      "valid_from": "2026-09-11T07:26:18.104Z",
+      "valid_to": "2026-10-06T11:39:01.572Z",
+      "content_hash": "05b573b062ab2eaf",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-NODE-PROTOCOL",
+      "valid_from": "2026-09-11T07:09:30.490Z",
+      "valid_to": "2026-09-11T09:22:20.236Z",
+      "content_hash": "1b3f56c7e54de1f1",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-09-11T06:38:40.693Z",
+      "valid_to": null,
+      "content_hash": "2db5cc06b2212fa1",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-WEATHER-001",
+      "valid_from": "2026-09-10T20:58:45.241Z",
+      "valid_to": null,
+      "content_hash": "e1756fd773511b3a",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-WEATHER-001",
+      "valid_from": "2026-09-10T18:26:40.732Z",
+      "valid_to": "2026-09-10T20:58:45.241Z",
+      "content_hash": "bc30a53f2275dcde",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-AUDIO-FRONTEND",
+      "valid_from": "2026-09-08T06:31:00.519Z",
+      "valid_to": null,
+      "content_hash": "e2c9b78ff9a734df",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-AUDIO-FRONTEND",
+      "valid_from": "2026-09-08T05:45:32.692Z",
+      "valid_to": "2026-09-08T06:31:00.519Z",
+      "content_hash": "06f569e577a4db91",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-AUDIO-FRONTEND",
+      "valid_from": "2026-09-08T05:23:10.878Z",
+      "valid_to": "2026-09-08T05:45:32.692Z",
+      "content_hash": "6a3c87d440d94890",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-AUDIO-FRONTEND",
+      "valid_from": "2026-09-08T05:08:29.077Z",
+      "valid_to": "2026-09-08T05:23:10.878Z",
+      "content_hash": "ad61b5ec73c11933",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-AUDIO-FRONTEND",
+      "valid_from": "2026-09-08T05:02:40.212Z",
+      "valid_to": "2026-09-08T05:08:29.077Z",
+      "content_hash": "bea0849c2796073b",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-ENSEMBLE-001",
+      "valid_from": "2026-09-02T05:06:02.885Z",
+      "valid_to": null,
+      "content_hash": "aec4980d1b301f39",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-ENSEMBLE-001",
+      "valid_from": "2026-09-02T03:01:44.614Z",
+      "valid_to": "2026-09-02T05:06:02.885Z",
+      "content_hash": "4e476ea23c9e4ed3",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-ENSEMBLE-001",
+      "valid_from": "2026-09-01T17:55:58.374Z",
+      "valid_to": "2026-09-02T03:01:44.614Z",
+      "content_hash": "4e476ea23c9e4ed3",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-ENSEMBLE-001",
+      "valid_from": "2026-09-01T17:17:32.900Z",
+      "valid_to": "2026-09-01T17:55:58.374Z",
+      "content_hash": "4dddeff9e0301030",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-P4C5-WATCH",
+      "valid_from": "2026-09-01T16:40:41.506Z",
+      "valid_to": null,
+      "content_hash": "27577a41c3ad38a8",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-NODE-FIRMWARE",
+      "valid_from": "2026-09-01T13:39:31.679Z",
+      "valid_to": null,
+      "content_hash": "52ee65c69bb80966",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-S31-WATCH",
+      "valid_from": "2026-09-01T09:44:18.791Z",
+      "valid_to": null,
+      "content_hash": "ce58dfc70bc4cf30",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-P4C5-WATCH",
+      "valid_from": "2026-09-01T09:42:40.497Z",
+      "valid_to": "2026-09-01T16:40:41.506Z",
+      "content_hash": "996fffbc1abd8fc1",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-NODE-FIRMWARE",
+      "valid_from": "2026-09-01T09:19:18.239Z",
+      "valid_to": "2026-09-01T13:39:31.679Z",
+      "content_hash": "4ccbfbe058f8e139",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-P4C5-WATCH",
+      "valid_from": "2026-09-01T09:18:00.699Z",
+      "valid_to": "2026-09-01T09:42:40.497Z",
+      "content_hash": "4bb5c6f81c61dc11",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-P4C5-WATCH",
+      "valid_from": "2026-09-01T08:42:54.053Z",
+      "valid_to": "2026-09-01T09:18:00.699Z",
+      "content_hash": "b5b85dfd4f7c3ad2",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-AUDIO-FRONTEND",
+      "valid_from": "2026-09-01T08:37:57.062Z",
+      "valid_to": "2026-09-08T05:02:40.212Z",
+      "content_hash": "84cb56e0db5e4f32",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-S31-WATCH",
+      "valid_from": "2026-09-01T07:38:44.084Z",
+      "valid_to": "2026-09-01T09:44:18.791Z",
+      "content_hash": "185ad483cefe4f55",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-S31-WATCH",
+      "valid_from": "2026-09-01T07:34:27.420Z",
+      "valid_to": "2026-09-01T07:38:44.084Z",
+      "content_hash": "8508b70a78d47a5c",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-S31-WATCH",
+      "valid_from": "2026-09-01T06:40:58.760Z",
+      "valid_to": "2026-09-01T07:34:27.420Z",
+      "content_hash": "226ae954b9906566",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-AUDIO-FRONTEND",
+      "valid_from": "2026-09-01T06:37:59.362Z",
+      "valid_to": "2026-09-01T08:37:57.062Z",
+      "content_hash": "e98d3d5f62a19646",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-AUDIO-FRONTEND",
+      "valid_from": "2026-09-01T06:21:55.452Z",
+      "valid_to": "2026-09-01T06:37:59.362Z",
+      "content_hash": "e8e4b0e7bf8c80ff",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-I2S-LINK",
+      "valid_from": "2026-08-31T18:34:29.619Z",
+      "valid_to": null,
+      "content_hash": "e35e7e7ab8121b01",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-I2S-LINK",
+      "valid_from": "2026-08-31T18:09:54.395Z",
+      "valid_to": "2026-08-31T18:34:29.619Z",
+      "content_hash": "4c4f5b1cd27eb4ad",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-XMOS-DFU-I2C",
+      "valid_from": "2026-08-31T17:20:57.040Z",
+      "valid_to": null,
+      "content_hash": "102b03823b374af2",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-XMOS-DFU-I2C",
+      "valid_from": "2026-08-31T17:17:05.243Z",
+      "valid_to": "2026-08-31T17:20:57.040Z",
+      "content_hash": "31af41deb3e15e14",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-XMOS-DFU-I2C",
+      "valid_from": "2026-08-31T16:45:05.905Z",
+      "valid_to": "2026-08-31T17:17:05.243Z",
+      "content_hash": "ccb955f58f48f2f4",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-08-30T21:04:00.511Z",
+      "valid_to": "2026-09-11T06:38:40.693Z",
+      "content_hash": "df549ead49fac70f",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-SPATIAL-ANALYTICS",
+      "valid_from": "2026-08-30T20:48:18.272Z",
+      "valid_to": null,
+      "content_hash": "4bafcc33df007f2d",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-SPATIAL-ANALYTICS",
+      "valid_from": "2026-08-30T20:07:22.154Z",
+      "valid_to": "2026-08-30T20:48:18.272Z",
+      "content_hash": "27ea079c7a459b6f",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "valid_from": "2026-08-30T19:18:13.445Z",
+      "valid_to": "2026-09-11T19:22:18.064Z",
+      "content_hash": "fbec09489537f210",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-UC-PRIORITY",
+      "valid_from": "2026-08-30T19:10:59.827Z",
+      "valid_to": null,
+      "content_hash": "72a1b52ecf06566f",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "valid_from": "2026-08-30T19:07:24.464Z",
+      "valid_to": "2026-08-30T19:18:13.445Z",
+      "content_hash": "9d2e0e6401694f8a",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITOR-CARDS",
+      "valid_from": "2026-08-30T18:54:18.450Z",
+      "valid_to": "2026-09-11T19:20:00.591Z",
+      "content_hash": "3dfe1d7358472eee",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-08-30T18:52:29.103Z",
+      "valid_to": "2026-08-30T21:04:00.511Z",
+      "content_hash": "56b79bfb2c4a27ea",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VENDOR-TRENDS",
+      "valid_from": "2026-08-30T18:50:56.499Z",
+      "valid_to": null,
+      "content_hash": "94a6df32385cd62c",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VENDOR-TRENDS",
+      "valid_from": "2026-08-30T12:59:06.260Z",
+      "valid_to": "2026-08-30T18:50:56.499Z",
+      "content_hash": "42b0b80b71f0ce8d",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VENDOR-TRENDS",
+      "valid_from": "2026-08-30T12:27:44.644Z",
+      "valid_to": "2026-08-30T12:59:06.260Z",
+      "content_hash": "4ca57a024083638b",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-FIELD-LABELS",
+      "valid_from": "2026-08-30T11:11:57.046Z",
+      "valid_to": null,
+      "content_hash": "bbb4bd306375dc49",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-FIELD-LABELS",
+      "valid_from": "2026-08-30T11:06:43.509Z",
+      "valid_to": "2026-08-30T11:11:57.046Z",
+      "content_hash": "20517b701ccbc4f8",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-FIELD-LABELS",
+      "valid_from": "2026-08-30T10:59:31.420Z",
+      "valid_to": "2026-08-30T11:06:43.509Z",
+      "content_hash": "7a6bccbb6c7715e6",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-LORE-PRODUCT-LAYER-FOR-GATEWAY",
+      "valid_from": "2026-08-30T10:46:25.651Z",
+      "valid_to": null,
+      "content_hash": "01f6420876b6ba7b",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-VOICE-CONSUMPTION",
+      "valid_from": "2026-08-30T10:45:18.023Z",
+      "valid_to": null,
+      "content_hash": "cf936b4fcd00ba31",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-OUTAGE-CASES",
+      "valid_from": "2026-08-30T10:16:57.229Z",
+      "valid_to": "2026-09-15T19:15:28.897Z",
+      "content_hash": "7f9716f1b3cefb54",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-08-30T10:00:36.407Z",
+      "valid_to": "2026-08-30T18:52:29.103Z",
+      "content_hash": "bb86ff5a34c86000",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-08-30T09:59:18.169Z",
+      "valid_to": "2026-08-30T10:00:36.407Z",
+      "content_hash": "9e5a11cce0d37422",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-UC-PRIORITY",
+      "valid_from": "2026-08-30T09:17:10.700Z",
+      "valid_to": "2026-08-30T19:10:59.827Z",
+      "content_hash": "8b096738641a7342",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-UC-PRIORITY",
+      "valid_from": "2026-08-30T09:12:26.954Z",
+      "valid_to": "2026-08-30T09:17:10.700Z",
+      "content_hash": "a2b0cc7c8db8df72",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-METRICS",
+      "valid_from": "2026-08-30T07:29:27.309Z",
+      "valid_to": null,
+      "content_hash": "7138fd566c639d85",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "valid_from": "2026-08-29T23:29:30.882Z",
+      "valid_to": "2026-08-30T19:07:24.464Z",
+      "content_hash": "8a83f200e0a5a170",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-FINDINGS-BY-COMPONENT",
+      "valid_from": "2026-08-29T23:28:05.298Z",
+      "valid_to": null,
+      "content_hash": "b75212efa8628219",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITORS-FULL",
+      "valid_from": "2026-08-29T23:23:37.941Z",
+      "valid_to": null,
+      "content_hash": "b9fd5e224ffe3ad1",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-08-29T23:22:16.284Z",
+      "valid_to": "2026-08-30T09:59:18.169Z",
+      "content_hash": "4aa916aa8861713e",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-HUB-CLASSES",
+      "valid_from": "2026-08-29T22:58:51.658Z",
+      "valid_to": null,
+      "content_hash": "c371441855453a2b",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-HUB-CLASSES",
+      "valid_from": "2026-08-29T22:50:14.253Z",
+      "valid_to": "2026-08-29T22:58:51.658Z",
+      "content_hash": "aceb05c7f315d6d4",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "valid_from": "2026-08-29T22:09:41.046Z",
+      "valid_to": "2026-08-29T23:29:30.882Z",
+      "content_hash": "44b7c652d9a67ca1",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-08-29T21:47:36.881Z",
+      "valid_to": "2026-08-29T23:22:16.284Z",
+      "content_hash": "bbfb3e4450958e7c",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-08-29T21:43:30.558Z",
+      "valid_to": "2026-08-29T21:47:36.881Z",
+      "content_hash": "2ea2f33003f9e0c2",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-08-29T21:37:13.517Z",
+      "valid_to": "2026-08-29T21:43:30.558Z",
+      "content_hash": "64931c67e52172e3",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "valid_from": "2026-08-29T21:32:03.559Z",
+      "valid_to": "2026-08-29T22:09:41.046Z",
+      "content_hash": "4f814ee3f939d88f",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "valid_from": "2026-08-29T21:28:52.237Z",
+      "valid_to": "2026-08-29T21:32:03.559Z",
+      "content_hash": "021d71ee5e85f0f9",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-08-29T21:25:02.578Z",
+      "valid_to": "2026-08-29T21:37:13.517Z",
+      "content_hash": "b346cc9ef1d38706",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-08-29T21:22:25.799Z",
+      "valid_to": "2026-08-29T21:25:02.578Z",
+      "content_hash": "00bbb8a4ce3725bf",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITOR-CARDS",
+      "valid_from": "2026-08-29T21:10:51.761Z",
+      "valid_to": "2026-08-30T18:54:18.450Z",
+      "content_hash": "b1db7187424d06df",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITORS-FULL",
+      "valid_from": "2026-08-29T21:09:54.051Z",
+      "valid_to": "2026-08-29T23:23:37.941Z",
+      "content_hash": "8d1a6e7bbe3e3881",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-08-29T21:08:11.241Z",
+      "valid_to": "2026-08-29T21:22:25.799Z",
+      "content_hash": "fe43c856819aa8d9",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PACKAGES",
+      "valid_from": "2026-08-29T20:54:59.180Z",
+      "valid_to": "2026-08-29T21:08:11.241Z",
+      "content_hash": "c742d86fd7521bb6",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITORS-FULL",
+      "valid_from": "2026-08-29T20:46:46.998Z",
+      "valid_to": "2026-08-29T21:09:54.051Z",
+      "content_hash": "936003a994230b1a",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PANEL-001",
+      "valid_from": "2026-08-29T20:26:57.115Z",
+      "valid_to": null,
+      "content_hash": "041d681e30756373",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PROFILES-001",
+      "valid_from": "2026-08-29T19:50:08.963Z",
+      "valid_to": null,
+      "content_hash": "107cf0eea94b89f5",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PROFILES-001",
+      "valid_from": "2026-08-29T19:46:23.209Z",
+      "valid_to": "2026-08-29T19:50:08.963Z",
+      "content_hash": "3afaa52fbbc03589",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "valid_from": "2026-08-29T19:39:08.267Z",
+      "valid_to": "2026-08-29T21:28:52.237Z",
+      "content_hash": "83571ac28008ddab",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "valid_from": "2026-08-29T19:33:49.297Z",
+      "valid_to": "2026-08-29T19:39:08.267Z",
+      "content_hash": "4ae5c934d685382f",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-POSITIONING",
+      "valid_from": "2026-08-29T19:28:20.178Z",
+      "valid_to": "2026-08-29T19:33:49.297Z",
+      "content_hash": "512efc33a4471f32",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-COMPETITOR-CARDS",
+      "valid_from": "2026-08-29T19:27:20.772Z",
+      "valid_to": "2026-08-29T21:10:51.761Z",
+      "content_hash": "95dec448731c0728",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-OUTAGE-CASES",
+      "valid_from": "2026-08-29T18:59:33.859Z",
+      "valid_to": "2026-08-30T10:16:57.229Z",
+      "content_hash": "616318f6a3fc3564",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-FINDINGS-BY-COMPONENT",
+      "valid_from": "2026-08-29T18:48:08.139Z",
+      "valid_to": "2026-08-29T23:28:05.298Z",
+      "content_hash": "4f9ebc1633a45d7a",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-OUTAGE-CASES",
+      "valid_from": "2026-08-29T18:07:25.602Z",
+      "valid_to": "2026-08-29T18:59:33.859Z",
+      "content_hash": "7c90cef72c3b80a7",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-OUTAGE-CASES",
+      "valid_from": "2026-08-29T17:55:47.934Z",
+      "valid_to": "2026-08-29T18:07:25.602Z",
+      "content_hash": "6b716ce7a7308adf",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-OUTAGE-CASES",
+      "valid_from": "2026-08-29T17:44:38.253Z",
+      "valid_to": "2026-08-29T17:55:47.934Z",
+      "content_hash": "f329b3bc9c20761d",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MARKET-MATRIX",
+      "valid_from": "2026-08-29T17:29:31.420Z",
+      "valid_to": null,
+      "content_hash": "b2e888cd6c1ddea6",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MARKET-MATRIX",
+      "valid_from": "2026-08-29T16:44:37.989Z",
+      "valid_to": "2026-08-29T17:29:31.420Z",
+      "content_hash": "1e0bd614009310a6",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-NAMING-001",
+      "valid_from": "2026-08-27T11:32:23.338Z",
+      "valid_to": null,
+      "content_hash": "7579c8d2b357d2e0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-QG-ARCHITECTURE",
+      "valid_from": "2026-08-27T11:27:03.568Z",
+      "valid_to": null,
+      "content_hash": "592d34f5a15fed77",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-QG-ARCHITECTURE",
+      "valid_from": "2026-08-27T11:12:26.382Z",
+      "valid_to": "2026-08-27T11:27:03.568Z",
+      "content_hash": "c4786f3e8b582c99",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLANPARSE-ALGO",
+      "valid_from": "2026-08-26T07:59:17.789Z",
+      "valid_to": null,
+      "content_hash": "fd0400cde5822857",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-QG-ARCHITECTURE",
+      "valid_from": "2026-08-26T04:35:21.955Z",
+      "valid_to": "2026-08-27T11:12:26.382Z",
+      "content_hash": "abb5395c5ead4094",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-SONG-ID-001",
+      "valid_from": "2026-08-25T13:17:27.550Z",
+      "valid_to": null,
+      "content_hash": "30f11f71fcffc3d0",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-QG-ARCHITECTURE",
+      "valid_from": "2026-08-25T13:09:09.407Z",
+      "valid_to": "2026-08-26T04:35:21.955Z",
+      "content_hash": "81dd3946f0cde51b",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-QG-ARCHITECTURE",
+      "valid_from": "2026-08-25T12:59:35.541Z",
+      "valid_to": "2026-08-25T13:09:09.407Z",
+      "content_hash": "1a91ed8ae6de3012",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-QG-ARCHITECTURE",
+      "valid_from": "2026-08-25T12:50:17.526Z",
+      "valid_to": "2026-08-25T12:59:35.541Z",
+      "content_hash": "16b5b6ae6bcd0e30",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-QG-ARCHITECTURE",
+      "valid_from": "2026-08-25T06:33:52.606Z",
+      "valid_to": "2026-08-25T12:50:17.526Z",
+      "content_hash": "81e9db39f0d8bff2",
+      "projects": [
+        "NooriUta/UnlimitedLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLAN-WALL-MODEL-001",
+      "valid_from": "2026-08-24T17:45:33.253Z",
+      "valid_to": null,
+      "content_hash": "d228c707080d7793",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MODEL-TRAINING-001",
+      "valid_from": "2026-08-24T08:25:33.903Z",
+      "valid_to": null,
+      "content_hash": "dd467513417e08c4",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-RASTER-VECTOR-001",
+      "valid_from": "2026-08-24T06:31:45.426Z",
+      "valid_to": null,
+      "content_hash": "58bb4b9ed10eb787",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PLAN-IMPORT-001",
+      "valid_from": "2026-08-24T00:51:16.998Z",
+      "valid_to": null,
+      "content_hash": "58059461c5af9b4a",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MODEL-001",
+      "valid_from": "2026-08-23T23:26:07.460Z",
+      "valid_to": null,
+      "content_hash": "320f80994e3a7215",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-DEVICES-001",
+      "valid_from": "2026-08-23T23:04:58.343Z",
+      "valid_to": null,
+      "content_hash": "41616451291044bc",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-WEATHER-001",
+      "valid_from": "2026-08-23T21:54:57.794Z",
+      "valid_to": "2026-09-10T18:26:40.732Z",
+      "content_hash": "98f1f56fa12fdb6c",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-PANEL-001",
+      "valid_from": "2026-08-23T21:53:41.733Z",
+      "valid_to": "2026-08-29T20:26:57.115Z",
+      "content_hash": "a76d7a4273ca454d",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MIDGARD-MATTER-001",
+      "valid_from": "2026-08-23T12:33:37.014Z",
+      "valid_to": null,
+      "content_hash": "e5446a95bfcca9f7",
+      "projects": [
+        "AIDA/MIDGARD"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-PHONE-API",
+      "valid_from": "2026-08-23T07:36:02.600Z",
+      "valid_to": null,
+      "content_hash": "f2c03f469ea09d48",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE_LINK-002",
+      "valid_from": "2026-08-18T10:06:06.668Z",
+      "valid_to": null,
+      "content_hash": "af35a2282505da63",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE_LINK-CHANNELS-001",
+      "valid_from": "2026-08-18T09:45:16.297Z",
+      "valid_to": null,
+      "content_hash": "72fc66bae2019811",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-PHONE-API",
+      "valid_from": "2026-08-17T09:12:24.487Z",
+      "valid_to": "2026-08-23T07:36:02.600Z",
+      "content_hash": "92c0d756883e3778",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-FRAMES",
+      "valid_from": "2026-08-17T09:10:03.240Z",
+      "valid_to": null,
+      "content_hash": "a1f6c0139bf9b5b6",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "HOUND_PLPGSQL_LEXER_CONTRACT",
+      "valid_from": "2026-08-15T21:22:57.001Z",
+      "valid_to": null,
+      "content_hash": "6f14df827e162c51",
+      "projects": [
+        "NooriUta/AIDA"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-PHONE-API",
+      "valid_from": "2026-08-15T05:24:04.167Z",
+      "valid_to": "2026-08-17T09:12:24.487Z",
+      "content_hash": "192bd02daceeccb8",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-MINILORE-FRAMES",
+      "valid_from": "2026-08-15T05:23:03.532Z",
+      "valid_to": "2026-08-17T09:10:03.240Z",
+      "content_hash": "81b121b8d408a569",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-TRAEFIK",
+      "valid_from": "2026-08-15T05:21:48.047Z",
+      "valid_to": null,
+      "content_hash": "ced999150bb08a28",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-KEYCLOAK",
+      "valid_from": "2026-08-15T05:21:46.374Z",
+      "valid_to": null,
+      "content_hash": "5c208d9a8653d22c",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-GRADLE",
+      "valid_from": "2026-08-15T05:21:43.543Z",
+      "valid_to": null,
+      "content_hash": "9e571eba0b63aeaa",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-SMALLRYE-FAULT-TOLERANCE",
+      "valid_from": "2026-08-15T05:21:41.377Z",
+      "valid_to": null,
+      "content_hash": "6e42efb09e1ec228",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-VITEST",
+      "valid_from": "2026-08-15T05:21:39.961Z",
+      "valid_to": null,
+      "content_hash": "9bdc2bc01acea2d7",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-MICROMETER",
+      "valid_from": "2026-08-15T05:21:39.460Z",
+      "valid_to": null,
+      "content_hash": "83c21f4cc5b97a2a",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-ZOD",
+      "valid_from": "2026-08-15T05:21:37.262Z",
+      "valid_to": null,
+      "content_hash": "64c3bdee13f606f5",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-SMALLRYE-HEALTH",
+      "valid_from": "2026-08-15T05:21:37.195Z",
+      "valid_to": null,
+      "content_hash": "a6aeed8cc185968f",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-INFISICAL",
+      "valid_from": "2026-08-15T05:21:35.104Z",
+      "valid_to": null,
+      "content_hash": "eb52432d3257fc6a",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK--MODELCONTEXTPROTOCOL-SDK",
+      "valid_from": "2026-08-15T05:21:34.340Z",
+      "valid_to": null,
+      "content_hash": "30edc011848604d5",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-MINIO",
+      "valid_from": "2026-08-15T05:21:29.270Z",
+      "valid_to": null,
+      "content_hash": "3cd4457957909585",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-CAFFEINE",
+      "valid_from": "2026-08-15T05:21:27.044Z",
+      "valid_to": null,
+      "content_hash": "50817834b1506e2c",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-ARCADEDB",
+      "valid_from": "2026-08-15T05:21:22.001Z",
+      "valid_to": null,
+      "content_hash": "9e94786d5bb1d321",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-OIDC",
+      "valid_from": "2026-08-15T05:21:19.126Z",
+      "valid_to": null,
+      "content_hash": "a6e0ec9b18554ed4",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-WS",
+      "valid_from": "2026-08-15T05:21:18.349Z",
+      "valid_to": null,
+      "content_hash": "aae2b30b26c18e0c",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-REST-CLIENT-JACKSON",
+      "valid_from": "2026-08-15T05:21:15.610Z",
+      "valid_to": null,
+      "content_hash": "3c6e625ddb6c2191",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-TYPESCRIPT",
+      "valid_from": "2026-08-15T05:21:15.069Z",
+      "valid_to": null,
+      "content_hash": "1266b09f5380d72b",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_LINK-NODE-JS",
+      "valid_from": "2026-08-15T05:21:12.290Z",
+      "valid_to": null,
+      "content_hash": "c813a5069b10650a",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-WEBSOCKETS-NEXT",
+      "valid_from": "2026-08-15T05:21:08.440Z",
+      "valid_to": null,
+      "content_hash": "caa614f71d6ea773",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-REST-JACKSON",
+      "valid_from": "2026-08-15T05:21:06.444Z",
+      "valid_to": null,
+      "content_hash": "6876e3a41b01b1fa",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS-REST",
+      "valid_from": "2026-08-15T05:21:04.216Z",
+      "valid_to": null,
+      "content_hash": "55e3c34349fad953",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-QUARKUS",
+      "valid_from": "2026-08-15T05:21:02.082Z",
+      "valid_to": null,
+      "content_hash": "b49a8ffc17006406",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-ECLIPSE-TEMURIN-",
+      "valid_from": "2026-08-15T05:20:59.435Z",
+      "valid_to": null,
+      "content_hash": "3bbd83d48bfe707f",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    },
+    {
+      "spec_id": "SPEC-TECH-MINILORE_SRV-JAVA",
+      "valid_from": "2026-08-15T05:20:57.386Z",
+      "valid_to": null,
+      "content_hash": "b8fc6886e91aa808",
+      "projects": [
+        "AIDA/miniLORE"
+      ]
+    }
+  ],
+  "_page": {
+    "limit": 1000,
+    "offset": 0,
+    "total": 300,
+    "has_more": false
+  }
+}

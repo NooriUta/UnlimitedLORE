@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "3dd968311d78d54a",
+  "version" : "a5022054be1e46dd",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "skill", "feature", "question" ],
@@ -7651,6 +7651,21 @@
         "inverse_label_en" : null,
         "inverse_label_pl" : null
       }, {
+        "key" : "repository",
+        "label" : "Репозиторий",
+        "label_key" : "pp.rel.repository",
+        "label_en" : "Repository",
+        "label_pl" : "Repozytorium",
+        "relation" : "association",
+        "rel" : "RELEASE_OF",
+        "dir" : "out",
+        "target_type" : "repository",
+        "place" : "prop",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
         "key" : "adrs",
         "label" : "ADR",
         "label_key" : "pp.rel.adr",
@@ -13891,6 +13906,36 @@
         "inverse_label_en" : null,
         "inverse_label_pl" : null
       }, {
+        "key" : "releases",
+        "label" : "Релизы",
+        "label_key" : "pp.rel.releases",
+        "label_en" : "Releases",
+        "label_pl" : "Wydania",
+        "relation" : "association",
+        "rel" : "RELEASE_OF",
+        "dir" : "in",
+        "target_type" : "release",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
+        "key" : "prs",
+        "label" : "PR",
+        "label_key" : "pp.rel.prs",
+        "label_en" : "PRs",
+        "label_pl" : "PR",
+        "relation" : "association",
+        "rel" : "PR_OF",
+        "dir" : "in",
+        "target_type" : "pr",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
         "key" : "organizations",
         "label" : "Организации",
         "label_key" : "pp.rel.organizations",
@@ -14433,6 +14478,21 @@
         "rel" : "BELONGS_TO_PROJECT",
         "dir" : "out",
         "target_type" : "project",
+        "place" : "prop",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
+        "key" : "repository",
+        "label" : "Репозиторий",
+        "label_key" : "pp.rel.repository",
+        "label_en" : "Repository",
+        "label_pl" : "Repozytorium",
+        "relation" : "association",
+        "rel" : "PR_OF",
+        "dir" : "out",
+        "target_type" : "repository",
         "place" : "prop",
         "manageable" : false,
         "inverse_label" : null,
@@ -18013,10 +18073,30 @@
             "label" : "Связи"
           }
         }, {
+          "key" : "releases",
+          "source" : "relation",
+          "ref" : "releases",
+          "order" : 7,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "prs",
+          "source" : "relation",
+          "ref" : "prs",
+          "order" : 8,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
           "key" : "organizations",
           "source" : "relation",
           "ref" : "organizations",
-          "order" : 7,
+          "order" : 9,
           "slot" : "own",
           "group" : null
         } ]
@@ -18991,19 +19071,52 @@
         "evidence" : [ {
           "type" : "pr",
           "label" : "PR (влит)"
+        } ],
+        "flow" : [ {
+          "stage" : "design",
+          "produces" : [ "spec" ],
+          "consumes" : [ "uc", "adr", "code" ]
         }, {
-          "type" : "release",
-          "label" : "релиз"
+          "stage" : "implement",
+          "produces" : [ "code", "tests", "branch", "pr" ],
+          "consumes" : [ "spec", "code" ]
+        }, {
+          "stage" : "test",
+          "produces" : [ "ci_run" ],
+          "consumes" : [ "code", "tests", "pr" ]
+        }, {
+          "stage" : "stand_check",
+          "produces" : [ "stand_report", "review_report" ],
+          "consumes" : [ "pr", "ci_run" ]
+        }, {
+          "stage" : "uat",
+          "consumes" : [ "stand_report", "review_report" ]
         } ]
       },
       "doc" : {
         "label" : "документ",
         "types" : [ "docs" ],
         "stages" : [ "draft", "review_text" ],
-        "review_stages" : [ "owner_read" ],
+        "review_stages" : [ "agent_review", "owner_read" ],
         "evidence" : [ {
           "type" : "lore",
           "label" : "запись LORE: спека, док, runbook, ADR"
+        } ],
+        "flow" : [ {
+          "stage" : "draft",
+          "produces" : [ "draft" ],
+          "consumes" : [ "uc", "adr" ]
+        }, {
+          "stage" : "review_text",
+          "produces" : [ "doc" ],
+          "consumes" : [ "draft" ]
+        }, {
+          "stage" : "agent_review",
+          "produces" : [ "review_report" ],
+          "consumes" : [ "doc" ]
+        }, {
+          "stage" : "owner_read",
+          "consumes" : [ "doc", "review_report" ]
         } ]
       },
       "ops" : {
@@ -19017,16 +19130,52 @@
         }, {
           "type" : "pr",
           "label" : "PR, если менялся код"
+        } ],
+        "flow" : [ {
+          "stage" : "diagnose",
+          "produces" : [ "diagnosis" ],
+          "consumes" : [ "code" ]
+        }, {
+          "stage" : "fix",
+          "produces" : [ "code", "tests", "branch", "pr" ],
+          "consumes" : [ "diagnosis", "code" ]
+        }, {
+          "stage" : "measure",
+          "produces" : [ "measurement" ],
+          "consumes" : [ "pr", "code", "tests" ]
+        }, {
+          "stage" : "stand_check",
+          "produces" : [ "stand_report", "review_report" ],
+          "consumes" : [ "measurement" ]
         } ]
       },
       "research" : {
         "label" : "исследование",
         "types" : [ "research", "analytics" ],
         "stages" : [ "collect", "analyse", "write" ],
-        "review_stages" : [ "owner_read" ],
+        "review_stages" : [ "agent_review", "owner_read" ],
         "evidence" : [ {
           "type" : "lore",
           "label" : "запись LORE с выводом: док, спека или решение"
+        } ],
+        "flow" : [ {
+          "stage" : "collect",
+          "produces" : [ "sources" ]
+        }, {
+          "stage" : "analyse",
+          "produces" : [ "findings" ],
+          "consumes" : [ "sources" ]
+        }, {
+          "stage" : "write",
+          "produces" : [ "doc", "decision" ],
+          "consumes" : [ "findings" ]
+        }, {
+          "stage" : "agent_review",
+          "produces" : [ "review_report" ],
+          "consumes" : [ "doc", "decision" ]
+        }, {
+          "stage" : "owner_read",
+          "consumes" : [ "doc", "review_report" ]
         } ]
       },
       "external" : {
@@ -19038,7 +19187,22 @@
           "type" : "doc",
           "label" : "документ, номер заявки или решения"
         } ],
-        "failed" : "отказ"
+        "failed" : "отказ",
+        "flow" : [ {
+          "stage" : "preparing",
+          "produces" : [ "draft" ]
+        }, {
+          "stage" : "submitted",
+          "produces" : [ "submission" ],
+          "consumes" : [ "draft" ]
+        }, {
+          "stage" : "under_review",
+          "consumes" : [ "submission" ]
+        }, {
+          "stage" : "decision_in",
+          "produces" : [ "external_decision" ],
+          "consumes" : [ "submission" ]
+        } ]
       },
       "funnel" : {
         "label" : "воронка",
@@ -19049,41 +19213,263 @@
           "type" : "doc",
           "label" : "LOI, договор, оффер принят, доклад принят"
         } ],
-        "failed" : "проиграли, отказ"
+        "failed" : "проиграли, отказ",
+        "flow" : [ {
+          "stage" : "lead",
+          "produces" : [ "lead" ]
+        }, {
+          "stage" : "contacted",
+          "consumes" : [ "lead" ]
+        }, {
+          "stage" : "meeting",
+          "consumes" : [ "lead" ]
+        }, {
+          "stage" : "pilot",
+          "consumes" : [ "lead" ]
+        }, {
+          "stage" : "answer_in",
+          "produces" : [ "agreement" ],
+          "consumes" : [ "lead" ]
+        } ]
       },
       "routine" : {
         "label" : "регламент",
         "types" : [ "finance", "support" ],
         "stages" : [ "period_open", "reconciling" ],
-        "review_stages" : [ "report" ],
+        "review_stages" : [ "report", "agent_review" ],
         "evidence" : [ {
           "type" : "doc",
           "label" : "закрытый период + отчёт"
         } ],
-        "failed" : "просрочен"
+        "failed" : "просрочен",
+        "flow" : [ {
+          "stage" : "period_open"
+        }, {
+          "stage" : "reconciling",
+          "produces" : [ "findings" ]
+        }, {
+          "stage" : "report",
+          "produces" : [ "period_report" ],
+          "consumes" : [ "findings" ]
+        }, {
+          "stage" : "agent_review",
+          "produces" : [ "review_report" ],
+          "consumes" : [ "period_report" ]
+        } ]
       },
       "content" : {
         "label" : "контент",
         "types" : [ "content" ],
-        "stages" : [ "draft", "ready", "scheduled" ],
-        "review_stages" : [ "scheduled" ],
+        "stages" : [ "draft", "ready" ],
+        "review_stages" : [ "agent_review", "approval", "scheduled" ],
         "evidence" : [ {
           "type" : "url",
           "label" : "URL публикации"
+        } ],
+        "flow" : [ {
+          "stage" : "draft",
+          "produces" : [ "draft" ]
+        }, {
+          "stage" : "ready",
+          "consumes" : [ "draft" ]
+        }, {
+          "stage" : "agent_review",
+          "produces" : [ "review_report" ],
+          "consumes" : [ "draft" ]
+        }, {
+          "stage" : "approval",
+          "consumes" : [ "draft", "review_report" ]
+        }, {
+          "stage" : "scheduled",
+          "produces" : [ "publication" ],
+          "consumes" : [ "draft" ]
         } ]
       },
       "hardware" : {
         "label" : "железо",
         "types" : [ "procurement" ],
         "stages" : [ "prototype", "testing", "waiting_supplier" ],
-        "review_stages" : [ "protocol" ],
+        "review_stages" : [ "agent_review", "protocol" ],
         "evidence" : [ {
           "type" : "doc",
           "label" : "протокол испытаний, сертификат"
         } ],
-        "failed" : "не прошло испытания"
+        "failed" : "не прошло испытания",
+        "flow" : [ {
+          "stage" : "prototype",
+          "produces" : [ "prototype" ]
+        }, {
+          "stage" : "testing",
+          "produces" : [ "test_protocol" ],
+          "consumes" : [ "prototype" ]
+        }, {
+          "stage" : "waiting_supplier"
+        }, {
+          "stage" : "agent_review",
+          "produces" : [ "review_report" ],
+          "consumes" : [ "test_protocol" ]
+        }, {
+          "stage" : "protocol",
+          "consumes" : [ "test_protocol", "review_report" ]
+        } ]
       }
-    }
+    },
+    "artifacts" : {
+      "uc" : {
+        "label" : "сценарий (KnowUseCase) — основание класса uc",
+        "source" : "record"
+      },
+      "adr" : {
+        "label" : "ADR — основание класса enb",
+        "source" : "record",
+        "evidence" : "lore"
+      },
+      "spec" : {
+        "label" : "спека",
+        "source" : "record",
+        "evidence" : "lore"
+      },
+      "doc" : {
+        "label" : "док или runbook",
+        "source" : "record",
+        "evidence" : "lore"
+      },
+      "code" : {
+        "label" : "код (файлы, модули) — новый или изменённый",
+        "source" : "record"
+      },
+      "tests" : {
+        "label" : "автотесты — новые или изменённые",
+        "source" : "record"
+      },
+      "decision" : {
+        "label" : "решение",
+        "source" : "record",
+        "evidence" : "lore"
+      },
+      "branch" : {
+        "label" : "ветка с правкой",
+        "source" : "stage"
+      },
+      "pr" : {
+        "label" : "PR (влит)",
+        "source" : "stage",
+        "evidence" : "pr"
+      },
+      "ci_run" : {
+        "label" : "прогон CI",
+        "source" : "stage",
+        "evidence" : "probe"
+      },
+      "release" : {
+        "label" : "релиз",
+        "source" : "stage",
+        "evidence" : "release"
+      },
+      "stand_report" : {
+        "label" : "отчёт смоука стенда, скрины",
+        "source" : "stage",
+        "evidence" : "probe"
+      },
+      "review_report" : {
+        "label" : "заключение внутренней приёмки агентом (RFD → UAT): ок или замечания",
+        "source" : "stage"
+      },
+      "diagnosis" : {
+        "label" : "диагноз: лог, метрика, причина",
+        "source" : "stage"
+      },
+      "measurement" : {
+        "label" : "замер после правки",
+        "source" : "stage",
+        "evidence" : "probe"
+      },
+      "sources" : {
+        "label" : "собранные источники",
+        "source" : "stage"
+      },
+      "findings" : {
+        "label" : "выводы анализа",
+        "source" : "stage"
+      },
+      "draft" : {
+        "label" : "черновик текста",
+        "source" : "stage"
+      },
+      "submission" : {
+        "label" : "поданный документ, номер заявки",
+        "source" : "stage",
+        "evidence" : "doc"
+      },
+      "external_decision" : {
+        "label" : "внешнее решение",
+        "source" : "stage",
+        "evidence" : "doc"
+      },
+      "lead" : {
+        "label" : "контакт воронки",
+        "source" : "stage"
+      },
+      "agreement" : {
+        "label" : "LOI, договор, оффер, доклад принят",
+        "source" : "stage",
+        "evidence" : "doc"
+      },
+      "period_report" : {
+        "label" : "закрытый период + отчёт",
+        "source" : "stage",
+        "evidence" : "doc"
+      },
+      "publication" : {
+        "label" : "публикация (URL)",
+        "source" : "stage",
+        "evidence" : "url"
+      },
+      "prototype" : {
+        "label" : "прототип изделия",
+        "source" : "stage"
+      },
+      "test_protocol" : {
+        "label" : "протокол испытаний, сертификат",
+        "source" : "stage",
+        "evidence" : "doc"
+      }
+    },
+    "delivery" : [ {
+      "stage" : "feature",
+      "from" : "feature/* · fix/*",
+      "to" : "umbrella/<тема>-<ддмм>",
+      "pr" : "feature",
+      "gate" : "auto",
+      "task_status" : "ready_for_deploy",
+      "label" : "PR задачи в зонтик; CI на PR; после мержа задача — ready_for_deploy"
+    }, {
+      "stage" : "umbrella",
+      "from" : "umbrella/<тема>-<ддмм>",
+      "to" : "develop",
+      "pr" : "umbrella",
+      "env" : "dev",
+      "gate" : "human",
+      "label" : "зонтик → develop одним PR, полный CI; вливается только по слову владельца; develop не деплоит"
+    }, {
+      "stage" : "promote",
+      "from" : "promote/<дата>-<sha8> (снимок develop)",
+      "to" : "preprod",
+      "pr" : "promote",
+      "env" : "preprod",
+      "gate" : "agent",
+      "task_status" : "uat",
+      "label" : "снимок develop → preprod без отдельного разрешения; выкатка на стенд, смоук; внутренняя приёмка агентом → uat"
+    }, {
+      "stage" : "release",
+      "from" : "preprod",
+      "to" : "main",
+      "pr" : "release",
+      "env" : "prod",
+      "gate" : "human",
+      "tag_from" : "main",
+      "label" : "preprod → main, затем тег vX.Y.Z на коммите main (тег обязан содержаться в main) и RELEASE-<tag>.md; в релиз входят задачи в uat или done; только по слову владельца"
+    } ]
   },
   "palettes" : {
     "source" : "settings:palette",

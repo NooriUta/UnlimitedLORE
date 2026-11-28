@@ -29,7 +29,7 @@ public class ModelSchemaClientFilter implements ClientRequestFilter, ClientRespo
             // MDL-06 (патч 1.18.1): и на старой схеме каждый :param — в карте, даже null; пропуск — отказ движка
             if (e instanceof LoreCommandClient.LoreCommand c && isSql(c.language())) {
                 java.util.Map<String, Object> p = SqlParams.complete(c.command(), c.params());
-                if (p != c.params()) req.setEntity(new LoreCommandClient.LoreCommand(c.language(), c.command(), p),
+                if (p != c.params()) req.setEntity(new LoreCommandClient.LoreCommand(c.language(), c.command(), p, c.limit()),
                     req.getEntityAnnotations(), req.getMediaType());
             }
             return;
@@ -42,7 +42,7 @@ public class ModelSchemaClientFilter implements ClientRequestFilter, ClientRespo
             // MDL-06 (патч 1.18.1): переходник переименовал :status_raw в :status — параметр под новым именем, и при null
             String sql = ModelSchemaAdapter.rewriteSql(c.command());
             req.setEntity(new LoreCommandClient.LoreCommand(c.language(), sql,
-                SqlParams.complete(sql, ModelSchemaAdapter.rewriteParams(c.command(), c.params()))), req.getEntityAnnotations(), req.getMediaType());
+                SqlParams.complete(sql, ModelSchemaAdapter.rewriteParams(c.command(), c.params())), c.limit()), req.getEntityAnnotations(), req.getMediaType());
         }
     }
 

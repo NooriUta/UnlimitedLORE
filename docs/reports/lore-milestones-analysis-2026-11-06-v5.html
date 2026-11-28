@@ -1,0 +1,1207 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LORE · вехи: многофакторный разбор и переразбиение · 06.11.2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Seiðr · светлая тема «amber forest light» (значения из src/styles/tokens.css, [data-mode=light]). Цвета и размеры — только токенами. */
+  :root {
+    --bg0:#f5f3ee; --bg1:#faf8f3; --bg2:#ffffff; --bg3:#eee9df; --bd:#d4ccb8;
+    --t1:#1e1a12; --t2:#5c5240; --t3:#76694f;
+    --acc:#A86A10; --suc:#3d7a38; --wrn:#a06010; --inf:#3a7060; --dng:#c03030;
+    /* категориальные слоты графиков — проверены validate_palette.js на поверхности --bg1 (light): band/chroma/CVD/normal/contrast — PASS */
+    --c1:#A86A10; --c2:#2F6DB5; --c3:#6B7A2A; --cN:#b3a990;
+    /* шкала для чтения отчёта с телефона (контент-просмотр) */
+    --fs-2xs:10px; --fs-xs:11px; --fs-sm:12.5px; --fs-base:14px; --fs-md:15px; --fs-lg:18px; --fs-xl:24px; --fs-2xl:32px;
+    --font:'Manrope',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace; --head:'Unbounded','Manrope',sans-serif;
+    --r:8px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg0);color:var(--t1);font:var(--fs-base)/1.6 var(--font)}
+  .wrap{max-width:1000px;margin:0 auto;padding:24px 14px 80px}
+  h1{font:800 var(--fs-xl)/1.25 var(--head);margin:0 0 6px;letter-spacing:.01em}
+  h2{font:800 var(--fs-lg)/1.3 var(--head);margin:44px 0 12px;padding-top:14px;border-top:1px solid var(--bd)}
+  h3{font:700 var(--fs-md)/1.35 var(--font);margin:24px 0 8px;color:var(--t1)}
+  p{margin:8px 0} .muted{color:var(--t2)} .small{font-size:var(--fs-sm)}
+  code,.mono{font-family:var(--mono);font-size:.92em;color:var(--t1);background:var(--bg2);padding:1px 5px;border-radius:4px}
+  a{color:var(--acc)}
+  .meta{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
+  .chip{display:inline-block;font:600 var(--fs-xs)/1 var(--font);padding:5px 9px;border-radius:999px;background:var(--bg2);border:1px solid var(--bd);color:var(--t2)}
+  .chip.acc{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 50%,var(--bd))}
+  .chip.dng{color:var(--dng);border-color:color-mix(in srgb,var(--dng) 50%,var(--bd))}
+  .chip.suc{color:var(--suc);border-color:color-mix(in srgb,var(--suc) 50%,var(--bd))}
+  .card{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r);padding:14px 16px;margin:12px 0}
+  .tldr{border-left:3px solid var(--acc)}
+  .tldr ol{margin:6px 0 0;padding-left:20px} .tldr li{margin:6px 0}
+  .ev{border-left:3px solid var(--inf)}
+  .hyp{border-left:3px solid var(--wrn)}
+  .bad{border-left:3px solid var(--dng)}
+  .lbl{font:700 var(--fs-2xs)/1 var(--font);text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:6px}
+  table{width:100%;border-collapse:collapse;font-size:var(--fs-sm);margin:8px 0}
+  th{font:700 var(--fs-2xs)/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px 8px;border-bottom:1px solid var(--bd);background:var(--bg2)}
+  td{padding:6px 8px;border-bottom:1px solid color-mix(in srgb,var(--bd) 60%,transparent);vertical-align:top}
+  td.n,th.n{text-align:right;font-family:var(--mono)}
+  .tw{overflow-x:auto}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0}
+  .kpi{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r);padding:12px}
+  .kpi b{display:block;font:800 var(--fs-2xl)/1.1 var(--head);color:var(--t1)}
+  .kpi span{font-size:var(--fs-xs);color:var(--t2)}
+  .chart{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r);padding:12px 12px 6px;margin:12px 0;position:relative}
+  .chart .ttl{font:700 var(--fs-sm)/1.3 var(--font);color:var(--t1);margin:0 0 2px}
+  .chart .sub{font-size:var(--fs-xs);color:var(--t2);margin:0 0 8px}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:var(--fs-xs);color:var(--t2);margin:4px 0 6px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+  svg text{font-family:var(--font);fill:var(--t2);font-size:11px}
+  svg .lab{fill:var(--t1);font-weight:600}
+  svg .val{fill:var(--t1);font-family:var(--mono);font-size:10.5px}
+  svg .grid{stroke:var(--bd);stroke-width:1}
+  .tip{position:fixed;pointer-events:none;background:var(--bg3);border:1px solid var(--bd);color:var(--t1);font-size:var(--fs-xs);padding:6px 8px;border-radius:6px;opacity:0;transition:opacity .08s;z-index:9;max-width:260px}
+  details{margin:6px 0} summary{cursor:pointer;color:var(--t2);font-size:var(--fs-xs)}
+  .mermaid{background:var(--bg1);border:1px solid var(--bd);border-radius:var(--r);padding:12px;margin:12px 0;overflow-x:auto}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media (max-width:760px){.grid2{grid-template-columns:1fr}}
+  ul.tight{margin:6px 0;padding-left:20px} ul.tight li{margin:3px 0}
+  .tag{font:600 var(--fs-2xs)/1 var(--font);padding:3px 7px;border-radius:999px;background:var(--bg3);color:var(--t2);white-space:nowrap}
+  .tag.ok{color:var(--suc)} .tag.no{color:var(--dng)} .tag.q{color:var(--wrn)}
+  .foot{margin-top:50px;font-size:var(--fs-xs);color:var(--t3)}
+  .tabs{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:6px;background:var(--bg0);padding:10px 0;margin:14px 0 4px;border-bottom:1px solid var(--bd)}
+  .tabs a{font:700 var(--fs-xs)/1 var(--font);text-transform:uppercase;letter-spacing:.06em;text-decoration:none;color:var(--t2);padding:8px 12px;border-radius:999px;border:1px solid var(--bd);background:var(--bg1)}
+  .tabs a.on{color:var(--bg2);background:var(--acc);border-color:var(--acc)}
+  .tab{display:none} .tab.on{display:block}
+  .tab > h2:first-child{border-top:0;margin-top:18px}</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Вехи LORE: почему нынешняя шкала не работает и как её переразбить</h1>
+<div class="muted">Многофакторный разбор · 06.11.2026 · прод-база <span class="mono">system_aida_lore</span> (192.168.3.131:2480), прямые read-only запросы + слайсы MCP</div>
+<div class="meta">
+  <span class="chip acc">SPRINT_LORE_ROADMAP_PER_PROJECT/RM-A4</span>
+  <span class="chip">ADR-LORE-040 · PROPOSED</span>
+  <span class="chip">D-2026-LORE-PRODUCT-IS-OWN-ENTITY · accepted</span>
+  <span class="chip">D-2026-LORE-RBAC-BY-PROJECT · accepted</span>
+  <span class="chip">SPEC-LORE-PLAN-MODEL</span>
+</div>
+
+<nav class="tabs" role="tablist">
+  <a href="#tab=short" data-tab="short">Кратко</a>
+  <a href="#tab=analysis" data-tab="analysis">Анализ</a>
+  <a href="#tab=roadmap" data-tab="roadmap">Дорожные карты</a>
+  <a href="#tab=plan" data-tab="plan">Предложение</a>
+  <a href="#tab=kaos" data-tab="kaos">GOAL/KAOS</a>
+  <a href="#tab=decide" data-tab="decide">Решения</a>
+</nav>
+<section class="tab" id="tab-short"><div class="card tldr">
+  <div class="lbl">Коротко — восемь выводов</div>
+  <ol>
+    <li><b>M0–M7 — это не вехи продукта, а план одного забега к докладу на HighLoad++.</b> Это видно по самим данным: контрольные точки вех — «CFP abstract», «Demo script», «make demo-reset &lt; 5s», «Backup laptop»; треки — «Demo &amp; Talk», «Logistics», «Outreach»; в целях — ИП, найм, OEM. Поэтому в одной вехе лежат 7–10 продуктов.</li>
+    <li><b>Модель для карт продуктов в LORE построена, но пуста.</b> Рёбер <span class="mono">TARGETS_PRODUCT</span> (веха → продукт) — <b>0</b>. У всех 11 вех <span class="mono">planned_date = null</span>, <span class="mono">decisions_md</span> пуст, цели не менялись с 11.06.</li>
+    <li><b>По датам переразбить нельзя: даты нет.</b> Из 139 открытых спринтов будущий срок есть у 10. У 41 срок прошёл, у 78 его нет, 10 спрятаны скоупом.</li>
+    <li><b>Связи компонентов дают естественную границу.</b> 57 спринтов затрагивают больше одного продукта, и почти все — внутри семейства AIDA (AIDA·HOUND·SEIDR·HEIMDALL·MT, цепочка DALI→HND→SHT→VERDANDI). MIDGARD, Datawanderers, miniLORE, MIGGEN ни с кем не связаны.</li>
+    <li><b>Составные продукты в модели заявлены только у AIDA.</b> MIDGARD — фактически составной: 16 компонентов, 5 подсистем, у хаба GLADSHEIM свой репозиторий и 40 релизов, BOKVIT тоже его. Но в справочнике MIDGARD плоский. OMILORE, miniLORE и BRAGI живут на одной платформе, а записаны как три несвязанных продукта (раздел 7).</li>
+    <li><b>Продукт делается без фронта.</b> 437 из 493 спринтов — создание. Маркетинга — 48, продаж — 4, обслуживания — 1. Фронт есть только у AIDA (сайт и SEO), у BRAGI и у MIDGARD (исследование рынка — самое глубокое в корпусе). У HOUND, SEIDR, HEIMDALL, MT, VOLVA, miniLORE, MIGGEN и Datawanderers фронтовых спринтов нет совсем (раздел 8).</li>
+    <li><b>Классы работы uc / jtd / enb введены, но покрывают меньше половины.</b> У 55% задач класс не указан; у M0–M2 размечено 3 задачи из 676. Только 216 из 613 uc-задач говорят, какой сценарий реализуют. 668 из 717 jtd-задач лежат вне вех — вспомогательная работа по природе течёт потоком (раздел 9).</li>
+    <li><b>Предложение.</b> Историю переразбить по сериям релизов: у 312 из 342 закрытых спринтов есть релиз, M0–M4 сохраняются как архив. Будущая веха — вариант полки продукта с четырьмя дорожками: создание, вывод на рынок, продажа, обслуживание. Состав вехи задаётся правилами по классам работы. Два типа продуктов — технологические и сервисно-организационные (им git не нужен): FREYJA (учёт), HARPA (продажи и витрина) и поддержка строятся модулями общего бэкофиса на OMILORE и связаны с продуктами типизированно — СЧИТАЕТ / ПРОДАЁТ / ПОДДЕРЖИВАЕТ. Туда ложатся 42 орг-спринта. Для семейства AIDA — одна карта с дорожками (разделы 12–13).</li>
+  </ol>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><b>11</b><span>вех; привязано к продукту — 0</span></div>
+  <div class="kpi"><b>493</b><span>спринтов в базе (слайс видит 483)</span></div>
+  <div class="kpi"><b>139</b><span>открытых; с будущим сроком — 10</span></div>
+  <div class="kpi"><b>114</b><span>открытых вне вех (27.08: 60 → 20.10: 110)</span></div>
+  <div class="kpi"><b>46</b><span>открытых без движения 120+ дней</span></div>
+  <div class="kpi"><b>0</b><span>фич у семейства AIDA (≈280 спринтов)</span></div>
+</div>
+
+<!-- ================================================================ -->
+<p class="small muted">Подробности — на вкладках: «Анализ» — доказательства и графики, «Дорожные карты» — по продуктам с зависимостями, «Предложение» — история, горизонты и правила, «GOAL/KAOS» — критический проход, «Решения» — что нужно от вас.</p>
+</section>
+<section class="tab" id="tab-analysis">
+<h2>1. Как мерила и каким числам нельзя верить</h2>
+<p>Все числа взяты отдельными запросами в один момент. Слайсы MCP я сверила с прямыми запросами к базе, и расхождения нашлись. Спринт может входить сразу в несколько вех и продуктов, поэтому числа по множествам <b>не складываются</b>: каждое измерено своим запросом (правило SPEC-LORE-PLAN-MODEL, раздел «Ловушки»).</p>
+<div class="grid2">
+  <div class="card bad">
+    <div class="lbl">Мерка врёт — в выводы не брала</div>
+    <ul class="tight">
+      <li><b>done_date</b> — это дата, когда проставили статус, а не дата работы. 4–5 ноября закрыто 45 спринтов, в сентябре — 1 (график 5). Скорость команды и прогноз по этому полю посчитать нельзя.</li>
+      <li><b>Статус задачи на самой вершине</b> пуст у 581 задачи открытых спринтов (он хранится в истории). Процент закрытых задач по вехам поэтому недостоверен.</li>
+      <li><b>Опоздание</b> по M1–M3 даёт медиану 0 дней — похоже, плановые сроки дописаны задним числом. Сигнал слабый.</li>
+    </ul>
+  </div>
+  <div class="card ev">
+    <div class="lbl">Положительные контроли</div>
+    <ul class="tight">
+      <li>Слайс <span class="mono">sprints</span>: 483 строки, <span class="mono">_page.total=483</span>. В базе 493. Пропавшие 10 — ровно те, у кого нет <span class="mono">BELONGS_TO_PROJECT</span>; в выдаче слайса ни одного спринта без проекта нет. Причина — скоуп AL-91, включён 06.11 07:38. Это задумано, не баг.</li>
+      <li>«Вехи-сироты» не пусты: в M-PRODUCT-UI ведёт FEAT-VP-FIT, в M-LORE-CLIENT-SAFE — FEAT-GITCYCLE. Слайс <span class="mono">milestones</span> считает только спринты и показывает <span class="mono">[null]</span>.</li>
+      <li>Идентификатор вехи — <span class="mono">M2</span>, а «✓ core» есть только в label. Дефект из RM-X1 в базе больше не воспроизводится.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2>2. Откуда взялись M0–M7 — доказательство</h2>
+<p>Утверждение «это календарь забега, а не вехи продукта» уже записано в RM-X1 и в SPEC-LORE-PLAN-MODEL, но там оно опирается на текст целей. Ниже три независимых следа в данных, которые к тексту целей не сводятся.</p>
+<div class="tw"><table>
+<tr><th>след</th><th>что в базе</th><th>что это значит</th></tr>
+<tr><td><b>Контрольные точки</b> (PlanCheckpoint → ON_MILESTONE)</td><td>M1: «CFP abstract написан», «Two-track план», «Dali S1 старт». M4: «Demo script финализирован», «MIMIR: go/no-go live vs teaser». M5: «make demo-reset &lt; 5s», «Backup laptop готов» (подготовка к докладу за 24 часа)</td><td>Это шаги подготовки доклада и демо, а не поставки продукта</td></tr>
+<tr><td><b>Треки плана</b> (track_id)</td><td>Есть 18 треков, все про AIDA, среди них «Demo &amp; Talk» (14 спринтов), «Logistics» (4), «Outreach» (3). У 281 из 493 спринтов трек не задан: это все продукты, появившиеся после забега</td><td>Шкала строилась под одного основателя плюс соосновательницу («Track A founder solo май / Track B co-founder с июня»)</td></tr>
+<tr><td><b>Цели вех</b> (KnowMilestoneHist.goal_md)</td><td>По одной строке истории на веху, все от 11.06.2026 13:51 — цели вносились разом и с тех пор не менялись. <span class="mono">planned_date</span> пуст у всех</td><td>Цели не служат инструментом управления: их не перечитывали, когда план менялся (RM-V3 29.08 переложил 35 спринтов M4, а цель M4 осталась прежней)</td></tr>
+</table></div>
+
+<h3>Цели M0–M7, разобранные по типу обязательства</h3>
+<p class="small muted">Каждая цель разрезана на утверждения. Тип показывает, кто задаёт дату: готовность кода (<span class="tag ok">продукт</span>) или внешний мир (<span class="tag q">бизнес</span> <span class="tag q">закон</span> <span class="tag q">событие</span> <span class="tag q">найм</span>).</p>
+<div class="tw"><table>
+<tr><th>веха</th><th>срок</th><th>утверждения цели</th></tr>
+<tr><td>M0</td><td>18 апр</td><td><span class="tag ok">продукт</span> инфраструктура + Core готовы</td></tr>
+<tr><td>M1</td><td>4 мая</td><td><span class="tag ok">продукт</span> feature wave · Hound стабилен · MIMIR prep</td></tr>
+<tr><td>M2</td><td>31 мая</td><td><span class="tag ok">продукт</span> Core v1.4.4 PROD (31/38, 7 перенесены в M3)</td></tr>
+<tr><td>M3</td><td>6 июл</td><td><span class="tag ok">продукт</span> v1.5.0 PROD · 5-минутное демо &nbsp;<span class="tag q">закон</span> ИП оформлен &nbsp;<span class="tag q">бизнес</span> 5 холодных писем OEM</td></tr>
+<tr><td>M4</td><td>31 авг</td><td><span class="tag q">событие</span> демо-видео для аутрича &nbsp;<span class="tag q">бизнес</span> 1–2 тёплых разговора с OEM &nbsp;<span class="tag ok">продукт</span> Helm chart · SDK packaging начат · AI auto-docs · MCP server</td></tr>
+<tr><td>M5</td><td>30 сен</td><td><span class="tag q">бизнес</span> LOI/контракт с OEM &nbsp;<span class="tag q">закон</span> заявка в реестр ПО &nbsp;<span class="tag q">найм</span> Mid DE (триггер MRR&gt;50К) &nbsp;<span class="tag ok">продукт</span> named agents</td></tr>
+<tr><td>M6</td><td>Окт</td><td><span class="tag q">событие</span> доклад на HighLoad++ · 5+ лидов с конференции</td></tr>
+<tr><td>M7</td><td>Ноя+</td><td><span class="tag q">бизнес</span> платящий OEM &nbsp;<span class="tag ok">продукт</span> Wave 3 backlog · ALERTS · SKULD metrics · OSI layer</td></tr>
+</table></div>
+<p><b>Вывод.</b> У M3–M7 в каждой цели смешаны продуктовые и внешние обязательства. Процент закрытых спринтов меряет только продуктовую часть. Пример: M4 закрыта на 100%, а продуктовое утверждение её цели «SDK packaging начат» не выполнено — спринт уехал в M5 и до сих пор на стадии проектирования. Внешнюю часть («тёплые разговоры с OEM») граф не меряет вообще.</p>
+
+<!-- ================================================================ -->
+<h2>3. Состав вех</h2>
+<div class="chart" id="ch-ms">
+  <div class="ttl">Спринты по вехам: закрыто / открыто / отменено</div>
+  <div class="sub">Над столбцом — сколько продуктов в вехе. «Вне вех» — спринты без TARGETS_MILESTONE</div>
+  <div class="legend"><span><i style="background:var(--c3)"></i>закрыто</span><span><i style="background:var(--c1)"></i>открыто</span><span><i style="background:var(--cN)"></i>отменено</span></div>
+  <svg width="100%" viewBox="0 0 960 300" role="img" aria-label="Спринты по вехам"></svg>
+  <details><summary>таблица</summary><div class="tw" data-table="ms"></div></details>
+</div>
+<div class="grid2">
+  <div class="card">
+    <div class="lbl">Что видно</div>
+    <ul class="tight">
+      <li>M0–M4 закрыты на 98–100%. Это архив, переразбивать там нечего.</li>
+      <li><b>M5 (срок 30.09):</b> закрыто 5 из 18, медиана опоздания закрытых — 35 дней. В RM-V3 было условие: «если к середине сентября не сдвинется — разгружать». Оно наступило 7 недель назад.</li>
+      <li><b>Вне вех открыто 114</b> — в 4 раза больше, чем во всех вехах вместе (25).</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="lbl">Смешанность</div>
+    <p class="small">Энтропия состава по продуктам: M0 1.95 · M1 2.23 · M2 2.27 · M3 2.55 · M4 2.51 · <b>M5 2.72</b> · M6 1.50 · M7 2.25 бит. При 2.5 битах в вехе в среднем шесть-семь равноправных продуктов. Это признак календаря, а не результата: у вехи-результата состав сосредоточен в одном-двух продуктах (у M-MIDGARD-PLAN-TO-DRAFT — 0 бит).</p>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2>4. Открытая работа: где она и в каком состоянии</h2>
+<div class="chart" id="ch-prod">
+  <div class="ttl">Открытые спринты по продуктам</div>
+  <div class="sub">Продукт выведен через компоненты (BELONGS_TO → IN_PRODUCT), без компонентов — через репозиторий. Справа: сколько в вехах / сколько без движения 30+ дней</div>
+  <div class="legend"><span><i style="background:var(--c1)"></i>в работе / частично</span><span><i style="background:var(--c2)"></i>planned / design / todo</span><span><i style="background:var(--c3)"></i>backlog / blocked</span></div>
+  <svg width="100%" viewBox="0 0 960 430" role="img" aria-label="Открытые спринты по продуктам"></svg>
+  <details><summary>таблица</summary><div class="tw" data-table="prod"></div></details>
+</div>
+
+<div class="grid2">
+  <div class="chart" id="ch-dates">
+    <div class="ttl">Срок у открытых спринтов</div>
+    <div class="sub">139 открытых; в веху по правилу RM-V3 «есть исполнитель и дата» проходят только 10</div>
+    <svg width="100%" viewBox="0 0 460 150" role="img" aria-label="Сроки открытых спринтов"></svg>
+  </div>
+  <div class="chart" id="ch-age">
+    <div class="ttl">Давность последнего изменения состояния</div>
+    <div class="sub">дни с последней строки истории открытого спринта</div>
+    <div class="legend"><span><i style="background:var(--c1)"></i>в работе</span><span><i style="background:var(--c2)"></i>planned/design</span><span><i style="background:var(--c3)"></i>backlog</span></div>
+    <svg width="100%" viewBox="0 0 460 220" role="img" aria-label="Давность"></svg>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="card">
+    <div class="lbl">Факты</div>
+    <ul class="tight">
+      <li><b>MIDGARD:</b> 32 открытых, 26 из них «в работе», и <b>все 32</b> не менялись 30+ дней. Из 9 фич продукта ни одна не стоит в вехе.</li>
+      <li><b>46 спринтов</b> не менялись 120+ дней: 43 planned/design, 3 backlog. Ни один из них не в работе — это мёртвый план.</li>
+      <li><b>40 спринтов «в работе» или «частично»</b> не двигались 30+ дней.</li>
+      <li>37 открытых спринтов без единой задачи.</li>
+    </ul>
+  </div>
+  <div class="card hyp">
+    <div class="lbl">Гипотеза — проверить</div>
+    <p class="small">У MIDGARD 26 спринтов «в работе» без движения — это скорее не 26 параллельных потоков, а <b>статусы спринтов не ведутся</b>: сессии MIDGARD работают задачами и не трогают сам спринт. Проверка: сравнить последнюю правку задач MIDGARD с последней правкой их спринтов. Если подтвердится, переразбиение MIDGARD на вехи бессмысленно без правила «спринт закрывается вместе с последней задачей».</p>
+  </div>
+</div>
+
+<div class="chart" id="ch-month">
+  <div class="ttl">Закрыто спринтов по месяцам (по полю done_date)</div>
+  <div class="sub">Показано, чтобы было видно, почему это поле нельзя считать скоростью: сентябрь — 1, а 4–5 ноября — 45 за два дня</div>
+  <svg width="100%" viewBox="0 0 960 220" role="img" aria-label="Закрыто по месяцам"></svg>
+</div>
+
+<!-- ================================================================ -->
+<h2>5. Связи компонентов: где проходит естественная граница</h2>
+<p>Если двум продуктам часто нужен один спринт, их вехи нельзя планировать независимо: дата одного продукта упирается в другой. Ниже связность по трём независимым признакам: общие спринты, общие задачи (теги задач на компоненты чужого продукта) и зависимости спринтов (DEPENDS_ON).</p>
+
+<div class="chart" id="ch-heat">
+  <div class="ttl">Общие спринты между продуктами</div>
+  <div class="sub">Число спринтов, затрагивающих оба продукта. Одна гамма: светлее — больше. Пустая клетка — 0</div>
+  <svg width="100%" viewBox="0 0 960 470" role="img" aria-label="Матрица связности"></svg>
+</div>
+
+<div class="grid2">
+  <div class="card ev">
+    <div class="lbl">Три признака — одна картина</div>
+    <ul class="tight">
+      <li><b>Общие спринты:</b> 57 из 493. AIDA~HOUND 20, AIDA~SEIDR 17, AIDA~HEIMDALL 13, HOUND~SEIDR 9, AIDA~MT 7, HEIMDALL~SEIDR 6. За пределами семейства — AIDA~OMILORE 6, BRAGI~OMILORE 2 и одиночные.</li>
+      <li><b>Общие задачи:</b> 193 из 1399 тегов задач ведут в компонент чужого продукта. Больше всего HEIMDALL→AIDA 31, AIDA↔HOUND 37, AIDA→SEIDR 15, HOUND→SEIDR 12 — снова внутри семейства.</li>
+      <li><b>Зависимости:</b> 90 рёбер DEPENDS_ON, 29 межпродуктовых. Почти все — SEIDR↔AIDA↔HEIMDALL↔HOUND.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="lbl">Ядро связности — пары компонентов</div>
+    <table>
+      <tr><th>пара</th><th class="n">спринтов</th></tr>
+      <tr><td>DALI (AIDA) — HND (HOUND)</td><td class="n">10</td></tr>
+      <tr><td>HND (HOUND) — SHT (AIDA)</td><td class="n">9</td></tr>
+      <tr><td>SHT (AIDA) — VERDANDI (SEIDR)</td><td class="n">8</td></tr>
+      <tr><td>HND — VERDANDI</td><td class="n">7</td></tr>
+      <tr><td>HND — YGG (AIDA)</td><td class="n">5</td></tr>
+      <tr><td>DALI — VERDANDI</td><td class="n">5</td></tr>
+      <tr><td>DALI — HEIMDALL</td><td class="n">4</td></tr>
+      <tr><td>AI (AIDA) — MIMIR (MT)</td><td class="n">3</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="mermaid">
+flowchart LR
+  subgraph FAM["Семейство AIDA — одна карта, дорожки по суб-продуктам"]
+    direction LR
+    DALI["DALI<br/>оркестрация"] -- 10 --- HND["HND<br/>парсер · HOUND"]
+    HND -- 9 --- SHT["SHT<br/>API"]
+    SHT -- 8 --- VER["VERDANDI<br/>UI · SEIDR"]
+    HND -- 7 --- VER
+    HND -- 5 --- YGG["YGG<br/>граф"]
+    DALI -- 4 --- HEIM["HEIMDALL<br/>наблюдение"]
+    AI["AI"] -- 3 --- MIM["MIMIR · MT"]
+    HND -- 3 --- MIM
+  end
+  OMI["OMILORE / LORE"] -. 6 .- FAM
+  BRAGI -. 2 .- OMI
+  VOLVA -. 1 .- HND
+  MID["MIDGARD<br/>32 открытых"]
+  DW["Datawanderers<br/>16 открытых"]
+  MINI["miniLORE"]
+  MIG["MIGGEN"]
+  ODIN
+</div>
+<p class="small muted">Сплошные линии — общие спринты внутри семейства, пунктир — слабые связи с внешними продуктами, продукты без линий ни с кем не связаны. Цифры — число общих спринтов.</p>
+
+<h3>Вехи нарушают порядок зависимостей</h3>
+<p>Веха не может закрыться раньше, чем закроются спринты, от которых зависят её спринты. Сейчас пять вех ждут работу, которая не стоит ни в одной вехе или стоит в более поздней:</p>
+<div class="mermaid">
+flowchart RL
+  ANV["ANVIL_IDE · M6"] --> SK1["SKULD_V1 · M5 · design"]
+  SKO["SKULD_OPERATIONAL_METRICS · M7"] --> SK1
+  SKO --> ALR["ALERTS · HEIMDALL · вне вех"]
+  SDK["SDK_PACKAGING · M5"] --> W2["WAVE2_SAAS_ENABLERS · вне вех"]
+  PP["MIDGARD_PLANPARSE_PROD · M-MIDGARD"] --> OWN["MIDGARD_OWN_MODEL · вне вех"]
+  PP --> IMP["MIDGARD_PLAN_IMPORT · вне вех"]
+  LDG["LLM_DIALECT_GUARD · HOUND"] --> LLM["MIMIR_LOCAL_LLM · MT"]
+  classDef out fill:#f6e0dc,stroke:#c03030,color:#1e1a12
+  class ALR,W2,OWN,IMP out
+</div>
+<p class="small muted">Стрелка — «зависит от». Красным — спринты вне вех, без которых веха не закроется.</p>
+
+<!-- ================================================================ -->
+<h2>6. Дефекты модели компонентов, которые исказят любую карту</h2>
+<div class="tw"><table>
+<tr><th>#</th><th>что</th><th>доказательство</th><th>влияние на карту</th></tr>
+<tr><td>1</td><td><b>HARPA</b> (сайт) — витрина AIDA, но поля записаны неверно</td><td><span class="mono">project=BRAGI</span>, а 16 из 18 спринтов — в <span class="mono">NooriUta/seidr-site</span>; area и owner пусты (подтвердила сессия seidr-site)</td><td>Сайт правильно в продукте AIDA, но его спринты попадают в «создание». Нужно area=marketing — тогда они встанут во фронт-дорожку AIDA</td></tr>
+<tr><td>2</td><td><b>Компоненты Datawanderers есть, но пустые</b></td><td>DW, DW_SRV, DW_UNITY, DW_AI: продукта нет, спринтов 0; при этом 24 спринта DW без компонентов</td><td>16 открытых спринтов не попадут ни в одну карту</td></tr>
+<tr><td>3</td><td><b>FREYJA</b> — будущий продукт «общая бухгалтерия» (ещё не начат), а на нём висят 14 спринтов найма, ИП, CFP и аутрича. BOKVIT (относится к MIDGARD) и BALDR — без продукта</td><td>FREYJA area=finance, задач у её спринтов 2; BOKVIT — 1 спринт в репо <span class="mono">AIDA/BOKVIT</span></td><td>Студийные дела записаны на ненаписанный продукт. BOKVIT не виден в карте MIDGARD</td></tr>
+<tr><td>3a</td><td><b>Дубли в MIGGEN</b></td><td>MIGGEN-AIRFLOW / -AUDIT / -CORE / -PARSER (area=engine, 0 спринтов) дублируют MIGAIRFLOW / MIGAUDIT / MIGCORE / MIGPARSER; два дубля уже помечены «УСТАРЕЛ», четыре — нет</td><td>Состав продукта раздут на 6 пустых записей</td></tr>
+<tr><td>4</td><td>miniLORE — отдельный продукт, но родитель его компонента — OMILORE</td><td>MINILORE.parent → OMILORE</td><td>Неясно, чья это карта: своя или дорожка OMILORE</td></tr>
+<tr><td>5</td><td>Роль <span class="mono">consumer</span> у IN_PRODUCT не используется</td><td>все 90 рёбер — <span class="mono">owner</span></td><td>Связь «продукт пользуется чужим компонентом» (например, LORE → YGG) не выражена; связность видна только через спринты</td></tr>
+<tr><td>6</td><td>Продукт → репозиторий не заполнен</td><td><span class="mono">products.git_projects = []</span> у всех 13</td><td>Скоуп прав (по проекту) и карта (по продукту) не сшиты; соседняя сессия подтвердила это у всех 13</td></tr>
+</table></div>
+
+<!-- ================================================================ -->
+<h2>7. Составные продукты</h2>
+<p>Составной продукт — это продукт из нескольких частей, каждая из которых сама может быть вариантом полки. Решение D-2026-LORE-PRODUCT-IS-OWN-ENTITY разрешает вложенность («AIDA составной, из него выделяются SEIDR STUDIO, HEIMDALL, HOUND»). Сейчас вложенность записана <b>только у AIDA</b>: у остальных 12 продуктов <span class="mono">parent_code</span> и <span class="mono">sub_products</span> пусты. Ниже — фактическое строение по дереву компонентов и по работе.</p>
+
+<h3>7.1 Семейство AIDA — составной, записан верно, но с перекосом</h3>
+<div class="mermaid">
+flowchart TB
+  AIDA["AIDA · платформа<br/>18 компонентов · 159 спринтов"]
+  AIDA --> CORE["ядро данных<br/>DALI 29 · YGG 15 · FRIGG 8 · OL 11 · SKADI 4 · SCHEMA_MIGRATE 4"]
+  AIDA --> API["API и доступ<br/>SHT 24 · CHUR 9 · KC 11 · SECURITY 8 · VAULT 2"]
+  AIDA --> INF["инфраструктура<br/>INFRA 31 · FORGEJO 1"]
+  AIDA --> ENG["движки<br/>ANVIL 5 · AI 3"]
+  AIDA -.-> SITE["HARPA · сайт 18<br/>project=BRAGI — чужой"]
+  AIDA ==> HOUND["HOUND · 87 спринтов<br/>HND 85 · DEDUP 3 · TS 0 · TUNGA 2"]
+  AIDA ==> SEIDR["SEIDR STUDIO · 47<br/>LOOM 25 · VERDANDI 15 · KNOT 7 · SKULD 2 · URD 0 · ANVIL_FE 0"]
+  AIDA ==> HEIM["HEIMDALL · 41<br/>HEIMDALL 21 · FE 9 · OBS 6 · BE 5 · ALERTS 1 · SDK 0"]
+  AIDA ==> MT["MT (Mimir) · 26<br/>MIMIR 25 · MT 1"]
+  VOLVA["VOLVA · BI · 16<br/>EMBED «в Seiðr Studio» · THEME «AIDA whitelabel»"] -. встраивается .-> SEIDR
+  HND2["HND лежит внутри DALI"] -.- HOUND
+</div>
+<ul class="tight">
+  <li><b>Перекос веса.</b> HOUND (87 спринтов, 53 ADR) по объёму больше всех остальных суб-продуктов, а его корень HND сидит внутри DALI платформы. Поэтому дорожку HOUND нельзя отделить от ядра AIDA — это и есть причина связности DALI~HND = 10.</li>
+  <li><b>Пустые компоненты:</b> TS, URD, ANVIL_FE, SDK — 0 спринтов. Это заявки на будущие варианты полки: например, SDK — тот самый «SDK packaging» из цели M4.</li>
+  <li><b>VOLVA</b> — отдельный продукт, но его компоненты прямо называют себя частью AIDA: «Embedding в Seiðr Studio», «AIDA theming &amp; whitelabel», мост VOLVA_HOUND_BRIDGE. <b>Подтверждено решением</b> D-2026-PRODUCT-BOUNDARIES-REALMS (05.11, ваши слова: «Völva будет часть экосистемы AIDA, а DW и MIDGARD — отдельные продукты»). Отсюда общий realm <span class="mono">seer</span>. В справочнике продуктов это пока не отражено: VOLVA — корневой. Остаётся выбрать уровень: суб-продукт AIDA или вариант полки.</li>
+</ul>
+
+<h3>7.2 MIDGARD — составной по факту, плоский в модели</h3>
+<div class="mermaid">
+flowchart TB
+  MID["MIDGARD · DIY умный дом<br/>16 компонентов + BOKVIT · 38 спринтов · 9 фич"]
+  MID --> HUB["хаб GLADSHEIM · 13 сп., 11 открыто · свой репо, 40 релизов 0.1→0.6<br/>VEBAND доступ · KVASIR ИИ · THING сценарии"]
+  MID --> VOICE["голос GJALLARHORN · 6 сп."]
+  MID --> PLAN["планировки TEIKN · 2 сп. · свой репо<br/>веха «лист застройщика → черновик»"]
+  MID --> VIEW["вид SJON · панель и приложение<br/>VOG · весы дома"]
+  MID --> IOT["узлы и железо<br/>BREIDABLIK свет · THRYMHEIM климат · FENSALIR вода · BILSKIRNIR питание<br/>EITRI плата · HANDSAL онбординг · GARD идентичность"]
+  MID --> BOK["BOKVIT · граф знаний по библиотеке<br/>свой репо — сейчас без продукта"]
+  F1["FEAT-BUTLER"] -.-> VOICE
+  F2["FEAT-NOCLOUD"] -.-> HUB
+  F3["FEAT-SCENARIOS"] -.-> HUB
+  F4["FEAT-CIRCLE"] -.-> HUB
+  F5["FEAT-SJON · FEAT-VOG"] -.-> VIEW
+  F6["FEAT-HANDS · FEAT-SELF-INSTALL · FEAT-OWNERSHIP"] -.-> IOT
+</div>
+<ul class="tight">
+  <li><b>Пять подсистем с разной судьбой:</b> у хаба GLADSHEIM свой репозиторий и 40 релизов, у TEIKN — свой репозиторий и своя веха. То есть это уже отдельные варианты поставки. Узлы и железо: 7 компонентов, спринтов на них почти нет (1+1), работа там ещё не началась.</li>
+  <li><b>Фичи ложатся на подсистемы почти один к одному</b> (пунктир на схеме, сопоставление по смыслу <span class="tag q">ASSUMED</span>). Значит, вехи MIDGARD естественно резать по подсистемам: каждая веха — одна-две фичи одной подсистемы.</li>
+  <li><b>Вложенность не записана:</b> у MIDGARD нет суб-продуктов, хотя GLADSHEIM и TEIKN по признакам «свой репозиторий + свои релизы + свои фичи» ими являются. BOKVIT по вашему слову относится к MIDGARD, а записан без продукта.</li>
+  <li><b>Ответ сессии MIDGARD (06.11):</b> GLADSHEIM — да, часть MIDGARD («датахаб дома»), TEIKN — да («чтение планировок для дома»). BOKVIT — «по-моему нет: граф библиотеки книг по электронике (бывш. biblio_graph), к дому не относится». Своего целеполагания сверх спек рынка у MIDGARD нет. <span class="tag q">расхождение</span> с вашим словом — вынесено в раздел 14.</li>
+  <li>6 открытых спринтов MIDGARD/GLADSHEIM вообще без компонентов, а у GLADSHEIM на 13 спринтов всего 3 тега задач. Подсистему по задачам MIDGARD сейчас определить нельзя — только по имени спринта.</li>
+</ul>
+
+<h3>7.3 Платформа OMILORE — три продукта на одной основе, записаны как несвязанные</h3>
+<div class="mermaid">
+flowchart LR
+  OMI["OMILORE · Backoffice Platform<br/>OMILORE 54 · FORSETI 19 · FORSETI_MCP 10 · QG 3"]
+  MINI["miniLORE · мобильный монитор<br/>SRV 6 · LINK 1 · APP 1 · GW 2 · CHAN 1 · 15 сп., 232 релиза"]
+  BR["BRAGI · публикации<br/>12 сп., работа — PLATFORM_RENDER, ARCHIVE_IMPL на OMILORE"]
+  MINI -- компонент MINILORE лежит внутри OMILORE --> OMI
+  BR -- 2 общих спринта --> OMI
+  FREY["FREYJA · общая бухгалтерия<br/>не начата"] -. будущий продукт на платформе? .-> OMI
+</div>
+<ul class="tight">
+  <li>RM-P2 называет miniLORE и BRAGI «двумя продуктами на базе OMILORE», но в справочнике все три — корневые. Компонент MINILORE при этом сидит внутри OMILORE. Модель противоречит сама себе: по продуктам — независимы, по компонентам — вложены.</li>
+  <li>У miniLORE 232 релиза в двух репозиториях и 15 спринтов, и <b>ни одной вехи</b>. Это самый частый поставщик релизов в корпусе.</li>
+</ul>
+
+<h3>7.4 Что из этого следует для вех</h3>
+<div class="tw"><table>
+<tr><th>продукт</th><th>строение</th><th>как резать вехи</th></tr>
+<tr><td>AIDA</td><td>составной, 4 суб-продукта (+ VOLVA?)</td><td>одна карта, дорожки по суб-продуктам; веха AIDA = сборка варианта из вех дорожек (веха целит в несколько продуктов — модель это разрешает)</td></tr>
+<tr><td>MIDGARD</td><td>составной по факту, плоский в модели</td><td>записать GLADSHEIM и TEIKN суб-продуктами (BOKVIT — по вашему решению); вехи — по подсистемам и их фичам</td></tr>
+<tr><td>OMILORE · miniLORE · BRAGI</td><td>платформа + два продукта на ней</td><td>решить: семейство с общей картой (как AIDA) или независимые карты. Связность низкая (2 общих спринта), поэтому рекомендую независимые карты с общей платформенной дорожкой OMILORE</td></tr>
+<tr><td>VOLVA, ODIN, MIGGEN, Datawanderers</td><td>монолитные (у MIGGEN 6 пустых дублей)</td><td>одна карта, вехи по фичам</td></tr>
+</table></div>
+
+<!-- ================================================================ -->
+<h2>8. Цельность продукта: создание и вывод на рынок</h2>
+<p>Ваша рамка: у продукта есть <b>back</b> — создание — и <b>front</b>: маркетинг, продажи, обслуживание. Цельным продукт делает наличие обеих сторон. Я разметила каждый спринт по стадии цепочки ценности: по компонентам (BRAGI, HARPA, BALDR — маркетинг), по трекам плана (Demo &amp; Talk, Outreach) и по смыслу названия (SITE, SEO, BLOG, DEMO, CFP, анализ рынка и конкурентов → маркетинг; OEM, LEADS, PRICING, OUTREACH → продажи; RUNBOOK, ONBOARD, HOTFIX → обслуживание; HIRE, INCORPORATION → студия).</p>
+<div class="chart" id="ch-stage">
+  <div class="ttl">Спринты по стадиям цепочки ценности, по продуктам</div>
+  <div class="sub">все спринты продукта (закрытые и открытые); число справа — всего</div>
+  <div class="legend"><span><i style="background:var(--c3)"></i>создание (back)</span><span><i style="background:var(--c1)"></i>маркетинг</span><span><i style="background:var(--c2)"></i>продажи</span><span><i style="background:var(--cN)"></i>обслуживание · студия</span></div>
+  <svg width="100%" viewBox="0 0 960 470" role="img" aria-label="Стадии по продуктам"></svg>
+  <details><summary>таблица</summary><div class="tw" data-table="stage"></div></details>
+</div>
+<div class="grid2">
+  <div class="card ev">
+    <div class="lbl">Что видно</div>
+    <ul class="tight">
+      <li><b>Создание — 437 из 493 спринтов (89%).</b> Маркетинг — 48, продажи — 4, обслуживание — 1, студийные дела — 3.</li>
+      <li><b>Фронт есть у трёх продуктов.</b> У AIDA — 21 спринт сайта и SEO (почти все в M3, июнь). У BRAGI фронт — весь продукт. У MIDGARD — исследование рынка (SPRINT_MIDGARD_COMPETITORS, SPRINT_MIDGARD_ANALYSIS_GAPS и 14 спек рынка), но пока без вывода на рынок и продаж. У восьми продуктов фронта нет ни одного спринта.</li>
+      <li><b>По задачам картина та же:</b> dev — 66% задач, content — 2.9% (165), docs — 1.7% (97). Задач продаж или поддержки как типа нет вообще.</li>
+      <li><b>Продажи — 4 спринта на весь корпус:</b> PRICING (закрыт в M2), OEM_PARTNER_PROGRAM (M5, design), LEADS и OUTREACH (без вех). При этом в целях M3–M7 продажи стоят в каждой вехе: 5 холодных писем, тёплые OEM, LOI, платящий OEM.</li>
+    </ul>
+  </div>
+  <div class="card bad">
+    <div class="lbl">Вывод</div>
+    <p class="small">Цели вех обещали фронт: OEM, демо, лиды, доклад. Работа делала back. Именно здесь разошлись «процент вехи» и «цель вехи». <b>Обслуживания нет как класса работы:</b> ни онбординга клиента, ни поддержки, ни SLA. Есть только внутренние runbook'и. Для полки «вариантов сборки и продажи» это значит, что продавать уже есть что (AIDA 1.7, LORE 1.15), но некому и нечем: нет оффера, прайса, пилота и сопровождения.</p>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2>9. Классы работы и типы задач</h2>
+<p>Две оси размечают задачу: <b>класс работы</b> — зачем она (<span class="mono">uc</span> реализует сценарий, <span class="mono">jtd</span> — вспомогательная работа, <span class="mono">enb</span> — инфраструктура, без которой не сделать сценарий; ADR-LORE-022) — и <b>тип</b>: что делаем (dev, test, ops, design, research, content, docs, analytics, planning). Обе оси — естественный материал для правил состава вехи.</p>
+<div class="chart" id="ch-wc">
+  <div class="ttl">Класс работы задач по вехам</div>
+  <div class="sub">доля задач; число справа — всего задач в вехе</div>
+  <div class="legend"><span><i style="background:var(--c1)"></i>uc · сценарий</span><span><i style="background:var(--c2)"></i>enb · инфраструктура</span><span><i style="background:var(--c3)"></i>jtd · вспомогательная</span><span><i style="background:var(--cN)"></i>не размечено</span></div>
+  <svg width="100%" viewBox="0 0 960 300" role="img" aria-label="Класс работы по вехам"></svg>
+  <details><summary>таблица</summary><div class="tw" data-table="wc"></div></details>
+</div>
+<div class="tw"><table>
+<tr><th>тип \ класс</th><th class="n">uc</th><th class="n">jtd</th><th class="n">enb</th><th class="n">не размечено</th><th class="n">всего</th></tr>
+<tr><td>dev</td><td class="n">435</td><td class="n">454</td><td class="n">693</td><td class="n">2141</td><td class="n">3723</td></tr>
+<tr><td>ops</td><td class="n">5</td><td class="n">71</td><td class="n">240</td><td class="n">233</td><td class="n">549</td></tr>
+<tr><td>test</td><td class="n">9</td><td class="n">49</td><td class="n">118</td><td class="n">301</td><td class="n">477</td></tr>
+<tr><td>design</td><td class="n">50</td><td class="n">13</td><td class="n">68</td><td class="n">117</td><td class="n">248</td></tr>
+<tr><td>research</td><td class="n">24</td><td class="n">53</td><td class="n">57</td><td class="n">110</td><td class="n">244</td></tr>
+<tr><td>content</td><td class="n">64</td><td class="n">2</td><td class="n">0</td><td class="n">99</td><td class="n">165</td></tr>
+<tr><td>docs</td><td class="n">2</td><td class="n">41</td><td class="n">17</td><td class="n">37</td><td class="n">97</td></tr>
+<tr><td>analytics</td><td class="n">13</td><td class="n">21</td><td class="n">16</td><td class="n">33</td><td class="n">83</td></tr>
+<tr><td>planning</td><td class="n">3</td><td class="n">6</td><td class="n">10</td><td class="n">25</td><td class="n">44</td></tr>
+</table></div>
+<div class="grid2">
+  <div class="card ev">
+    <div class="lbl">Факты</div>
+    <ul class="tight">
+      <li><b>Разметка новая:</b> у M0–M2 размечено 3 задачи из 676, у M3 — 31%, у M4 — 55%. Вне вех — 61%. Открытые спринты — 49% (741 из 1 499).</li>
+      <li><b>uc без сценария:</b> из 613 uc-задач ребро REALIZES есть у 216 (35%). Остальные 397 заявляют «реализую сценарий», не называя какой.</li>
+      <li><b>jtd течёт мимо вех:</b> 668 из 717 jtd-задач — вне вех. Это и есть «поток» из RM-V4: вспомогательная работа по природе не ведёт к результату вехи.</li>
+      <li><b>enb тяжелее uc:</b> enb 1 221 против uc 613. В M5 enb 78 против uc 13 — веха стала инфраструктурной, хотя её цель — LOI с OEM.</li>
+      <li><b>ops почти целиком enb/jtd</b> (311 из 316 размеченных) — эксплуатация к сценариям не привязана.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="lbl">Фичи уже ведут себя как вехи</div>
+    <table>
+      <tr><th>фича</th><th class="n">задач</th><th class="n">закрыто</th><th>вехи</th></tr>
+      <tr><td>FEAT-VP-FIT</td><td class="n">40</td><td class="n">40</td><td>M4</td></tr>
+      <tr><td>FEAT-LORE-PLAN</td><td class="n">20</td><td class="n">20</td><td>M3, M4</td></tr>
+      <tr><td>FEAT-LORE-HONEST</td><td class="n">39</td><td class="n">38</td><td>M3, M4, M5</td></tr>
+      <tr><td>FEAT-LORE-AGENT-TOOLS</td><td class="n">38</td><td class="n">36</td><td>M3, M4</td></tr>
+      <tr><td>FEAT-LORE-KNOW</td><td class="n">36</td><td class="n">30</td><td>M3, M4</td></tr>
+      <tr><td>FEAT-BRAGI-CONTENT-PIPELINE</td><td class="n">41</td><td class="n">35</td><td>M3, M5</td></tr>
+    </table>
+    <p class="small muted">Фича размазана по 2–3 календарным вехам — значит, календарная веха режет результат пополам. Если бы веха была фичей, процент закрытия совпадал бы с готовностью результата.</p>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<h2>10. Целеполагание и рынок: что есть у каждого продукта</h2>
+<p>Собрано из LORE и из ответов сессий продуктов 06.11. Ответили сессии aida-root, Völva, Datawanderers, seidr-site, Mobilepoc (miniLORE) и MIDGARD. «Нет» ниже — это подтверждённое отсутствие: сессия искала и записи не существует, а не «не нашли».</p>
+<div class="tw"><table>
+<tr><th>продукт</th><th>цели</th><th>рынок, конкуренты, цены</th><th>оценка</th></tr>
+<tr><td><b>AIDA</b></td><td><b>есть:</b> doc:product_growth_focus_m5 — North Star «первый OEM design partner к M5 + демо, которое продаёт за 5–7 минут», 5 треков, KEEP/DEFER-триаж; ADR-MT-006 (биллинг), ADR-MT-011 (OEM/on-prem, BYOK, pricing)</td><td>частично: 4 карточки конкурентов (COMP-ARENADATA, COLLIBRA, DATAHUB, MANTA), product_capability_map, product_dialect_parse_strategy; документа про цены, пакеты и рынок нет</td><td><span class="tag ok">цель есть</span> но не связана ни с одной вехой; документ лежит в UnlimitedLORE на компоненте OMILORE, а не в AIDA</td></tr>
+<tr><td><b>MIDGARD</b></td><td>цели разложены по кускам: зачем — POSITIONING + 9 FEAT; за сколько — PACKAGES, BOM; для кого — AN-01…05; <b>когда — нигде</b>. Главный вопрос «на продажу или нет» открыт с 10.09</td><td><b>богато:</b> SPEC-MIDGARD-MARKET-MATRIX, -COMPETITORS-FULL, -COMPETITOR-CARDS, -POSITIONING, -PACKAGES (состав и цена по типам жилья), -UC-PRIORITY (обязательное / ожидаемое / восхищающее), -VENDOR-TRENDS, -BOM, сегменты РФ / PL / US / KR / CN</td><td><span class="tag ok">лучший в корпусе</span> рынок изучен глубже, чем у любого продукта, но вехи нет ни у одной фичи</td></tr>
+<tr><td><b>Völva</b></td><td>граница OSS/EE: ADR-VOLVA-009, ADR-VOLVA-010, spec:VOLVA_MODULES; направления — D-2026-VOLVA-DATASTORY, ADR-VOLVA-012 (PROPOSED)</td><td><b>нет</b>: конкурентов BI, цен, позиционирования в LORE не существует</td><td>часть экосистемы AIDA — D-2026-PRODUCT-BOUNDARIES-REALMS (accepted 05.11)</td></tr>
+<tr><td><b>Datawanderers</b></td><td>doc:dw_concept, doc:dw_book_game, doc:dw_mechanics; монетизация — ADR-DWL-005 («за деньги только уголь, покупает родитель»)</td><td><b>нет</b> отдельного анализа; ближе всего doc:dw_ref_cafe_economy, doc:dw_trademark_check</td><td>отдельный продукт (то же решение); в справочнике продуктов отсутствует</td></tr>
+<tr><td><b>Сайт (HARPA)</b></td><td><b>нет</b>: аудитории, воронки, метрик нет ни в одной записи</td><td><b>нет</b>; позиционирование существует только готовыми текстами в репо (<span class="mono">public/data/docs</span>, блог)</td><td>витрина AIDA, маркетинговая функция — BRAGI, код — <span class="mono">NooriUta/seidr-site</span> (project=BRAGI записан неверно)</td></tr>
+<tr><td><b>miniLORE</b></td><td><b>нет</b></td><td><b>нет</b></td><td>место в иерархии (сам или под OMILORE) — решение владелицы</td></tr>
+<tr><td><b>LORE / OMILORE</b></td><td>6 фич, ADR-LORE-*</td><td>канва ценности: болей 33, выгод 19, работ 9 — общие, без привязки к продукту</td><td>фичи есть, рынка как записи нет</td></tr>
+</table></div>
+
+<div class="card hyp">
+  <div class="lbl">MIDGARD: диагноз маркетинговой сессии продукта (передан владелицей 06.11)</div>
+  <p class="small">«Цели написаны, но разложены по кускам и ни разу не названы целями»:</p>
+  <ul class="tight small">
+    <li><b>зачем</b> — в SPEC-MIDGARD-POSITIONING и в девяти FEAT-MIDGARD-*, которые по сути и есть список целей;</li>
+    <li><b>за сколько</b> — в SPEC-MIDGARD-PACKAGES и SPEC-MIDGARD-BOM;</li>
+    <li><b>для кого</b> — в болях и голосах из AN-01…AN-05;</li>
+    <li><b>когда</b> — нигде.</li>
+  </ul>
+  <p class="small">Три следствия: (1) <b>нечем мерить «достаточно»</b> — десяток задач «готово, ждёт приёмки» с сентября; (2) <b>маркетинг и инженерия не сведены</b> — у ADR-MIDGARD-001…034 и у маркетинговых спринтов нет общей цели, поэтому расхождения всплывают поздно (платформа за 100 тысяч, лицензия XMOS, которой не было ни в одной смете); (3) <b>главный вопрос не решён</b>.</p>
+  <p class="small"><b>Проверено в LORE:</b> Q-MIDGARD-OWN-MODEL-LICENCE-FOR-SALE — «изделие на продажу или нет», открыт с 10.09, приоритет high. Два спринта уже исходят из противоположных ответов: SPRINT_MIDGARD_OWN_MODEL/OM-05 учит модель на CubiCasa (CC BY-NC) под «продаж не планируется», а SPRINT_GJALLARHORN_WAKEWORD/WW-02 отбраковал Silero v4 потому, что «изделие на продажу». При этом <span class="mono">gating_tasks</span> у вопроса пуст: формально он не блокирует ни одной задачи.</p>
+  <p class="small"><b>Что это значит для вех MIDGARD:</b> пока вопрос открыт, веха-«вариант полки» невозможна — от ответа зависят сертификация (AN-06 заморожена), себестоимость, поддержка и форма обещания «дом переживёт производителя». Поэтому первая веха MIDGARD — не продуктовая, а <b>решение</b>: «на продажу / для себя» + свод целей (зачем · для кого · за сколько · когда) в одну запись. До этого — только инженерные вехи подсистем с критерием приёмки.</p>
+</div>
+<h3>10.1 North Star AIDA против того, что делалось</h3>
+<p>Документ product_growth_focus_m5 от 06.06 прямо говорит: «ОПЕРАЦИОННЫЙ ПРИОРИТЕТ — перекрывает приоритеты спринтов». Ниже его же список KEEP/DEFER, сверенный со статусами спринтов на 06.11.</p>
+<div class="grid2">
+  <div class="card">
+    <div class="lbl">KEEP — «работает на North Star»</div>
+    <table>
+      <tr><th>спринт</th><th>дорожка</th><th>статус</th></tr>
+      <tr><td>PLPGSQL_BODY_PARSING</td><td>создание</td><td><span class="tag ok">done 06.07</span></td></tr>
+      <tr><td>GREENPLUM_EXTENSION</td><td>создание</td><td><span class="tag ok">done 06.07</span></td></tr>
+      <tr><td>PLPGSQL_GRAMMAR_ANTLR</td><td>создание</td><td><span class="tag ok">done 05.11</span></td></tr>
+      <tr><td>COMPETITOR_UX_GAPS — «демо, что продаёт»</td><td>создание → вывод</td><td><span class="tag no">planned</span></td></tr>
+      <tr><td>DEMO_SCRIPT</td><td>вывод</td><td><span class="tag no">planned</span></td></tr>
+      <tr><td>SOVEREIGN_AI_MESSAGING (~2–3 дня)</td><td>вывод</td><td><span class="tag no">todo</span></td></tr>
+      <tr><td>OUTREACH (15–20 контактов в месяц)</td><td>продажа</td><td><span class="tag no">planned</span></td></tr>
+      <tr><td>LEADS</td><td>продажа</td><td><span class="tag no">planned</span></td></tr>
+      <tr><td>OEM_PARTNER_PROGRAM</td><td>продажа</td><td><span class="tag no">design</span></td></tr>
+      <tr><td>PENTEST_EXTERNAL</td><td>обслуживание / due diligence</td><td><span class="tag no">planned</span></td></tr>
+      <tr><td>HIRE_MID_DE</td><td>студия</td><td><span class="tag no">planned</span></td></tr>
+      <tr><td>УД4 / реестр ПО · advisory board · escrow</td><td>студия / compliance</td><td><span class="tag no">спринтов нет</span></td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="lbl">DEFER — «хорошо, но не на M5»</div>
+    <table>
+      <tr><th>спринт</th><th>статус</th><th>где</th></tr>
+      <tr><td>WAVE1_UI</td><td>done 20.06</td><td>M3</td></tr>
+      <tr><td>MCP_SERVER</td><td>done 06.06</td><td>M3</td></tr>
+      <tr><td><b>AI_AUTODOCS_BASIC</b></td><td>design</td><td><b>M5</b></td></tr>
+      <tr><td><b>AI_CPG_AUTODOCS_BACKLOG</b></td><td>backlog</td><td><b>M5</b></td></tr>
+      <tr><td><b>SDK_PACKAGING</b></td><td>design</td><td><b>M5</b></td></tr>
+      <tr><td>WAVE2_SAAS_ENABLERS</td><td>planned</td><td>вне вех</td></tr>
+      <tr><td>WAVE3_NEW_UCS</td><td>planned</td><td>вне вех</td></tr>
+    </table>
+    <p class="small"><b>Три отложенных спринта стоят в M5</b>, чья цель — LOI. Их перенесли туда 31.08 (RM-V3) по правилу «есть исполнитель и дата», не сверившись с North Star: документ не связан ни с одной вехой, и правило его не видело. Мой первый вариант вехи «on-prem поставка с SDK» ошибался так же — ниже исправлено.</p>
+  </div>
+</div>
+<div class="card bad">
+  <div class="lbl">Вывод — количественно о «back преобладает»</div>
+  <p class="small">После 06.06 закрыто 222 спринта: AIDA 72, OMILORE 56, HOUND 48, SEIDR 15, HEIMDALL 15, miniLORE 14 и т. д. Из KEEP-списка North Star закрыты <b>3 из 11 — все три про создание (парсинг)</b>. <b>Все 6 фронтовых пунктов — демо, позиционирование, аутрич, лиды, OEM-программа, пентест — открыты 5 месяцев.</b> Цель записана, триаж сделан, а исполнение пошло по пути наименьшего сопротивления — в back. Ровно потому, что цель не была вехой: у неё не было ни ребра на спринты, ни процента, ни места на плане.</p>
+</div>
+
+<!-- ================================================================ -->
+<h2>11. Что уже решено в LORE и где решения расходятся с данными</h2>
+<div class="tw"><table>
+<tr><th>запись</th><th>статус</th><th>что говорит</th><th>расхождение</th></tr>
+<tr><td>ADR-LORE-040</td><td><span class="tag q">PROPOSED</span></td><td>вехи по проектам; §1 заменён правкой 27.08 — веха принадлежит продукту</td><td>Замер в контексте устарел: «M4 — 58, M6 — 0, M5 — 3», а сегодня 23 / 3 / 18. ADR не принят, хотя код по нему уже построен (RM-S1…S3, RM-M1)</td></tr>
+<tr><td>D-2026-LORE-PRODUCT-IS-OWN-ENTITY</td><td><span class="tag ok">accepted</span></td><td>продукт — сущность и носитель карты; продукты вложены; проект — только права</td><td>Данные не заполнены: TARGETS_PRODUCT = 0</td></tr>
+<tr><td>D-2026-LORE-RBAC-BY-PROJECT</td><td><span class="tag ok">accepted</span></td><td>«продукт — продуктовая полка различных вариантов сборок и продажи»</td><td><b>Это меняет смысл вехи продукта:</b> веха — состояние полки (что можно собрать и продать), а не месяц. Предложение ниже исходит из этого</td></tr>
+<tr><td>D-2026-LORE-M0M7-BELONG-TO-AIDA</td><td><span class="tag ok">accepted</span></td><td>M0–M7 — вехи AIDA</td><td>Противоречит доказательству в разделе 2 и правке 27.08; в спеке помечено «на ревизии» (RM-V1), само решение не пересмотрено</td></tr>
+<tr><td>D-2026-LORE-MILESTONE-BELONGS-TO-PROJECT</td><td><span class="tag q">proposed</span></td><td>веха принадлежит проекту; веха без проекта — портфельная, и это законно</td><td>Снято правкой 27.08 и противоречит SPEC-LORE-PLAN-MODEL (инвариант 1: «веха без продукта — незаполненность»). Висит как живое предложение</td></tr>
+<tr><td>D-2026-LORE-PLAN-FILTERED-BY-PROJECT</td><td><span class="tag q">proposed</span></td><td>план фильтруется по проекту</td><td>Уточнено: группировка по продукту, проект — граница прав под ней</td></tr>
+<tr><td>SPEC-LORE-PLAN-MODEL / RUNBOOK-LORE-PRODUCT-ROADMAP</td><td>v1.0.0, 20.10</td><td>модель, инварианты, пошаговый рецепт</td><td>Рецепт есть, карт нет ни одной. Шаг 0 («продукт заведён») для Datawanderers не выполним агентом: справочник правит только человек (dict_set → 403)</td></tr>
+</table></div>
+<p><b>Вывод по решениям.</b> Механизм и решение о носителе карты есть. Не хватает трёх вещей: (1) закрыть противоречащие предложения — D-2026-LORE-MILESTONE-BELONGS-TO-PROJECT и D-2026-LORE-PLAN-FILTERED-BY-PROJECT; (2) пересмотреть D-2026-LORE-M0M7-BELONG-TO-AIDA; (3) принять ADR-LORE-040 в редакции «по продукту» с обновлённым замером. Пока они висят, у агента, который строит карту, на одну ситуацию два правила.</p>
+
+<!-- ================================================================ -->
+</section>
+<section class="tab" id="tab-roadmap">
+<h2>Дорожные карты по продуктам</h2>
+<p>Каждая карта показывает последовательность вех-кандидатов продукта и то, от чего каждая веха зависит снаружи. Зависимости трёх видов:</p>
+<div class="legend" style="font-size:var(--fs-sm)">
+  <span><i style="background:#ffffff;border:1px solid #b8ab94"></i>веха продукта (кандидат)</span>
+  <span><i style="background:#e0edf6;border:1px solid #2F6DB5"></i>ждёт веху или работу соседнего продукта</span>
+  <span><i style="background:#f6e0dc;border:1px solid #c03030"></i>нехватка: фичи, функции, решения или работы, которой нет вовсе</span>
+</div>
+<p class="small muted">Источник рёбер: DEPENDS_ON открытых спринтов (17 пар «открытый ждёт открытого»), North Star AIDA (doc:product_growth_focus_m5), решения D-2026-PRODUCT-BOUNDARIES-REALMS и D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE, вопрос Q-MIDGARD-OWN-MODEL-LICENCE-FOR-SALE, задача SPRINT_MIDGARD_PLAN_IMPORT/PI-16. Дат на картах нет сознательно: у 129 из 139 открытых спринтов их нет, а выдуманная дата хуже пустой. Порядок вех — по зависимостям. Где связь выведена по смыслу, а не из ребра, стоит пометка <span class="tag q">ASSUMED</span>.</p>
+
+<h3>Общая карта: кто кого ждёт</h3>
+<div class="mermaid">
+flowchart LR
+  OMI["OMILORE · бэкофис<br/>LORE · права · KC-админ"]
+  HAR["HARPA · service<br/>витрина, продажи, доклады"]:::ext
+  FRE["FREYJA · service<br/>учёт, юрлицо, найм — не начата"]:::miss
+  SUP["поддержка · service<br/>функции нет"]:::miss
+  AIDA["семейство AIDA"]
+  MT["MT · Mimir"]
+  HND["HOUND"]
+  SEI["SEIDR"]
+  HEI["HEIMDALL"]
+  VOL["Völva"]
+  MID["MIDGARD"]
+  DW["Datawanderers"]
+  ML["miniLORE"]
+  HAR -- ПРОДАЁТ: демо, аутрич, OEM --> AIDA
+  SUP -- due diligence, онбординг --> AIDA
+  FRE -- УД4, реестр, найм --> AIDA
+  MT -- MIMIR_LOCAL_LLM --> HND
+  HEI -- ALERTS --> SEI
+  SEI -- embed --> VOL
+  HND -- VOLVA_HOUND_BRIDGE --> VOL
+  OMI -- realm midgard в KC --> MID
+  OMI -- realm datawanderers в KC --> DW
+  OMI -- скоуп, читатель корпуса --> ML
+  OMI -- проект-не-репозиторий --> HAR
+  OMI -- проект-не-репозиторий --> FRE
+  classDef ext fill:#e0edf6,stroke:#2F6DB5,color:#1e1a12
+  classDef miss fill:#f6e0dc,stroke:#c03030,color:#1e1a12
+</div>
+<div class="card ev">
+  <div class="lbl">Что видно на общей карте</div>
+  <ul class="tight small">
+    <li><b>OMILORE — поставщик для трёх продуктов, а не только «внутренний инструмент».</b> MIDGARD и Datawanderers ждут realm в Keycloak: заводит человек, а живой админский доступ, по решению D-2026-PRODUCT-BOUNDARIES-REALMS, есть у сессии LORE. miniLORE ждёт скоуп и роль «читатель всего корпуса» (AL-91). Сервисным продуктам нужен проект, который не является репозиторием.</li>
+    <li><b>AIDA ждёт три сервисных продукта, и два из них не существуют.</b> HARPA есть, но фронтовые пункты North Star в ней не начаты. Функции поддержки нет. FREYJA не начата, а спринтов на УД4, реестр и advisory board нет вовсе.</li>
+    <li><b>Внутри семейства AIDA две цепочки ожидания:</b> MT → HOUND (локальная модель для LLM_DIALECT_GUARD) и HEIMDALL → SEIDR (ALERTS для SKULD_OPERATIONAL_METRICS).</li>
+  </ul>
+</div>
+
+<div class="grid2">
+<div>
+<h3>Семейство AIDA (+ Völva)</h3>
+<div class="mermaid">
+flowchart TB
+  A1["A1 · North Star<br/>OEM design partner:<br/>демо «что сломается» + LOI"]
+  A2["A2 · on-prem поставка<br/>Helm · K8s · SDK · секреты"]
+  A3["A3 · AI-автодоки<br/>+ Mimir on-prem"]
+  H1["HOUND · диалекты<br/>+ внешние источники"]
+  S1["SEIDR · SKULD → ANVIL IDE"]
+  V1["Völva · DATASTORY, KC_AUTH"]
+  A1 --> A2
+  A1 --> A3
+  H1 --> A2
+  X1["HARPA: DEMO_SCRIPT, MESSAGING,<br/>OUTREACH, LEADS, OEM_PROGRAM"]:::ext --> A1
+  X0["SEIDR: COMPETITOR_UX_GAPS (демо)"]:::ext --> A1
+  X2["поддержка: PENTEST, due diligence<br/>— функции нет"]:::miss --> A1
+  X3["Студия: УД4, реестр, advisory<br/>— спринтов нет"]:::miss --> A1
+  W2["WAVE2_SAAS_ENABLERS — вне вех"]:::miss --> A2
+  LL["MT: MIMIR_LOCAL_LLM"]:::ext --> H1
+  LL --> A3
+  AL["HEIMDALL: ALERTS — вне вех"]:::miss --> S1
+  S1 --> V1
+  F0["фич у семейства: 0"]:::miss -.-> A1
+  NS["North Star истёк: срок M5 30.09"]:::miss -.-> A1
+  classDef ext fill:#e0edf6,stroke:#2F6DB5,color:#1e1a12
+  classDef miss fill:#f6e0dc,stroke:#c03030,color:#1e1a12
+</div>
+<ul class="tight small">
+  <li><b>A1 держится на чужой работе:</b> из 7 спринтов вехи к созданию относится один (COMPETITOR_UX_GAPS), остальные — работа HARPA и поддержки. Функции поддержки нет, студийных спринтов (УД4, реестр) нет.</li>
+  <li><b>Нехватка:</b> 0 фич у семейства; North Star не переподтверждён после истечения срока.</li>
+</ul>
+</div>
+
+<div>
+<h3>MIDGARD</h3>
+<div class="mermaid">
+flowchart TB
+  D0["D0 · решение: на продажу или нет<br/>+ свод целей: зачем · для кого · за сколько · когда"]:::miss
+  D1["D1 · TEIKN: лист застройщика → черновик"]
+  D2["D2 · GLADSHEIM: хаб без облака"]
+  D3["D3 · GJALLARHORN: голос дома"]
+  D4["D4 · узлы: Zigbee, свет, климат"]
+  D5["D5 · сертификация / Matter"]
+  D0 --> D1
+  D0 --> D3
+  D0 --> D5
+  D2 --> D3
+  D2 --> D4
+  OWN["OWN_MODEL + PLAN_IMPORT — вне вех"]:::miss --> D1
+  AMD["AMD-машина для обучения (PI-16)"]:::ext --> OWN
+  KC["OMILORE: realm midgard в KC — не заведён"]:::ext --> D2
+  KV["KVASIR: ИИ-слой — 0 спринтов"]:::miss --> D3
+  EI["EITRI: плата — 0 спринтов"]:::miss --> D4
+  HA["HARPA: вывод и продажи — нет<br/>(рынок изучен)"]:::miss -.-> D5
+  classDef ext fill:#e0edf6,stroke:#2F6DB5,color:#1e1a12
+  classDef miss fill:#f6e0dc,stroke:#c03030,color:#1e1a12
+</div>
+<ul class="tight small">
+  <li><b>D0 блокирует три ветки:</b> от ответа «на продажу» зависят лицензия данных (OM-05: CubiCasa CC BY-NC), выбор wake-word (WW-02: Silero отбракован «под продажу») и сертификация (AN-06 заморожена). <span class="tag q">ASSUMED</span> порядок D2 → D3/D4 — по смыслу подсистем.</li>
+  <li><b>Нехватка:</b> «когда» не задано; KVASIR и EITRI без спринтов; фронта, кроме исследования рынка, нет.</li>
+</ul>
+</div>
+
+<div>
+<h3>Datawanderers</h3>
+<div class="mermaid">
+flowchart TB
+  W0["W0 · продукт в справочнике<br/>+ компоненты DW_* к 24 спринтам"]:::miss
+  W1["W1 · игровой сервер<br/>SRV_AUTH → SRV_GAME → SRV_COMBAT"]
+  W2["W2 · Unity-стенд и клиент<br/>UNITY_STAND, DW_* ассеты"]
+  W3["W3 · экономика v1 (ADR-DWL-005)<br/>покупает родитель"]
+  W0 --> W1
+  W1 --> W2
+  W1 --> W3
+  KC["OMILORE: realm datawanderers в KC,<br/>согласие родителя (ADR-DWL-006)"]:::ext --> W1
+  FR["FREYJA: приём платежей — не начата"]:::miss --> W3
+  MK["рынок и аналоги — нет"]:::miss -.-> W3
+  classDef ext fill:#e0edf6,stroke:#2F6DB5,color:#1e1a12
+  classDef miss fill:#f6e0dc,stroke:#c03030,color:#1e1a12
+</div>
+<ul class="tight small">
+  <li>Цепочка W1 — прямо из DEPENDS_ON: UNITY_STAND ← SRV_GAME ← SRV_AUTH, SRV_COMBAT ← SRV_GAME. <span class="tag q">ASSUMED</span> связь W3 ← FREYJA — по смыслу «за деньги покупает родитель».</li>
+</ul>
+</div>
+
+<div>
+<h3>OMILORE · бэкофис (LORE, miniLORE, BRAGI, service-модули)</h3>
+<div class="mermaid">
+flowchart TB
+  O1["O1 · LORE client-safe<br/>FEAT-GITCYCLE 0/3"]
+  O2["O2 · доступ по проектам<br/>FEAT-LORE-ACCESS · скоуп включён, PR #801"]
+  O3["O3 · проект-не-репозиторий<br/>+ kind tech/service + SERVES"]:::miss
+  O4["O4 · модули service:<br/>HARPA · FREYJA · поддержка"]
+  O5["O5 · карты продуктов в UI<br/>RM-U1…U6"]
+  O2 --> O3
+  O3 --> O4
+  O2 --> ML["miniLORE: читатель корпуса"]
+  O1 --> O5
+  O3 --> O5
+  ADR["ADR на SERVES/kind — нет"]:::miss --> O3
+  KCA["KC-админ: realms для MIDGARD и DW"]:::ext
+  O2 -.-> KCA
+  classDef ext fill:#e0edf6,stroke:#2F6DB5,color:#1e1a12
+  classDef miss fill:#f6e0dc,stroke:#c03030,color:#1e1a12
+</div>
+<ul class="tight small">
+  <li><b>O3 — узкое место всей схемы:</b> без проекта, который не является репозиторием, сервисная работа невидима, а без SERVES фронтовые дорожки вех продуктов не связать.</li>
+  <li><b>miniLORE</b> своих вех не имеет и живёт как клиент O2: 232 релиза, целей нет (ответ сессии).</li>
+</ul>
+</div>
+</div>
+
+<div class="tw"><table>
+<tr><th>продукт</th><th>ждёт соседей</th><th>чего не хватает</th><th>первая веха</th></tr>
+<tr><td>AIDA</td><td>HARPA (фронт North Star), MT → HOUND, HEIMDALL → SEIDR</td><td>фич (0), функции поддержки, спринтов УД4/реестра, переподтверждённого North Star</td><td>A1 · OEM design partner</td></tr>
+<tr><td>MIDGARD</td><td>OMILORE (realm KC), AMD-машина</td><td>решения «на продажу», «когда», спринтов KVASIR и EITRI, фронта</td><td>D0 · решение и свод целей</td></tr>
+<tr><td>Datawanderers</td><td>OMILORE (realm KC), FREYJA (платежи)</td><td>продукта в справочнике, компонентов у спринтов, анализа рынка</td><td>W0 → W1 · игровой сервер</td></tr>
+<tr><td>OMILORE</td><td>— (поставщик для MIDGARD, DW, miniLORE, service)</td><td>ADR на SERVES/kind, проекта-не-репозитория</td><td>O2 · доступ по проектам</td></tr>
+<tr><td>Völva</td><td>SEIDR (embed), HOUND (bridge)</td><td>рынка, конкурентов, цен</td><td>в составе карты AIDA</td></tr>
+<tr><td>miniLORE</td><td>OMILORE (скоуп, читатель)</td><td>целей, рынка</td><td>в составе карты OMILORE</td></tr>
+</table></div>
+
+</section>
+<section class="tab" id="tab-plan">
+<h2>12. Переразбиение истории: вехи продуктов по сериям релизов</h2>
+<p>Историю можно переразбить без потерь. У <b>312 из 342 закрытых спринтов (91%) есть ребро на релиз</b>: M0 — 7 из 7, M1 — 66 из 75, M2 — 38 из 39, M3 — 126 из 126, M4 — 22 из 23. Релиз — это и есть «состояние полки», которое можно было поставить. Серия релизов (1.3, 1.4…) — готовая историческая веха продукта, причём с настоящими датами.</p>
+<div class="mermaid">
+gantt
+  title Исторические вехи продуктов по сериям релизов (даты — первый и последний релиз серии)
+  dateFormat YYYY-MM-DD
+  axisFormat %d.%m
+  section AIDA (+ суб-продукты)
+  1.0–1.2 прод запущен (≈20 сп.)       :done, a0, 2026-04-16, 2026-04-24
+  1.3 lineage и Hound стабилен (71)   :done, a3, 2026-04-24, 2026-05-27
+  1.4 Core PROD (13)                  :done, a4, 2026-05-28, 2026-06-04
+  1.5 демо готово (25)                :done, a5, 2026-06-04, 2026-06-08
+  1.6 мультитенант, выделение сайта (73) :done, a6, 2026-06-09, 2026-07-03
+  1.7–1.8 (21)                        :done, a7, 2026-07-06, 2026-08-17
+  section Сайт seidr-site (фронт AIDA)
+  1.0–1.4 сайт, SEO, блог (9)         :done, s1, 2026-06-25, 2026-06-29
+  section LORE
+  1.0 выделение и MCP (42)            :done, l0, 2026-06-28, 2026-07-23
+  1.1–1.10 продуктовый слой (20)      :done, l1, 2026-08-01, 2026-08-31
+  1.11–1.15 скоуп и продукты (37)     :done, l2, 2026-09-11, 2026-11-05
+  section miniLORE
+  0.5–1.11 канал и клиент             :done, m1, 2026-08-12, 2026-11-05
+  section GLADSHEIM (MIDGARD)
+  0.1–0.4 хаб                         :done, g1, 2026-08-23, 2026-09-15
+  0.5–0.6                             :done, g2, 2026-09-22, 2026-11-06
+  section Völva
+  0.0 форк                            :done, v0, 2026-07-18, 2026-07-31
+  0.1                                 :done, v1, 2026-11-04, 2026-11-06
+</div>
+<div class="tw"><table>
+<tr><th>серия</th><th>спринтов</th><th>в каких календарных вехах лежали</th><th>что это доказывает</th></tr>
+<tr><td>AIDA 1.3</td><td class="n">71</td><td>M1 39 · M2 20 · M3 7</td><td>одна поставка разрезана тремя календарными вехами</td></tr>
+<tr><td>AIDA 1.4</td><td class="n">13</td><td>M1 9 · M3 4</td><td>цель M2 «Core v1.4.4 PROD» — а спринты 1.4 лежат в M1 и M3</td></tr>
+<tr><td>AIDA 1.5</td><td class="n">25</td><td>M3 21 · M2 4</td><td>цель M3 «v1.5.0 PROD» — совпадает лучше всего</td></tr>
+<tr><td>AIDA 1.6</td><td class="n">73</td><td>M3 51 · M2 11 · M1 4 · M4 3</td><td>самая большая поставка — ни в одной цели не названа</td></tr>
+<tr><td>LORE 1.0</td><td class="n">42</td><td>M3 30 · M4 7</td><td>выделение LORE попало в «календарь AIDA»</td></tr>
+<tr><td>miniLORE, GLADSHEIM, Völva</td><td class="n">—</td><td>ни в одной</td><td>у продуктов есть история поставок, но нет ни одной вехи</td></tr>
+</table></div>
+<h3>Как переразбивать — не разрушая</h3>
+<div class="card">
+<ol style="margin:0;padding-left:20px">
+  <li><b>M0–M7 не удалять и не отвязывать.</b> Это архив календаря «Забег 2026» (решение «сироты разбираются, а не удаляются», ADR-LORE-040 §5). Пометить в label «календарь», цели не переписывать.</li>
+  <li><b>Завести исторические вехи продуктов параллельно:</b> <span class="mono">AIDA-1-3</span>, <span class="mono">AIDA-1-4</span>… <span class="mono">LORE-1-0</span>… с <span class="mono">planned_date</span> = дата последнего релиза серии, ребром на продукт. Спринт может стоять в нескольких вехах — модель это разрешает (инвариант 3 SPEC-LORE-PLAN-MODEL).</li>
+  <li><b>Состав — автоматически, из рёбер спринт → релиз.</b> 30 закрытых спринтов без релиза разобрать вручную. Цель исторической вехи — из release notes (<span class="mono">RELEASE-vX.md</span>) или описания релиза: что стало можно поставить.</li>
+  <li><b>Для LORE историческая веха может быть фичей:</b> FEAT-LORE-PLAN, FEAT-VP-FIT уже закрыты целиком, так что это точнее серии релизов.</li>
+</ol>
+</div>
+
+<!-- ================================================================ -->
+<h2>13. Будущие вехи: три горизонта и правила</h2>
+<div class="mermaid">
+flowchart TB
+  subgraph H1["Горизонт 1 · Архив «Забег 2026» + исторические вехи продуктов"]
+    A["M0…M7 — календарь, сохраняется как есть<br/>параллельно: AIDA-1-3…1-8, LORE-1-0…1-15, GLADSHEIM-0-x — по сериям релизов"]
+  end
+  subgraph H2["Горизонт 2 · Функции бэкофиса на OMILORE — одни на все продукты"]
+    B["FREYJA — учёт, юрлицо, найм (ещё не начата) · HARPA — витрина, продажи, доклады · поддержка<br/>связи с продуктами: СЧИТАЕТ · ПРОДАЁТ · ПОДДЕРЖИВАЕТ"]
+  end
+  subgraph H3["Горизонт 3 · Вехи продуктов = вариант полки, четыре дорожки"]
+    direction LR
+    F["Семейство AIDA<br/>одна карта, дорожки суб-продуктов<br/>AIDA · HOUND · SEIDR · HEIMDALL · MT (+VOLVA?)"]
+    G["MIDGARD<br/>вехи по подсистемам:<br/>хаб · голос · планировки · узлы"]
+    L["OMILORE · miniLORE · BRAGI<br/>свои карты + платформенная дорожка"]
+    D["Datawanderers · VOLVA · ODIN · MIGGEN<br/>по фичам, когда появятся"]
+  end
+  M5["M5 · M6 · M7<br/>19 открытых"] -->|создание + фронт продукта:<br/>OEM-программа, демо, доклад, контент| H3
+  M5 -->|ИП · реестр · найм · OEM-воронка · доклад| H2
+  H2 -->|SERVES| H3
+</div>
+
+<h3>13.1 Два типа продуктов: технологические и сервисно-организационные</h3>
+<p>Ваше уточнение: «технологические продукты от сервисно-управляющих функций разделить — FREYJA и HARPA нужны для обслуживания по факту всех продуктов, а не под каждый отдельно; связи у них с продуктами и компонентами будут, но другого типа — кого считаем, кого продаём, кого поддерживаем».</p>
+<p><b>Это снимает противоречие, которое было в моём предложении.</b> Раньше выходило так: либо каждый продукт сам ведёт маркетинг, продажи и поддержку (а их нет у 8 продуктов из 13 — раздел 8), либо всё фронтовое уходит в «горизонт Студия» без связи с продуктом (и тогда снова «два контура не сведены», как в диагнозе MIDGARD). Функции с типизированными связями дают третий путь: фронт делается один раз, для всех, но каждая единица работы знает, на какой продукт она работает.</p>
+<div class="mermaid">
+flowchart LR
+  subgraph FN["Сервисно-организационные продукты · инструменты — на OMILORE (общий бэкофис)"]
+    direction TB
+    FO["FORSETI · план и знание (LORE)<br/>«кого ведём»"]
+    FR["FREYJA · учёт<br/>«кого считаем»<br/>деньги, юрлицо, найм, договоры"]
+    HA["HARPA · продажи и витрина<br/>«кого продаём»<br/>сайт, SEO, оффер, лиды, OEM, доклады"]
+    SU["поддержка — модуль ещё без имени<br/>«кого поддерживаем»<br/>онбординг, SLA, docs клиента"]
+    BR["BRAGI · публикации"]
+    ML["miniLORE · мобильный клиент бэкофиса"]
+  end
+  subgraph TP["Технологические продукты — свои карты и вехи"]
+    direction TB
+    AI["семейство AIDA<br/>+ Völva"]
+    MI["MIDGARD"]
+    DW["Datawanderers"]
+    OM["OMILORE · LORE · miniLORE"]
+    OT["MIGGEN · ODIN"]
+  end
+  FR -- СЧИТАЕТ --> AI
+  FR -- СЧИТАЕТ --> MI
+  FR -- СЧИТАЕТ --> DW
+  HA -- ПРОДАЁТ --> AI
+  HA -- ПРОДАЁТ --> MI
+  HA -- ПРОДАЁТ --> DW
+  SU -- ПОДДЕРЖИВАЕТ --> AI
+  SU -. ПОДДЕРЖИВАЕТ .-> OM
+  BR -. инструмент .-> HA
+</div>
+
+<div class="card ev">
+  <div class="lbl">Функции — модули OMILORE (ваше уточнение) — и почему данные за это</div>
+  <ul class="tight small">
+    <li><b>OMILORE уже задуман как бэкофис:</b> корневой компонент называется «Backoffice Platform» (54 спринта, 26 ADR). LORE — то есть FORSETI и FORSETI_MCP — его первый модуль.</li>
+    <li><b>Два модуля уже на нём:</b> BRAGI строился поверх OMILORE (SPRINT_BRAGI_PLATFORM_RENDER, SPRINT_BRAGI_ARCHIVE_IMPL); компонент MINILORE лежит внутри OMILORE; RM-P2 называет miniLORE и BRAGI «продуктами на базе OMILORE».</li>
+    <li><b>Это снимает вопрос из раздела 7.3</b> («miniLORE и BRAGI — дети OMILORE?»): да, это модули и клиенты одной платформы. В справочнике их надо записать детьми OMILORE.</li>
+    <li><b>FREYJA и HARPA получают дом:</b> FREYJA ещё не начата и сразу строится модулем бэкофиса, а не отдельным продуктом. HARPA (сайт) — модуль продаж и витрины; BRAGI — её инструмент публикаций.</li>
+    <li><b>Права уже совпадают:</b> скоуп по проектам (AL-91) работает в LORE — модули бэкофиса наследуют его. Коммерческие сведения (найм, ИП, OEM) видны только своему проекту — тот самый вариант (а) для 10 скрытых спринтов.</li>
+  </ul>
+  <p class="small"><b>Две оси вместо одной:</b> OMILORE — технологическая платформа, у неё своя карта как у продукта: модули, их вехи. Функции на ней — сервисно-управляющие, их связи с технологическими продуктами (AIDA, MIDGARD, Datawanderers…) типизированы: СЧИТАЕТ / ПРОДАЁТ / ПОДДЕРЖИВАЕТ.</p>
+</div>
+<h3>Куда лягут орг-спринты</h3>
+<p class="small muted">42 спринта, которые сейчас висят на FREYJA (бухгалтерия, ещё не начата), HARPA, BALDR, BRAGI или прямо на продукте. 19 из них открыты. Предлагаемый адресат функции и связь — <span class="tag q">ASSUMED</span> по названию, сверить.</p>
+<div class="tw"><table>
+<tr><th>спринты</th><th class="n">всего / откр.</th><th>функция</th><th>связь → продукт</th></tr>
+<tr><td>SITE_*, SEO_*, SEIDR_SITE_*, FE_SITE_SPLIT, LANDING, SEO_MARKETING_*</td><td class="n">21 / 1</td><td>HARPA</td><td>ПРОДАЁТ → AIDA</td></tr>
+<tr><td>CFP, CFP_ABS, CFP_SUB, ALT_AIJ(_WORK), ALT_MLSD(_WORK), ALT_SMART_WORK, SLIDES, RAG_BLOG</td><td class="n">10 / 8</td><td>HARPA (доклады и конференции)</td><td>ПРОДАЁТ → AIDA (HOUND — тема докладов)</td></tr>
+<tr><td>OEM_PARTNER_PROGRAM, OUTREACH, LEADS, PRICING, DEMO_SCRIPT, SOVEREIGN_AI_MESSAGING</td><td class="n">6 / 5</td><td>HARPA</td><td>ПРОДАЁТ → AIDA (North Star T1/T4)</td></tr>
+<tr><td>MIDGARD_COMPETITORS, MIDGARD_ANALYSIS_GAPS</td><td class="n">2 / 2</td><td>HARPA (исследование рынка)</td><td>ПРОДАЁТ → MIDGARD</td></tr>
+<tr><td>INCORPORATION_IP, HIRE_MID_DE, MIMREH</td><td class="n">3 / 3</td><td>FREYJA</td><td>СЧИТАЕТ → студия целиком; найм — ещё и → AIDA (North Star T3)</td></tr>
+<tr><td>— (нет ни одного)</td><td class="n">0</td><td>поддержка</td><td>ПОДДЕРЖИВАЕТ → … — пустая функция, это и есть дыра «обслуживания нет» из раздела 8</td></tr>
+</table></div>
+
+<h3>Модель — минимальная</h3>
+<div class="card">
+<ol style="margin:0;padding-left:20px" class="small">
+  <li><b>Функция — та же запись справочника <span class="mono">product</span></b> с типом <span class="mono">kind = service</span> (сервисно-организационный); у технологических — <span class="mono">kind = tech</span>. Программные модули, которыми функция пользуется (учёт, витрина), живут на OMILORE как на технологической платформе. Новый тип вершины не нужен: это тот же приём, что у самого продукта (ADR-LORE-012 level B). Карта, вехи и Гант у функции свои, как у продукта.</li>
+  <li><b>Одно новое ребро <span class="mono">SERVES</span></b> функция → продукт или компонент, с ролью на ребре: <span class="mono">count</span> (считаем) · <span class="mono">sell</span> (продаём) · <span class="mono">support</span> (поддерживаем). Ребро, а не поле — по той же причине, что и у вехи: функция служит многим продуктам сразу.</li>
+  <li><b>Орг-спринт</b> принадлежит компоненту функции (<span class="mono">BELONGS_TO</span> → HARPA / FREYJA / …) и указывает, на кого работает (<span class="mono">SERVES</span>, роль берётся от функции). Продукт спринта по-прежнему выводится через компонент — функция, а не AIDA, — поэтому сайт перестаёт раздувать «создание» AIDA (дефект 1 раздела 6).</li>
+  <li><b>Сервисно-организационному продукту git не нужен.</b> Ваши слова: «от последних просить иметь код в гит странно». Значит: (а) линтер полноты требует <span class="mono">BELONGS_TO_PROJECT</span> на репозиторий только у <span class="mono">kind = tech</span>; (б) граница прав для service-работы — проект, который <b>не репозиторий</b>, например «Студия». ADR-LORE-038 уже сказал «проект ≠ репозиторий», но в модели проект по-прежнему <span class="mono">KnowGitProject</span>, и именно поэтому 10 спринтов найма, ИП и докладов выпали из видимости после включения скоупа.</li>
+  <li><b>Связь с вехами:</b> веха функции целит в функцию (TARGETS_PRODUCT, как у продукта) и может целить ещё и в продукт, которому служит. Например, «HARPA: OEM-воронка AIDA» → HARPA + AIDA. Тогда фронтовые дорожки вехи AIDA видны как вехи HARPA, связанные с ней, а не как отсутствующие спринты самой AIDA.</li>
+</ol>
+<p class="small muted" style="margin-top:8px">Схема меняется: новый тип ребра и признак на записи справочника. По правилам проекта это отдельный ADR и ваше «да» до кода.</p>
+</div>
+
+<h3>Шаблон вехи продукта: четыре дорожки</h3>
+<div class="mermaid">
+flowchart LR
+  subgraph V["Веха = вариант полки «что можно собрать и продать»"]
+    direction LR
+    B1["СОЗДАНИЕ<br/>uc-задачи фичи вехи<br/>+ enb, без которых их не сделать<br/>dev · test · design"]
+    B2["ВЫВОД НА РЫНОК<br/>страница, демо, кейс, пост, доклад<br/>content · BRAGI"]
+    B3["ПРОДАЖА<br/>оффер, прайс, пилот, OEM-предложение<br/>(типа задачи нет — завести)"]
+    B4["ОБСЛУЖИВАНИЕ<br/>онбординг, docs, runbook клиента, поддержка<br/>docs · ops клиента"]
+    B1 --> B2 --> B3 --> B4
+  end
+  J["jtd и внутренний ops<br/>поток — вне вех"] -. обслуживает .-> V
+</div>
+<p class="small muted">Был предложен отдельный горизонт «внешние обязательства». С учётом вашей рамки back/front я его сузила: фронт конкретного продукта — OEM-программа AIDA, демо, доклад про AIDA, посты BRAGI о продукте — это дорожки вехи самого продукта, а не отдельная шкала. Отдельным горизонтом остаётся только студийное: ИП, реестр ПО, найм, бухгалтерия.</p>
+
+<h3>Почему так, а не иначе — рассмотренные варианты</h3>
+<div class="tw"><table>
+<tr><th>вариант</th><th>вердикт</th><th>почему</th></tr>
+<tr><td>Привязать M0–M7 к продукту AIDA (как в D-2026-LORE-M0M7-BELONG-TO-AIDA)</td><td><span class="tag no">нет</span></td><td>В вехах лежит работа 10 продуктов и внешние обязательства (раздел 2). Привязка закрепит путаницу и заставит карту AIDA показывать ИП и найм</td></tr>
+<tr><td>Нарезать по месяцам для каждого продукта (M-MIDGARD-NOV, M-AIDA-DEC…)</td><td><span class="tag no">нет</span></td><td>Даты нет у 129 из 139 открытых спринтов (раздел 4). Месячная веха снова станет корзиной, ровно как M4 до RM-V3 (58 спринтов, 40%)</td></tr>
+<tr><td>Отдельная карта на каждый суб-продукт AIDA</td><td><span class="tag no">нет</span></td><td>57 общих спринтов и цепочка DALI→HND→SHT→VERDANDI (раздел 5): дата HOUND упирается в AIDA, SEIDR — в HOUND. Пять независимых карт врали бы о сроках; одна карта с дорожками показывает зависимость</td></tr>
+<tr><td>Вывести принадлежность вехи из её спринтов</td><td><span class="tag no">нет</span></td><td>Отвергнуто ещё в ADR-LORE-040 (вариант б): у пустой вехи нет продукта, а карта начинается с пустых вех</td></tr>
+<tr><td><b>Три горизонта, веха = фича продукта</b></td><td><span class="tag ok">да</span></td><td>Совпадает с решениями (продукт — носитель; продукт — полка вариантов сборки и продажи), с данными (связность, нет дат) и с моделью (фичи уже есть у MIDGARD, LORE, BRAGI, MIGGEN)</td></tr>
+</table></div>
+
+<h3>Кандидаты в вехи продуктов</h3>
+<p class="small muted">Группы собраны по зависимостям и именам спринтов. <span class="tag q">ASSUMED</span> — сгруппировано по названию, нужно сверить с сессией продукта. Формулировки целей — черновики: что будет правдой, когда веха достигнута.</p>
+<div class="tw"><table>
+<tr><th>продукт · веха-кандидат</th><th>цель (что станет правдой)</th><th>спринты</th><th>основание</th></tr>
+<tr><td><b>AIDA · первая веха = North Star</b><br>«OEM design partner»</td><td>подписан LOI/пилот с одним OEM (архетип E «Bank-soft» или D «интегратор») на демо «что сломается при миграции Oracle→PG/GP» за 5–7 минут</td><td><b>создание:</b> COMPETITOR_UX_GAPS (демо) · <b>вывод:</b> DEMO_SCRIPT, SOVEREIGN_AI_MESSAGING · <b>продажа:</b> OEM_PARTNER_PROGRAM, OUTREACH, LEADS · <b>обслуживание / due diligence:</b> PENTEST_EXTERNAL</td><td>doc:product_growth_focus_m5 §0–§2 — состав взят из KEEP-списка, а не придуман</td></tr>
+<tr><td><b>AIDA · после LOI</b> — on-prem поставка</td><td>партнёр разворачивает AIDA у себя: Helm/K8s, секреты, SDK</td><td>HELM_CHART, K8S, SDK_PACKAGING, AIDA_PREPROD_MIGRATION, VAULT_HARDENING, TENANT_SECRETS_V2, Q6_SCHEMA, WAVE2_SAAS_ENABLERS</td><td>по триажу North Star SDK и SaaS-enablers отложены до LOI — веха идёт <b>после</b> первой</td></tr>
+<tr><td><b>AIDA·MT · после LOI</b> — AI-автодоки, Mimir on-prem</td><td>описание схемы генерируется локальной моделью без облака</td><td>AI_AUTODOCS_BASIC, AI_CPG_AUTODOCS_BACKLOG, MIMIR_ONPREM*, MIMIR_HYBRID, MIMIR_GATEWAY, MIMIR_LOCAL_LLM, NAMED_AGENTS, MIMIR_TOKEN_USAGE_ACCOUNTING</td><td>в DEFER-списке North Star; сейчас ошибочно стоят в M5</td></tr>
+<tr><td><b>Студия · compliance</b></td><td>подан пакет УД4 / реестр ПО; есть advisory board; найм Mid DE</td><td>HIRE_MID_DE; спринты УД4, реестра, advisory board, escrow — <b>завести</b> (их нет)</td><td>North Star T2/T3 — «жёсткий гейт M6–M7»</td></tr>
+<tr><td><b>HOUND</b> · диалекты и внешние источники</td><td>T-SQL/SQLite/DuckDB и MPP разбираются, внешние источники подключаются</td><td>HOUND_TSQL_SQLITE_DUCKDB, HOUND_MPP_DIALECTS, HOUND_ARCADEDB_DIALECT, HOUND_DIALECT_SEMANTICS_AUDIT, HOUND_EXTERNAL_SOURCES 1–2, LLM_DIALECT_GUARD, STAR_EXPANSION</td><td>цепочка EXTERNAL_SOURCES_2→1, TSQL→EXTERNAL; LLM_DIALECT_GUARD ждёт MIMIR_LOCAL_LLM — поэтому после вехи Mimir</td></tr>
+<tr><td><b>SEIDR</b> · SKULD → ANVIL IDE</td><td>метрики SKULD работают, ANVIL открывается как IDE поверх них</td><td>SKULD_V1 → ANVIL_IDE, SKULD_OPERATIONAL_METRICS (+ ALERTS из HEIMDALL), OSI_METRICS_LAYER, COMPETITOR_UX_GAPS</td><td>две зависимости: ANVIL→SKULD_V1, SKULD_OP→ALERTS</td></tr>
+<tr><td><b>MIDGARD · 0</b> — решение и свод целей</td><td>ответ на Q-MIDGARD-OWN-MODEL-LICENCE-FOR-SALE; одна запись целей: зачем · для кого · за сколько · когда</td><td>— (решение владелицы + аналитика сессии)</td><td>диагноз маркетинговой сессии MIDGARD; без этого остальные вехи MIDGARD — только инженерные</td></tr>
+<tr><td><b>MIDGARD</b> · «лист застройщика → черновик»</td><td>(уже есть веха)</td><td>PLANPARSE_PROD + <b>OWN_MODEL + PLAN_IMPORT</b> + REVIEW_FIXES, ANALYSIS_GAPS</td><td>две зависимости вне вехи</td></tr>
+<tr><td><b>MIDGARD</b> · голос дома</td><td>FEAT-MIDGARD-BUTLER (разговор)</td><td>GJALLARHORN_POC, WAKEWORD, NEW_WAKEWORD, VOICE_REPLY, VOICE_PROFILE, NET_AUDIO, ACOUSTICS</td><td><span class="tag q">ASSUMED</span></td></tr>
+<tr><td><b>MIDGARD</b> · хаб без облака</td><td>FEAT-MIDGARD-NOCLOUD, FEAT-MIDGARD-SJON</td><td>GLADSHEIM_HUB, SERVER_CORE, INTENTS, INTENT_TOOLS, ADMIN_UI, VOICE_ARCH, VOICE_TOOLS, OUTSIDE_DOOR, MULTIROOM_SYNC, MIDGARD_PANEL</td><td><span class="tag q">ASSUMED</span></td></tr>
+<tr><td><b>MIDGARD</b> · датчики и исполнители</td><td>FEAT-MIDGARD-HANDS, FEAT-MIDGARD-SELF-INSTALL</td><td>ZIGBEE_STACK, ZIGBEE_GATEWAY → ZIGBEE_BENCH, CLIMATE, LIGHT, CURTAINS, KORVO</td><td>зависимость GATEWAY→BENCH <span class="tag q">ASSUMED</span></td></tr>
+<tr><td><b>LORE</b> · M-LORE-CLIENT-SAFE</td><td>FEAT-GITCYCLE (0/3) + FEAT-LORE-ACCESS: доступ по проектам применяется сам</td><td>LORE_PROJECT_SCOPE, LORE_OWN_HOST, KC_THEMES_VOLVA_LORE, LORE_AGENT_OBSERVABILITY</td><td>веха уже есть, нужны дата и цель</td></tr>
+<tr><td><b>LORE</b> · M-PRODUCT-UI</td><td>—</td><td>—</td><td>её фича FEAT-VP-FIT готова 5/5 → <b>закрыть</b></td></tr>
+<tr><td><b>Datawanderers</b> · игровой сервер</td><td>сервер принимает бой и сессию из Unity-стенда</td><td>DWL_SRV_AUTH → DWL_SRV_GAME → DWL_SRV_COMBAT, DWL_UNITY_STAND</td><td>цепочка из трёх DEPENDS_ON</td></tr>
+</table></div>
+
+<h3>Правила будущих вех</h3>
+<p class="small muted">У каждого правила — данные, из которых оно выведено. «Требование» — линтер валит веху, «подсказка» — предупреждает. Предлагаю внести в SPEC-LORE-PLAN-MODEL после вашего «да».</p>
+<div class="tw"><table>
+<tr><th>#</th><th>правило</th><th>сила</th><th>откуда</th></tr>
+<tr><td>R1</td><td><b>Веха принадлежит продукту</b> (TARGETS_PRODUCT); у вехи составного продукта — ещё и тем суб-продуктам, чьи дорожки в неё входят</td><td>требование (есть)</td><td>D-2026-LORE-PRODUCT-IS-OWN-ENTITY; сейчас TARGETS_PRODUCT = 0</td></tr>
+<tr><td>R2</td><td><b>Веха = вариант полки:</b> несёт ≥1 фичу, цель записана как «что можно собрать и продать», есть <b>критерий приёмки</b> («когда хватит») и ответы «для кого · за сколько · когда»</td><td>требование</td><td>D-2026-LORE-RBAC-BY-PROJECT; фичи LORE размазаны по 2–3 календарным вехам (раздел 9)</td></tr>
+<tr><td>R3</td><td><b>planned_date датой</b>, id — латиница/цифры/дефис</td><td>требование</td><td>planned_date = null у всех 11; RM-X1</td></tr>
+<tr><td>R4</td><td><b>Ядро вехи — uc-задачи с REALIZES</b> на сценарии её фичи. uc-задача без REALIZES в веху не идёт</td><td>требование</td><td>397 из 613 uc-задач без сценария</td></tr>
+<tr><td>R5</td><td><b>enb входит в веху только вместе с uc, который она разблокирует</b> (DEPENDS_ON или JUSTIFIED_BY). enb без такой связи — платформенный поток</td><td>подсказка</td><td>M5: enb 78 против uc 13, цель вехи — OEM</td></tr>
+<tr><td>R6</td><td><b>jtd и внутренний ops — поток, не веха.</b> Считается отдельной полосой «работа вне вех — поток» (RM-V4, RM-U6)</td><td>правило учёта</td><td>668 из 717 jtd уже вне вех; ops размечен почти целиком как enb/jtd</td></tr>
+<tr><td>R7</td><td><b>Четыре дорожки:</b> создание — спринты самого продукта; вывод, продажа, обслуживание — вехи функций бэкофиса (HARPA, поддержка) с ребром SERVES на этот продукт. Веха продукта без связанной вехи функции помечается «только back»</td><td>подсказка</td><td>89% спринтов — создание; у 8 продуктов фронта нет (раздел 8)</td></tr>
+<tr><td>R8</td><td><b>Спринт в веху — с исполнителем, датой и предками DEPENDS_ON</b> в той же или более ранней вехе</td><td>требование</td><td>RM-V3; 5 вех ждут спринтов вне плана (раздел 5)</td></tr>
+<tr><td>R9</td><td><b>Задача в спринте вехи размечена</b> классом работы и типом</td><td>подсказка</td><td>45% задач без класса; без разметки R4–R7 не проверить</td></tr>
+<tr><td>R10</td><td><b>Орг-работа — в функции бэкофиса, не в технологический продукт:</b> учёт, юрлицо, найм — FREYJA; витрина, продажи, доклады — HARPA; поддержка — свой модуль. Связь с продуктом — SERVES (count / sell / support)</td><td>правило размещения</td><td>цели M3–M7 смешивали студию с продуктом (раздел 2)</td></tr>
+<tr><td>R11</td><td><b>Историческая веха продукта = серия релизов</b> (или закрытая фича); календарные M0–M7 не переписываются</td><td>правило истории</td><td>91% закрытых спринтов имеют релиз (раздел 12)</td></tr>
+</table></div>
+<p>Всё, что не проходит R4–R8, — бэклог продукта. Это нормальное состояние, а не провал.</p>
+
+<h3>Порядок работ и кто что делает</h3>
+<div class="tw"><table>
+<tr><th>шаг</th><th>что</th><th>кто</th></tr>
+<tr><td>0</td><td>Решения владелицы (раздел 14)</td><td>владелица</td></tr>
+<tr><td>1</td><td>Справочник: продукт Datawanderers; BOKVIT → MIDGARD; GLADSHEIM и TEIKN — суб-продукты MIDGARD; miniLORE и BRAGI — решить про родителя OMILORE; HARPA: project → seidr-site, area → marketing; VOLVA → под AIDA; дубли MIGGEN пометить снятыми</td><td>человек (dict_set для агента — 403)</td></tr>
+<tr><td>2</td><td>Компоненты 28 открытым спринтам без них (DW_* — 24); студийные спринты (ИП, найм, CFP, аутрич) — в проект «Студия» и с FREYJA снять, CFP/аутрич/доклад — во фронт-дорожку своего продукта</td><td>агент</td></tr>
+<tr><td>3</td><td>Гигиена: 46 спринтов 120+ дней → бэклог/отмена; 40 «в работе» без движения 30+ дней → подтвердить или понизить</td><td>агент + сессии продуктов</td></tr>
+<tr><td>4</td><td>Фичи для семейства AIDA (сейчас 0) — без них вехе нечего нести; uc-задачам открытых спринтов — REALIZES; разметка класса работы у открытых (758 задач)</td><td>агент-аналитик → владелица</td></tr>
+<tr><td>4a</td><td>Исторические вехи по сериям релизов (раздел 12) — параллельно M0–M7</td><td>агент</td></tr>
+<tr><td>5</td><td>Вехи продуктов: <span class="mono">milestone_new</span> → <span class="mono">milestone_link rel=product</span> → <span class="mono">milestone_sprints</span> → <span class="mono">quality_check</span> (RUNBOOK-LORE-PRODUCT-ROADMAP)</td><td>агент</td></tr>
+<tr><td>6</td><td>Решения: закрыть D-2026-LORE-MILESTONE-BELONGS-TO-PROJECT и D-2026-LORE-PLAN-FILTERED-BY-PROJECT, пересмотреть D-2026-LORE-M0M7-BELONG-TO-AIDA, принять ADR-LORE-040 с новым замером</td><td>агент → владелица</td></tr>
+</table></div>
+
+<!-- ================================================================ -->
+</section>
+<section class="tab" id="tab-kaos">
+<h2>Критический проход по GOAL/KAOS</h2>
+<p>KAOS — это дерево целей (AND-разложение до требований), препятствия к каждой цели (obstacles), их устранение (resolutions) и ответственные агенты. Сначала я разложила по KAOS цель самой системы вех и проверила препятствия по данным. Потом теми же препятствиями проверила собственное предложение. Формат вывода — как в прецеденте корпуса LORE_STORAGE_GOAL_KAOS_TRIZ_TOC: вердикт, затем Must / Should / Could.</p>
+
+<h3>Дерево целей</h3>
+<div class="mermaid">
+flowchart TB
+  G0["G0 · план отвечает: что, кому и когда студия может поставить и продать"]
+  G0 --> G1["G1 · принадлежность<br/>каждая веха — продукту"]
+  G0 --> G2["G2 · измеримость<br/>цель вехи = критерий приёмки"]
+  G0 --> G3["G3 · достижимость<br/>зависимости и ресурс учтены"]
+  G0 --> G4["G4 · цельность<br/>создание + вывод + продажа + обслуживание"]
+  G0 --> G5["G5 · видимость<br/>права не прячут план"]
+  G0 --> G6["G6 · честная история<br/>прошлое читается как было"]
+  G1 --> R1["R1 веха → продукт"]
+  G2 --> R2["R2 фича + критерий + для кого · за сколько · когда"]
+  G2 --> R3["R3 planned_date датой"]
+  G2 --> R4["R4 ядро — uc с REALIZES"]
+  G3 --> R8["R8 предки DEPENDS_ON не позже"]
+  G3 --> R5["R5 enb только с её uc"]
+  G4 --> R7["R7 фронт — вехи service с SERVES"]
+  G4 --> R10["R10 орг-работа — в service"]
+  G5 --> PR["проект-не-репозиторий для service"]
+  G6 --> R11["R11 история = серии релизов"]
+  G0 --> R6["R6 jtd и ops — поток, вне вех"]
+</div>
+
+<h3>Препятствия к целям — по данным</h3>
+<div class="tw"><table>
+<tr><th>цель</th><th>препятствие (obstacle)</th><th>доказательство</th><th>устранение</th><th>агент</th></tr>
+<tr><td>G1</td><td>O1 · веха без продукта</td><td>TARGETS_PRODUCT = 0 у 11 вех</td><td>R1 (линтер уже требует)</td><td>PM-агент продукта</td></tr>
+<tr><td>G2</td><td>O2 · цель не мерит результат</td><td>M4 = 100%, но «SDK packaging начат» не выполнено; фичи LORE размазаны по 2–3 вехам</td><td>R2</td><td>владелица (цель) + PM-агент</td></tr>
+<tr><td>G2</td><td>O3 · нет «когда»</td><td>planned_date null у 11; у 129 из 139 открытых нет будущей даты; у MIDGARD «когда — нигде»</td><td>R3</td><td>владелица</td></tr>
+<tr><td>G2</td><td>O4 · нет «достаточно»</td><td>MIDGARD: десяток задач «ждёт приёмки» с сентября</td><td>R2 (критерий приёмки)</td><td>владелица + сессия продукта</td></tr>
+<tr><td>G3</td><td>O5 · веха ждёт работу вне плана</td><td>5 вех ждут спринтов вне вех (ALERTS, WAVE2, OWN_MODEL, PLAN_IMPORT)</td><td>R8</td><td>линтер</td></tr>
+<tr><td>G3</td><td>O6 · ресурс уходит не туда</td><td>после 06.06 закрыто 222 спринта; из KEEP North Star — 3 из 11, все про создание</td><td>R2 + R7: цель как веха, фронт как вехи service</td><td>владелица</td></tr>
+<tr><td>G3</td><td>O7 · статусы не ведутся</td><td>MIDGARD: 26 «в работе», все 32 без движения 30+ дней; 46 спринтов 120+ дней</td><td>гигиена до карты <span class="tag no">не закрыто правилом</span></td><td>сессии продуктов</td></tr>
+<tr><td>G4</td><td>O8 · фронта нет</td><td>437 / 48 / 4 / 1 спринтов по стадиям; у 8 продуктов фронта нет</td><td>R7, R10</td><td>service-продукты</td></tr>
+<tr><td>G4</td><td>O9 · нет функции поддержки</td><td>на «поддерживаем» не ложится ни одного спринта</td><td>завести service-модуль <span class="tag no">не закрыто</span></td><td>владелица</td></tr>
+<tr><td>G5</td><td>O10 · права прячут работу без репозитория</td><td>10 спринтов скрыты скоупом: 493 в базе, 483 в слайсе</td><td>проект-не-репозиторий (D-2026-LORE-PRODUCT-KINDS-TECH-SERVICE)</td><td>сессия LORE (код скоупа) + ADR</td></tr>
+<tr><td>G6</td><td>O11 · история в календаре, а не в продуктах</td><td>AIDA 1.3 размазана по M1/M2/M3; у miniLORE, GLADSHEIM, Völva релизы есть, вех нет</td><td>R11</td><td>PM-агент</td></tr>
+<tr><td>все</td><td>O12 · решение не связано с планом</td><td>North Star лежит doc'ом на OMILORE, ни с одной вехой не связан; Q-MIDGARD-…-FOR-SALE не гейтит ни одной задачи</td><td>цель — вехой; вопрос — gating на задачи <span class="tag no">не закрыто правилом</span></td><td>PM-агент</td></tr>
+</table></div>
+
+<h3>Препятствия к собственному предложению</h3>
+<p class="small muted">Каждое правило — тоже утверждение, у которого есть препятствия. Ниже те, что видны по тем же данным, и как я предлагаю их обойти.</p>
+<div class="tw"><table>
+<tr><th>#</th><th>препятствие</th><th>почему реально</th><th>как обойти</th></tr>
+<tr><td>P1</td><td><b>R4 опустошит вехи.</b> Требование «uc с REALIZES» при покрытии 35% (216 из 613)</td><td>сделать R4 требованием сегодня — значит, что почти каждая веха немедленно краснеет</td><td>R4 — подсказка на один цикл; сначала разметить открытые (758 задач без класса), потом поднять до требования</td></tr>
+<tr><td>P2</td><td><b>R3 породит выдуманные даты</b></td><td>дат нет у 129 из 139; агент, которого заставили, поставит дату наугад</td><td>дату ставит только владелица или исполнитель со своим словом; без даты веха — «кандидат», а не нарушение</td></tr>
+<tr><td>P3</td><td><b>Исторические вехи дадут двойной счёт</b></td><td>спринт окажется и в M3, и в AIDA-1-6</td><td>портфель и проценты считать только по вехам продуктов; M0–M7 пометить «календарь» и исключить из счёта</td></tr>
+<tr><td>P4</td><td><b>SERVES и kind усложняют схему</b></td><td>новое ребро и признак; риск, что SERVES прочтут как ещё одну ось прав</td><td>в ADR прямо записать, что SERVES — связь смысла, а не прав (как и продукт по D-2026-LORE-RBAC-BY-PROJECT)</td></tr>
+<tr><td>P5</td><td><b>Одна карта семейства AIDA снова станет «130 баров»</b></td><td>у AIDA 159 спринтов, это та самая проблема M3</td><td>предел открытых вех на дорожку (например, ≤ 2) и отдельный вид по суб-продукту</td></tr>
+<tr><td>P6</td><td><b>North Star истёк</b></td><td>срок M5 (30.09) прошёл 5 недель назад, LOI нет, документ не пересматривался</td><td>первая веха AIDA — только после переподтверждения цели и нового срока владелицей</td></tr>
+<tr><td>P7</td><td><b>Четыре дорожки на каждую веху не потянуть</b></td><td>команда маленькая; требование фронта у каждой вехи невыполнимо</td><td>R7 — подсказка «только back», а не требование; фронт делают service-продукты сразу на все продукты</td></tr>
+<tr><td>P8</td><td><b>Числа фронта приблизительны</b></td><td>стадия определена по компонентам, трекам и названиям спринтов; типов задач sales и support нет</td><td>добавить в справочник task_type значения sales и support; до этого числа помечены как оценка</td></tr>
+<tr><td>P9</td><td><b>Карта MIDGARD будет врать, если статусы не ведутся</b></td><td>все 32 открытых спринта без движения 30+ дней</td><td>сначала сверить статусы с сессиями MIDGARD (гипотеза раздела 4), потом резать вехи</td></tr>
+<tr><td>P10</td><td><b>Шаги блокируются человеком</b></td><td>справочник продуктов правит только человек (dict_set → 403), realm в KC заводит только человек</td><td>собрать для владелицы одну пачку правок справочника и KC — один заход, а не десять</td></tr>
+</table></div>
+
+<div class="card tldr">
+  <div class="lbl">Вердикт</div>
+  <p class="small"><b>Предложение держится, но с тремя поправками, без которых оно повторит ошибку M4.</b> Препятствия O1–O6 и O8–O11 закрываются правилами R1–R11. Без правила остаются O7 (статусы не ведутся), O9 (функции поддержки нет) и O12 (решение не связано с планом) — их нужно закрыть явно. Собственные препятствия P1, P2 и P6 опасны тем, что дают красивую, но ложную картину: пустые вехи, выдуманные даты, цель с истёкшим сроком.</p>
+  <p class="small"><b>Must:</b> переподтвердить North Star AIDA и решить «MIDGARD на продажу или нет» (P6, D0); R1, R3 (дата только со словом владелицы), R8 — требованием; ADR на kind / SERVES / проект-не-репозиторий (O10, P4).<br>
+  <b>Should:</b> R2, R4, R7 — подсказками на один цикл, разметка открытых задач (P1); гигиена статусов MIDGARD и 46 мёртвых спринтов (O7, P9); пачка правок справочника и KC одним заходом (P10).<br>
+  <b>Could:</b> исторические вехи по релизам с исключением M0–M7 из счёта (R11, P3); типы задач sales и support (P8); предел вех на дорожку (P5).</p>
+</div>
+
+</section>
+<section class="tab" id="tab-decide">
+<h2>14. Что нужно решить владелице</h2>
+<div class="card tldr">
+<ol>
+  <li><b>Три горизонта</b> (архив + исторические вехи по релизам / студия / вехи продуктов с четырьмя дорожками) — да или нет.</li>
+  <li><b>Два типа продуктов:</b> <span class="mono">tech</span> и <span class="mono">service</span> (FREYJA, HARPA, поддержка); их инструменты — на OMILORE как на общем бэкофисе; связь service → tech — ребро SERVES (count / sell / support); git требуется только у tech — да? Это изменение схемы: нужен ADR до кода. Как назвать модуль поддержки? BRAGI — инструмент HARPA или отдельная функция «продвижение»?</li>
+  <li><b>Правила R1–R11</b> (раздел 13) — какие сделать требованием линтера, какие подсказкой; после «да» вношу в SPEC-LORE-PLAN-MODEL.</li>
+  <li><b>Составные продукты:</b> GLADSHEIM и TEIKN — суб-продукты MIDGARD (сессия MIDGARD согласна)? <b>BOKVIT</b> — вы сказали «относится к MIDGARD», а сессия MIDGARD возражает: это граф библиотеки книг по электронике, к дому не относится. Подтвердите. VOLVA — суб-продукт или вариант AIDA? miniLORE и BRAGI — дети OMILORE?</li>
+  <li><b>Одна карта на семейство AIDA с дорожками</b> вместо пяти отдельных — да или нет.</li>
+  <li><b>10 спринтов без проекта.</b> Рекомендую (а) в уточнённом виде: проект «Студия» как граница прав <b>без репозитория</b> (service-работе git не нужен); спринты — в продукты FREYJA (ИП, найм) и HARPA (CFP, слайды, аутрич) с ребром SERVES на AIDA. Для этого в модели проект должен уметь быть не-репозиторием. Вариант (б) «видно всем» откроет найм и ИП всем участникам; вариант (в) прячет эту работу даже от планирования.</li>
+  <li><b>M-PRODUCT-UI закрыть</b> (фича готова 5/5); <b>M-LORE-CLIENT-SAFE</b> — дать дату и цель.</li>
+  <li><b>M5–M7:</b> разобрать 19 открытых по правилу приёма или закрыть вехи как календарные вместе с архивом.</li>
+  <li><b>MIDGARD — на продажу или нет</b> (Q-MIDGARD-OWN-MODEL-LICENCE-FOR-SALE, открыт с 10.09). Без ответа у MIDGARD невозможна ни одна веха-вариант полки; два спринта уже исходят из противоположных ответов.</li>
+  <li><b>HighLoad++:</b> доклад состоялся? От этого зависит судьба M6 и SOVEREIGN_AI_MESSAGING. В графе этого не видно.</li>
+  <li><b>HARPA:</b> оставить в AIDA как витрину; поправить project на <span class="mono">NooriUta/seidr-site</span> и area на marketing — да?</li>
+</ol>
+</div>
+
+<h2>15. Ограничения разбора</h2>
+<ul class="tight">
+  <li>Стадия цепочки ценности (раздел 8) определена по компонентам, трекам и названиям спринтов — это приближение; задач продаж и поддержки как типа нет, поэтому фронт мог быть недосчитан внутри «создательских» спринтов.</li>
+  <li>Группировка вех MIDGARD и часть групп AIDA сделаны по названиям спринтов — <span class="tag q">ASSUMED</span>, сверить с сессиями продуктов.</li>
+  <li>Продукт спринта выведен через компоненты. Для 41 спринта без компонентов — через репозиторий (Datawanderers, MIDGARD, volva), это приближение.</li>
+  <li>Скорость команды не оценена: done_date не отражает дату работы (раздел 1). Поэтому прогноза «когда закроется веха» в отчёте нет — это сознательно.</li>
+  <li>Данные только читались. Записи в LORE — только через MCP: SPRINT_LORE_ROADMAP_PER_PROJECT/RM-A4.</li>
+</ul>
+
+</section>
+<div class="foot">Источники: прямые запросы к <span class="mono">system_aida_lore</span> (KnowSprint, KnowSprintHist, KnowMilestone, KnowMilestoneHist, TARGETS_MILESTONE, TARGETS_PRODUCT, IN_PRODUCT, BELONGS_TO, BELONGS_TO_PROJECT, DEPENDS_ON, TAGGED_WITH, PlanCheckpoint/ON_MILESTONE, LoreComponent); слайсы <span class="mono">milestones, sprints, products, features, strategic_coverage, plan_checkpoints, plan_tracks</span>; ADR-LORE-040, ADR-LORE-038, D-2026-LORE-PRODUCT-IS-OWN-ENTITY, D-2026-LORE-RBAC-BY-PROJECT, SPEC-LORE-PLAN-MODEL, RUNBOOK-LORE-PRODUCT-ROADMAP. Палитра графиков проверена <span class="mono">validate_palette.js --mode light --surface #faf8f3</span>: все проверки PASS.</div>
+</div>
+
+<div class="tip" id="tip"></div>
+<script>
+const D = {"ms":[{"m":"M0","done":7,"open":0,"cancel":0,"prods":4},{"m":"M1","done":75,"open":1,"cancel":0,"prods":7},{"m":"M2","done":39,"open":3,"cancel":1,"prods":7},{"m":"M3","done":126,"open":1,"cancel":1,"prods":10},{"m":"M4","done":23,"open":0,"cancel":0,"prods":7},{"m":"M5","done":5,"open":13,"cancel":0,"prods":8},{"m":"M6","done":0,"open":3,"cancel":0,"prods":3},{"m":"M7","done":0,"open":3,"cancel":0,"prods":5},{"m":"M-MIDGARD-PLAN-TO-DRAFT","done":0,"open":1,"cancel":0,"prods":1},{"m":"вне вех","done":69,"open":114,"cancel":10,"prods":0}],"prod":[{"p":"MIDGARD","wip":26,"plan":6,"frozen":0,"inms":1,"stale":32,"n":32},{"p":"AIDA","wip":6,"plan":19,"frozen":3,"inms":11,"stale":23,"n":28},{"p":"DATAWANDERERS","wip":14,"plan":2,"frozen":0,"inms":0,"stale":0,"n":16},{"p":"MT","wip":0,"plan":9,"frozen":3,"inms":5,"stale":9,"n":12},{"p":"FREYJA","wip":0,"plan":12,"frozen":0,"inms":1,"stale":12,"n":12},{"p":"OMILORE","wip":8,"plan":2,"frozen":0,"inms":1,"stale":8,"n":10},{"p":"HOUND","wip":7,"plan":3,"frozen":0,"inms":1,"stale":3,"n":10},{"p":"SEIDR","wip":1,"plan":7,"frozen":1,"inms":6,"stale":8,"n":9},{"p":"BRAGI","wip":1,"plan":5,"frozen":1,"inms":3,"stale":7,"n":7},{"p":"VOLVA","wip":6,"plan":0,"frozen":0,"inms":1,"stale":3,"n":6},{"p":"HEIMDALL","wip":1,"plan":4,"frozen":1,"inms":4,"stale":5,"n":6},{"p":"ODIN","wip":0,"plan":3,"frozen":0,"inms":1,"stale":2,"n":3},{"p":"MINILORE","wip":1,"plan":0,"frozen":0,"inms":0,"stale":1,"n":1},{"p":"BOKVIT","wip":1,"plan":0,"frozen":0,"inms":0,"stale":0,"n":1}],"age":[{"b":"\u003c14","wip":17,"plan":5,"frozen":3},{"b":"14–30","wip":9,"plan":4,"frozen":0},{"b":"30–60","wip":22,"plan":6,"frozen":0},{"b":"60–120","wip":18,"plan":8,"frozen":1},{"b":"120+","wip":0,"plan":43,"frozen":3}],"month":[{"m":"2026-04","n":75},{"m":"2026-05","n":31},{"m":"2026-06","n":71},{"m":"2026-07","n":66},{"m":"2026-08","n":39},{"m":"2026-09","n":1},{"m":"2026-10","n":12},{"m":"2026-11","n":47}],"nov":[{"d":"10-20","n":4},{"d":"10-27","n":4},{"d":"10-28","n":3},{"d":"11-04","n":22},{"d":"11-05","n":23},{"d":"11-06","n":2}],"dates":{"future":10,"past":41,"none":78,"hidden":10},"coupP":["AIDA","HOUND","SEIDR","HEIMDALL","MT","OMILORE","BRAGI","VOLVA","MINILORE","MIDGARD","DATAWANDERERS","ODIN"],"coup":[[0,20,17,13,7,6,0,1,0,0,0,1],[20,0,9,4,3,1,0,1,0,0,0,0],[17,9,0,6,2,0,0,0,0,0,0,0],[13,4,6,0,1,1,0,0,0,0,0,0],[7,3,2,1,0,0,0,0,0,0,0,0],[6,1,0,1,0,0,2,1,0,0,0,1],[0,0,0,0,0,2,0,0,0,0,0,0],[1,1,0,0,0,1,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0],[1,0,0,0,0,1,0,0,0,0,0,0]],"total":493};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = { c1: css('--c1'), c2: css('--c2'), c3: css('--c3'), cN: css('--cN'), bd: css('--bd'), bg1: css('--bg1'), acc: css('--acc') };
+const NS = 'http://www.w3.org/2000/svg';
+const tip = document.getElementById('tip');
+function el(tag, attrs, parent, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; parent && parent.appendChild(e); return e; }
+function hover(node, html) {
+  node.addEventListener('pointerenter', () => { tip.innerHTML = html; tip.style.opacity = 1; });
+  node.addEventListener('pointermove', ev => { tip.style.left = Math.min(ev.clientX + 12, innerWidth - 270) + 'px'; tip.style.top = (ev.clientY + 12) + 'px'; });
+  node.addEventListener('pointerleave', () => { tip.style.opacity = 0; });
+}
+// rounded data-end on the free end only
+function barPath(x, y, w, h, r, end) { r = Math.min(r, w / 2, h / 2); if (!end || r <= 0) return `M${x},${y}h${w}v${h}h${-w}z`;
+  if (end === 'top') return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}z`;
+  return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}z`; }
+function table(host, cols, rows) { const t = document.createElement('table'); t.innerHTML = '<tr>' + cols.map(c => `<th${c.n ? ' class="n"' : ''}>${c.h}</th>`).join('') + '</tr>' + rows.map(r => '<tr>' + cols.map(c => `<td${c.n ? ' class="n"' : ''}>${r[c.k]}</td>`).join('') + '</tr>').join(''); host.appendChild(t); }
+
+// generic horizontal stacked bars; pct=true → 100% shares
+function hstack(sel, data, label, segs, opt) {
+  const svg = document.querySelector(sel + ' svg'); const W = 960, L = 150, R = 70, rh = opt.rh || 30, T = 8;
+  const max = opt.pct ? 1 : opt.max; const sx = v => (W - L - R) * v / max;
+  (opt.ticks || []).forEach(v => { el('line', { x1: L + sx(v), x2: L + sx(v), y1: T, y2: T + rh * data.length, class: 'grid' }, svg); el('text', { x: L + sx(v), y: T + rh * data.length + 14, 'text-anchor': 'middle' }, svg, opt.pct ? Math.round(v * 100) + '%' : v); });
+  data.forEach((d, i) => { const y = T + i * rh + 6, h = rh - 12; let x0 = L; const tot = segs.reduce((a, s) => a + d[s[0]], 0);
+    el('text', { x: L - 8, y: y + h / 2 + 4, 'text-anchor': 'end', class: 'lab' }, svg, d[label]);
+    const vs = segs.filter(s => d[s[0]] > 0);
+    vs.forEach((s, j) => { const v = opt.pct ? d[s[0]] / tot : d[s[0]]; const w = sx(v);
+      const p = el('path', { d: barPath(x0, y, Math.max(w - (j < vs.length - 1 ? 2 : 0), 0.5), h, 4, j === vs.length - 1 ? 'right' : null), fill: s[1] }, svg); x0 += w;
+      hover(p, `<b>${d[label]}</b><br>${s[2]}: ${d[s[0]]}${opt.pct ? ' (' + Math.round(100 * d[s[0]] / tot) + '%)' : ''}<br>всего: ${tot}`); });
+    el('text', { x: (opt.pct ? L + sx(1) : x0) + 6, y: y + h / 2 + 4, class: 'val' }, svg, tot); });
+  table(document.querySelector(`[data-table=${opt.table}]`), [{ h: '', k: label }].concat(segs.map(s => ({ h: s[2], k: s[0], n: 1 }))), data);
+}
+hstack('#ch-stage', [
+  { p: 'AIDA', b: 137, m: 21, s: 1, v: 0 }, { p: 'HOUND', b: 87, m: 0, s: 0, v: 0 }, { p: 'OMILORE', b: 65, m: 2, s: 0, v: 1 },
+  { p: 'SEIDR', b: 45, m: 2, s: 0, v: 0 }, { p: 'HEIMDALL', b: 40, m: 1, s: 0, v: 0 }, { p: 'MIDGARD', b: 36, m: 2, s: 0, v: 0 },
+  { p: 'MT', b: 26, m: 0, s: 0, v: 0 }, { p: 'DATAWANDERERS', b: 24, m: 0, s: 0, v: 0 }, { p: 'VOLVA', b: 16, m: 0, s: 0, v: 0 },
+  { p: 'MINILORE', b: 15, m: 0, s: 0, v: 0 }, { p: 'FREYJA (студия)', b: 0, m: 10, s: 1, v: 3 }, { p: 'BRAGI', b: 0, m: 10, s: 2, v: 0 },
+  { p: 'ODIN', b: 9, m: 0, s: 0, v: 0 }, { p: 'MIGGEN', b: 8, m: 0, s: 0, v: 0 }
+], 'p', [['b', C.c3, 'создание'], ['m', C.c1, 'маркетинг'], ['s', C.c2, 'продажи'], ['v', C.cN, 'обслуживание · студия']], { max: 160, ticks: [0, 40, 80, 120, 160], table: 'stage' });
+hstack('#ch-wc', [
+  { m: 'M1', uc: 0, enb: 3, jtd: 0, no: 464 }, { m: 'M2', uc: 0, enb: 0, jtd: 0, no: 202 }, { m: 'M3', uc: 240, enb: 205, jtd: 15, no: 1017 },
+  { m: 'M4', uc: 127, enb: 103, jtd: 17, no: 203 }, { m: 'M5', uc: 13, enb: 78, jtd: 7, no: 114 }, { m: 'M-MIDGARD', uc: 0, enb: 28, jtd: 3, no: 17 },
+  { m: 'вне вех', uc: 233, enb: 802, jtd: 668, no: 1072 }
+], 'm', [['uc', C.c1, 'uc'], ['enb', C.c2, 'enb'], ['jtd', C.c3, 'jtd'], ['no', C.cN, 'не размечено']], { pct: true, ticks: [0, .25, .5, .75, 1], table: 'wc', rh: 34 });
+
+// 1. milestones: vertical stacked
+(function () {
+  const svg = document.querySelector('#ch-ms svg'); const W = 960, H = 300, L = 40, B = 40, T = 26;
+  const data = D.ms; const max = 200; const bw = (W - L - 10) / data.length;
+  [0, 50, 100, 150, 200].forEach(v => { const y = H - B - (H - B - T) * v / max; el('line', { x1: L, x2: W - 6, y1: y, y2: y, class: 'grid' }, svg); el('text', { x: L - 6, y: y + 4, 'text-anchor': 'end' }, svg, v); });
+  data.forEach((d, i) => {
+    const x = L + i * bw + bw * 0.22, w = bw * 0.56; let y0 = H - B;
+    const segs = [['done', C.c3, 'закрыто'], ['open', C.c1, 'открыто'], ['cancel', C.cN, 'отменено']].filter(s => d[s[0]] > 0);
+    segs.forEach((s, j) => { const h = (H - B - T) * d[s[0]] / max; const p = el('path', { d: barPath(x, y0 - h, w, Math.max(h - (j < segs.length - 1 ? 2 : 0), 0.5), 4, j === segs.length - 1 ? 'top' : null), fill: s[1] }, svg); y0 -= h;
+      hover(p, `<b>${d.m}</b><br>${s[2]}: ${d[s[0]]}`); });
+    el('text', { x: x + w / 2, y: y0 - 6, 'text-anchor': 'middle', class: 'val' }, svg, d.prods ? `${d.prods} пр.` : '');
+    el('text', { x: x + w / 2, y: H - B + 16, 'text-anchor': 'middle', class: 'lab' }, svg, d.m.replace('M-MIDGARD-PLAN-TO-DRAFT', 'MIDGARD'));
+    el('text', { x: x + w / 2, y: H - B + 30, 'text-anchor': 'middle' }, svg, `${d.done}/${d.open}`);
+  });
+  table(document.querySelector('[data-table=ms]'), [{ h: 'веха', k: 'm' }, { h: 'закрыто', k: 'done', n: 1 }, { h: 'открыто', k: 'open', n: 1 }, { h: 'отменено', k: 'cancel', n: 1 }, { h: 'продуктов', k: 'prods', n: 1 }], data);
+})();
+
+// 2. products: horizontal stacked
+(function () {
+  const svg = document.querySelector('#ch-prod svg'); const data = D.prod; const W = 960, L = 130, R = 190, rh = 29, T = 8;
+  const max = 35; const sx = v => (W - L - R) * v / max;
+  [0, 10, 20, 30].forEach(v => { el('line', { x1: L + sx(v), x2: L + sx(v), y1: T, y2: T + rh * data.length, class: 'grid' }, svg); el('text', { x: L + sx(v), y: T + rh * data.length + 14, 'text-anchor': 'middle' }, svg, v); });
+  data.forEach((d, i) => {
+    const y = T + i * rh + 6, h = rh - 12; let x0 = L;
+    el('text', { x: L - 8, y: y + h / 2 + 4, 'text-anchor': 'end', class: 'lab' }, svg, d.p);
+    const segs = [['wip', C.c1, 'в работе / частично'], ['plan', C.c2, 'planned / design / todo'], ['frozen', C.c3, 'backlog / blocked']].filter(s => d[s[0]] > 0);
+    segs.forEach((s, j) => { const w = sx(d[s[0]]); const p = el('path', { d: barPath(x0, y, Math.max(w - (j < segs.length - 1 ? 2 : 0), 0.5), h, 4, j === segs.length - 1 ? 'right' : null), fill: s[1] }, svg); x0 += w;
+      hover(p, `<b>${d.p}</b><br>${s[2]}: ${d[s[0]]}<br>всего открыто: ${d.n}`); });
+    el('text', { x: x0 + 6, y: y + h / 2 + 4, class: 'val' }, svg, d.n);
+    el('text', { x: W - R + 20, y: y + h / 2 + 4 }, svg, `в вехах ${d.inms} · стоит 30+ дн ${d.stale}`);
+  });
+  table(document.querySelector('[data-table=prod]'), [{ h: 'продукт', k: 'p' }, { h: 'в работе', k: 'wip', n: 1 }, { h: 'план', k: 'plan', n: 1 }, { h: 'бэклог', k: 'frozen', n: 1 }, { h: 'в вехах', k: 'inms', n: 1 }, { h: '30+ дн', k: 'stale', n: 1 }, { h: 'всего', k: 'n', n: 1 }], data);
+})();
+
+// 3. dates: single 100% bar
+(function () {
+  const svg = document.querySelector('#ch-dates svg'); const d = D.dates; const tot = d.future + d.past + d.none + d.hidden; const W = 460, L = 10, y = 30, h = 34;
+  const segs = [['future', 'срок впереди', C.c3], ['past', 'срок прошёл', C.c1], ['none', 'срока нет', C.cN], ['hidden', 'скрыты скоупом', C.c2]]; let x0 = L;
+  segs.forEach((s, j) => { const w = (W - 2 * L) * d[s[0]] / tot; const p = el('path', { d: barPath(x0, y, Math.max(w - (j < 3 ? 2 : 0), 0.5), h, 4, j === 3 ? 'right' : null), fill: s[2] }, svg);
+    hover(p, `${s[1]}: <b>${d[s[0]]}</b> из ${tot}`);
+    const lx = L + j * 112; el('rect', { x: lx, y: y + h + 16, width: 10, height: 10, rx: 3, fill: s[2] }, svg); el('text', { x: lx + 15, y: y + h + 25, class: 'val' }, svg, d[s[0]]); el('text', { x: lx + 15, y: y + h + 40 }, svg, s[1]); x0 += w; });
+  el('text', { x: L, y: 18, class: 'lab' }, svg, `${tot} открытых спринтов`);
+})();
+
+// 4. age histogram stacked vertical
+(function () {
+  const svg = document.querySelector('#ch-age svg'); const data = D.age; const W = 460, H = 220, L = 30, B = 36, T = 14; const max = 50; const bw = (W - L) / data.length;
+  [0, 25, 50].forEach(v => { const y = H - B - (H - B - T) * v / max; el('line', { x1: L, x2: W, y1: y, y2: y, class: 'grid' }, svg); el('text', { x: L - 5, y: y + 4, 'text-anchor': 'end' }, svg, v); });
+  data.forEach((d, i) => { const x = L + i * bw + bw * .2, w = bw * .6; let y0 = H - B;
+    const segs = [['wip', C.c1, 'в работе'], ['plan', C.c2, 'planned/design'], ['frozen', C.c3, 'backlog']].filter(s => d[s[0]] > 0);
+    segs.forEach((s, j) => { const h = (H - B - T) * d[s[0]] / max; const p = el('path', { d: barPath(x, y0 - h, w, Math.max(h - (j < segs.length - 1 ? 2 : 0), .5), 4, j === segs.length - 1 ? 'top' : null), fill: s[1] }, svg); y0 -= h; hover(p, `<b>${d.b} дн</b><br>${s[2]}: ${d[s[0]]}`); });
+    el('text', { x: x + w / 2, y: y0 - 5, 'text-anchor': 'middle', class: 'val' }, svg, d.wip + d.plan + d.frozen);
+    el('text', { x: x + w / 2, y: H - B + 16, 'text-anchor': 'middle', class: 'lab' }, svg, d.b);
+  });
+  el('text', { x: W / 2, y: H - 4, 'text-anchor': 'middle' }, svg, 'дней без изменения');
+})();
+
+// 5. monthly done
+(function () {
+  const svg = document.querySelector('#ch-month svg'); const data = D.month; const W = 960, H = 220, L = 34, B = 34, T = 16; const max = 80; const bw = (W - L) / data.length;
+  [0, 40, 80].forEach(v => { const y = H - B - (H - B - T) * v / max; el('line', { x1: L, x2: W, y1: y, y2: y, class: 'grid' }, svg); el('text', { x: L - 5, y: y + 4, 'text-anchor': 'end' }, svg, v); });
+  const mn = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  data.forEach((d, i) => { const x = L + i * bw + bw * .25, w = bw * .5; const h = (H - B - T) * d.n / max; const p = el('path', { d: barPath(x, H - B - h, w, Math.max(h, .5), 4, 'top'), fill: d.m === '2026-11' ? C.c1 : C.c3 }, svg);
+    hover(p, `<b>${d.m}</b>: ${d.n}${d.m === '2026-11' ? '<br>из них 45 — 4–5 ноября (массовое закрытие)' : ''}`);
+    el('text', { x: x + w / 2, y: H - B - h - 5, 'text-anchor': 'middle', class: 'val' }, svg, d.n);
+    el('text', { x: x + w / 2, y: H - B + 16, 'text-anchor': 'middle', class: 'lab' }, svg, mn[+d.m.slice(5) - 1]); });
+})();
+
+// 6. heatmap (sequential: one hue, light = more)
+(function () {
+  const svg = document.querySelector('#ch-heat svg'); const P = D.coupP, M = D.coup; const L = 130, T = 96, cs = 32;
+  let max = 0; M.forEach(r => r.forEach(v => max = Math.max(max, v)));
+  P.forEach((p, i) => { el('text', { x: L - 8, y: T + i * cs + cs / 2 + 4, 'text-anchor': 'end', class: 'lab' }, svg, p);
+    const t = el('text', { x: L + i * cs + cs / 2, y: T - 8, class: 'lab', transform: `rotate(-50 ${L + i * cs + cs / 2} ${T - 8})` }, svg, p); });
+  M.forEach((r, i) => r.forEach((v, k) => { const x = L + k * cs, y = T + i * cs;
+    const c = el('rect', { x: x + 1, y: y + 1, width: cs - 2, height: cs - 2, rx: 4, fill: i === k ? 'transparent' : (v ? C.acc : C.bg1), 'fill-opacity': v ? (0.15 + 0.85 * v / max).toFixed(2) : 1, stroke: C.bd }, svg);
+    if (i !== k) hover(c, `<b>${P[i]} ↔ ${P[k]}</b><br>общих спринтов: ${v}`);
+    if (v) el('text', { x: x + cs / 2, y: y + cs / 2 + 4, 'text-anchor': 'middle', class: 'val', style: v / max > .55 ? 'fill:#ffffff' : '' }, svg, v); }));
+  const x0 = L + P.length * cs + 40; el('text', { x: x0, y: T + 10, class: 'lab' }, svg, 'Семейство AIDA');
+  el('text', { x: x0, y: T + 28 }, svg, 'AIDA · HOUND · SEIDR · HEIMDALL · MT —'); el('text', { x: x0, y: T + 44 }, svg, 'плотный блок в левом верхнем углу:');
+  el('text', { x: x0, y: T + 60 }, svg, 'здесь сосредоточены почти все связи.');
+  el('text', { x: x0, y: T + 92, class: 'lab' }, svg, 'Независимые');
+  el('text', { x: x0, y: T + 110 }, svg, 'MIDGARD · Datawanderers · miniLORE —'); el('text', { x: x0, y: T + 126 }, svg, 'пустые строки: своя карта, без оглядки');
+  el('rect', { x: L - 2, y: T - 2, width: cs * 5 + 4, height: cs * 5 + 4, rx: 6, fill: 'none', stroke: C.acc, 'stroke-width': 1.5, 'stroke-dasharray': '4 3' }, svg);
+})();
+</script>
+<script>
+(function () {
+  const tabs = [...document.querySelectorAll('.tabs a')];
+  function show(id) {
+    if (!document.getElementById('tab-' + id)) id = 'short';
+    document.querySelectorAll('.tab').forEach(s => s.classList.toggle('on', s.id === 'tab-' + id));
+    tabs.forEach(a => a.classList.toggle('on', a.dataset.tab === id));
+    const pane = document.getElementById('tab-' + id);
+    if (window.renderMer) window.renderMer(pane);
+  }
+  const fromHash = () => (location.hash.match(/tab=([a-z]+)/) || [])[1];
+  window.addEventListener('hashchange', () => show(fromHash()));
+  show(fromHash());
+})();
+</script><script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: {
+    darkMode: false, background: '#faf8f3', primaryColor: '#ffffff', primaryTextColor: '#1e1a12', primaryBorderColor: '#b8ab94',
+    lineColor: '#76694f', secondaryColor: '#eee9df', tertiaryColor: '#faf8f3', clusterBkg: '#f5f3ee', clusterBorder: '#A86A10',
+    fontFamily: 'Manrope, sans-serif', fontSize: '13px', edgeLabelBackground: '#faf8f3' } });
+  window.renderMer = pane => mermaid.run({ nodes: [...pane.querySelectorAll('.mermaid:not([data-processed])')] });
+  const cur = document.querySelector('.tab.on'); if (cur) window.renderMer(cur);
+</script>
+</body>
+</html>

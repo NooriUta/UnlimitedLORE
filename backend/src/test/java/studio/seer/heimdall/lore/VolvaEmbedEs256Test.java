@@ -136,4 +136,15 @@ class VolvaEmbedEs256Test {
         assertEquals(keys(kp).kid(), k.kid());
         assertTrue(Map.of("k", k).containsKey("k"));
     }
+
+    @Test
+    void claims_несут_lang_только_у_графика_с_флагом() {
+        JsonObject c = new JsonObject(VolvaEmbedEs256.claims(new VolvaEmbedSigner.Chart("question", 44, true, true),
+            "a/b", "en", "https://i", "s", "j", 1000, 1600));
+        assertEquals("en", c.getJsonObject("params").getString("lang"));
+        assertEquals(Set.of("iss", "aud", "iat", "exp", "card_id", "params", "sub", "jti"), c.fieldNames(), "новых ключей верхнего уровня нет");
+        JsonObject d = new JsonObject(VolvaEmbedEs256.claims(new VolvaEmbedSigner.Chart("question", 44, true),
+            "a/b", "en", "https://i", "s", "j", 1000, 1600));
+        assertFalse(d.getJsonObject("params").containsKey("lang"));
+    }
 }

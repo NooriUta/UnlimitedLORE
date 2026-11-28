@@ -26,8 +26,14 @@ import java.util.Map;
 public interface LoreCommandClient {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    record LoreCommand(String language, String command, Map<String, Object> params) {
-        LoreCommand(String language, String command) { this(language, command, null); }
+    /**
+     * limit — потолок выдачи. Без него /command молча режет ответ на 20 000 строк (потолок HTTP-API
+     * ArcadeDB); чтение просит -1 (все строки), запись идёт без поля (null). Дефект 28.11.2026: лента
+     * новостей теряла свежие версии истории задач — LoreReadUncappedTest.
+     */
+    record LoreCommand(String language, String command, Map<String, Object> params, Integer limit) {
+        LoreCommand(String language, String command) { this(language, command, null, null); }
+        LoreCommand(String language, String command, Map<String, Object> params) { this(language, command, params, null); }
     }
 
     record LoreCommandResult(Object result) {}

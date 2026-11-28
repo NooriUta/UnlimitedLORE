@@ -1,0 +1,170 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Юзабилити LORE · заход 1 · 07.11.2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg0:#f5f3ee;--bg1:#faf8f3;--bg2:#ffffff;--bg3:#eee9df;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#76694f;--acc:#A86A10;--wrn:#a06010;--dng:#c03030;--suc:#3d7a38;--inf:#3a7060;
+--fs-2xs:10px;--fs-xs:11px;--fs-sm:12.5px;--fs-base:14px;--fs-lg:17px;--fs-xl:21px;--font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:var(--fs-base)/1.5 var(--font)}.wrap{max-width:960px;margin:0 auto;padding:18px 12px 60px}
+h1{font:800 var(--fs-xl)/1.25 var(--head);margin:0 0 6px;color:var(--acc)}h2{font:800 var(--fs-lg)/1.3 var(--head);margin:28px 0 8px}h3{font:700 var(--fs-base)/1.3 var(--font);margin:16px 0 6px;color:var(--acc);text-transform:uppercase;letter-spacing:.05em}
+.muted{color:var(--t2);font-size:var(--fs-xs)}.mono{font-family:var(--mono);font-size:.9em}.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin:10px 0}.tldr{border-left:3px solid var(--acc)}
+.card ul,.card ol{margin:6px 0 0;padding-left:20px}.card li{margin:4px 0;font-size:var(--fs-sm)}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}th{font:700 var(--fs-2xs)/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px;border-bottom:1px solid var(--bd);background:var(--bg3)}
+td{padding:7px 6px;border-bottom:1px solid var(--bd);vertical-align:top}.tw{overflow-x:auto}
+.tag{font:600 var(--fs-2xs)/1 var(--font);padding:3px 7px;border-radius:999px;background:var(--bg3);color:var(--t2);white-space:nowrap}
+.s{color:var(--suc)}.m{color:var(--wrn)}.l{color:var(--dng)}.hi{color:var(--acc);font-weight:700}
+.id{font-family:var(--mono);color:var(--acc);font-weight:600;white-space:nowrap}
+.hyp{color:var(--wrn);font-size:var(--fs-xs)}
+</style></head><body><div class="wrap">
+<h1>Юзабилити LORE — заход 1: все находки и предложения</h1>
+<div class="muted">07.11.2026 · бренд-бук и иконки сохраняем, ищем раскладку, навигацию и дизайн страниц · источники: код фронта (ветка feat/ve2-volva-embed-sign), прошлый аудит <span class="mono">lore_ux_audit_forseti_bragi_2026_07</span>, VP-канва LORE (боли/выгоды/работы), 8 референсов + расширенный круг аналогов · в LORE ничего не записано</div>
+
+<div class="card tldr"><b>Коротко</b><ul>
+<li><b>Функций у LORE много, а входы в них разношёрстные.</b> 24 раздела в 6 главах, 4 уровня вложенности. Спринты видны в 7 местах, QG — в 3. Поиск устроен пятью разными способами. Каркасов «список → карточка» два. Сохранённых видов нет, с клавиатуры есть только ⌘K.</li>
+<li><b>Сильнее всего от референсов три идеи:</b> (1) <b>единая страница сущности</b> — шапка, вкладки, обратные ссылки (Backstage + Obsidian); (2) <b>сохранённые виды</b> — один набор данных как таблица, доска или таймлайн (Notion, Linear, Plane, Redmine); (3) <b>скорость</b> — peek по пробелу, ⌘K с действиями, j/k (Linear).</li>
+<li><b>То, что у LORE уникально, у других тоже есть, и с готовыми приёмами.</b> «Честный вердикт» — Grafana (No Data ≠ Error) и Atlan (старение данных). QG — история гейта в SonarQube и «рискованный релиз». VP-канва — вес доказательств в Productboard. Релизы — автосостав в Linear Releases.</li>
+<li><b>Ниже 34 предложения в 7 блоках</b> с ценностью и усилием. Выберите финалистов по номерам <span class="id">P-xx</span>: в заходе 2 их копаю вглубь против нашего текущего функционала.</li>
+</ul></div>
+
+<h2>1. Где мы сейчас</h2>
+<div class="card">
+<table><tr><th>Метрика</th><th>Значение</th></tr>
+<tr><td>Пространства / главы / разделы</td><td>5 (Forseti, MUNINN, HUGINN, TYR, BRAGI) / 6 / 22 видимых + search + admin</td></tr>
+<tr><td>Уровни навигации</td><td>4: пространство (меню бренда) → глава (табы в шапке) → раздел (подвкладки) → вкладка в карточке или аналитике</td></tr>
+<tr><td>Боковая панель</td><td>нет, вся навигация горизонтальная</td></tr>
+<tr><td>Карточка (паспорт)</td><td>всегда на странице в master-detail, без drawer/peek; выбор хранится в <span class="mono">?passport=</span></td></tr>
+<tr><td>Объём кода</td><td>components/lore ≈ 30 тыс. строк; крупнейшие файлы: LoreAnalytics 2626, LoreSprintDetail 2076, LorePage 1443, LorePlanBoard 1160</td></tr>
+<tr><td>Клавиатура</td><td>⌘K и <span class="mono">/</span> (поиск), Esc, Enter/Space на чипах. Нет j/k, стрелок в списках, горячих клавиш создания</td></tr>
+<tr><td>Сохранённые виды/фильтры</td><td>нет; половина фильтров в URL, половина нет; при смене раздела фильтры молча сбрасываются</td></tr>
+</table></div>
+
+<h3>Главные проблемы раскладки (по коду)</h3>
+<div class="card"><ol>
+<li><b>Одна сущность — много экранов.</b> Спринты: План, Спринты, Вехи, Релизы, Аналитика→Спринты, паспорт компонента→Спринты, История. QG: раздел, Аналитика→Quality, паспорт→QG. MCP API и Подключения — и в «Основе», и в Админке. Три похожие ленты: Новости, Лента, История.</li>
+<li><b>Пять механизмов поиска и фильтра:</b> палитра ⌘K; верхний фильтр (только 4 раздела); поиск в шапке списка (только ADR); свой поиск у спринтов; свой у продуктовых экранов и QG.</li>
+<li><b>Пять моделей «открыть запись»:</b> два разных master-detail (LorePage и product/shared), раскрытие строки (Решения, Релизы), выбор в списке (Вехи), страница-редактор (<span class="mono">passport=__new</span>).</li>
+<li><b>Адресация несогласована:</b> spec — <span class="mono">?spec=</span>, doc/runbook — <span class="mono">passport=kind:id</span>; фильтры спринтов и ADR частично вне URL.</li>
+<li><b>Глава «Новости» с одной подвкладкой</b>, то есть строка L2 там пустая. Аналитика, QG-деталь и VP-канва не адаптированы под узкий экран.</li>
+<li><b>Монолиты:</b> одна функция Аналитики ≈ 2160 строк; LorePage держит ~30 useState фильтров и рендерит 24 раздела цепочкой условий. Каждая правка UI дорогая.</li>
+</ol></div>
+
+<h3>Июльский аудит: что осталось открытым</h3>
+<div class="card"><div class="hyp">Статус выведен из инвентаризации кода, на стенде не проверялся (гипотеза до захода 2).</div>
+<table><tr><th>Находка</th><th>Что видно сейчас</th></tr>
+<tr><td><span class="id">F-01</span> чипы без клавиатуры</td><td>частично: появился <span class="mono">a11yClick</span> (Enter/Space)</td></tr>
+<tr><td><span class="id">F-03</span> непоследовательный поиск</td><td><b>открыто</b>, стало пять механизмов вместо трёх</td></tr>
+<tr><td><span class="id">F-04</span> 6 рядов фильтров в Спринтах</td><td>вероятно открыто: полоса фильтров + KPI на месте</td></tr>
+<tr><td><span class="id">F-05</span> разные пустые состояния</td><td>частично: EmptyState в 27 файлах, раскатка неполная</td></tr>
+<tr><td><span class="id">F-06</span> «Знания» — иной механизм выбора</td><td><b>открыто</b>: kind/art + портал фильтра</td></tr>
+<tr><td><span class="id">F-12</span> impact компонента не на входе</td><td>открыто: паспорт начинается с вкладки ADR</td></tr>
+</table></div>
+
+<h3>Голос пользователя (VP-канва LORE)</h3>
+<div class="card"><ul>
+<li><b>PAIN-LORE-PLAN-BLIND</b> — состояние работ собирается по кускам и к моменту сборки устаревает → нужен экран «состояние с одного взгляда» (GAIN-LORE-PLAN-ONE-SCREEN).</li>
+<li><b>PAIN-LORE-SILENT-HALF</b> — «не найдено» неотличимо от «сломалось» → честные состояния во всех блоках (GAIN-LORE-HONEST-VERDICT).</li>
+<li><b>PAIN-LORE-LOST-WHY</b> — причина решения теряется → обратные ссылки и «почему» в один клик (GAIN-LORE-WHY-TRACEABLE, JOB-RECALL-WHY).</li>
+<li><b>PAIN-LORE-FIT-BLIND</b> — по канве не видно, чем закрыта ценность и доказано ли это (GAIN-LORE-FIT-EVIDENCE).</li>
+<li><b>PAIN-LORE-QUALITY-UNSEEN</b> — требования к качеству записаны, но выполняются ли — неизвестно.</li>
+<li><b>PAIN-LORE-SCOPE-MANUAL</b> — видно чужое или не видно своего (JOB-SEE-OWN-SCOPE).</li>
+</ul><div class="muted">Внешних отзывов пользователей в LORE не нашлось, только канва владелицы. Сбор у реальных пользователей — кандидат в заход 2.</div></div>
+
+<h2>2. Наша функция → аналог → что взять</h2>
+<div class="tw"><table>
+<tr><th>Наша функция</th><th>Лучший аналог</th><th>Что взять</th><th>Ценн.</th><th>Усилие</th></tr>
+<tr><td>Паспорт компонента</td><td>Backstage, Port, Compass</td><td>шапка «владелец · область · жизненный цикл», вкладки Обзор/Решения/Спеки/QG/Зависимости; карточки обзора; scorecard; доска «без владельца»</td><td class="hi">выс.</td><td class="m">M</td></tr>
+<tr><td>ADR + решения</td><td>Log4brains, Backstage ADR, Tana</td><td>таймлайн ADR с чипами статуса; superseded приглушён со стрелкой на преемника; атомарное решение встраивается живым блоком в ADR и спринт</td><td>сред.</td><td class="s">S–M</td></tr>
+<tr><td>Ссылки в MD-телах</td><td>Confluence smart links, Obsidian</td><td>чип со статусом + превью при наведении; панель «на это ссылаются» и «упоминания без ссылки»</td><td class="hi">выс.</td><td class="s">S–M</td></tr>
+<tr><td>Спринты / задачи</td><td>Linear, Redmine, Plane</td><td>сохранённые виды в боковой панели; display options (группировка, колонки); inline-правка; peek по пробелу, j/k; массовая смена статуса</td><td class="hi">выс.</td><td class="m">M</td></tr>
+<tr><td>План / Вехи / Релизы</td><td>Redmine Roadmap, Linear Initiatives, Notion views</td><td>один набор «спринты» в видах таймлайн/доска/таблица; roadmap «релиз → задачи + прогресс»; здоровье вехи из апдейта, серое «нет апдейта»</td><td class="hi">выс.</td><td class="m">M–L</td></tr>
+<tr><td>Релизы ↔ PR ↔ спринт</td><td>Linear Releases (04.2026)</td><td>автосостав релиза по ссылкам в PR; AI-черновик RELEASE-заметок с разделами «фичи / апгрейды»; ручное отцепление</td><td class="hi">выс.</td><td class="m">M</td></tr>
+<tr><td>QG</td><td>SonarQube QG history, Cortex</td><td>полоса прогонов (зелёный/красный/серый SKIP с причиной) + отметки релизов; «релиз вышел при красном гейте»; scorecard на компоненте</td><td class="hi">выс.</td><td class="m">M</td></tr>
+<tr><td>«Честный вердикт»</td><td>Grafana, Atlan, DataHub</td><td>плашка трёх состояний на каждом блоке: «проверено N мин назад» / «пусто (проверено)» / «не смогли: 403/таймаут»; старение свежести</td><td class="hi">оч. выс.</td><td class="s">S–M</td></tr>
+<tr><td>VP-канва, фичи, US</td><td>Productboard Insights, Notion DB</td><td>вес доказательств на боли/фиче; без доказательств → «гипотеза»; fit как доля закрытого с весами; канва как база с видами</td><td class="hi">выс.</td><td class="m">M</td></tr>
+<tr><td>История (SCD2)</td><td>Confluence compare, Dolt AS OF</td><td>пикер «на дату» переключает всю карточку; дифф двух состояний по полям; восстановление = новое состояние</td><td class="hi">выс.</td><td class="m">M–L</td></tr>
+<tr><td>Новости / Лента / История</td><td>Linear Inbox, Redmine Activity</td><td>одна лента активности с фильтрами + личный Inbox (Priority, группа «Агенты»)</td><td class="hi">выс.</td><td class="l">L</td></tr>
+<tr><td>Вопросы (open questions)</td><td>Linear Triage, Plane Intake</td><td>очередь триажа: новое → принять/отклонить/назначить; intake-форма для внешних клиентов</td><td>сред.</td><td class="m">M</td></tr>
+<tr><td>Знания (spec/doc/runbook)</td><td>Confluence, Plane Wiki</td><td>дерево страниц с коллекциями; одна адресация <span class="mono">passport=</span> для всех типов</td><td>сред.</td><td class="m">M</td></tr>
+<tr><td>Поиск ⌘K</td><td>Linear, Sourcegraph, Obsidian</td><td>разделить «перейти» и «сделать» (действия: статус, связь, создать); стрелки по выдаче; фасеты ↔ строка запроса и URL; пометка «счётчики неполные»</td><td class="hi">выс.</td><td class="s">S–M</td></tr>
+<tr><td>Технологии</td><td>Port, LeanIX</td><td>колонка на правило (устарело / нет владельца); уровни зрелости</td><td>низк.</td><td class="s">S</td></tr>
+<tr><td>MCP API + журнал агентов</td><td>Stripe docs, Langfuse</td><td>три колонки «навигация / параметры / пример»; сессия агента → дерево вызовов с ok/ошибка/пусто и источником (прод/тест)</td><td>сред.</td><td class="m">M</td></tr>
+<tr><td>BRAGI</td><td>Peec AI, CoSchedule, Notion calendar</td><td>матрица «промпт × AI-движок», Share of Voice; календарь как вид той же базы публикаций</td><td>сред.</td><td class="l">L</td></tr>
+<tr><td>Аналитика</td><td>Notion dashboard views, Linear updates</td><td>дашборд из виджетов-видов, а не отдельный экран-монолит; AI-черновик апдейта спринта/вехи</td><td>сред.</td><td class="l">L</td></tr>
+<tr><td>Навигация в целом</td><td>Atlassian 2025, Backstage Home</td><td>боковая панель: закрепить, «Недавние», «Избранное»; стартовая страница по роли</td><td class="hi">выс.</td><td class="m">M</td></tr>
+</table></div>
+<div class="muted">Нет хорошего аналога: SCD2-срез «на дату» по всему графу и связка «решение → задача → релиз → QG» в одном месте. Это наше преимущество, его надо показывать, а не прятать в «История».</div>
+
+<h2>3. Каталог предложений — выберите финалистов</h2>
+<div class="muted">Ценность: ★★★ высокая · ★★ средняя · ★ низкая. Усилие: <span class="s">S</span> дни · <span class="m">M</span> 1–2 недели · <span class="l">L</span> больше.</div>
+
+<h3>A. Навигация и информационная архитектура</h3>
+<div class="tw"><table><tr><th>ID</th><th>Предложение</th><th>Источник</th><th>Ценн.</th><th>Ус.</th></tr>
+<tr><td class="id">P-01</td><td>Боковая панель вместо трёх горизонтальных уровней: главы → разделы, сворачиваемая; на мобильном — drawer</td><td>Atlassian 2025, Plane, Linear</td><td>★★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-02</td><td>«Недавние» и «Избранное» (закреплённые записи и виды) в панели</td><td>Atlassian, Notion</td><td>★★★</td><td class="s">S</td></tr>
+<tr><td class="id">P-03</td><td>Стартовая страница «Мой день» по роли: мои задачи, мои вопросы, красные QG, свежие решения</td><td>Backstage Home, Redmine «My page»</td><td>★★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-04</td><td>Свести дубли: одна сущность — один дом, остальные места = виды или ссылки (спринты 7→1+виды, QG 3→1, MCP/Подключения только в одном месте)</td><td>Backstage (entity = one page)</td><td>★★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-05</td><td>Слить Новости / Лента / История в одну «Активность» с фильтрами (типы, люди, агенты, период)</td><td>Redmine Activity, Linear</td><td>★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-06</td><td>Перегруппировать главы по задачам пользователя (journey), а не по типам сущностей; убрать главу с одной вкладкой</td><td>Atlassian, тренд journey-nav</td><td>★★</td><td class="s">S</td></tr>
+</table></div>
+
+<h3>B. Страница сущности (паспорт)</h3>
+<div class="tw"><table><tr><th>ID</th><th>Предложение</th><th>Источник</th><th>Ценн.</th><th>Ус.</th></tr>
+<tr><td class="id">P-07</td><td>Единый каркас паспорта для всех типов: шапка (тип · статус · владелец · проект · свежесть) + вкладки Обзор / Связи / История / Тело</td><td>Backstage, OpenProject</td><td>★★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-08</td><td>Панель обратных ссылок «на это ссылаются» + «упоминания без ссылки»</td><td>Obsidian, Logseq</td><td>★★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-09</td><td>Смарт-чипы ссылок в MD-телах: статус + превью при наведении</td><td>Confluence, Obsidian</td><td>★★★</td><td class="s">S</td></tr>
+<tr><td class="id">P-10</td><td>Локальный граф связей записи (глубина 1–2) на вкладке «Связи», вместо глобального</td><td>Obsidian, Backstage relations</td><td>★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-11</td><td>Impact-блок на входе паспорта компонента: кто зависит, открытые ADR, красные QG</td><td>Backstage, Compass</td><td>★★★</td><td class="s">S–M</td></tr>
+<tr><td class="id">P-12</td><td>Пикер «на дату» и дифф двух состояний по полям прямо в паспорте</td><td>Confluence compare, Dolt</td><td>★★★</td><td class="m">M–L</td></tr>
+</table></div>
+
+<h3>C. Списки, виды, фильтры</h3>
+<div class="tw"><table><tr><th>ID</th><th>Предложение</th><th>Источник</th><th>Ценн.</th><th>Ус.</th></tr>
+<tr><td class="id">P-13</td><td>Один компонент списка + фильтра для всех разделов (вместо пяти механизмов), все фильтры в URL</td><td>Plane universal filtering</td><td>★★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-14</td><td>Сохранённые виды (фильтр + колонки + группировка) с именем, в боковой панели, с общей ссылкой</td><td>Redmine queries, Linear, Plane</td><td>★★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-15</td><td>Один набор — много видов: таблица / доска / таймлайн / календарь (спринты, вехи, публикации, канва)</td><td>Notion, Obsidian Bases</td><td>★★★</td><td class="l">L</td></tr>
+<tr><td class="id">P-16</td><td>Inline-правка статуса и ключевых полей прямо в строке списка</td><td>Linear, Airtable</td><td>★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-17</td><td>Массовые действия: выбор нескольких → статус, проект, связь</td><td>Redmine bulk edit, Linear</td><td>★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-18</td><td>Разгрузить «Спринты»: фильтры за кнопкой «Фильтр» + строка активных чипов; по умолчанию ≤ 2 ряда</td><td>Linear display options</td><td>★★</td><td class="s">S</td></tr>
+</table></div>
+
+<h3>D. Скорость и клавиатура</h3>
+<div class="tw"><table><tr><th>ID</th><th>Предложение</th><th>Источник</th><th>Ценн.</th><th>Ус.</th></tr>
+<tr><td class="id">P-19</td><td>Peek: пробел открывает запись сбоку, j/k листают, список остаётся</td><td>Linear, Notion side peek</td><td>★★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-20</td><td>⌘K с действиями (сменить статус, связать, создать), стрелки по выдаче, недавние</td><td>Linear, Raycast</td><td>★★★</td><td class="s">S–M</td></tr>
+<tr><td class="id">P-21</td><td>Горячие клавиши с видимыми подсказками в меню и тултипах + шпаргалка по <span class="mono">?</span></td><td>Linear, Superhuman</td><td>★★</td><td class="s">S</td></tr>
+<tr><td class="id">P-22</td><td>Вкладки и разделённые панели: две записи рядом (ADR + спринт)</td><td>Obsidian, OpenProject sidesheet</td><td>★</td><td class="l">L</td></tr>
+</table></div>
+
+<h3>E. Честность и доверие</h3>
+<div class="tw"><table><tr><th>ID</th><th>Предложение</th><th>Источник</th><th>Ценн.</th><th>Ус.</th></tr>
+<tr><td class="id">P-23</td><td>Плашка трёх состояний на каждом блоке данных: свежо · пусто (проверено) · не смогли проверить (причина)</td><td>Grafana, Atlan</td><td>★★★</td><td class="s">S–M</td></tr>
+<tr><td class="id">P-24</td><td>Старение данных: «проверено N мин назад», серое «нет апдейта» у вех/спринтов</td><td>Atlan, Linear updates</td><td>★★</td><td class="s">S</td></tr>
+<tr><td class="id">P-25</td><td>Пустые состояния как сценарий: зачем это, одно действие, отличие от ошибки (довести раскатку EmptyState)</td><td>Linear, Plane</td><td>★★</td><td class="s">S</td></tr>
+<tr><td class="id">P-26</td><td>Атрибуция «кто сделал»: человек / агент (сессия) / система — в ленте, истории и паспортах</td><td>Linear Agents, Langfuse</td><td>★★</td><td class="m">M</td></tr>
+</table></div>
+
+<h3>F. Доменные экраны</h3>
+<div class="tw"><table><tr><th>ID</th><th>Предложение</th><th>Источник</th><th>Ценн.</th><th>Ус.</th></tr>
+<tr><td class="id">P-27</td><td>QG: полоса прогонов с отметками релизов и «релиз при красном гейте»; scorecard на компоненте</td><td>SonarQube, Cortex</td><td>★★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-28</td><td>Roadmap: релиз/веха → задачи с прогрессом; здоровье из апдейта</td><td>Redmine, Linear Initiatives</td><td>★★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-29</td><td>VP-канва: вес доказательств, статус «гипотеза», fit с весами</td><td>Productboard</td><td>★★★</td><td class="m">M</td></tr>
+<tr><td class="id">P-30</td><td>Inbox + триаж вопросов и событий, отдельная группа «Агенты»</td><td>Linear Inbox/Triage</td><td>★★</td><td class="l">L</td></tr>
+<tr><td class="id">P-31</td><td>ADR: таймлайн, цепочка supersede стрелками, живое встраивание атомарных решений</td><td>Log4brains, Tana</td><td>★★</td><td class="s">S–M</td></tr>
+<tr><td class="id">P-32</td><td>Релизы: автосостав по PR + AI-черновик заметок</td><td>Linear Releases</td><td>★★</td><td class="m">M</td></tr>
+</table></div>
+
+<h3>G. Фундамент (без него редизайн дорогой)</h3>
+<div class="tw"><table><tr><th>ID</th><th>Предложение</th><th>Источник</th><th>Ценн.</th><th>Ус.</th></tr>
+<tr><td class="id">P-33</td><td>Распилить монолиты (LorePage, Analytics, SprintDetail) на маршруты и общий каркас master-detail; один словарь статусов</td><td>—</td><td>★★★</td><td class="l">L</td></tr>
+<tr><td class="id">P-34</td><td>Режим плотности (compact/comfortable) + аудит WCAG 2.2: цели 24×24, фокус не под липкими панелями, альтернатива drag</td><td>Gmail, OpenProject, W3C</td><td>★★</td><td class="s">S–M</td></tr>
+</table></div>
+
+<h2>4. Что дальше</h2>
+<div class="card"><ol>
+<li><b>Вы выбираете финалистов.</b> Можно по номерам (P-01, P-07, P-19…), можно целыми блоками (A, B…).</li>
+<li><b>Заход 2:</b> по каждому финалисту — подробный разбор против нашего текущего функционала: что сохраняем (инвентаризация, ничего не теряем), что меняем, цена, риски. Плюс пути 4–5 типов пользователей в Mermaid.</li>
+<li><b>Потом вариант III:</b> юзабилити-прогон на стенде (Chrome), axe, Нильсен по разделам, прототипы раскладки на approve; черновик спринтов в LORE.</li>
+</ol>
+<div class="muted">Моя рекомендация для старта: <b>P-01, P-04, P-07, P-08, P-13, P-14, P-19, P-20, P-23</b>. Это каркас (навигация + паспорт + список), на который ложится всё остальное, плюс быстрые выигрыши по скорости и честности. P-33 — обязательный спутник каркасных изменений.</div></div>
+
+<div class="muted">Источники референсов: linear.app/docs/peek · linear.app/changelog (priority inbox 2026-09, releases 2026-04) · obsidian.md/help/bases · backstage.io/docs/releases/v1.37.0 · support.atlassian.com (new navigation) · plane.so/changelog · openproject.org/docs/release-notes/16 · redmine.org Changelog 6.0 · docs.sonarsource.com (quality gate history 2026.4) · docs.port.io · docs.cortex.io · support.productboard.com · grafana.com (nodata-and-error-states) · atlan.com · confluence.atlassian.com (page comparison) · dolthub.com · docs.peec.ai · langfuse.com · sourcegraph.com/docs. Часть фактов о референсах взята из поисковых сниппетов, страницы не открывались; проверю их в заходе 2 по финалистам.</div>
+</div></body></html>

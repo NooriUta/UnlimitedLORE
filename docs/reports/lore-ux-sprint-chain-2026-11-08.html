@@ -1,0 +1,75 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Цепочка спринтов редизайна LORE · 08.11.2026</title><link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"><script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script><script>mermaid.initialize({startOnLoad:true,theme:'base',themeVariables:{primaryColor:'#eee9df',primaryTextColor:'#1e1a12',primaryBorderColor:'#8a560a',lineColor:'#5c5240',fontFamily:'Manrope'}});</script><style>:root{--bg0:#f5f3ee;--bg1:#faf8f3;--bg3:#eee9df;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#6f6249;--acc:#8a560a;--font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:14px/1.55 var(--font)}.wrap{max-width:900px;margin:0 auto;padding:18px 12px 60px}h1{font:800 21px/1.25 var(--head);color:var(--acc);margin:0 0 6px}h2{font:800 16px/1.3 var(--head);margin:22px 0 6px}.muted{color:var(--t2);font-size:11px}.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;margin:8px 0}.card ul{margin:4px 0 0;padding-left:20px}.card li{margin:3px 0;font-size:13px}.why{color:var(--t2);font-size:12.5px;margin-top:4px}.mermaid{background:#fff;border:1px solid var(--bd);border-radius:8px;padding:8px;overflow:auto}b.s{font-family:var(--mono);color:var(--acc)}</style></head><body><div class="wrap">
+<h1>Цепочка спринтов редизайна LORE — черновик</h1>
+<div class="muted">08.11.2026 · предварительно согласовано владелицей («по спринтам предварительно ок, но S4 я бы добавила в параллель первым трём») · в LORE не заведено · основа: [[lore_ux_redesign_principles_2026_11]], ADR-LORE-045 и его решения D-2026-UXR-*, два круга критики</div>
+<div class="card"><b>Главный принцип:</b> каждый спринт выкатывается сам по себе; v1 работает всё время; MCP и miniLORE ничего не замечают. Сначала то, что снижает риск, и то, что даёт пользу уже в старом LORE; новый UI — за флагом на new.lore.odal…</div>
+<div class="mermaid">
+flowchart LR
+  S0[S0 Страховка] --> S1[S1 Сервер: честный ответ + баги]
+  S0 --> S2[S2 Сервер: связи, история, память]
+  S0 --> S3[S3 Инфра второго приложения]
+  S0 --> S4[S4 UI v2: каркас и списки]
+  S1 -. API .-> S4
+  S2 -. API .-> S4
+  S3 -. стенд .-> S4
+  S4 --> S5[S5 UI v2: запись и задачи]
+  S4 --> S6[S6 Völva в LORE]
+  S4 --> S7[S7 Новости · Админка · Зачем]
+  S5 --> S8[S8 Переключение]
+  S6 --> S8
+  S7 --> S8
+</div>
+<h2><b class="s">S0</b> Страховка (без изменений UI) — <span style="color:var(--acc)">первым берём только кусок, остальное параллельно (решение владелицы 08.11)</span></h2>
+<div class="card"><ul><li>Контрактные тесты: все MCP-инструменты, телефонный API miniLORE, встройки Völva, доступ MCP через :4400 (старые веб-ссылки — не нужны, D-2026-UXR-NO-LINK-COMPAT).</li><li>Рендер-тесты (сейчас их ноль), e2e на 5 ключевых путей, замер «до».</li></ul><div class="why"><b>Кусок первым (1–2 дня):</b> контракты MCP-инструментов и API miniLORE, проба доступа MCP через :4400 — то, без чего нельзя трогать сервер. <b>Остальное параллельно с S1–S4:</b> рендер-тесты, e2e ключевых путей, замер «до».</div></div>
+<h2><b class="s">S1</b> Сервер: честный ответ и баги</h2>
+<div class="card"><ul>
+<li>Метаданные полноты в ответе: время, скоуп, «обрезано».</li>
+<li>Сбой одного блока вместо 502 на страницу, таймаут, <code>body_redacted</code>.</li>
+<li>Баги B-03/04/05.</li>
+<li>Категории статусов на сервере: accepted у знаний = «действует».</li>
+<li>Одно правило счётчиков.</li>
+<li>Найденное по дороге:
+<ul><li>«сценарии фичи» отдают 0 при 5 существующих (FEAT-VP-FIT);</li>
+<li>docs kind=claude-rules отдаёт 1 документ из ~10 без пометки о неполноте.</li></ul></li>
+</ul><div class="why"><b>Почему:</b> польза сразу и в v1; честный UI без этого не построить.</div></div>
+<h2><b class="s">S2</b> Сервер: связи, история, память пользователя</h2>
+<div class="card"><ul>
+<li>Эндпоинт backlinks, общий запрос истории.</li>
+<li>Виды, избранное и личные настройки на сервере, «что LORE помнит обо мне».</li>
+<li>Типы рёбер для «Связать».</li>
+<li>Прямой адрес бэкенда для MCP — опционально.</li>
+</ul><div class="why"><b>Почему:</b> это данные под экраны v2; миграции только аддитивные, v1 не задевают. Идёт параллельно с S1.</div></div>
+<h2><b class="s">S3</b> Инфраструктура второго приложения</h2>
+<div class="card"><ul>
+<li>Сервис <code>lore-app-next</code>, DNS и сертификат <code>new.lore.odal…</code>, роутер Traefik.</li>
+<li>Redirect URI в Keycloak, проверка cookie.</li>
+<li>Два образа в CD, проба <code>/lore/version</code> через :4400.</li>
+<li>Флаг «новая навигация».</li>
+<li>v2 — каталогом в develop (на подтверждение владелице).</li>
+</ul><div class="why"><b>Почему:</b> чтобы UI v2 с первого дня выкатывался на стенд, не трогая v1.</div></div>
+<h2><b class="s">S4</b> UI v2: каркас и списки — <span style="color:var(--acc)">параллельно с S1–S3 (решение владелицы 08.11)</span></h2>
+<div class="card"><ul>
+<li>Приложения наверху, меню, аватар с настройками, мультискоуп.</li>
+<li>Строка «фильтр / группировка / порядок», иконки и описание фильтров.</li>
+<li>Статус-звезда, виды.</li>
+<li>Касание и доступность.</li>
+<li>Баги B-01/02/06–09.</li>
+</ul><div class="why"><b>Как идёт параллельно:</b> в первый день S1–S2 фиксируем контракты новых API (форма ответа с метаданными полноты, backlinks, виды и настройки). S4 строится на заглушках по этим контрактам в каталоге web-next. Как только сервер готов, подключаем по-настоящему. На стенд S4 выходит, когда готов S3.</div></div>
+<h2><b class="s">S5</b> UI v2: запись и задачи</h2>
+<div class="card"><ul>
+<li>Вердикт, вкладки, «ушко», режим чтения, задачи и чтение задач.</li>
+<li>Правка на месте (TipTap + «код / превью»), тест «Markdown без потерь», слияние при конфликте.</li>
+<li>Локальный граф, история «человек / агент».</li>
+</ul><div class="why"><b>Почему после S4:</b> запись открывается из списков.</div></div>
+<h2><b class="s">S6</b> Völva внутри LORE</h2>
+<div class="card"><ul><li>Вкладка аналитики, блоки <code>lore-query</code>/<code>lore-graph</code> в тексте, клик = фильтр, шаблоны по типу записи.</li></ul><div class="why"><b>Почему отдельно:</b> зависит от готовности Völva (SPRINT_VIZ_EMBED); может идти рядом с S5.</div></div>
+<h2><b class="s">S7</b> Новости · Админка · «Зачем» — три параллельные дорожки</h2>
+<div class="card"><ul>
+<li><b>Новости:</b> лента и сводка без уведомлений, Atom.</li>
+<li><b>Админка v3:</b> журнал действий, дифф и подтверждение для опасных действий, страницы записей.</li>
+<li><b>«Зачем»:</b> канва раскладывается сама, «Матрица fit», «Карта историй»; UC не трогаем.</li>
+</ul><div class="why"><b>Почему в конце:</b> самостоятельные экраны, им нужен готовый каркас S4.</div></div>
+<h2><b class="s">S8</b> Переключение</h2>
+<div class="card"><ul><li>v2 на основной адрес, v1 запасным адресом N недель, замер «после», отключение v1.</li></ul></div>
+<h2>Что увидите вы</h2>
+<div class="card"><ul><li>После S1 — честность в старом LORE.</li><li>После S4 — по флагу можно жить в новом.</li><li>После S8 — один LORE, новый.</li></ul></div>
+</div></body></html>

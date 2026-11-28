@@ -44,7 +44,7 @@ final class LoreNewsV2Collector {
     static final String SQL_TASK_HIST =
         "SELECT in('HAS_STATE').task_uid[0] AS task_uid, in('HAS_STATE').task_uid AS task_uids, " +
         "valid_from, status_raw " +
-        "FROM KnowTaskHist WHERE valid_from IS NOT NULL";
+        "FROM KnowTaskHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC";
     /**
      * S7A-09: текущий снимок задач — лёгкая проекция. Срез all_tasks везёт note_md
      * (сотни раз тяжелее остального) и роли; ленте нужны только эти пять полей.
@@ -69,11 +69,11 @@ final class LoreNewsV2Collector {
     static final String SQL_ADR_HIST =
         "SELECT in('HAS_STATE').adr_id[0] AS adr_id, in('HAS_STATE').adr_id AS adr_uids, valid_from, " +
         "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
-        "FROM KnowADRHist WHERE valid_from IS NOT NULL";
+        "FROM KnowADRHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC";
     static final String SQL_SPEC_HIST =
         "SELECT in('HAS_STATE').spec_id[0] AS spec_id, in('HAS_STATE').spec_id AS spec_uids, valid_from, " +
         "in('HAS_STATE').out('BELONGS_TO_PROJECT').slug AS projects " +
-        "FROM KnowSpecHist WHERE valid_from IS NOT NULL";
+        "FROM KnowSpecHist WHERE valid_from IS NOT NULL ORDER BY valid_from DESC";
     /** S7A-01: вопросы для ленты — лёгкая проекция без body_md (условие 9 SPEC-LORE-KIT-CONTRACT-CONDITIONS). */
     static final String SQL_QUESTIONS =
         "SELECT question_id, title, status, opened_date, closed_date, " +
@@ -141,9 +141,20 @@ final class LoreNewsV2Collector {
         return false;
     }
 
+    /**
+     * Потолок выдачи HTTP-API ArcadeDB (тот же, что {@code AidaLoreResource.SERVER_ROW_CAP}). Чтение просит все
+     * строки (limit=-1, LoreReadUncappedTest), но выдача ровно в потолок значит «база могла обрезать» —
+     * это ошибка источника, а не «прочитано всё» (дефект 28.11.2026: свежие закрытия пропадали молча).
+     * Истории читаются от свежих к старым: при усечении теряется старый хвост, а не сегодняшний день.
+     */
+    static final int SERVER_ROW_CAP = 20000;
+
     private List<Map<String, Object>> read(String source, String sql, boolean critical) {
         try {
             List<Map<String, Object>> rows = query.apply(sql, Map.of());
+            if (rows != null && rows.size() == SERVER_ROW_CAP)
+                fail(source, new IllegalStateException("выдача ровно " + SERVER_ROW_CAP
+                    + " строк — потолок базы: могла быть обрезана, лента может быть неполной"), critical);
             return rows == null ? List.of() : rows;
         } catch (Exception e) {
             fail(source, e, critical);

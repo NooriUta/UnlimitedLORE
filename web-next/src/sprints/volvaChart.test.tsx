@@ -55,6 +55,14 @@ describe('подпись встройки: ответ бэкенда → чес�
     const u = new URL(r.urls[0], 'http://lore.test');
     expect(u.pathname).toBe('/lore/embed/volva/sprints_timeline');
     expect(u.searchParams.get('project')).toBe('AIDA/miniLORE,NooriUta/UnlimitedLORE');
+    expect(u.searchParams.get('lang')).toBe('ru');
+  });
+
+  it('язык LORE уходит в подпись (EMB-L6): en — lang=en, и без проектов тоже', async () => {
+    const urls: string[] = [];
+    const impl = (async (u: string) => { urls.push(u); return json({ url: 'https://v/embed/question/J' }); }) as unknown as typeof fetch;
+    await volvaEmbedState('sprints_timeline', [], impl, { lang: 'en' });
+    expect(new URL(urls[0], 'http://lore.test').searchParams.get('lang')).toBe('en');
   });
 
   it('503 NOT_CONFIGURED — «не настроено» с тем, что настроить', async () => {
@@ -171,6 +179,25 @@ describe('встройка Völva молчит 15 с — «не ответила
       expect(container.querySelector('[data-embed-state="silent"]')).not.toBeNull();
     } finally {
       vi.useRealTimers();
+    }
+  });
+});
+
+// EMB-L6 (слово владелицы 28.11: «сплющенность растянуть на экран»): рамка занимает всю
+// оставшуюся высоту окна, а не 320 px — Völva растягивает строки на высоту кадра.
+describe('рамка Völva — на всю оставшуюся высоту окна', () => {
+  it('окно 1000 px, рамка у верха — высота кадра почти 1000, а не 320', async () => {
+    const prev = window.innerHeight;
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 1000 });
+    try {
+      const impl = vi.fn(async () => json({ url: 'https://volva.example.org/embed/question/J', expires_at: 'x' })) as unknown as typeof fetch;
+      const { container } = render(<VolvaChart chart={VOLVA_SPRINTS_CHART} title="t" projects={['A/B']} fetchImpl={impl} />);
+      await waitFor(() => expect(container.querySelector('iframe')).not.toBeNull());
+      const h = parseInt((container.querySelector('iframe') as HTMLIFrameElement).style.height, 10);
+      expect(h).toBeGreaterThanOrEqual(900);
+      expect(h).toBeLessThanOrEqual(1000);
+    } finally {
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: prev });
     }
   });
 });

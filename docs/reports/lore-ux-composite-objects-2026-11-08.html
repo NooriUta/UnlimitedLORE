@@ -1,0 +1,250 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Составные объекты: как это делают графы знаний · LORE UX · 08.11.2026</title><link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Manrope:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"><style>:root{--bg0:#f5f3ee;--bg1:#faf8f3;--bg3:#eee9df;--bd:#d4ccb8;--t1:#1e1a12;--t2:#5c5240;--t3:#6f6249;--acc:#8a560a;--wrn:#a06010;--dng:#c03030;--suc:#3d7a38;--inf:#3a7060;--font:'Manrope',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--head:'Unbounded',sans-serif}*{box-sizing:border-box}body{margin:0;background:var(--bg0);color:var(--t1);font:14px/1.55 var(--font)}.wrap{max-width:1000px;margin:0 auto;padding:18px 12px 60px}h1{font:800 21px/1.25 var(--head);margin:0 0 6px;color:var(--acc)}h2{font:800 17px/1.3 var(--head);margin:28px 0 8px}.muted{color:var(--t2);font-size:11px}.mono{font-family:var(--mono);font-size:.9em}.card{background:var(--bg1);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin:10px 0}.tldr{border-left:3px solid var(--acc)}.good{border-left:3px solid var(--suc)}.warn{border-left:3px solid var(--dng)}.card ul,.card ol{margin:6px 0 0;padding-left:20px}.card li{margin:5px 0;font-size:12.5px}table{width:100%;border-collapse:collapse;font-size:12.5px}th{font:700 10px/1.3 var(--font);text-transform:uppercase;letter-spacing:.06em;color:var(--t3);text-align:left;padding:6px;border-bottom:1px solid var(--bd);background:var(--bg3)}td{padding:7px 6px;border-bottom:1px solid var(--bd);vertical-align:top}.tw{overflow-x:auto}.s{font:700 10px/1.4 var(--font);padding:2px 7px;border-radius:999px;white-space:nowrap;text-transform:uppercase}.b{background:#f6dcd8;color:var(--dng)}.h{background:#f6e3d0;color:var(--wrn)}.m{background:var(--bg3);color:var(--t2)}.who{font:600 10px/1 var(--mono);color:var(--inf);white-space:nowrap}</style></head><body><div class="wrap">
+<h1>Составные объекты: как с ними справляются любители графов знаний</h1>
+<div class="muted">08.11.2026 · исследование по просьбе владелицы, без правок кода · 17 инструментов · то, что проверено по документации, идёт со ссылкой; то, что взято по памяти о продукте, помечено <span class="s m">по знанию продукта</span> · скриншоты не встраивались и ссылок на них нет: ни одной картинки не удалось проверить (ссылки ведут на страницы документации)</div>
+
+<div class="card tldr"><b>Коротко</b><ul>
+<li><b>Почти все сходятся на одном каркасе: «страница родителя = шапка + встроенный вид детей».</b> Так у Notion (linked view), Tana (search node внутри supertag), Capacities (variable query), Obsidian Bases (<span class="mono">this.file</span>), Anytype (inline set), Coda (таблица с фильтром по <span class="mono">thisRow</span>), Linear (страница проекта). Дети на родителе — живая таблица или доска, а не ссылка «перейти к задачам».</li>
+<li><b>Статус ребёнка в 2 клика дают два приёма:</b> раскрыть строку прямо в списке родителей (Notion «Nested in toggle», дерево Jira Plans) или колонка-сводка на списке родителей (Airtable/Notion rollup, полоса прогресса Jira, Linear). А вот правка статуса чипом прямо в строке — стандарт без исключений.</li>
+<li><b>Сводки (сделано/всего, сумма трудоёмкости, прогноз) на родителе есть у всех трекеров.</b> В PKM-инструментах (Tana, Logseq, Obsidian, Capacities) их собирают руками, и это главная боль. Notion не умеет сводку от сводки, поэтому «веха → спринт → задачи» в два уровня там не сворачивается.</li>
+<li><b>Частые жалобы:</b> слишком глубокая вложенность (Heptabase прямо советует не делать третий уровень), «всё со всем связали — ничем не пользуешься» (Notion), дети теряются в запросах (Logseq), ребёнок выглядит как обычный объект без следа родителя.</li>
+<li><b>Для LORE 5 вариантов (ниже).</b> Самый частый в индустрии — <b>А + Б</b>: страница спринта с встроенной таблицей или доской задач плюс колонка «прогресс» и раскрытие строки в списке спринтов. Решение за владелицей. Отдельно: в прототипе задачи выгружены только у 109 из 503 спринтов (у 86 из 142 открытых). Это пробел данных прототипа, а не дизайнерское решение, и он сам по себе даёт ощущение «задач нет / путает».</li>
+</ul></div>
+
+<h2>Как делают</h2>
+
+<div class="card"><b>Notion</b> — база данных + связи + sub-items<ul>
+<li><b>Показ:</b> внутри страницы родителя — встроенный linked view базы задач с фильтром «связь = эта страница» (таблица, доска, timeline). Встроенный механизм sub-items добавляет пару связей «родитель/подэлементы» внутри одной базы. Режим «Nested in toggle» раскрывает детей под строкой родителя прямо в таблице, есть и плоский список [N1].</li>
+<li><b>Кликов до статуса:</b> 1 (раскрыть треугольник в списке) или 2 (открыть родителя, увидеть встроенный вид).</li>
+<li><b>Правка на месте:</b> статус — select-чип в ячейке. Строку можно открыть боковой панелью (peek) <span class="s m">по знанию продукта</span>.</li>
+<li><b>Сводки:</b> rollup (count, % checked, sum) по связи. <b>Сводку от сводки построить нельзя</b>, двухуровневую сумму делают обходом через формулы [N3][N4].</li>
+<li><b>Контекст родителя:</b> свойство-связь «Parent item» в шапке ребёнка, хлебные крошки по вложенности страниц.</li>
+<li><b>Жалобы:</b> «ловушка связей» — всё связали, пользоваться нельзя [N5]. Сам гид Notion признаёт, что загруженная база задач «путает» [N2]. Сторонние интеграции показывают sub-items как обычные задачи [N6].</li>
+</ul></div>
+
+<div class="card"><b>Tana</b> — supertags, поля, search nodes, views<ul>
+<li><b>Показ:</b> у любого узла с детьми и у search node есть вид: Outline, Table (дети — строки, поля — колонки), Cards (доска), List, Calendar, Tabs [T1]. Шаблон supertag может содержать search node, например «#project → его #task» [T2]. Тогда каждая страница проекта сама показывает свои задачи.</li>
+<li><b>Кликов:</b> 1–2. Узлы раскрываются на месте, как в аутлайнере.</li>
+<li><b>Правка на месте:</b> колонка таблицы = поле узла, значение правится в ячейке. Новая колонка добавляет поле самому узлу [T1].</li>
+<li><b>Сводки:</b> встроенных rollup-полей нет, есть подсчёт в группировке / summary таблицы <span class="s m">по знанию продукта</span>.</li>
+<li><b>Контекст:</b> у узла один «дом» (owner) и любое число ссылок. Хлебные крошки ведут к дому <span class="s m">по знанию продукта</span>.</li>
+<li><b>Жалобы:</b> высокий порог входа (supertag, field, search, view — четыре понятия сразу). Разница «ребёнок, который живёт тут» и «ссылка на ребёнка» путает новичков <span class="s m">по знанию продукта</span>.</li>
+</ul></div>
+
+<div class="card"><b>Logseq</b> — блоки, страницы, свойства, запросы<ul>
+<li><b>Показ:</b> страница = аутлайн блоков. Дети — вложенные блоки или встроенный запрос <span class="mono">{{query (and [[Спринт]] (task TODO DOING))}}</span> с видом списка или таблицы <span class="s m">по знанию продукта</span>.</li>
+<li><b>Кликов:</b> 1 (сворачивание и разворачивание блока).</li>
+<li><b>Правка на месте:</b> маркер TODO/DOING/DONE переключается кликом прямо в блоке.</li>
+<li><b>Сводки:</b> нет. Нужны плагины или advanced query.</li>
+<li><b>Контекст:</b> ссылающиеся блоки показываются с цепочкой родителей (breadcrumb) <span class="s m">по знанию продукта</span>.</li>
+<li><b>Жалобы:</b> запрос возвращает родителя без вложенных детей [L1]. На больших многоэтапных задачах запросы становятся неюзабельными [L2]. Свойства страницы смешиваются с блоками в выдаче [L3].</li>
+</ul></div>
+
+<div class="card"><b>Roam Research</b> — бесконечный аутлайн и ссылки на блоки<ul>
+<li><b>Показ:</b> дети — вложенные пули. Zoom в блок показывает только его поддерево с хлебными крошками [R1].</li>
+<li><b>Кликов:</b> 1. Правка на месте: TODO-чекбокс в строке.</li>
+<li><b>Сводки:</b> нет (только счётчики ссылок).</li>
+<li><b>Контекст:</b> у ссылки на блок видно, где он живёт, и править его можно прямо оттуда [R2].</li>
+<li><b>Жалобы:</b> без схемы нет полей вроде «исполнитель» или «трудоёмкость». Глубокая вложенность заставляет бесконечно зумить <span class="s m">по знанию продукта</span>.</li>
+</ul></div>
+
+<div class="card"><b>Obsidian (+ Dataview / Bases)</b><ul>
+<li><b>Показ:</b> заметка-родитель встраивает вид Bases (<span class="mono">![[Tasks.base#Вид]]</span>) с фильтром <span class="mono">file == this.file</span> / по ссылке на текущую заметку. Тот же вид в каждом родителе показывает только своих детей [O1][O2]. Folder notes — папка как контейнер <span class="s m">по знанию продукта</span>.</li>
+<li><b>Кликов:</b> 1–2. Правка на месте: свойства правятся в ячейке Bases.</li>
+<li><b>Сводки:</b> формулы и итоги в Bases (count, sum) <span class="s m">по знанию продукта</span>.</li>
+<li><b>Жалобы:</b> <span class="mono">this</span> ломается при вложенных встраиваниях (указывает на ближайшую заметку) [O3]. Каждую связь родитель–ребёнок пользователь рисует сам.</li>
+</ul></div>
+
+<div class="card"><b>Capacities</b> — объекты, типы, коллекции, запросы<ul>
+<li><b>Показ:</b> «variable query», встроенный в объект, использует свойства самого объекта. Например, на странице «Человек» показываются его встречи — без ручного фильтра [C1]. Коллекции — ручные подгруппы одного типа [C2].</li>
+<li><b>Кликов:</b> 2. Правка на месте: свойства в табличном виде запроса <span class="s m">по знанию продукта</span>.</li>
+<li><b>Сводки:</b> нет. Контекст: обратные ссылки внизу объекта.</li>
+<li><b>Жалобы:</b> путают «запрос» и «коллекцию» — у вендора даже есть отдельный FAQ [C3].</li>
+</ul></div>
+
+<div class="card"><b>Anytype</b> — объекты, связи, наборы, коллекции<ul>
+<li><b>Показ:</b> Set — живой запрос по типу или связи. Collection — ручная подборка. Inline set/collection встраивается в объект. Вид встроенного блока свой, а правки свойств видны везде [A1][A2].</li>
+<li><b>Кликов:</b> 2. Правка на месте: ячейка, вид «доска» по статусу.</li>
+<li><b>Сводки:</b> подсчёты в колонках <span class="s m">по знанию продукта</span>.</li>
+<li><b>Жалобы:</b> пользователи просят сохранять виды inline-наборов [A3]. Различие set и collection непрозрачно.</li>
+</ul></div>
+
+<div class="card"><b>Heptabase</b> — карточки, доски, секции<ul>
+<li><b>Показ:</b> карточки на доске, группировка секциями (заголовок секции читается даже при сильном отдалении), вложенные доски (sub-whiteboard). Одна карточка может лежать на многих досках [H1][H2].</li>
+<li><b>Кликов:</b> 2–3 (через карту досок). Статусов и полей в трекерском смысле нет.</li>
+<li><b>Жалобы и правило вендора:</b> «не делайте третий уровень доски, пока на втором меньше ~100 карточек — используйте секции» [H1]. Прямое признание, что глубокая иерархия теряет человека.</li>
+</ul></div>
+
+<div class="card"><b>Coda</b> — таблицы внутри документов<ul>
+<li><b>Показ:</b> на странице или в развёрнутой строке — вид таблицы задач с фильтром <span class="mono">Projects.Contains(thisRow)</span>. Есть «subtables» — дети прямо в карточке строки [K1][K2].</li>
+<li><b>Кликов:</b> 2. Правка на месте: да.</li>
+<li><b>Сводки:</b> формулы (<span class="mono">thisRow.Tasks.Filter(Done).Count()</span>) <span class="s m">по знанию продукта</span>.</li>
+<li><b>Жалобы:</b> во вложенной таблице пропадает часть функций (фильтр, удаление по ПКМ) [K3]. Фильтр, вернувший число вместо булева значения, показывает всё [K1].</li>
+</ul></div>
+
+<div class="card"><b>Airtable</b> — связанные записи и развёрнутая карточка<ul>
+<li><b>Показ:</b> поле-связь — список чипов детей. В развёрнутой записи связанные записи показаны списком или мини-таблицей, клик открывает ребёнка поверх родителя (стек карточек) <span class="s m">по знанию продукта</span>.</li>
+<li><b>Кликов:</b> 2 (развернуть строку → увидеть детей). Статус виден сразу через lookup-колонку на родителе.</li>
+<li><b>Сводки:</b> rollup (COUNTALL, SUM, conditional rollup «только сделанные») и lookup [AT1][AT2]. Классика для «сделано/всего».</li>
+<li><b>Жалобы:</b> пустой rollup = связи не проставлены; без ссылок не работает [AT1].</li>
+</ul></div>
+
+<div class="card good"><b>Linear</b> — проект → задачи → подзадачи (ближе всего к спринту LORE)<ul>
+<li><b>Показ:</b> страница проекта: Overview (описание, документы, вехи с прогрессом) + вкладка задач (список или доска, группировка по статусу) [LN1]. Вехи проекта — список с прогрессом на overview [LN2]. Боковая панель (Cmd/Ctrl+I) — граф прогресса: объём, скорость, прогноз даты [LN3].</li>
+<li><b>Кликов:</b> 1 до проекта со шкалой прогресса в списке проектов, 2 до статуса задачи.</li>
+<li><b>Правка на месте:</b> иконка статуса в строке — меню по клику или клавиша S <span class="s m">по знанию продукта</span>.</li>
+<li><b>Сводки:</b> % по задачам (по оценкам, без оценок — по штукам), граф и прогноз [LN3]. Апдейты проекта несут метрики [LN5].</li>
+<li><b>Контекст:</b> в шапке задачи — проект и веха, у подзадачи — родитель.</li>
+<li><b>Позиция вендора:</b> для отслеживания — проекты, sub-issues только для мелкой группировки, они «дают меньше видимости» [LN4]. То есть самый уважаемый трекер сознательно держит иерархию <b>мелкой</b>.</li>
+</ul></div>
+
+<div class="card"><b>Jira</b> — эпик → дочерние задачи, иерархия, Advanced Roadmaps / Plans<ul>
+<li><b>Показ:</b> в карточке эпика — раздел «Child work items» со списком детей, статус-чипами и полосой прогресса <span class="s m">по знанию продукта</span> (официальной страницы не нашёл, партнёр Atlassian подтверждает полосу по умолчанию в Cloud [J1]). В Plans — дерево-таблица (tree grid) с раскрытием уровней.</li>
+<li><b>Кликов:</b> 2 (эпик → раздел детей). В Plans — 1 (раскрыть строку).</li>
+<li><b>Сводки:</b> прогресс родителя = решённые дети / все дети, без оценок — по резолюции [J2]. Аналитика считает прогресс эпика запросом по детям [J3].</li>
+<li><b>Жалобы:</b> нативные гаджеты дашборда не показывают прогресс по эпикам — нужны сторонние приложения [J1]. Delivery-прогресс в JPD игнорирует внуков [J4].</li>
+</ul></div>
+
+<div class="card"><b>Backstage</b> — System → Components<ul>
+<li><b>Показ:</b> страница System — карточки «Has components», «APIs», «Has resources» (таблицы детей). Плюс карточка Catalog Graph с прямыми соседями, фильтр по типу связи [B1][B2]. Связь <span class="mono">hasPart/partOf</span> — канонический part-of [B3].</li>
+<li><b>Кликов:</b> 2. Правки на месте нет: каталог только для чтения, источник — YAML в репо.</li>
+<li><b>Сводки:</b> нет. Контекст: у компонента в About виден System, в Relations — partOf.</li>
+</ul></div>
+
+<div class="card"><b>Neo4j Bloom / Explore</b><ul>
+<li><b>Показ:</b> выделить узел → Expand по всем или по выбранному типу связи и направлению. Меню заранее показывает, сколько узлов добавится; лимит в настройках [G1][G2].</li>
+<li><b>Кликов:</b> 2 (ПКМ → Expand) до появления детей. Статус читается только в инспекторе (+1 клик).</li>
+<li><b>Жалобы:</b> «волосяной шар» при раскрытии хаба <span class="s m">по знанию продукта</span>. Сводок нет.</li>
+</ul></div>
+
+<div class="card"><b>Kumu</b><ul>
+<li><b>Показ:</b> кластеризация по полю создаёт виртуальные узлы-значения и тянет к ним элементы [KU1]. Включается переключателем у зрителя [KU2]. Настоящей вложенности нет, есть группировка.</li>
+<li><b>Жалобы:</b> виртуальные узлы нельзя редактировать [KU3].</li>
+</ul></div>
+
+<div class="card"><b>TypeDB / онтологии (part-of)</b><ul>
+<li><b>Модель:</b> состав — это отдельное отношение с ролями (например, <span class="mono">composition(whole, part)</span> в TypeDB, mereology / BFO <span class="mono">part_of</span> с транзитивностью). Правила выводят транзитивную принадлежность «задача ∈ веха» <span class="s m">по знанию продукта</span>.</li>
+<li><b>Урок для LORE:</b> различать <i>состав</i> (ребёнок без родителя не живёт: решение ADR, задача спринта) и <i>ссылку</i> (задача упоминает спеку). UI должен рисовать их по-разному. В LORE это уже ребро BELONGS_TO и подобные — вопрос только в показе.</li>
+</ul></div>
+
+<h2>Сравнение</h2>
+<div class="tw"><table>
+<tr><th>Инструмент</th><th>Как показаны дети</th><th>Кликов до статуса ребёнка</th><th>Правка на месте</th><th>Сводки</th><th>Контекст родителя</th><th>Жалобы</th></tr>
+<tr><td>Notion</td><td>встроенный linked view; раскрытие строки</td><td>1–2</td><td>чип в ячейке</td><td>rollup, без rollup-of-rollup</td><td>поле Parent, крошки</td><td>«ловушка связей», путаница в больших базах</td></tr>
+<tr><td>Tana</td><td>search node в шаблоне; table/cards</td><td>1–2</td><td>ячейка = поле</td><td>слабо</td><td>owner + крошки</td><td>порог входа</td></tr>
+<tr><td>Logseq</td><td>вложенные блоки; запрос</td><td>1</td><td>TODO-маркер</td><td>нет</td><td>крошки блока</td><td>запросы теряют детей, медленно</td></tr>
+<tr><td>Roam</td><td>аутлайн, zoom</td><td>1</td><td>чекбокс</td><td>нет</td><td>крошки, ссылки на блоки</td><td>нет полей</td></tr>
+<tr><td>Obsidian Bases</td><td>встроенный .base с <span class="mono">this</span></td><td>1–2</td><td>ячейка</td><td>формулы</td><td>backlinks</td><td><span class="mono">this</span> во вложенных</td></tr>
+<tr><td>Capacities</td><td>variable query в объекте</td><td>2</td><td>частично</td><td>нет</td><td>backlinks</td><td>query vs collection</td></tr>
+<tr><td>Anytype</td><td>inline set/collection</td><td>2</td><td>ячейка, доска</td><td>счётчики</td><td>связи</td><td>set vs collection</td></tr>
+<tr><td>Heptabase</td><td>секции, вложенные доски</td><td>2–3</td><td>—</td><td>нет</td><td>карта досок</td><td>глубина; вендор против 3-го уровня</td></tr>
+<tr><td>Coda</td><td>таблица по <span class="mono">thisRow</span>, subtables</td><td>2</td><td>да</td><td>формулы</td><td>развёрнутая строка</td><td>урезанные вложенные таблицы</td></tr>
+<tr><td>Airtable</td><td>чипы связи, список в карточке</td><td>1 (lookup) / 2</td><td>да</td><td>rollup, conditional</td><td>стек карточек</td><td>пусто без связей</td></tr>
+<tr><td>Linear</td><td>страница проекта: overview + список/доска</td><td>2</td><td>иконка статуса</td><td>% + граф + прогноз</td><td>проект/веха в шапке</td><td>sub-issues «меньше видимости»</td></tr>
+<tr><td>Jira</td><td>раздел детей в эпике; tree grid в Plans</td><td>1–2</td><td>да</td><td>полоса прогресса</td><td>поле Parent</td><td>дашборды без прогресса эпика</td></tr>
+<tr><td>Backstage</td><td>карточки-таблицы на System</td><td>2</td><td>нет</td><td>нет</td><td>partOf в About</td><td>—</td></tr>
+<tr><td>Neo4j Bloom</td><td>Expand соседей на холсте</td><td>3</td><td>в инспекторе</td><td>нет</td><td>рёбра</td><td>«волосяной шар»</td></tr>
+<tr><td>Kumu</td><td>кластеры-виртуальные узлы</td><td>—</td><td>нет у кластеров</td><td>нет</td><td>рёбра</td><td>виртуальные не правятся</td></tr>
+</table></div>
+
+<h2>Паттерны</h2>
+<div class="card"><ol>
+<li><b>Страница родителя = контейнер + встроенный вид детей</b> (Notion, Tana, Capacities, Obsidian, Anytype, Coda, Linear, Backstage). Шапка (цель, сроки, тело MD) сверху, живая таблица или доска детей ниже — первым экраном, а не на вкладке.</li>
+<li><b>Раскрытие строки в списке (tree grid)</b> (Notion «Nested in toggle», Jira Plans). Статус ребёнка — 1 клик от списка родителей, без смены страницы.</li>
+<li><b>Колонки-сводки на списке родителей</b> (Airtable/Notion rollup, Jira, Linear). «7/12 · 60 % · 14 д» прямо в строке спринта, часто ещё и мини-полоса по статусам.</li>
+<li><b>Peek ребёнка с крошками родителя</b> (Notion side peek, Airtable стек, Linear). Ребёнок открывается панелью поверх родителя, в шапке «Веха › Спринт › Задача», закрытие возвращает в тот же список.</li>
+<li><b>Аутлайнер</b> (Roam, Logseq, Tana). Всё вложено, zoom + крошки. Хорош для глубины, слаб на поля и сводки.</li>
+<li><b>Доска детей</b> (Tana cards, Anytype, Linear, Notion board). Колонки = статусы, отвечает на вопрос «где застряло».</li>
+<li><b>Общее правило из жалоб:</b> держать видимую иерархию в 2 уровня за раз (Linear, Heptabase). Глубже — через крошки и переход, а не через матрёшку на одном экране.</li>
+</ol></div>
+
+<h2>Варианты для LORE</h2>
+<div class="muted">Решение за владелицей. Все варианты используют уже существующие рёбра (спринт → фаза → задача, веха → спринт через TARGETS_MILESTONE, фича → UC/US → задачи, ADR → решения через DECIDED_IN). Новой модели не требуется — меняется только показ.</div>
+
+<div class="card"><b>A. Паспорт = шапка + встроенная таблица/доска детей первым экраном</b> (паттерн 1 + 6)<ul>
+<li><b>Спринт:</b> над задачами — цель и сводка (полоса по статусам, сделано/всего, Σ трудоёмкости). Ниже — таблица задач, сгруппированная по фазам, с переключателем «таблица ↔ доска». Статус-чип правится в строке. Тело спринта (context_md) свёрнуто под заголовком.</li>
+<li><b>Веха:</b> таблица спринтов с колонкой прогресса. <b>Фича:</b> UC/US как группы, задачи внутри. <b>ADR:</b> список атомарных решений с их статусом.</li>
+<li>+ ровно то, что сказала владелица: «главное — задачи», 2 клика от списка (список → паспорт). Один шаблон на все составные типы.</li>
+<li>− длинные тела уезжают вниз. На мобильном таблица из 7+ колонок сжимается — нужна карточная раскладка.</li>
+</ul></div>
+
+<div class="card"><b>Б. Раскрытие строки в списке родителей (tree grid) + колонки-сводки</b> (паттерн 2 + 3)<ul>
+<li>В списке спринтов колонка «7/12 ▰▰▰▱» и треугольник: раскрыл — под строкой задачи со статус-чипами. То же для вех (→ спринты) и ADR (→ решения).</li>
+<li>+ 1 клик до статуса, можно сравнивать спринты, не уходя со списка. Хорошо дополняет A.</li>
+<li>− двухуровневое раскрытие (веха → спринт → задача) быстро превращается в «матрёшку», поэтому ограничить одним уровнем за раз. На телефоне тесно.</li>
+</ul></div>
+
+<div class="card"><b>В. Peek ребёнка с хлебными крошками</b> (паттерн 4)<ul>
+<li>Клик по задаче в любом месте открывает боковую панель (на телефоне — нижний лист) с её телом MD, статусом, исполнителем и крошками «Веха › Спринт › Фаза › Задача». Закрытие возвращает в тот же список с сохранённой позицией, состояние лежит в URL.</li>
+<li>+ ребёнок никогда не теряет родителя — прямой ответ на «путает». Сочетается с A и Б.</li>
+<li>− ещё один слой интерфейса. Нужна дисциплина: что открывается панелью, а что полной страницей.</li>
+</ul></div>
+
+<div class="card"><b>Г. Аутлайн-вид составного объекта</b> (паттерн 5)<ul>
+<li>Режим «структура»: фича → UC → US → задачи деревом со сворачиванием и zoom с крошками. Поля — чипами в строке.</li>
+<li>+ естественен для фича → UC → задачи и ADR → решения (3+ уровня), удобен для чтения целиком.</li>
+<li>− слаб на сводки и сравнение. Пользователи PKM-аутлайнеров жалуются на потерю детей и медлительность (Logseq). Лучше как дополнительный вид, а не основной.</li>
+</ul></div>
+
+<div class="card"><b>Д. Доска «мои/открытые задачи по спринтам» как отдельный вход</b><ul>
+<li>Сквозная доска или таблица задач с группировкой по спринту и фильтром по исполнителю (человек/агент) и вехе, с колонками-статусами.</li>
+<li>+ ответ на вопрос «что сейчас в работе» без выбора спринта, 1 клик.</li>
+<li>− не заменяет паспорт спринта. Рискует стать вторым дублем списка задач. Это вход «от задач», а не «от состава».</li>
+</ul></div>
+
+<div class="card warn"><b>Общее для всех вариантов</b><ul>
+<li>Сначала закрыть пробел данных прототипа: задачи выгружены только у 109 из 503 спринтов (у 86 из 142 открытых). Иначе любой вариант будет выглядеть как «задач нет».</li>
+<li>Честные пустые состояния: «задач нет» ≠ «задачи не загружены» ≠ «нет прав».</li>
+<li>Сводки считать на бэкенде (rollup), а не в браузере: у Notion сводка от сводки не работает, и двухуровневый прогресс вехи там разваливается. LORE от этого свободен, если считать сервером.</li>
+</ul></div>
+
+<h2>Источники</h2>
+<div class="card" style="font-size:12px"><ul>
+<li>[N1] Notion — Sub-items &amp; dependencies: <a href="https://www.notion.com/help/tasks-and-dependencies">notion.com/help/tasks-and-dependencies</a></li>
+<li>[N2] Notion — Break tasks into steps with sub-tasks and dependencies: <a href="https://www.notion.com/fi/help/guides/tasks-manageable-steps-sub-tasks-dependencies">notion.com/help/guides/…</a></li>
+<li>[N3] Notion rollups — limits: <a href="https://sync2sheets.com/blog/notion-rollups/">sync2sheets.com/blog/notion-rollups</a></li>
+<li>[N4] Rollup of rollup (zenn): <a href="https://zenn.dev/leaner_dev/articles/20230217-notion-rollup-of-rollup">zenn.dev/…/notion-rollup-of-rollup</a></li>
+<li>[N5] The Notion Relations Trap: <a href="https://medium.com/@R.H_Rizvi/the-notion-relations-trap-why-connecting-everything-makes-nothing-usable-6d3dfdf416e7">medium.com/…</a></li>
+<li>[N6] Sunsama — Notion sub-items displayed as regular items: <a href="https://roadmap.sunsama.com/improvements/p/notion-sub-items-should-be-displayed-differently-or-option-to-hide-them">roadmap.sunsama.com/…</a></li>
+<li>[T1] Tana — Views: <a href="https://outliner.tana.inc/learn/features/views">outliner.tana.inc/learn/features/views</a>, <a href="https://www.tana.inc/docs/views">tana.inc/docs/views</a></li>
+<li>[T2] Tana — Supertags: <a href="https://tana.inc/docs/supertags">tana.inc/docs/supertags</a>; Intro to supertags, search nodes and views: <a href="https://tana.inc/articles/intro-to-supertags-search-nodes-and-views">tana.inc/articles/…</a></li>
+<li>[L1] Logseq — Nested tasks in advanced query: <a href="https://discuss.logseq.com/t/hint-nested-tasks-in-advanced-query/4542">discuss.logseq.com/t/…/4542</a></li>
+<li>[L2] Logseq issue #6973: <a href="https://github.com/logseq/logseq/issues/6973">github.com/logseq/logseq/issues/6973</a></li>
+<li>[L3] Logseq — page properties in block queries: <a href="https://discuss.logseq.com/t/return-blocks-not-pages-with-a-user-provided-property/22472">discuss.logseq.com/t/…/22472</a></li>
+<li>[R1] Outliner notes (zoom, breadcrumbs): <a href="https://notes.dsebastien.net/30+Areas/33+Permanent+notes/33.02+Content/Outliner">notes.dsebastien.net/…/Outliner</a></li>
+<li>[R2] Zettelkasten forum on Roam block refs: <a href="https://forum.zettelkasten.de/discussion/comment/11726">forum.zettelkasten.de/…/11726</a></li>
+<li>[O1] Bases — best practices embedding: <a href="https://forum.obsidian.md/t/bases-best-practices-when-embedding-bases-in-other-pages/101123">forum.obsidian.md/t/…/101123</a></li>
+<li>[O2] Bases in practice: <a href="https://www.dsebastien.net/how-i-turned-20-000-notes-into-live-dashboards-with-obsidian-bases/">dsebastien.net/…obsidian-bases</a></li>
+<li>[O3] Embedding Bases in embedded files: <a href="https://forum.obsidian.md/t/embedding-bases-in-embedded-files/106654">forum.obsidian.md/t/…/106654</a></li>
+<li>[C1] Capacities — Queries: <a href="https://docs.capacities.io/reference/queries">docs.capacities.io/reference/queries</a></li>
+<li>[C2] Capacities — Collections: <a href="https://docs.capacities.io/reference/collections">docs.capacities.io/reference/collections</a></li>
+<li>[C3] Capacities FAQ — queries vs collections: <a href="https://docs.capacities.io/faq/editing/queries-vs-collections">docs.capacities.io/faq/…</a></li>
+<li>[A1] Anytype — Collections (inline): <a href="https://doc.anytype.io/anytype/organize/collections">doc.anytype.io/anytype/organize/collections</a></li>
+<li>[A2] Anytype — Sets: <a href="https://doc.anytype.io/anytype-docs/basics/sets-and-collections/sets">doc.anytype.io/…/sets</a></li>
+<li>[A3] Anytype community — Sets/Collections v2 wishes: <a href="https://community.anytype.io/t/what-do-you-want-to-be-added-in-sets-collections-v2/22425">community.anytype.io/t/…/22425</a></li>
+<li>[H1] Heptabase — Nested Whiteboard: <a href="https://wiki.heptabase.com/nested-whiteboard">wiki.heptabase.com/nested-whiteboard</a></li>
+<li>[H2] Heptabase — Fundamental Elements: <a href="https://wiki.heptabase.com/fundamental-elements">wiki.heptabase.com/fundamental-elements</a></li>
+<li>[K1] Coda — filter view by current row: <a href="https://connect.superhuman.com/t/filter-view-by-current-row-in-detailed-display/54169">connect.superhuman.com/t/…/54169</a></li>
+<li>[K2] Coda — Improvements to Subtables: <a href="https://community.coda.io/t/launched-improvements-to-subtables/42830">community.coda.io/t/…/42830</a></li>
+<li>[K3] Coda — Nested tables missing functionality: <a href="https://connect.superhuman.com/t/nested-tables-missing-functionality/10738">connect.superhuman.com/t/…/10738</a></li>
+<li>[AT1] Airtable — Rollup field overview: <a href="https://support.airtable.com/docs/rollup-field-overview">support.airtable.com/docs/rollup-field-overview</a></li>
+<li>[AT2] Airtable — Lookup field overview: <a href="https://support.airtable.com/docs/lookup-field-overview">support.airtable.com/docs/lookup-field-overview</a></li>
+<li>[LN1] Linear — Project overview: <a href="https://linear.app/docs/project-overview">linear.app/docs/project-overview</a></li>
+<li>[LN2] Linear — Project milestones: <a href="https://linear.app/docs/project-milestones">linear.app/docs/project-milestones</a></li>
+<li>[LN3] Linear — Project graph: <a href="https://linear.app/docs/project-graph">linear.app/docs/project-graph</a></li>
+<li>[LN4] Linear — How to use Linear (startups/mid-size): <a href="https://linear.app/docs/how-to-use-linear-startups-mid-size-companies">linear.app/docs/…</a></li>
+<li>[LN5] Linear — Project progress reports: <a href="https://linear.app/changelog/2023-08-16-project-progress-reports">linear.app/changelog/2023-08-16…</a></li>
+<li>[J1] Atlassian Community — Epic-level dashboard child progress: <a href="https://community.atlassian.com/forums/Jira-questions/Epic-Level-Dashboard-to-show-Child-Progess-Bar/qaa-p/3048383">community.atlassian.com/…/3048383</a></li>
+<li>[J2] Advanced Roadmaps — Tracking progress and status: <a href="https://confluence.atlassian.com/jiraportfolioserver/tracking-progress-and-status-814212695.html">confluence.atlassian.com/…</a></li>
+<li>[J3] Atlassian Analytics — Query progress on an epic: <a href="https://support.atlassian.com/atlassian-analytics/kb/querying-an-epics-progress/">support.atlassian.com/…/querying-an-epics-progress</a></li>
+<li>[J4] JPD delivery progress and child issues: <a href="https://community.atlassian.com/t5/Jira-Product-Discovery-questions/Delivery-progress-take-into-account-child-issues/qaq-p/2361393">community.atlassian.com/…/2361393</a></li>
+<li>[B1] Backstage — Viewing entity relationships: <a href="https://backstage.io/docs/getting-started/viewing-entity-relationships">backstage.io/docs/…</a></li>
+<li>[B2] Backstage — catalog-graph plugin: <a href="https://cdn.jsdelivr.net/npm/@backstage/plugin-catalog-graph@0.6.6/README.md">plugin-catalog-graph README</a></li>
+<li>[B3] Backstage — Well-known relations: <a href="https://backstage.io/docs/features/software-catalog/well-known-relations">backstage.io/docs/…/well-known-relations</a></li>
+<li>[G1] Neo4j Bloom — Scene interactions: <a href="https://neo4j.com/docs/bloom-user-guide/current/bloom-visual-tour/bloom-scene-interactions/">neo4j.com/docs/bloom-user-guide/…</a></li>
+<li>[G2] Neo4j Aura Explore — Scene interactions: <a href="https://neo4j.com/docs/aura/explore/explore-visual-tour/scene-interactions/">neo4j.com/docs/aura/explore/…</a></li>
+<li>[KU1] Kumu — Clustering: <a href="https://docs.kumu.io/guides/clustering">docs.kumu.io/guides/clustering</a></li>
+<li>[KU2] Kumu — Cluster control: <a href="https://docs.kumu.io/guides/controls/cluster-control">docs.kumu.io/guides/controls/cluster-control</a></li>
+<li>[KU3] Kumu — Virtual elements: <a href="https://docs.kumu.io/faq/how-do-i-edit-virtual-elements.html">docs.kumu.io/faq/…</a></li>
+</ul>
+<div class="muted">Источники найдены веб-поиском 07.11.2026, большинство пересказаны по выдаче поиска, страницы целиком не открывались. Форумные утверждения — свидетельства пользователей, а не поведение, документированное вендором.</div></div>
+</div></body></html>

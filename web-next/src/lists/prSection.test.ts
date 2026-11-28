@@ -30,7 +30,7 @@ describe('раздел «PR»', () => {
     const def = LIST_SCREENS.prs;
     expect(def.slice).toBe('prs');
     const cfg = def.config('ru');
-    expect(cfg.list?.columns).toEqual(['title', 'project', 'state', 'merged_at', 'branches', 'releases']);
+    expect(cfg.list?.columns).toEqual(['title', 'project', 'repository', 'state', 'merged_at', 'branches', 'releases']);
     expect(cfg.list?.filters).toEqual(expect.arrayContaining(['fields.project', 'fields.state', 'fields.no_title', 'fields.no_release']));
   });
 

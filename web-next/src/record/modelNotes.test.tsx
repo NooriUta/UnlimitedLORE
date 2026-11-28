@@ -24,9 +24,9 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { TechVisibilityProvider } from '@seidr/kit';
 import { RecordModelNotes as Bare } from '@seidr/kit';
+import { KIT_CSS } from '../test/kitPaths';
 
 // S4-TECH-NOTES: оговорки модели — tech. Здесь проверяется вид шеврона при
 // включённой настройке; скрытие по умолчанию — settings/showTech.test.tsx.
@@ -39,7 +39,7 @@ const NOTES = [
 
 // jsdom: import.meta.url недоступен, читаем от корня пакета.
 // Шеврон переехал в kit (K5-PASSPORT-FROM-MODEL, шаг 4) — его правила теперь в seidr.css.
-const css = readFileSync(join(process.cwd(), '../kit/src/styles/seidr.css'), 'utf8');
+const css = readFileSync(KIT_CSS, 'utf8');
 
 /** Тело правила по селектору (первое вхождение). */
 function rule(selector: string): string {

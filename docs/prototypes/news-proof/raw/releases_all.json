@@ -1,0 +1,3047 @@
+{
+  "rows": [
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.16.0",
+      "release_date": "2026-11-07",
+      "sprint_count": 11,
+      "pr_count": 45
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.7.10",
+      "release_date": "2026-11-07",
+      "sprint_count": 3,
+      "pr_count": 10
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.198",
+      "release_date": "2026-11-07",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/Datawanderers-Unity#dw-unity-0.1.10-mvp-test",
+      "release_date": "2026-11-07",
+      "sprint_count": 3,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/volva#v0.1.8-m0.65.2.5",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 16
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.126",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.13",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/seidr-site#site-v1.4.1",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/Datawanderers-ServerandLore#dw-server-v0.3.0",
+      "release_date": "2026-10-28",
+      "sprint_count": 3,
+      "pr_count": 6
+    },
+    {
+      "release_uid": "AIDA/MIDGARD#sjon-v0.3.0",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.195",
+      "release_date": "2026-11-07",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.194",
+      "release_date": "2026-11-07",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-v1.11.197",
+      "release_date": "2026-11-07",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-v1.11.196",
+      "release_date": "2026-11-07",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/Datawanderers-Unity#dw-unity-0.1.8-mvp-test",
+      "release_date": "2026-11-07",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/Datawanderers-Unity#dw-unity-0.1.7-mvp-test",
+      "release_date": "2026-11-07",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/Datawanderers-Unity#dw-unity-0.1.6-mvp-test",
+      "release_date": "2026-11-07",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/Datawanderers-Unity#dw-unity-0.1.4-mvp-test",
+      "release_date": "2026-11-07",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/Datawanderers-Unity#dw-unity-0.1.3-mvp-test",
+      "release_date": "2026-11-07",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/Datawanderers-Unity#dw-unity-0.1.2-mvp-test",
+      "release_date": "2026-11-07",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.7.9",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 11
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.7.8",
+      "release_date": "2026-11-06",
+      "sprint_count": 0,
+      "pr_count": 26
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.125",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.124",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.123",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.122",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.121",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.120",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.193",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.192",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.191",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.190",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.189",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.188",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.187",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.186",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.185",
+      "release_date": "2026-11-06",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/volva#v0.1.7-m0.65.2.5",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/volva#v0.1.6-m0.65.2.5",
+      "release_date": "2026-11-05",
+      "sprint_count": 5,
+      "pr_count": 7
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.15.0",
+      "release_date": "2026-11-05",
+      "sprint_count": 8,
+      "pr_count": 20
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.14.1",
+      "release_date": "2026-11-05",
+      "sprint_count": 6,
+      "pr_count": 16
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.14.0",
+      "release_date": "2026-11-05",
+      "sprint_count": 7,
+      "pr_count": 26
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.7.7",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.7.6",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/AIDA#aida-odal-2026-11-05",
+      "release_date": "2026-11-05",
+      "sprint_count": 5,
+      "pr_count": 11
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.119",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.118",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.117",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.116",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.115",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.114",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.113",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.112",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.111",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.110",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.109",
+      "release_date": "2026-11-05",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.184",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.183",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.182",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.181",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.180",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.179",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.178",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.177",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.176",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.175",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.174",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.173",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.172",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.171",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.170",
+      "release_date": "2026-11-05",
+      "sprint_count": 2,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.9",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.8",
+      "release_date": "2026-11-05",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.7",
+      "release_date": "2026-11-05",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.6",
+      "release_date": "2026-11-05",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.5",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.12",
+      "release_date": "2026-11-05",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.11",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.10",
+      "release_date": "2026-11-05",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/volva#v0.1.5-m0.65.2.5",
+      "release_date": "2026-11-04",
+      "sprint_count": 6,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/volva#v0.1.4-m0.65.2.5",
+      "release_date": "2026-11-04",
+      "sprint_count": 0,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.13.1",
+      "release_date": "2026-11-04",
+      "sprint_count": 3,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.13.0",
+      "release_date": "2026-10-28",
+      "sprint_count": 5,
+      "pr_count": 17
+    },
+    {
+      "release_uid": "AIDA/miniLORE#link-v0.2.2",
+      "release_date": "2026-10-28",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/Datawanderers-ServerandLore#dw-server-v0.2.0",
+      "release_date": "2026-10-28",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#link-v0.2.1",
+      "release_date": "2026-10-27",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.108",
+      "release_date": "2026-10-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.168",
+      "release_date": "2026-10-23",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.107",
+      "release_date": "2026-10-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.105",
+      "release_date": "2026-10-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.104",
+      "release_date": "2026-10-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.103",
+      "release_date": "2026-10-21",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.102",
+      "release_date": "2026-10-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.101",
+      "release_date": "2026-10-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.100",
+      "release_date": "2026-10-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#1.11.167",
+      "release_date": "2026-10-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#1.11.166",
+      "release_date": "2026-10-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.12.1",
+      "release_date": "2026-10-20",
+      "sprint_count": 4,
+      "pr_count": 6
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.12.0",
+      "release_date": "2026-10-20",
+      "sprint_count": 8,
+      "pr_count": 50
+    },
+    {
+      "release_uid": "NooriUta/AIDA#aida-odal-2026-10-20",
+      "release_date": "2026-10-20",
+      "sprint_count": 4,
+      "pr_count": 22
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.99",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.97",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.96",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.82",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.81",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.80",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.78",
+      "release_date": "2026-10-20",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.94",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.93",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.92",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.91",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.90",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.89",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.88",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.87",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.86",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.85",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#minilore-srv-v0.3.84",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.160",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.159",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.158",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.157",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.156",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.155",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.154",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.153",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.152",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-link-2026-10-20e",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-link-2026-10-20c",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-link-2026-10-20b",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-link-2026-10-20",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.151",
+      "release_date": "2026-10-20",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.150",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.149",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.148",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.147",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.146",
+      "release_date": "2026-10-20",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.145",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.144",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#1.11.165",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#1.11.164",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#1.11.163",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#1.11.162",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#1.11.161",
+      "release_date": "2026-10-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.77",
+      "release_date": "2026-10-19",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.76",
+      "release_date": "2026-10-19",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.75",
+      "release_date": "2026-10-19",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.143",
+      "release_date": "2026-10-19",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.142",
+      "release_date": "2026-10-19",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.141",
+      "release_date": "2026-10-19",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.11.2",
+      "release_date": "2026-10-12",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.4",
+      "release_date": "2026-10-07",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.3",
+      "release_date": "2026-10-07",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.2",
+      "release_date": "2026-10-06",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.1",
+      "release_date": "2026-10-06",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.6.0",
+      "release_date": "2026-09-24",
+      "sprint_count": 2,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.17",
+      "release_date": "2026-09-23",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.74",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.73",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.72",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.71",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.140",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.139",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.138",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/MIDGARD#midgard-8099-2026-09-22",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.9",
+      "release_date": "2026-09-22",
+      "sprint_count": 2,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.8",
+      "release_date": "2026-09-22",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.7",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.6",
+      "release_date": "2026-09-22",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.5",
+      "release_date": "2026-09-22",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.4",
+      "release_date": "2026-09-22",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.3",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.2",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.16",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.15",
+      "release_date": "2026-09-22",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.14",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.13",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.12",
+      "release_date": "2026-09-22",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.11",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.10",
+      "release_date": "2026-09-22",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.1",
+      "release_date": "2026-09-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.5.0",
+      "release_date": "2026-09-22",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.70",
+      "release_date": "2026-09-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.137",
+      "release_date": "2026-09-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.136",
+      "release_date": "2026-09-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.135",
+      "release_date": "2026-09-21",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.134",
+      "release_date": "2026-09-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.133",
+      "release_date": "2026-09-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.132",
+      "release_date": "2026-09-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.131",
+      "release_date": "2026-09-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/MIDGARD#sjon-v0.2.1",
+      "release_date": "2026-09-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/MIDGARD#sjon-v0.2.0",
+      "release_date": "2026-09-21",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/MIDGARD#sensor-node-mesha-2026-09-21",
+      "release_date": "2026-09-21",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/MIDGARD#midgard-zigbee-v0.1.0",
+      "release_date": "2026-09-21",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.69",
+      "release_date": "2026-09-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.130",
+      "release_date": "2026-09-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.129",
+      "release_date": "2026-09-20",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.128",
+      "release_date": "2026-09-20",
+      "sprint_count": 1,
+      "pr_count": 13
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.68",
+      "release_date": "2026-09-19",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.67",
+      "release_date": "2026-09-19",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.127",
+      "release_date": "2026-09-19",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.126",
+      "release_date": "2026-09-19",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.125",
+      "release_date": "2026-09-19",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.66",
+      "release_date": "2026-09-18",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.65",
+      "release_date": "2026-09-18",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.64",
+      "release_date": "2026-09-18",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.124",
+      "release_date": "2026-09-18",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.123",
+      "release_date": "2026-09-18",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.122",
+      "release_date": "2026-09-18",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.121",
+      "release_date": "2026-09-18",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.120",
+      "release_date": "2026-09-18",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.119",
+      "release_date": "2026-09-18",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.118",
+      "release_date": "2026-09-18",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.117",
+      "release_date": "2026-09-18",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.63",
+      "release_date": "2026-09-16",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/MIDGARD#sensor-node-mesha-2026-09-16",
+      "release_date": "2026-09-16",
+      "sprint_count": 0,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.11.1",
+      "release_date": "2026-09-15",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.3.0",
+      "release_date": "2026-09-15",
+      "sprint_count": 3,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.2.0",
+      "release_date": "2026-09-15",
+      "sprint_count": 4,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.1.0",
+      "release_date": "2026-09-15",
+      "sprint_count": 2,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/MIDGARD#sjon-v0.1.0",
+      "release_date": "2026-09-14",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.11.0",
+      "release_date": "2026-09-11",
+      "sprint_count": 3,
+      "pr_count": 33
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.62",
+      "release_date": "2026-09-11",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.61",
+      "release_date": "2026-09-11",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.60",
+      "release_date": "2026-09-11",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.59",
+      "release_date": "2026-09-11",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.58",
+      "release_date": "2026-09-11",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.116",
+      "release_date": "2026-09-11",
+      "sprint_count": 2,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.115",
+      "release_date": "2026-09-11",
+      "sprint_count": 2,
+      "pr_count": 6
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.57",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.56",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.55",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.54",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.53",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.52",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.51",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.114",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.113",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.112",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.111",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.110",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.109",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.108",
+      "release_date": "2026-09-10",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.107",
+      "release_date": "2026-09-10",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/MIDGARD#vord-v0.1.0",
+      "release_date": "2026-09-10",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-v1.11.106",
+      "release_date": "2026-09-04",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-v1.11.105",
+      "release_date": "2026-09-04",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-v1.11.104",
+      "release_date": "2026-09-04",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.50",
+      "release_date": "2026-09-03",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.103",
+      "release_date": "2026-09-03",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.102",
+      "release_date": "2026-09-03",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.48",
+      "release_date": "2026-09-02",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.47",
+      "release_date": "2026-09-02",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.99",
+      "release_date": "2026-09-02",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.98",
+      "release_date": "2026-09-02",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.97",
+      "release_date": "2026-09-02",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.96",
+      "release_date": "2026-09-02",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.95",
+      "release_date": "2026-09-02",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.100",
+      "release_date": "2026-09-02",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.10.0",
+      "release_date": "2026-08-31",
+      "sprint_count": 2,
+      "pr_count": 9
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.44",
+      "release_date": "2026-08-31",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.43",
+      "release_date": "2026-08-31",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.42",
+      "release_date": "2026-08-31",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.41",
+      "release_date": "2026-08-31",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.40",
+      "release_date": "2026-08-31",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.94",
+      "release_date": "2026-08-31",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.92",
+      "release_date": "2026-08-31",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.90",
+      "release_date": "2026-08-31",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-1.11.89",
+      "release_date": "2026-08-31",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.9.1",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.9.0",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.8.1",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 6
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.8.0",
+      "release_date": "2026-08-30",
+      "sprint_count": 2,
+      "pr_count": 8
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.39",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.38",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.37",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.36",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.35",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.34",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.33",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.32",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.31",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.30",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.29",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.28",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-app-1.11.80",
+      "release_date": "2026-08-30",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.7.2",
+      "release_date": "2026-08-27",
+      "sprint_count": 1,
+      "pr_count": 12
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.25",
+      "release_date": "2026-08-25",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.24",
+      "release_date": "2026-08-25",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.23",
+      "release_date": "2026-08-25",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.51",
+      "release_date": "2026-08-25",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.50",
+      "release_date": "2026-08-25",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.48",
+      "release_date": "2026-08-25",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.47",
+      "release_date": "2026-08-25",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#link-2026-08-25",
+      "release_date": "2026-08-25",
+      "sprint_count": 7,
+      "pr_count": 7
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.22",
+      "release_date": "2026-08-24",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-v1.11.43",
+      "release_date": "2026-08-24",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-v1.11.41",
+      "release_date": "2026-08-24",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-v1.11.39",
+      "release_date": "2026-08-24",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-v1.11.20",
+      "release_date": "2026-08-24",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-v1.11.18",
+      "release_date": "2026-08-24",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#link-2026-08-24",
+      "release_date": "2026-08-24",
+      "sprint_count": 1,
+      "pr_count": 10
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#gladsheim-v0.4.0",
+      "release_date": "2026-08-24",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.7.1",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.7.0",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 10
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.9",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.8",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.21",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.20",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.19",
+      "release_date": "2026-08-23",
+      "sprint_count": 0,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.18",
+      "release_date": "2026-08-23",
+      "sprint_count": 0,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.17",
+      "release_date": "2026-08-23",
+      "sprint_count": 0,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.16",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.15",
+      "release_date": "2026-08-23",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.14",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.13",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.12",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.11",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.10",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.3",
+      "release_date": "2026-08-23",
+      "sprint_count": 0,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.11.10",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v1.10.1",
+      "release_date": "2026-08-23",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#v0.1.3",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#v0.1.2",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#v0.1.1",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/GLADSHEIM#v0.1.0",
+      "release_date": "2026-08-23",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.6.0",
+      "release_date": "2026-08-22",
+      "sprint_count": 2,
+      "pr_count": 10
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.7",
+      "release_date": "2026-08-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.6",
+      "release_date": "2026-08-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.5",
+      "release_date": "2026-08-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.4",
+      "release_date": "2026-08-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.3",
+      "release_date": "2026-08-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.2",
+      "release_date": "2026-08-22",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.1",
+      "release_date": "2026-08-22",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "AIDA/miniLore_serverside#v0.3.0",
+      "release_date": "2026-08-22",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.5.0",
+      "release_date": "2026-08-17",
+      "sprint_count": 1,
+      "pr_count": 20
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.8.0",
+      "release_date": "2026-08-17",
+      "sprint_count": 9,
+      "pr_count": 75
+    },
+    {
+      "release_uid": "AIDA/miniLORE#minilore-v1.0.0",
+      "release_date": "2026-08-16",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v0.5.43",
+      "release_date": "2026-08-13",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.4.0",
+      "release_date": "2026-08-12",
+      "sprint_count": 4,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v0.5.35",
+      "release_date": "2026-08-12",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v0.5.31.1",
+      "release_date": "2026-08-12",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v0.5.29",
+      "release_date": "2026-08-12",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v0.5.27",
+      "release_date": "2026-08-12",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v0.5.23",
+      "release_date": "2026-08-12",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v0.5.21",
+      "release_date": "2026-08-12",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "AIDA/miniLORE#v0.5.20",
+      "release_date": "2026-08-12",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.3.0",
+      "release_date": "2026-08-08",
+      "sprint_count": 1,
+      "pr_count": 18
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.2.0",
+      "release_date": "2026-08-02",
+      "sprint_count": 4,
+      "pr_count": 20
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.1.1",
+      "release_date": "2026-08-01",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.1.0",
+      "release_date": "2026-08-01",
+      "sprint_count": 2,
+      "pr_count": 8
+    },
+    {
+      "release_uid": "NooriUta/volva#v0.0.5-m0.62.4",
+      "release_date": "2026-07-31",
+      "sprint_count": 3,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#RELEASE_VOLVA_0_0_0_4",
+      "release_date": "2026-07-30",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/volva#v0.0.0.3",
+      "release_date": "2026-07-29",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.58",
+      "release_date": "2026-07-23",
+      "sprint_count": 1,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.57",
+      "release_date": "2026-07-21",
+      "sprint_count": 3,
+      "pr_count": 25
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.56",
+      "release_date": "2026-07-20",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.55",
+      "release_date": "2026-07-20",
+      "sprint_count": 2,
+      "pr_count": 10
+    },
+    {
+      "release_uid": "NooriUta/volva#v0.0.0.2",
+      "release_date": "2026-07-18",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.54",
+      "release_date": "2026-07-18",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.53",
+      "release_date": "2026-07-18",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.52",
+      "release_date": "2026-07-17",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.51",
+      "release_date": "2026-07-17",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.50",
+      "release_date": "2026-07-16",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.49",
+      "release_date": "2026-07-16",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.48",
+      "release_date": "2026-07-16",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.47",
+      "release_date": "2026-07-16",
+      "sprint_count": 3,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.46",
+      "release_date": "2026-07-16",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.45",
+      "release_date": "2026-07-14",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.44",
+      "release_date": "2026-07-11",
+      "sprint_count": 1,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.43",
+      "release_date": "2026-07-11",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.42",
+      "release_date": "2026-07-10",
+      "sprint_count": 1,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.41",
+      "release_date": "2026-07-10",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.40",
+      "release_date": "2026-07-10",
+      "sprint_count": 1,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.39",
+      "release_date": "2026-07-10",
+      "sprint_count": 0,
+      "pr_count": 18
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.7.2",
+      "release_date": "2026-07-10",
+      "sprint_count": 5,
+      "pr_count": 16
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.7.1",
+      "release_date": "2026-07-08",
+      "sprint_count": 5,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.38",
+      "release_date": "2026-07-07",
+      "sprint_count": 0,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.7.0",
+      "release_date": "2026-07-06",
+      "sprint_count": 7,
+      "pr_count": 19
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.37",
+      "release_date": "2026-07-05",
+      "sprint_count": 3,
+      "pr_count": 6
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.36",
+      "release_date": "2026-07-04",
+      "sprint_count": 2,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.35",
+      "release_date": "2026-07-04",
+      "sprint_count": 0,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.34",
+      "release_date": "2026-07-04",
+      "sprint_count": 0,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.33",
+      "release_date": "2026-07-04",
+      "sprint_count": 3,
+      "pr_count": 18
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.32",
+      "release_date": "2026-07-03",
+      "sprint_count": 1,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.31",
+      "release_date": "2026-07-03",
+      "sprint_count": 2,
+      "pr_count": 8
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.30",
+      "release_date": "2026-07-03",
+      "sprint_count": 3,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.24",
+      "release_date": "2026-07-03",
+      "sprint_count": 0,
+      "pr_count": 6
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.23",
+      "release_date": "2026-07-03",
+      "sprint_count": 0,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.22",
+      "release_date": "2026-07-03",
+      "sprint_count": 6,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.29",
+      "release_date": "2026-07-02",
+      "sprint_count": 2,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.28",
+      "release_date": "2026-07-02",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.27",
+      "release_date": "2026-07-02",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.26",
+      "release_date": "2026-07-02",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.25",
+      "release_date": "2026-07-02",
+      "sprint_count": 4,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.24",
+      "release_date": "2026-07-02",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/seidr-site#v1.4.3",
+      "release_date": "2026-06-30",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.23",
+      "release_date": "2026-06-30",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.22",
+      "release_date": "2026-06-30",
+      "sprint_count": 2,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.21",
+      "release_date": "2026-06-30",
+      "sprint_count": 5,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.21",
+      "release_date": "2026-06-30",
+      "sprint_count": 7,
+      "pr_count": 15
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.0.23",
+      "release_date": "2026-06-30",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/seidr-site#v1.4.2",
+      "release_date": "2026-06-29",
+      "sprint_count": 0,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/seidr-site#v1.4.1",
+      "release_date": "2026-06-29",
+      "sprint_count": 0,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/seidr-site#v1.4.0",
+      "release_date": "2026-06-29",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#LORE_v1.0.20",
+      "release_date": "2026-06-29",
+      "sprint_count": 4,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.20",
+      "release_date": "2026-06-29",
+      "sprint_count": 2,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.19",
+      "release_date": "2026-06-29",
+      "sprint_count": 3,
+      "pr_count": 8
+    },
+    {
+      "release_uid": "NooriUta/seidr-site#v1.3.0",
+      "release_date": "2026-06-28",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.19",
+      "release_date": "2026-06-28",
+      "sprint_count": 3,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.17",
+      "release_date": "2026-06-28",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#v1.0.16",
+      "release_date": "2026-06-28",
+      "sprint_count": 2,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/UnlimitedLORE#LORE_v1.0.18",
+      "release_date": "2026-06-28",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.18",
+      "release_date": "2026-06-28",
+      "sprint_count": 0,
+      "pr_count": 7
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.17",
+      "release_date": "2026-06-28",
+      "sprint_count": 4,
+      "pr_count": 14
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.16",
+      "release_date": "2026-06-28",
+      "sprint_count": 0,
+      "pr_count": 19
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.15",
+      "release_date": "2026-06-28",
+      "sprint_count": 3,
+      "pr_count": 13
+    },
+    {
+      "release_uid": "NooriUta/seidr-site#v1.2.0",
+      "release_date": "2026-06-27",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/seidr-site#v1.1.0",
+      "release_date": "2026-06-25",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/seidr-site#v1.0.0",
+      "release_date": "2026-06-25",
+      "sprint_count": 3,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.14",
+      "release_date": "2026-06-25",
+      "sprint_count": 3,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.13",
+      "release_date": "2026-06-25",
+      "sprint_count": 1,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.12",
+      "release_date": "2026-06-25",
+      "sprint_count": 3,
+      "pr_count": 6
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.11",
+      "release_date": "2026-06-21",
+      "sprint_count": 1,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.10",
+      "release_date": "2026-06-21",
+      "sprint_count": 6,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.9",
+      "release_date": "2026-06-15",
+      "sprint_count": 5,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.8",
+      "release_date": "2026-06-15",
+      "sprint_count": 2,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.7",
+      "release_date": "2026-06-14",
+      "sprint_count": 3,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.6",
+      "release_date": "2026-06-14",
+      "sprint_count": 6,
+      "pr_count": 9
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.5",
+      "release_date": "2026-06-11",
+      "sprint_count": 8,
+      "pr_count": 12
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.4",
+      "release_date": "2026-06-10",
+      "sprint_count": 6,
+      "pr_count": 11
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.3",
+      "release_date": "2026-06-10",
+      "sprint_count": 0,
+      "pr_count": 6
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.2",
+      "release_date": "2026-06-10",
+      "sprint_count": 4,
+      "pr_count": 12
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.1",
+      "release_date": "2026-06-09",
+      "sprint_count": 1,
+      "pr_count": 15
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.6.0",
+      "release_date": "2026-06-09",
+      "sprint_count": 1,
+      "pr_count": 11
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.13",
+      "release_date": "2026-06-08",
+      "sprint_count": 3,
+      "pr_count": 14
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.9",
+      "release_date": "2026-06-07",
+      "sprint_count": 4,
+      "pr_count": 12
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.8",
+      "release_date": "2026-06-07",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.11",
+      "release_date": "2026-06-07",
+      "sprint_count": 3,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.10",
+      "release_date": "2026-06-07",
+      "sprint_count": 2,
+      "pr_count": 6
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.7.1",
+      "release_date": "2026-06-06",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.7",
+      "release_date": "2026-06-06",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.6",
+      "release_date": "2026-06-05",
+      "sprint_count": 3,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.5",
+      "release_date": "2026-06-05",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.4",
+      "release_date": "2026-06-05",
+      "sprint_count": 2,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.3",
+      "release_date": "2026-06-05",
+      "sprint_count": 0,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.2",
+      "release_date": "2026-06-05",
+      "sprint_count": 1,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.1",
+      "release_date": "2026-06-04",
+      "sprint_count": 2,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.5.0",
+      "release_date": "2026-06-04",
+      "sprint_count": 2,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.4.6",
+      "release_date": "2026-06-04",
+      "sprint_count": 0,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.4.5",
+      "release_date": "2026-06-04",
+      "sprint_count": 1,
+      "pr_count": 11
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.4.4",
+      "release_date": "2026-06-03",
+      "sprint_count": 1,
+      "pr_count": 15
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.4.3",
+      "release_date": "2026-06-03",
+      "sprint_count": 0,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.4.2",
+      "release_date": "2026-06-02",
+      "sprint_count": 2,
+      "pr_count": 7
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.4.1",
+      "release_date": "2026-05-28",
+      "sprint_count": 3,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.4.0",
+      "release_date": "2026-05-28",
+      "sprint_count": 8,
+      "pr_count": 10
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.41",
+      "release_date": "2026-05-27",
+      "sprint_count": 1,
+      "pr_count": 6
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.40",
+      "release_date": "2026-05-26",
+      "sprint_count": 0,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.39",
+      "release_date": "2026-05-26",
+      "sprint_count": 0,
+      "pr_count": 11
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.38",
+      "release_date": "2026-05-26",
+      "sprint_count": 0,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.37",
+      "release_date": "2026-05-26",
+      "sprint_count": 0,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.36",
+      "release_date": "2026-05-26",
+      "sprint_count": 0,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.35",
+      "release_date": "2026-05-25",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.34",
+      "release_date": "2026-05-25",
+      "sprint_count": 0,
+      "pr_count": 10
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.33",
+      "release_date": "2026-05-25",
+      "sprint_count": 0,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.32",
+      "release_date": "2026-05-24",
+      "sprint_count": 3,
+      "pr_count": 7
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.31",
+      "release_date": "2026-05-24",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.30",
+      "release_date": "2026-05-24",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.29",
+      "release_date": "2026-05-23",
+      "sprint_count": 0,
+      "pr_count": 7
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.28",
+      "release_date": "2026-05-16",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.27",
+      "release_date": "2026-05-16",
+      "sprint_count": 28,
+      "pr_count": 6
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.26",
+      "release_date": "2026-05-03",
+      "sprint_count": 5,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.25",
+      "release_date": "2026-05-02",
+      "sprint_count": 4,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.24",
+      "release_date": "2026-05-02",
+      "sprint_count": 0,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.23",
+      "release_date": "2026-05-02",
+      "sprint_count": 0,
+      "pr_count": 16
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.22",
+      "release_date": "2026-05-01",
+      "sprint_count": 2,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.21",
+      "release_date": "2026-05-01",
+      "sprint_count": 0,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.20",
+      "release_date": "2026-05-01",
+      "sprint_count": 0,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.19",
+      "release_date": "2026-05-01",
+      "sprint_count": 0,
+      "pr_count": 3
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.18",
+      "release_date": "2026-04-30",
+      "sprint_count": 3,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.17",
+      "release_date": "2026-04-29",
+      "sprint_count": 6,
+      "pr_count": 5
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.16",
+      "release_date": "2026-04-29",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.15",
+      "release_date": "2026-04-29",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.14",
+      "release_date": "2026-04-29",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.13",
+      "release_date": "2026-04-29",
+      "sprint_count": 2,
+      "pr_count": 2
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.12",
+      "release_date": "2026-04-28",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.11",
+      "release_date": "2026-04-28",
+      "sprint_count": 2,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.9",
+      "release_date": "2026-04-27",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.8",
+      "release_date": "2026-04-27",
+      "sprint_count": 0,
+      "pr_count": 4
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.10",
+      "release_date": "2026-04-27",
+      "sprint_count": 0,
+      "pr_count": 1
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.7",
+      "release_date": "2026-04-24",
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.6",
+      "release_date": "2026-04-24",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.5",
+      "release_date": "2026-04-24",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.4",
+      "release_date": "2026-04-24",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.3",
+      "release_date": "2026-04-24",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.2",
+      "release_date": "2026-04-24",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.1",
+      "release_date": "2026-04-24",
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.0",
+      "release_date": "2026-04-24",
+      "sprint_count": 25,
+      "pr_count": 9
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.0.0",
+      "release_date": "2026-04-18",
+      "sprint_count": 16,
+      "pr_count": 36
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.3.42",
+      "release_date": null,
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.2.2",
+      "release_date": null,
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.2.1",
+      "release_date": null,
+      "sprint_count": 0,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.2.0",
+      "release_date": null,
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.1.1",
+      "release_date": null,
+      "sprint_count": 1,
+      "pr_count": 0
+    },
+    {
+      "release_uid": "NooriUta/AIDA#v1.1.0",
+      "release_date": null,
+      "sprint_count": 4,
+      "pr_count": 1
+    }
+  ],
+  "_page": {
+    "limit": 1000,
+    "offset": 0,
+    "total": 505,
+    "has_more": false,
+    "fields": [
+      "release_uid",
+      "release_date",
+      "sprint_count",
+      "pr_count"
+    ],
+    "fields_checked": true
+  }
+}

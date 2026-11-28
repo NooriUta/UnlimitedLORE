@@ -8,12 +8,13 @@ import { LORE_KIND_COLOR, loreKindLook, loreKinds, withLoreKindLook } from './lo
 import { loreRefLook } from '../record/loreMdRefs';
 import { v2Config } from './v2Config';
 import { baseConfig } from '../record/passportAdapters';
+import { KIT_CSS } from '../test/kitPaths';
 
 const ROOT = resolve(__dirname, '..', '..', '..');
 const model = JSON.parse(readFileSync(resolve(ROOT, 'shared', 'model', 'lore-model.json'), 'utf8')) as {
   type_color: Record<string, string>; no_type_color: string[];
 };
-const kitCss = readFileSync(resolve(ROOT, 'kit', 'src', 'styles', 'seidr.css'), 'utf8');
+const kitCss = readFileSync(KIT_CSS, 'utf8');
 
 describe('цвет вида: модель ↔ приложение ↔ тема kit', () => {
   it('положительный контроль: в модели есть канон цветов', () => {
