@@ -157,4 +157,21 @@ class VolvaEmbedSignerTest {
         assertEquals("https://volva.example/embed/question/a.b.c",
             VolvaEmbedSigner.embedUrl("https://volva.example/", "a.b.c"));
     }
+
+    // EMB-L6 (слово владелицы 28.11): статусы и подписи — на языке LORE. Флаг lang у графика —
+    // запертый параметр lang=ru|en в подписи; без флага параметра нет (Völva отвергла бы чужой параметр).
+    @Test
+    void langFlagAddsLockedLangParam() {
+        var charts = VolvaEmbedSigner.parseCharts("sprints_timeline:question:44:lang, d:dashboard:4:unlocked+lang, plain:45");
+        assertEquals(new VolvaEmbedSigner.Chart("question", 44, true, true), charts.get("sprints_timeline"));
+        assertEquals(new VolvaEmbedSigner.Chart("dashboard", 4, false, true), charts.get("d"));
+        assertEquals(new VolvaEmbedSigner.Chart("question", 45, true, false), charts.get("plain"));
+        assertEquals("{\"resource\":{\"question\":44},\"params\":{\"project\":[\"a/b\"],\"lang\":\"en\"},\"exp\":9}",
+            VolvaEmbedSigner.payload(charts.get("sprints_timeline"), "a/b", "EN", 9));
+        assertEquals("{\"resource\":{\"question\":45},\"params\":{\"project\":[\"a/b\"]},\"exp\":9}",
+            VolvaEmbedSigner.payload(charts.get("plain"), "a/b", "en", 9), "без флага lang не уходит");
+        assertEquals("ru", VolvaEmbedSigner.langOf(null));
+        assertEquals("ru", VolvaEmbedSigner.langOf("de"), "не ru/en — ru, а не произвольная строка в подписи");
+        assertEquals("en", VolvaEmbedSigner.langOf(" en "));
+    }
 }

@@ -93,12 +93,34 @@ final class VolvaEmbedSigner {
     // ── Ресурсы: вопрос (проект заперт) или дашборд (фильтр «Проект» редактируемый) ──
 
     /** Ресурс встройки. locked=false — фильтры меняются внутри iframe, параметров в подписи нет. */
-    record Chart(String resource, int id, boolean locked) {}
+    record Chart(String resource, int id, boolean locked, boolean lang) {
+        Chart(String resource, int id, boolean locked) { this(resource, id, locked, false); }
+    }
 
     /**
-     * «имя:id» — вопрос с запертым project; «имя:вид:id[:unlocked]» — вопрос или
-     * дашборд; unlocked — редактируемые фильтры (дашборд 4 «Спринты», слово
-     * владелицы «проект выбирать dropdown»). Неразборчивое — пропускается.
+     * Язык подписей графика (EMB-L6, слово владелицы 28.11: статусы и надписи — на языке LORE).
+     * Только ru/en: всё прочее — ru, а не произвольная строка в подписи.
+     */
+    static String langOf(String raw) {
+        return raw != null && "en".equalsIgnoreCase(raw.trim()) ? "en" : "ru";
+    }
+
+    /**
+     * params подписи: запертый project — у запертого ресурса; запертый lang — у ресурса с флагом lang.
+     * Без флага lang не уходит: параметр, которого нет у карточки, Völva отвергает.
+     */
+    static String paramsJson(Chart c, String project, String lang) {
+        java.util.List<String> parts = new java.util.ArrayList<>();
+        if (c.locked()) parts.add("\"project\":" + projectJson(project));
+        if (c.lang()) parts.add("\"lang\":\"" + langOf(lang) + "\"");
+        return "{" + String.join(",", parts) + "}";
+    }
+
+    /**
+     * «имя:id» — вопрос с запертым project; «имя:вид:id[:флаги]» — вопрос или
+     * дашборд; флаги через «+»: unlocked — редактируемые фильтры (дашборд 4 «Спринты», слово
+     * владелицы «проект выбирать dropdown»), lang — запертый параметр языка (EMB-L6).
+     * Неразборчивое — пропускается.
      */
     static Map<String, Chart> parseCharts(String raw) {
         Map<String, Chart> out = new LinkedHashMap<>();
@@ -107,9 +129,13 @@ final class VolvaEmbedSigner {
             String[] p = item.trim().split(":");
             try {
                 if (p.length == 2) out.put(p[0].trim(), new Chart("question", Integer.parseInt(p[1].trim()), true));
-                else if ((p.length == 3 || p.length == 4) && ("question".equals(p[1].trim()) || "dashboard".equals(p[1].trim())))
+                else if ((p.length == 3 || p.length == 4) && ("question".equals(p[1].trim()) || "dashboard".equals(p[1].trim()))) {
+                    Set<String> flags = p.length == 4
+                        ? java.util.Arrays.stream(p[3].split("\\+")).map(String::trim).collect(java.util.stream.Collectors.toSet())
+                        : Set.of();
                     out.put(p[0].trim(), new Chart(p[1].trim(), Integer.parseInt(p[2].trim()),
-                        !(p.length == 4 && "unlocked".equals(p[3].trim()))));
+                        !flags.contains("unlocked"), flags.contains("lang")));
+                }
             } catch (NumberFormatException ignored) { }
         }
         return out;
@@ -149,7 +175,11 @@ final class VolvaEmbedSigner {
 
     /** Payload: у запертого ресурса — проект в params; у незапертого params пусты. */
     static String payload(Chart c, String project, long expEpochSeconds) {
-        String params = c.locked() ? "{\"project\":" + projectJson(project) + "}" : "{}";
+        return payload(c, project, null, expEpochSeconds);
+    }
+
+    static String payload(Chart c, String project, String lang, long expEpochSeconds) {
+        String params = paramsJson(c, project, lang);
         return "{\"resource\":{\"" + c.resource() + "\":" + c.id() + "},\"params\":" + params
             + ",\"exp\":" + expEpochSeconds + "}";
     }

@@ -11,7 +11,7 @@
 // или выключенное значение не уводит графики во внешнюю систему, и всё
 // остаётся как было. Подпись адреса — только бэкенд LORE
 // (GET /lore/embed/volva/{chart}?project=a/b,c/d, VE-2), проект — из скоупа шапки.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { EmbedChartFrame, useKitLang, type EmbedFrameState, type KitLang } from '@seidr/kit';
 import { loreFetch } from '../auth/session';
 import { appT, useAppT } from '../i18n';
@@ -80,7 +80,12 @@ export async function volvaEmbedState(
   opts: { signal?: AbortSignal; lang?: KitLang } = {},
 ): Promise<EmbedFrameState> {
   const lang = opts.lang ?? 'ru';
-  const qs = projects.length ? `?${new URLSearchParams({ project: projects.join(',') }).toString()}` : '';
+  // EMB-L6: язык LORE — в подпись (запертый lang у графика с флагом lang), чтобы статусы и надписи
+  // Völva были на том же языке, что и LORE. Бэкенд принимает только ru/en.
+  const q = new URLSearchParams();
+  if (projects.length) q.set('project', projects.join(','));
+  q.set('lang', lang);
+  const qs = `?${q.toString()}`;
   let res: Response;
   try {
     res = await fetchImpl(`/lore/embed/volva/${encodeURIComponent(chart)}${qs}`, { signal: opts.signal, headers: { Accept: 'application/json' } });
@@ -131,9 +136,37 @@ export function VolvaChart({ chart, title, projects, fetchImpl }: VolvaChartProp
     return () => ctrl.abort();
   }, [chart, key, fetchImpl, lang, attempt]);
   const retry = useCallback(() => setAttempt(n => n + 1), []);
+  const { ref, height } = useFillHeight(VOLVA_MIN_HEIGHT);
   // VE-7 (Völva 0.1.12): высота — metabase.frame, ошибка — metabase.error (рамка kit показывает
   // «Völva: ошибка» с кодом); молчание 15 с — «не ответила».
-  return <EmbedChartFrame source={VOLVA_SOURCE} title={title} state={state} minHeight={320} onRetry={retry} answerTimeoutMs={VOLVA_ANSWER_TIMEOUT_MS} />;
+  // EMB-L6 (слово владелицы 28.11): минимум — вся оставшаяся высота окна, а не 320 px: Völva
+  // растягивает строки на высоту кадра, и 105 спринтов не сплющиваются в полоску.
+  return (
+    <div ref={ref}>
+      {/* Рамка kit берёт minHeight как НАЧАЛЬНОЕ значение своей высоты — рисуем её после замера. */}
+      {height != null && <EmbedChartFrame source={VOLVA_SOURCE} title={title} state={state} minHeight={height} onRetry={retry} answerTimeoutMs={VOLVA_ANSWER_TIMEOUT_MS} />}
+    </div>
+  );
+}
+
+const VOLVA_MIN_HEIGHT = 320;
+/** Запас под нижнюю кромку окна (строка состояния LORE). */
+const FILL_BOTTOM_GAP = 24;
+
+/** Высота от верха элемента до низа окна (не меньше min); пересчёт на resize. */
+export function useFillHeight(min: number) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const top = ref.current?.getBoundingClientRect().top ?? 0;
+      setHeight(Math.max(min, Math.floor(window.innerHeight - Math.max(0, top) - FILL_BOTTOM_GAP)));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [min]);
+  return { ref, height };
 }
 
 /** Подпись вида и заголовок рамки «Спринтов». */
