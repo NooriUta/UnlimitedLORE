@@ -189,7 +189,7 @@ class LoreSchemaAdditiveEmbeddedTest {
         // доводка v5 (AP-PASSPORT-EDIT): пять цепочек истории боли/выгоды/работы/роли/фичи — 11 служебных полей у каждой
         // (время, ключ, версия, хэш, автор) + поля снимка (22) и по три индекса
         int histProps = ProductHistory.SPECS.size() * 11 + ProductHistory.SPECS.stream().mapToInt(s -> s.fields().size()).sum();
-        assertEquals(2 + ProductHistory.SPECS.size(), r.types(), "после шагов V нового — конец ребра OWNED_BY, цепочки доводки v5 и ребро RELEASE_OF (v6): " + r);
+        assertEquals(3 + ProductHistory.SPECS.size(), r.types(), "после шагов V нового — конец ребра OWNED_BY, цепочки доводки v5, рёбра RELEASE_OF (v6) и PR_OF (v7): " + r);
         assertEquals(3 + histProps, r.properties(), "свойства шагов V и доводки совпадают; новое после V100 — ClRoutineMetric.basis, tokens_json словаря и его истории, поля цепочек v5: " + r);
         assertEquals(3 * ProductHistory.SPECS.size(), r.indexes(), "индексы шагов V и доводки совпадают; новые — у цепочек v5: " + r);
         assertEquals(LoreSchemaAdditive.VERSION, ((Number) marker().get("version")).intValue());

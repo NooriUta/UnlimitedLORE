@@ -1,6 +1,6 @@
 {
   "format" : "model/0",
-  "version" : "899de8ff03ea66e3",
+  "version" : "a5022054be1e46dd",
   "partial" : true,
   "missing" : [ "statuses:*" ],
   "statuses_known" : [ "task", "sprint", "adr", "spec", "decision", "quality_gate", "skill", "feature", "question" ],
@@ -7651,6 +7651,21 @@
         "inverse_label_en" : null,
         "inverse_label_pl" : null
       }, {
+        "key" : "repository",
+        "label" : "Репозиторий",
+        "label_key" : "pp.rel.repository",
+        "label_en" : "Repository",
+        "label_pl" : "Repozytorium",
+        "relation" : "association",
+        "rel" : "RELEASE_OF",
+        "dir" : "out",
+        "target_type" : "repository",
+        "place" : "prop",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
         "key" : "adrs",
         "label" : "ADR",
         "label_key" : "pp.rel.adr",
@@ -13891,6 +13906,36 @@
         "inverse_label_en" : null,
         "inverse_label_pl" : null
       }, {
+        "key" : "releases",
+        "label" : "Релизы",
+        "label_key" : "pp.rel.releases",
+        "label_en" : "Releases",
+        "label_pl" : "Wydania",
+        "relation" : "association",
+        "rel" : "RELEASE_OF",
+        "dir" : "in",
+        "target_type" : "release",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
+        "key" : "prs",
+        "label" : "PR",
+        "label_key" : "pp.rel.prs",
+        "label_en" : "PRs",
+        "label_pl" : "PR",
+        "relation" : "association",
+        "rel" : "PR_OF",
+        "dir" : "in",
+        "target_type" : "pr",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
         "key" : "organizations",
         "label" : "Организации",
         "label_key" : "pp.rel.organizations",
@@ -14433,6 +14478,21 @@
         "rel" : "BELONGS_TO_PROJECT",
         "dir" : "out",
         "target_type" : "project",
+        "place" : "prop",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
+        "key" : "repository",
+        "label" : "Репозиторий",
+        "label_key" : "pp.rel.repository",
+        "label_en" : "Repository",
+        "label_pl" : "Repozytorium",
+        "relation" : "association",
+        "rel" : "PR_OF",
+        "dir" : "out",
+        "target_type" : "repository",
         "place" : "prop",
         "manageable" : false,
         "inverse_label" : null,
@@ -18013,10 +18073,30 @@
             "label" : "Связи"
           }
         }, {
+          "key" : "releases",
+          "source" : "relation",
+          "ref" : "releases",
+          "order" : 7,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
+          "key" : "prs",
+          "source" : "relation",
+          "ref" : "prs",
+          "order" : 8,
+          "slot" : "own",
+          "group" : {
+            "key" : "links",
+            "label" : "Связи"
+          }
+        }, {
           "key" : "organizations",
           "source" : "relation",
           "ref" : "organizations",
-          "order" : 7,
+          "order" : 9,
           "slot" : "own",
           "group" : null
         } ]

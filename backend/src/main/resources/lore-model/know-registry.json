@@ -6,7 +6,7 @@
     "ddl" : 46,
     "entity" : 33,
     "skill" : 1,
-    "slice" : 237
+    "slice" : 239
   },
   "kinds" : [ {
     "kind" : "ddl:AgentActionLog",
@@ -5025,6 +5025,12 @@
       "keys" : [ "tasks" ],
       "edge_fields" : [ ]
     }, {
+      "rel" : "PR_OF",
+      "dir" : "out",
+      "target_kind" : "entity:repository",
+      "keys" : [ "repository" ],
+      "edge_fields" : [ ]
+    }, {
       "rel" : "SHIPPED_IN",
       "dir" : "out",
       "target_kind" : "entity:release",
@@ -5042,7 +5048,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowPR",
-    "content_hash" : "sha256:8803210fdd5c1ab6a2467f46711c8210626200cabd0dbec44d92049854168ff3"
+    "content_hash" : "sha256:6b0d5f581f1d861b1867fceaa02b897183483ab93aaa9158acbe9220db36f24e"
   }, {
     "kind" : "entity:product",
     "id_field" : "code",
@@ -6223,6 +6229,12 @@
       "keys" : [ "refs", "refsOut" ],
       "edge_fields" : [ "created_at", "created_by", "origin" ]
     }, {
+      "rel" : "RELEASE_OF",
+      "dir" : "out",
+      "target_kind" : "entity:repository",
+      "keys" : [ "repository" ],
+      "edge_fields" : [ ]
+    }, {
       "rel" : "SHIPPED_IN",
       "dir" : "in",
       "target_kind" : "entity:pr",
@@ -6247,7 +6259,7 @@
     "source" : "model+ddl",
     "vertex" : "KnowRelease",
     "hist" : "KnowReleaseHist",
-    "content_hash" : "sha256:2810c6302316167d6e9006cdb431cf632086e97c2ac8e52b4229d327965dce28"
+    "content_hash" : "sha256:faf77752a300ed54692734b3c1bbc8cce2d916813807dc437ea3eb2e2050ed52"
   }, {
     "kind" : "entity:repository",
     "id_field" : "url",
@@ -6323,6 +6335,18 @@
       "keys" : [ "organizations" ],
       "edge_fields" : [ ]
     }, {
+      "rel" : "PR_OF",
+      "dir" : "in",
+      "target_kind" : "entity:pr",
+      "keys" : [ "links", "prs" ],
+      "edge_fields" : [ ]
+    }, {
+      "rel" : "RELEASE_OF",
+      "dir" : "in",
+      "target_kind" : "entity:release",
+      "keys" : [ "links", "releases" ],
+      "edge_fields" : [ ]
+    }, {
       "rel" : "USES_REPOSITORY",
       "dir" : "in",
       "target_kind" : "entity:repository",
@@ -6346,7 +6370,7 @@
     "replaces" : [ ],
     "source" : "model+ddl",
     "vertex" : "KnowRepository",
-    "content_hash" : "sha256:8f70072be7864f1384dcaa581cb836c26de3933d6bfd2a5777539ecff2f8d157"
+    "content_hash" : "sha256:2a5ac59581fcd6d42146c50261229acaaebefcd18e87546902d3f26ff6cda385"
   }, {
     "kind" : "entity:runbook",
     "id_field" : "runbook_id",
@@ -15564,6 +15588,14 @@
       "name" : "git_projects",
       "required" : false,
       "layer" : "slice"
+    }, {
+      "name" : "repository",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "repository_path",
+      "required" : false,
+      "layer" : "slice"
     } ],
     "links" : [ ],
     "guards" : [ {
@@ -15576,7 +15608,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:314d90e44df2c11ce81e38d79f99c3ebb17ba2d2ed609f1c35f6ce2aa02556b2"
+    "content_hash" : "sha256:d4b8c2118407488fb3326f29f736843f57e8ee18e354bf99fcfb8ab3048556f9"
   }, {
     "kind" : "slice:pr_ship_lag",
     "id_field" : null,
@@ -17602,6 +17634,14 @@
       "name" : "project_titles",
       "required" : false,
       "layer" : "slice"
+    }, {
+      "name" : "repository",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "repository_path",
+      "required" : false,
+      "layer" : "slice"
     } ],
     "links" : [ ],
     "guards" : [ {
@@ -17611,7 +17651,82 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:5148b764267bf9040bae90c6c0d457eabc8a2550012b636519d19aac37b70019"
+    "content_hash" : "sha256:95ccfbadfb7dffe1771ee123b05c44c2da23b5e8f818dc30e5a9265d645173bd"
+  }, {
+    "kind" : "slice:prs_of_repository",
+    "id_field" : null,
+    "title" : "prs_of_repository",
+    "params" : [ {
+      "name" : "id",
+      "type" : "string",
+      "required" : true,
+      "role" : "required"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "pr_uid",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "pr_number",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "title",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "url",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "state",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "merged_at",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "release_uids",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "projects",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-params",
+      "params" : [ "id" ]
+    }, {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:87ec3b8a14f3c0cc462030ffa39c1b20e45e8dc06b2e43bf9bb8ffe978adf1c5"
   }, {
     "kind" : "slice:qg_job_tasks",
     "id_field" : null,
@@ -19340,6 +19455,14 @@
       "required" : false,
       "layer" : "slice"
     }, {
+      "name" : "repository",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "repository_path",
+      "required" : false,
+      "layer" : "slice"
+    }, {
       "name" : "adr_ids",
       "required" : false,
       "layer" : "slice"
@@ -19355,7 +19478,7 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:945991070761270b0d9715fd0dc29bfeff71a5ea0e8905b3be2f1a033c9aff6b"
+    "content_hash" : "sha256:17a31a4815ab6e2e02d7c3901c59b93955c9061bbbe48b25b51547c4a2ac069b"
   }, {
     "kind" : "slice:release_decisions",
     "id_field" : null,
@@ -19843,6 +19966,14 @@
       "name" : "pr_count",
       "required" : false,
       "layer" : "slice"
+    }, {
+      "name" : "repository",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "repository_path",
+      "required" : false,
+      "layer" : "slice"
     } ],
     "links" : [ ],
     "guards" : [ {
@@ -19852,7 +19983,78 @@
     "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
     "replaces" : [ ],
     "source" : "slice-registry",
-    "content_hash" : "sha256:72f66192f518a0a7794af5a08075fe6d2460132ef4d996083eb99f676180428c"
+    "content_hash" : "sha256:a3cfa7b357673f8e41e7c273a674a44d1674279c97177d2f9bbc9307bffd21a2"
+  }, {
+    "kind" : "slice:releases_of_repository",
+    "id_field" : null,
+    "title" : "releases_of_repository",
+    "params" : [ {
+      "name" : "id",
+      "type" : "string",
+      "required" : true,
+      "role" : "required"
+    }, {
+      "name" : "limit",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "offset",
+      "type" : "number",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "fields",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    }, {
+      "name" : "where",
+      "type" : "string",
+      "required" : false,
+      "role" : "common"
+    } ],
+    "fields" : [ {
+      "name" : "release_id",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "release_uid",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "git_tag",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "release_date",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "is_current",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "projects",
+      "required" : false,
+      "layer" : "slice"
+    }, {
+      "name" : "pr_count",
+      "required" : false,
+      "layer" : "slice"
+    } ],
+    "links" : [ ],
+    "guards" : [ {
+      "name" : "required-params",
+      "params" : [ "id" ]
+    }, {
+      "name" : "value-whitelist",
+      "params" : [ "[\\w@.,:+\\-/ %#]{1,160}" ]
+    } ],
+    "roles" : [ "full", "architect", "pm", "product-analyst", "analyst", "developer", "marketer", "tester" ],
+    "replaces" : [ ],
+    "source" : "slice-registry",
+    "content_hash" : "sha256:4fd6c22dcc9fda9d6e862bc534eff1b39bfbf554bd62e6f5d737553b5be48274"
   }, {
     "kind" : "slice:releases_since",
     "id_field" : null,
