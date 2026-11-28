@@ -53,7 +53,7 @@ final class LoreSchemaAdditive {
      * Номер схемы кода. Поднимать при КАЖДОМ изменении {@link #CHANGES} и закреплять новый хэш в {@link #PINNED}
      * (сторож хэша — как у номера модели: «схема сменилась, а номер тот же» — красный).
      */
-    static final int VERSION = 6;
+    static final int VERSION = 7;
 
     /** Номер → хэш доводки. Прежние номера не правятся: их отметка уже лежит в базах. */
     static final Map<Integer, String> PINNED = Map.of(
@@ -62,7 +62,8 @@ final class LoreSchemaAdditive {
         3, "7f859c257fe15414",
         4, "8db786982331b847",
         5, "a4b19c3f6c60ca04",
-        6, "e12f8d031ca6b863");
+        6, "e12f8d031ca6b863",
+        7, "dc3748d7fc58f177");
 
     /** Последний шаг V. Реестр шагов заморожен: новое — только в {@link #CHANGES}. */
     static final int LAST_V_STEP = 100;
@@ -157,6 +158,11 @@ final class LoreSchemaAdditive {
     static final List<String> RELEASE_OF_DDL = List.of(
         "CREATE EDGE TYPE RELEASE_OF IF NOT EXISTS");
 
+    // ── v7 · ADR-LORE-066 фаза А: PR принадлежит репозиторию — ребро KnowPR → KnowRepository. Репозиторий PR
+    // однозначен из его адреса (…/owner/repo/pulls/N); ставит миграция release-of-repository и сверщик PR.
+    static final List<String> PR_OF_DDL = List.of(
+        "CREATE EDGE TYPE PR_OF IF NOT EXISTS");
+
     // ── v4 · SPRINT_LORE_ADMIN_POLISH/AP-APPEARANCE (1а): свой стиль — статья palette с JSON токенов. Поле и в истории
     // словаря: правка своего стиля — такая же версия статьи, как правка подписи (AL-43). Посев — подписи шести наших
     // палитр (SPRINT_LORE_EXT_AUDIT_1190/AUD-AREA-COLORS, 5а).
@@ -233,7 +239,9 @@ final class LoreSchemaAdditive {
                 + "начальная версия «как есть» у записей без истории",
             PRODUCT_HIST_DDL, ProductHistory.fingerprint(), sql -> ProductHistory.seed(sql, typeNames(sql))),
         new Change("release_of_repository", "ADR-LORE-066 фаза А (доводка v6): ребро RELEASE_OF — релиз принадлежит репозиторию",
-            RELEASE_OF_DDL, null, null));
+            RELEASE_OF_DDL, null, null),
+        new Change("pr_of_repository", "ADR-LORE-066 фаза А (доводка v7): ребро PR_OF — PR принадлежит репозиторию",
+            PR_OF_DDL, null, null));
 
     /** Шаги V после модели 1.18 → запись доводки, которая несёт то же самое на базу из модели. */
     static final Map<Integer, String> FROM_V_STEPS = Map.of(

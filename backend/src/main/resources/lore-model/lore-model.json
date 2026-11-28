@@ -3474,6 +3474,17 @@
       "relation" : "attribute",
       "place" : "prop"
     }, {
+      "key" : "repository",
+      "label" : "Репозиторий",
+      "labelKey" : "pp.rel.repository",
+      "labelEn" : "Repository",
+      "labelPl" : "Repozytorium",
+      "rel" : "RELEASE_OF",
+      "dir" : "out",
+      "targetType" : "repository",
+      "relation" : "association",
+      "place" : "prop"
+    }, {
       "key" : "adrs",
       "label" : "ADR",
       "labelKey" : "pp.rel.adr",
@@ -6705,6 +6716,16 @@
         "dir" : "in",
         "label" : "используется в",
         "relation" : "association"
+      }, {
+        "rel" : "RELEASE_OF",
+        "dir" : "in",
+        "label" : "релизы репозитория",
+        "relation" : "association"
+      }, {
+        "rel" : "PR_OF",
+        "dir" : "in",
+        "label" : "PR репозитория",
+        "relation" : "association"
       } ]
     } ],
     "relations" : [ {
@@ -6771,6 +6792,28 @@
       "rel" : "USES_REPOSITORY",
       "dir" : "in",
       "targetType" : "repository",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "releases",
+      "label" : "Релизы",
+      "labelKey" : "pp.rel.releases",
+      "labelEn" : "Releases",
+      "labelPl" : "Wydania",
+      "rel" : "RELEASE_OF",
+      "dir" : "in",
+      "targetType" : "release",
+      "relation" : "association",
+      "place" : "link_tab"
+    }, {
+      "key" : "prs",
+      "label" : "PR",
+      "labelKey" : "pp.rel.prs",
+      "labelEn" : "PRs",
+      "labelPl" : "PR",
+      "rel" : "PR_OF",
+      "dir" : "in",
+      "targetType" : "pr",
       "relation" : "association",
       "place" : "link_tab"
     }, {
@@ -7018,6 +7061,17 @@
       "dir" : "out",
       "targetType" : "project",
       "relation" : "attribute",
+      "place" : "prop"
+    }, {
+      "key" : "repository",
+      "label" : "Репозиторий",
+      "labelKey" : "pp.rel.repository",
+      "labelEn" : "Repository",
+      "labelPl" : "Repozytorium",
+      "rel" : "PR_OF",
+      "dir" : "out",
+      "targetType" : "repository",
+      "relation" : "association",
       "place" : "prop"
     }, {
       "key" : "tasks",

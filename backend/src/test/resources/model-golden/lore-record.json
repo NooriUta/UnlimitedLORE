@@ -12825,6 +12825,21 @@
         "inverse_label_en" : null,
         "inverse_label_pl" : null
       }, {
+        "key" : "repository",
+        "label" : "Репозиторий",
+        "label_key" : "pp.rel.repository",
+        "label_en" : "Repository",
+        "label_pl" : "Repozytorium",
+        "relation" : "association",
+        "rel" : "RELEASE_OF",
+        "dir" : "out",
+        "target_type" : "repository",
+        "place" : "prop",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
         "key" : "adrs",
         "label" : "ADR",
         "label_key" : "pp.rel.adr",
@@ -13357,6 +13372,21 @@
         "rel" : "BELONGS_TO_PROJECT",
         "dir" : "out",
         "target_type" : "project",
+        "place" : "prop",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
+        "key" : "repository",
+        "label" : "Репозиторий",
+        "label_key" : "pp.rel.repository",
+        "label_en" : "Repository",
+        "label_pl" : "Repozytorium",
+        "relation" : "association",
+        "rel" : "RELEASE_OF",
+        "dir" : "out",
+        "target_type" : "repository",
         "place" : "prop",
         "manageable" : false,
         "inverse_label" : null,
@@ -24794,6 +24824,18 @@
             "label" : "используется в",
             "relation" : "association",
             "edge_props" : [ ]
+          }, {
+            "rel" : "RELEASE_OF",
+            "dir" : "in",
+            "label" : "релизы репозитория",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "PR_OF",
+            "dir" : "in",
+            "label" : "PR репозитория",
+            "relation" : "association",
+            "edge_props" : [ ]
           } ]
         } ],
         "tree" : {
@@ -24885,6 +24927,36 @@
         "rel" : "USES_REPOSITORY",
         "dir" : "in",
         "target_type" : "repository",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
+        "key" : "releases",
+        "label" : "Релизы",
+        "label_key" : "pp.rel.releases",
+        "label_en" : "Releases",
+        "label_pl" : "Wydania",
+        "relation" : "association",
+        "rel" : "RELEASE_OF",
+        "dir" : "in",
+        "target_type" : "release",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
+        "key" : "prs",
+        "label" : "PR",
+        "label_key" : "pp.rel.prs",
+        "label_en" : "PRs",
+        "label_pl" : "PR",
+        "relation" : "association",
+        "rel" : "PR_OF",
+        "dir" : "in",
+        "target_type" : "pr",
         "place" : "link_tab",
         "manageable" : false,
         "inverse_label" : null,
@@ -25110,6 +25182,18 @@
             "label" : "используется в",
             "relation" : "association",
             "edge_props" : [ ]
+          }, {
+            "rel" : "RELEASE_OF",
+            "dir" : "in",
+            "label" : "релизы репозитория",
+            "relation" : "association",
+            "edge_props" : [ ]
+          }, {
+            "rel" : "PR_OF",
+            "dir" : "in",
+            "label" : "PR репозитория",
+            "relation" : "association",
+            "edge_props" : [ ]
           } ]
         } ],
         "tree" : {
@@ -25207,6 +25291,36 @@
         "inverse_label_en" : null,
         "inverse_label_pl" : null
       }, {
+        "key" : "releases",
+        "label" : "Релизы",
+        "label_key" : "pp.rel.releases",
+        "label_en" : "Releases",
+        "label_pl" : "Wydania",
+        "relation" : "association",
+        "rel" : "RELEASE_OF",
+        "dir" : "in",
+        "target_type" : "release",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
+        "key" : "prs",
+        "label" : "PR",
+        "label_key" : "pp.rel.prs",
+        "label_en" : "PRs",
+        "label_pl" : "PR",
+        "relation" : "association",
+        "rel" : "PR_OF",
+        "dir" : "in",
+        "target_type" : "pr",
+        "place" : "link_tab",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
         "key" : "organizations",
         "label" : "Организации",
         "label_key" : "pp.rel.organizations",
@@ -25226,7 +25340,7 @@
       "requirements_block" : "schema"
     },
     "parts" : [ ],
-    "slice_links" : [ ],
+    "slice_links" : [ "SliceLink[key=releases, slice=releases_of_repository, param=id, rel=RELEASE_OF, dir=in, type=release, id=From[columns=[release_uid], transform=STR, when=null], title=From[columns=[git_tag, release_id, release_uid], transform=FIRST_OF, when=null], status=null, paged=true]", "SliceLink[key=prs, slice=prs_of_repository, param=id, rel=PR_OF, dir=in, type=pr, id=From[columns=[pr_uid], transform=STR, when=null], title=From[columns=[title, pr_uid], transform=FIRST_OF, when=null], status=null, paged=true]" ],
     "unread" : [ ],
     "edge_links" : {
       "organizations" : "SELECT @type AS end_vertex, coalesce(qg_id, task_uid, phase_uid, adr_id, spec_id, sprint_id, decision_id, question_id, milestone_id, release_uid, component_id, uc_id, runbook_id, doc_id, publication_id, insight_id, rec_id, pain_id, gain_id, job_id, actor_id, machine_id, kc_sub, org_id, pr_uid, slug) AS end_id, coalesce(title, name, label, full_name, display_name, statement_md) AS end_title, coalesce(status, status_raw, status_general) AS end_status, unionall(out('BELONGS_TO_PROJECT').slug, out('PART_OF').out('BELONGS_TO_PROJECT').slug) AS end_projects FROM (SELECT expand(in('ORG_HAS_REPOSITORY')) FROM KnowRepository WHERE url = :id) LIMIT 201"
@@ -25861,6 +25975,21 @@
         "inverse_label_en" : null,
         "inverse_label_pl" : null
       }, {
+        "key" : "repository",
+        "label" : "Репозиторий",
+        "label_key" : "pp.rel.repository",
+        "label_en" : "Repository",
+        "label_pl" : "Repozytorium",
+        "relation" : "association",
+        "rel" : "PR_OF",
+        "dir" : "out",
+        "target_type" : "repository",
+        "place" : "prop",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
         "key" : "tasks",
         "label" : "Закрывает задачи",
         "label_key" : "pp.rel.closes_tasks",
@@ -26177,6 +26306,21 @@
         "rel" : "BELONGS_TO_PROJECT",
         "dir" : "out",
         "target_type" : "project",
+        "place" : "prop",
+        "manageable" : false,
+        "inverse_label" : null,
+        "inverse_label_en" : null,
+        "inverse_label_pl" : null
+      }, {
+        "key" : "repository",
+        "label" : "Репозиторий",
+        "label_key" : "pp.rel.repository",
+        "label_en" : "Repository",
+        "label_pl" : "Repozytorium",
+        "relation" : "association",
+        "rel" : "PR_OF",
+        "dir" : "out",
+        "target_type" : "repository",
         "place" : "prop",
         "manageable" : false,
         "inverse_label" : null,

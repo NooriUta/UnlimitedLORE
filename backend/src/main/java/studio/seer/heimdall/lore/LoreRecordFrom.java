@@ -706,7 +706,9 @@ final class LoreRecordFrom {
             lf("TARGETS_MILESTONE", "in", "feature", "feature_ids"))),
         // 11.11: ADR, выпущенные релизом; спринты и PR — отдельными срезами (SLICE_LINKS).
         Map.entry("release", List.of(
-            lf("IMPLEMENTED_IN_RELEASE", "in", "adr", "adr_ids"))),
+            lf("IMPLEMENTED_IN_RELEASE", "in", "adr", "adr_ids"),
+            // ADR-LORE-066 фаза А: репозиторий релиза — ребро RELEASE_OF (строка release_by_id, колонка repository).
+            lf("RELEASE_OF", "out", "repository", "repository"))),
         Map.entry("component", List.of(
             // Технология — это спека SPEC-TECH-…: тип tech, чтобы щелчок открыл паспорт технологии.
             // Слово владелицы 11.11: + спеки, привязанные только ребром спека → компонент (BELONGS_TO).
@@ -734,7 +736,9 @@ final class LoreRecordFrom {
         // MD-05: задачи, закрытые PR (CLOSED_BY задача → PR), и релизы PR (SHIPPED_IN) — из строки pr_by_id.
         // Задачи PR — срезом pr_tasks (SLICE_LINKS): название и статус, а не голые коды (прототип md05-pr-passport).
         Map.entry("pr", List.of(
-            lf("SHIPPED_IN", "out", "release", "release_uids"))),
+            lf("SHIPPED_IN", "out", "release", "release_uids"),
+            // ADR-LORE-066 фаза А: репозиторий PR — ребро PR_OF (строка pr_by_id, колонка repository).
+            lf("PR_OF", "out", "repository", "repository"))),
         // S4-PRODUCTS-NODE: компоненты продукта и подпродукты — из строки product_by_id.
         Map.entry("product", List.of(
             lf("IN_PRODUCT", "in", "component", "components"),
@@ -764,7 +768,7 @@ final class LoreRecordFrom {
             lf("UC_EXTENDS", "in", "feature", "extended_by_ids"))));
 
     /** Вкладки связей, которые фасад читает отдельным срезом, — в порядке чтения. */
-    static final Map<String, List<SliceLink>> SLICE_LINKS = Map.of(
+    static final Map<String, List<SliceLink>> SLICE_LINKS = withRepositoryLinks(Map.of(
         "task", List.of(
             new SliceLink("adrs", "adrs_of_task", "id", "JUSTIFIED_BY", "out", "adr",
                 from(Transform.STR, "adr_id"), from(Transform.STR, "name"), from(Transform.DOC_TOKEN, "status"), false),
@@ -858,5 +862,19 @@ final class LoreRecordFrom {
             new SliceLink("jobs", "product_jobs", "code", "HELPS_WITH", "out", "job",
                 from(Transform.STR, "job_id"), from(Transform.FIRST_OF, "title", "job_id"), null, true),
             new SliceLink("actors", "product_actors", "code", "HAS_ACTOR", "out", "actor",
-                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true)));
+                from(Transform.STR, "actor_id"), from(Transform.FIRST_OF, "name", "actor_id"), null, true))));
+
+    /**
+     * ADR-LORE-066 фаза А: релизы и PR репозитория (RELEASE_OF / PR_OF) — постранично, с подписью. Отдельной картой:
+     * Map.of держит не больше десяти пар, а типов со срезовыми связями стало одиннадцать.
+     */
+    private static Map<String, List<SliceLink>> withRepositoryLinks(Map<String, List<SliceLink>> base) {
+        Map<String, List<SliceLink>> out = new java.util.HashMap<>(base);
+        out.put("repository", List.of(
+            new SliceLink("releases", "releases_of_repository", "id", "RELEASE_OF", "in", "release",
+                from(Transform.STR, "release_uid"), from(Transform.FIRST_OF, "git_tag", "release_id", "release_uid"), null, true),
+            new SliceLink("prs", "prs_of_repository", "id", "PR_OF", "in", "pr",
+                from(Transform.STR, "pr_uid"), from(Transform.FIRST_OF, "title", "pr_uid"), null, true)));
+        return Map.copyOf(out);
+    }
 }

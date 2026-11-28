@@ -315,6 +315,13 @@ public final class LoreSlices {
         + "in('COMPONENT_REPOSITORY').out('IN_PRODUCT').out('BELONGS_TO_PROJECT').slug AS component_projects, "
         + "in('MIRRORED_TO').in('HAS_REPOSITORY').slug AS mirror_projects ";
 
+    /** ADR-LORE-066 фаза А: репозиторий релиза (RELEASE_OF) — адрес и путь для подписи; без ребра — null. */
+    private static final String REPO_OF_RELEASE =
+        "out('RELEASE_OF').url[0] AS repository, out('RELEASE_OF').full_path[0] AS repository_path ";
+    /** ADR-LORE-066 фаза А: репозиторий PR (PR_OF). */
+    private static final String REPO_OF_PR =
+        "out('PR_OF').url[0] AS repository, out('PR_OF').full_path[0] AS repository_path ";
+
     private static final String TASK_RELEASES_SQL =
         "out('CLOSED_BY').out('SHIPPED_IN').release_id AS release_ids";
 
@@ -1984,6 +1991,8 @@ public final class LoreSlices {
             "out('BELONGS_TO_PROJECT').slug AS projects, " +
             "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
             "in('SHIPPED_IN').size() AS pr_count, " +
+            // ADR-LORE-066 фаза А: репозиторий релиза (RELEASE_OF)
+            "out('RELEASE_OF').url[0] AS repository, out('RELEASE_OF').full_path[0] AS repository_path, " +
             // 11.11 (полнота модели рёбер): ADR, выпущенные релизом (adr_link rel:release).
             "in('IMPLEMENTED_IN_RELEASE')[@this INSTANCEOF 'KnowADR'].adr_id AS adr_ids " +
             "FROM KnowRelease WHERE release_uid = :id",
@@ -2246,6 +2255,17 @@ public final class LoreSlices {
             + "ORDER BY full_path", List.of("project"), Map.of(), "");
         slice("repos_of_component", REPO_COLUMNS + "FROM KnowRepository WHERE in('COMPONENT_REPOSITORY').component_id CONTAINS :id ORDER BY full_path",
             List.of("id"), Map.of(), "");
+        // ADR-LORE-066 фаза А: вкладки «Релизы» и «PR» паспорта репозитория — по рёбрам RELEASE_OF / PR_OF.
+        slice("releases_of_repository",
+            "SELECT release_id, release_uid, git_tag, release_date, is_current, " +
+            "out('BELONGS_TO_PROJECT').slug AS projects, in('SHIPPED_IN').size() AS pr_count " +
+            "FROM KnowRelease WHERE out('RELEASE_OF').url CONTAINS :id",
+            List.of("id"), Map.of(), " ORDER BY release_date DESC, release_uid");
+        slice("prs_of_repository",
+            "SELECT pr_uid, pr_number, title, url, state, merged_at, " +
+            "out('SHIPPED_IN').release_uid AS release_uids, out('BELONGS_TO_PROJECT').slug AS projects " +
+            "FROM KnowPR WHERE out('PR_OF').url CONTAINS :id",
+            List.of("id"), Map.of(), " ORDER BY merged_at DESC, pr_uid");
         slice("organizations", "SELECT org_id, name FROM KnowOrganization ORDER BY org_id");
         slice("org_by_id", "SELECT org_id, name FROM KnowOrganization WHERE org_id = :id LIMIT 1", List.of("id"), Map.of(), "");
 
@@ -2988,7 +3008,9 @@ public final class LoreSlices {
             // репозитории как remote'ы ОДНОГО проекта, а не отдельные проекты.
             "out('BELONGS_TO_PROJECT').hosts[0] AS project_hosts, " +
             "in('IMPLEMENTED_IN_RELEASE').size() AS sprint_count, " +
-            "in('SHIPPED_IN').size() AS pr_count " +
+            "in('SHIPPED_IN').size() AS pr_count, " +
+            // ADR-LORE-066 фаза А: репозиторий релиза — ребро RELEASE_OF (ставит миграция); нет ребра — пусто.
+            REPO_OF_RELEASE +
             // Порядок по ДАТЕ, а не по release_id: строковое сравнение версий
             // ставило v0.3.9 выше v0.3.42, и LIMIT 200 отрезал середину окна, а
             // не хвост истории (тот же дефект, что у timeline_releases выше).
@@ -3055,7 +3077,9 @@ public final class LoreSlices {
             "out('SHIPPED_IN').release_uid AS release_uids, " +
             "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects, " +
             // #1708: подпись проекта — краткое название (по связи с проектом; без связи — ключ из поля)
-            "out('BELONGS_TO_PROJECT').slug AS project_slugs, out('BELONGS_TO_PROJECT').short_title AS project_titles " +
+            "out('BELONGS_TO_PROJECT').slug AS project_slugs, out('BELONGS_TO_PROJECT').short_title AS project_titles, " +
+            // ADR-LORE-066 фаза А: репозиторий PR — ребро PR_OF (миграция и сверщик LorePrRepositoryReconciler).
+            REPO_OF_PR +
             "FROM KnowPR",
             List.of(), Map.of(), " ORDER BY merged_at DESC, pr_uid");
 
@@ -3103,7 +3127,8 @@ public final class LoreSlices {
             "in('CLOSED_BY').task_uid AS task_uids, out('SHIPPED_IN').release_uid AS release_uids, " +
             // MD-05: спринт PR — выводной, через задачи (своего ребра спринт → PR нет); у фазы sprint_id нет — пусто.
             "in('CLOSED_BY').out('PART_OF').sprint_id AS sprint_ids, " +
-            "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects " +
+            "unionall(git_project, out('BELONGS_TO_PROJECT').slug) AS git_projects, " +
+            REPO_OF_PR +
             "FROM KnowPR WHERE pr_uid = :id LIMIT 1",
             List.of("id"), Map.of(), "");
         // MD-05 (прототип md05-pr-passport, «да» владельца 23.11): вкладка «Закрывает задачи» паспорта PR — задачи
@@ -3676,6 +3701,7 @@ public final class LoreSlices {
         Map.entry("deps_of", LoreDependency.scopeOf("@out") + "&" + LoreDependency.scopeOf("@in")),
         Map.entry("adrs",      "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("releases",  "out('BELONGS_TO_PROJECT').slug"),
+        Map.entry("releases_of_repository", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("release_by_id", "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("docs",      "out('BELONGS_TO_PROJECT').slug"),
         Map.entry("runbooks",  "out('BELONGS_TO_PROJECT').slug"),
@@ -3923,6 +3949,7 @@ public final class LoreSlices {
         Map.entry("tag_entities", "ребро TAGGED_WITH — путь через запись (ADR, решение); скоуп по проекту записи — SUPERTAGS шаг 3"),
         Map.entry("task_roles_history", "ребро ROLE_HELD_BY — путь через задачу"),
         Map.entry("release_prs", "KnowPR — путь через релиз"),
+        Map.entry("prs_of_repository", "KnowPR — путь через репозиторий (PR_OF), как release_prs"),
         Map.entry("release_prs_by_tag", "KnowPR — путь через релиз"),
         Map.entry("machine_by_id", "паспорт машины (AP-MACHINE-PASSPORT) — служебный, как machine_acl: машины видны в админке"),
         Map.entry("machines_graph", "машины графа (AP-MACHINE-PASSPORT, 3б) — служебный, как machine_acl"),

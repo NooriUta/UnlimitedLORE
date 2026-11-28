@@ -47,6 +47,14 @@ public class LoreReleaseRepositoryResource extends LoreResourceBase {
         "SELECT slug, hosts, out('HAS_REPOSITORY').url AS repos FROM KnowGitProject";
     static final String EXISTING_SQL =
         "SELECT @out.release_uid AS u, @in.url AS r FROM " + LoreReleaseRepositoryMigration.EDGE;
+    static final String PRS_SQL = "SELECT pr_uid, url FROM KnowPR";
+    static final String CREATE_PR_EDGE_SQL = "CREATE EDGE " + LoreReleaseRepositoryMigration.PR_EDGE
+        + " FROM (SELECT FROM KnowPR WHERE pr_uid=:u) TO (SELECT FROM KnowRepository WHERE url=:r) IF NOT EXISTS";
+    static final String COUNT_PR_EDGE_SQL =
+        "SELECT count(*) AS n FROM " + LoreReleaseRepositoryMigration.PR_EDGE + " WHERE @out.pr_uid=:u AND @in.url=:r";
+    static final String REPO_URLS_SQL = "SELECT url FROM KnowRepository";
+    static final String EXISTING_PR_SQL =
+        "SELECT @out.pr_uid AS u, @in.url AS r FROM " + LoreReleaseRepositoryMigration.PR_EDGE;
 
     @Inject
     ForgejoBridge forgejo;
@@ -60,7 +68,9 @@ public class LoreReleaseRepositoryResource extends LoreResourceBase {
         requireAdmin(role);
         if (!forgejo.configured()) return badParams("мост к Forgejo не настроен — чей релиз, проверить нечем");
         try {
-            return noStore(Response.ok(currentPlan().toMap()));
+            Map<String, Object> out = new LinkedHashMap<>(currentPlan().toMap());
+            out.putAll(currentPrPlan(ingestService::queryPublic).toMap());
+            return noStore(Response.ok(out));
         } catch (Exception e) {
             LOG.warnf("[LORE RELEASE-REPO] dry-run: %s", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
@@ -77,8 +87,10 @@ public class LoreReleaseRepositoryResource extends LoreResourceBase {
             return badParams("применение — только с явным apply=true; сухой прогон — GET …/migrate");
         if (!forgejo.configured()) return badParams("мост к Forgejo не настроен — чей релиз, проверить нечем");
         LoreReleaseRepositoryMigration.Plan plan;
+        LoreReleaseRepositoryMigration.PrPlan prPlan;
         try {
             plan = currentPlan();
+            prPlan = currentPrPlan(ingestService::queryPublic);
         } catch (Exception e) {
             LOG.warnf("[LORE RELEASE-REPO] plan: %s", e.getMessage());
             return noStore(Response.status(Response.Status.BAD_GATEWAY).entity(LoreUpstream.error(e)));
@@ -101,14 +113,55 @@ public class LoreReleaseRepositoryResource extends LoreResourceBase {
                 failed.add(f);
             }
         }
+        int prCreated = 0;
+        for (LoreReleaseRepositoryMigration.PrItem it : prPlan.items()) {
+            if (it.exists()) continue;
+            try {
+                createPrEdge(it.uid(), it.repo());
+                prCreated++;
+            } catch (RuntimeException e) {
+                Map<String, Object> f = it.toMap();
+                f.put("error", e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+                failed.add(f);
+            }
+        }
         Map<String, Object> out = new LinkedHashMap<>(plan.toMap());
+        out.putAll(prPlan.toMap());
         out.put("dry_run", false);
         out.put("created", created);
+        out.put("prs_created", prCreated);
         out.put("failed", failed.size());
         out.put("failed_items", failed);
-        LOG.infof("[LORE RELEASE-REPO] apply: resolved=%d created=%d failed=%d unresolved=%d ambiguous=%d unchecked=%d",
-            plan.items().size(), created, failed.size(), plan.unresolved().size(), plan.ambiguous().size(), plan.unchecked().size());
+        LOG.infof("[LORE RELEASE-REPO] apply: resolved=%d created=%d failed=%d unresolved=%d ambiguous=%d unchecked=%d; PR: resolved=%d created=%d unresolved=%d",
+            plan.items().size(), created, failed.size(), plan.unresolved().size(), plan.ambiguous().size(), plan.unchecked().size(),
+            prPlan.items().size(), prCreated, prPlan.unresolved().size());
         return noStore(Response.status(failed.isEmpty() ? 200 : 207).entity(out));
+    }
+
+    /** PR → репозиторий; после создания ребро перечитывается — «создано» без чтения не считается. */
+    void createPrEdge(String uid, String repo) {
+        writeClient.command(db, basicAuth(), new LoreCommandClient.LoreCommand("sql", CREATE_PR_EDGE_SQL,
+            Map.of("u", uid, "r", repo))).await().indefinitely();
+        List<Map<String, Object>> n = ingestService.queryPublic(COUNT_PR_EDGE_SQL, Map.of("u", uid, "r", repo));
+        if (n.isEmpty() || ((Number) n.get(0).getOrDefault("n", 0)).longValue() == 0)
+            throw new IllegalStateException("ребро PR_OF после создания не читается");
+    }
+
+    /** План PR_OF из базы; Forgejo не нужен — репозиторий PR виден из его адреса. Общий с {@link LorePrRepositoryReconciler}. */
+    static LoreReleaseRepositoryMigration.PrPlan currentPrPlan(java.util.function.BiFunction<String, Map<String, Object>, List<Map<String, Object>>> q) {
+        List<LoreReleaseRepositoryMigration.Pr> prs = new ArrayList<>();
+        for (Map<String, Object> r : q.apply(PRS_SQL, Map.of()))
+            prs.add(new LoreReleaseRepositoryMigration.Pr(text(r.get("pr_uid")), text(r.get("url"))));
+        List<String> repoUrls = new ArrayList<>();
+        for (Map<String, Object> r : q.apply(REPO_URLS_SQL, Map.of())) { String u = text(r.get("url")); if (u != null) repoUrls.add(u); }
+        Set<String> existing = new HashSet<>();
+        try {
+            for (Map<String, Object> r : q.apply(EXISTING_PR_SQL, Map.of()))
+                existing.add(text(r.get("u")) + "|" + LoreReleaseRepositoryMigration.norm(text(r.get("r"))));
+        } catch (RuntimeException e) {
+            LOG.debugf("[LORE RELEASE-REPO] рёбер %s ещё нет: %s", LoreReleaseRepositoryMigration.PR_EDGE, e.getMessage());
+        }
+        return LoreReleaseRepositoryMigration.planPrs(prs, repoUrls, existing);
     }
 
     private boolean edgeExists(String uid, String repo) {
