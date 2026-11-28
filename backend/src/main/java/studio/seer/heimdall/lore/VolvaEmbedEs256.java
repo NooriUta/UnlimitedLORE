@@ -106,11 +106,17 @@ final class VolvaEmbedEs256 {
      */
     static String claims(VolvaEmbedSigner.Chart c, String project, String issuer, String sub, String jti,
                          long iat, long exp) {
+        return claims(c, project, null, issuer, sub, jti, iat, exp);
+    }
+
+    /** То же с языком: lang уходит в params только у графика с флагом lang (EMB-L6). */
+    static String claims(VolvaEmbedSigner.Chart c, String project, String lang, String issuer, String sub, String jti,
+                         long iat, long exp) {
         if (exp - iat > MAX_LIFETIME_SECONDS || exp <= iat)
             throw new IllegalArgumentException("срок токена встройки — от 1 до " + MAX_LIFETIME_SECONDS + " с");
         String iss = issuer.endsWith("/") ? issuer.substring(0, issuer.length() - 1) : issuer;
         String idKey = "dashboard".equals(c.resource()) ? "dashboard_id" : "card_id";
-        String params = c.locked() ? "{\"project\":" + VolvaEmbedSigner.projectJson(project) + "}" : "{}";
+        String params = VolvaEmbedSigner.paramsJson(c, project, lang);
         return "{\"iss\":" + js(iss) + ",\"aud\":\"" + AUDIENCE + "\",\"iat\":" + iat + ",\"exp\":" + exp
             + ",\"" + idKey + "\":" + c.id() + ",\"params\":" + params + ",\"sub\":" + js(sub == null ? "" : sub)
             + ",\"jti\":" + js(jti) + "}";

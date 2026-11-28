@@ -174,11 +174,17 @@ public class AidaLoreResource extends LoreResourceBase {
      * из запроса, но выдаётся только в пределах проектов вызывающего; служебный
      * клиент отказ. Адрес (в нём JWT) не логируется. Срок жизни — ttl-seconds.
      */
+    /** Без языка — ru (вызовы до EMB-L6 и тесты контракта). */
+    Response volvaEmbed(String chart, String project, String role) {
+        return volvaEmbed(chart, project, null, role);
+    }
+
     @GET
     @Path("embed/volva/{chart}")
     @Produces(MediaType.APPLICATION_JSON)
     @io.smallrye.common.annotation.Blocking
     public Response volvaEmbed(@PathParam("chart") String chart, @QueryParam("project") String project,
+                               @QueryParam("lang") String lang,
                                @HeaderParam("X-Seer-Role") String role) {
         if (!enabled) return disabled();
         java.util.Optional<String> secret = secrets.get(VOLVA_EMBED_SECRET_KEY);
@@ -205,12 +211,12 @@ public class AidaLoreResource extends LoreResourceBase {
         String jwt;
         if (es256) {
             String jti = java.util.UUID.randomUUID().toString();
-            jwt = VolvaEmbedEs256.sign(VolvaEmbedEs256.claims(d.chart(), project, volvaIssuer.get(),
+            jwt = VolvaEmbedEs256.sign(VolvaEmbedEs256.claims(d.chart(), project, lang, volvaIssuer.get(),
                 callerKcSub(), jti, iat, exp), es.get());
             // Журнал подписи (ADR-LORE-055-D7 п.7): кто, что, jti — без адреса (в нём JWT) и без значений параметров.
             LOG.infof("[LORE EMBED] подпись ES256 chart=%s sub=%s jti=%s", chart, callerKcSub(), jti);
         } else {
-            jwt = VolvaEmbedSigner.jwtHs256(VolvaEmbedSigner.payload(d.chart(), project, exp), secret.get());
+            jwt = VolvaEmbedSigner.jwtHs256(VolvaEmbedSigner.payload(d.chart(), project, lang, exp), secret.get());
         }
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("chart", chart);
