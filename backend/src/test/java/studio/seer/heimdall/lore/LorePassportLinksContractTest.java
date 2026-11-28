@@ -322,6 +322,9 @@ class LorePassportLinksContractTest {
         Set<String> out = new LinkedHashSet<>();
         List<String> sql = new ArrayList<>(LoreSchemaInitializer.DDL);
         for (LoreSchemaMigrations.Step s : LoreSchemaMigrations.STEPS) sql.addAll(s.sql());
+        // После 1.18 схема растёт доводкой (LoreSchemaAdditive, шаги V заморожены): её рёбра (RELEASE_OF v6, PR_OF v7)
+        // объявлены так же законно, как рёбра шагов V.
+        for (LoreSchemaAdditive.Change c : LoreSchemaAdditive.CHANGES) if (c.ddl() != null) sql.addAll(c.ddl());
         for (String q : sql) {
             Matcher m = CREATE_EDGE.matcher(q);
             while (m.find()) out.add(m.group(1));

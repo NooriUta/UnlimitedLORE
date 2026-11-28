@@ -2257,13 +2257,13 @@ public final class LoreSlices {
             List.of("id"), Map.of(), "");
         // ADR-LORE-066 фаза А: вкладки «Релизы» и «PR» паспорта репозитория — по рёбрам RELEASE_OF / PR_OF.
         slice("releases_of_repository",
-            "SELECT release_id, release_uid, git_tag, release_date, is_current, git_project, " +
+            "SELECT release_id, release_uid, git_tag, release_date, is_current, " +
             "out('BELONGS_TO_PROJECT').slug AS projects, in('SHIPPED_IN').size() AS pr_count " +
             "FROM KnowRelease WHERE out('RELEASE_OF').url CONTAINS :id",
             List.of("id"), Map.of(), " ORDER BY release_date DESC, release_uid");
         slice("prs_of_repository",
-            "SELECT pr_uid, pr_number, git_project, title, url, state, merged_at, " +
-            "out('SHIPPED_IN').release_uid AS release_uids " +
+            "SELECT pr_uid, pr_number, title, url, state, merged_at, " +
+            "out('SHIPPED_IN').release_uid AS release_uids, out('BELONGS_TO_PROJECT').slug AS projects " +
             "FROM KnowPR WHERE out('PR_OF').url CONTAINS :id",
             List.of("id"), Map.of(), " ORDER BY merged_at DESC, pr_uid");
         slice("organizations", "SELECT org_id, name FROM KnowOrganization ORDER BY org_id");
