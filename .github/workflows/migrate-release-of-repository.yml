@@ -1,0 +1,56 @@
+name: Migrate release → repository (RELEASE_OF, ADR-LORE-066 фаза А)
+
+# Разовая миграция данных: релиз принадлежит репозиторию. Работу делает СЕРВЕР
+# (/lore/release-repository/migrate, только admin, LoreReleaseRepositoryMigration): чей релиз,
+# решает Forgejo (объект Release или тег). Старые рёбра BELONGS_TO_PROJECT не трогаются —
+# их снятие — фаза Б, отдельным словом владелицы.
+#
+# ТОЛЬКО ручной запуск. Порядок: dry_run preprod → dry_run prod → отчёт владелице →
+# apply по её «да». Повторный apply безопасен — стоящие рёбра не дублируются.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'dry_run — только план; apply — поставить рёбра RELEASE_OF'
+        required: true
+        default: 'dry_run'
+        type: choice
+        options: ['dry_run', 'apply']
+      target:
+        description: 'Стенд: preprod или prod'
+        required: true
+        default: 'preprod'
+        type: choice
+        options: ['preprod', 'prod']
+
+concurrency:
+  group: migrate-release-of-repository-${{ inputs.target }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      MODE: ${{ inputs.mode || 'dry_run' }}
+      TARGET: ${{ inputs.target || 'preprod' }}
+      # Токен — client_credentials учёткой пробы CD, как у /lore/version в LORE CD.
+      LORE_OIDC_ISSUER: https://odal.seidrstudio.pro/kc/realms/omilore
+      PROBE_CLIENT_ID: ${{ secrets.LORE_CD_PROBE_CLIENT_ID }}
+      PROBE_CLIENT_SECRET: ${{ secrets.LORE_CD_PROBE_CLIENT_SECRET }}
+      # Имена препрода резолвит CoreDNS 131 — curl из сети хоста, как у пробы CD.
+      MIG_CURL: docker run --rm --network host curlimages/curl:latest curl
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Адрес стенда
+        run: bash .github/scripts/release-repository-migrate.sh --resolve-target "$TARGET"
+
+      - name: Самопроверка разбора ответа
+        run: bash .github/scripts/release-repository-migrate.sh --selftest
+
+      - name: Миграция (dry_run — план, apply — запись)
+        run: bash .github/scripts/release-repository-migrate.sh "$MODE" "$LORE_BASE"
