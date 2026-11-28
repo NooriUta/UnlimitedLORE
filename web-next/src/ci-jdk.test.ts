@@ -29,6 +29,8 @@ describe('Backend CI: JDK совпадает с версией компиляц�
     expect(step).toContain(`JDK_MAJOR: '${target()}'`);
     // 25 лежит в /usr/lib/jvm/temurin-25 (CICD 28.11), прежние мажоры — в /opt/acttoolcache
     expect(step).toMatch(/\/usr\/lib\/jvm\/temurin-\$\{JDK_MAJOR\}\/bin\/java/);
+    // PR #1922: шаг идёт под bash -eo pipefail, а ls с отсутствующим путём даёт код 2 — поиск обязан это глотать
+    expect(step).toMatch(/head -1 \|\| true\)"/);
   });
 
   it('github-hosted: setup-java той же версии', () => {

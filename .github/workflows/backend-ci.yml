@@ -231,7 +231,7 @@ jobs:
         env:
           JDK_MAJOR: '25'
         run: |
-          JAVA_BIN="$(ls -d /usr/lib/jvm/temurin-${JDK_MAJOR}/bin/java /opt/acttoolcache/Java_Temurin-Hotspot_jdk/${JDK_MAJOR}.*/x64/bin/java 2>/dev/null | head -1)"
+          JAVA_BIN="$(ls -d /usr/lib/jvm/temurin-${JDK_MAJOR}/bin/java /opt/acttoolcache/Java_Temurin-Hotspot_jdk/${JDK_MAJOR}.*/x64/bin/java 2>/dev/null | head -1 || true)"  # ls даёт 2, если одного из путей нет; шаг идёт под -eo pipefail
           JH="$(dirname "$(dirname "$JAVA_BIN")")"
           test -x "$JH/bin/java" || { echo "::error::в образе раннера нет JDK ${JDK_MAJOR} (ни /usr/lib/jvm/temurin-${JDK_MAJOR}, ни /opt/acttoolcache) — нужен forgejo-ci-runtime с Temurin ${JDK_MAJOR}"; ls -d /usr/lib/jvm/*/ /opt/acttoolcache/Java_Temurin-Hotspot_jdk/*/ 2>/dev/null; exit 1; }
           echo "JAVA_HOME=$JH" >> "$GITHUB_ENV"
