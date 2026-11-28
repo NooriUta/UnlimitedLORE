@@ -108,6 +108,9 @@ class LorePassportLinksContractTest {
         // репозитории и организации (D-2026-MIG-REPOSITORY-ORGANIZATION): рёбра ставит перенос данных 1.18
         new Fact("project", "HAS_REPOSITORY", "repository", "перенос 1.18 (MIG-03): основной репозиторий проекта, role=primary"),
         new Fact("component", "COMPONENT_REPOSITORY", "repository", "перенос 1.18 (MIG-03): свой репозиторий компонента"),
+        // ADR-LORE-066 фаза А (доводка v6/v7): релиз и PR принадлежат репозиторию; ставят миграция release-of-repository и сверщик PR.
+        new Fact("release", "RELEASE_OF", "repository", "LoreReleaseRepositoryResource migrate (доводка v6)"),
+        new Fact("pr", "PR_OF", "repository", "LoreReleaseRepositoryResource migrate, LorePrRepositoryReconciler (доводка v7)"),
         new Fact("repository", "MIRRORED_TO", "repository", "перенос 1.18 (MIG-03): зеркало"),
         new Fact("repository", "USES_REPOSITORY", "repository", "перенос 1.18 (MIG-03): «использует»"),
         // организация (решение владелицы 19.11.2026) — связи правятся в админке
