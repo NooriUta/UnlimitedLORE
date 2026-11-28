@@ -28,7 +28,7 @@ describe('смоук стенда: выгрузка скринов не роня
   });
 
   it('шаг самих тестов (npm run e2e:stand) continue-on-error не получил', () => {
-    const blocks = wf.split(/\n\s{6}- name: /).filter(b => /npm run e2e:stand\s*\n/.test(b));
+    const blocks = wf.split(/\n\s{6}- name: /).filter(b => /npm run e2e:stand(?![:\w])/.test(b));
     expect(blocks.length).toBeGreaterThan(0);
     for (const b of blocks) expect(b, b.split('\n')[0]).not.toMatch(/continue-on-error: true/);
   });

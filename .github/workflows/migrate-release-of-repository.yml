@@ -38,7 +38,8 @@ jobs:
       MODE: ${{ inputs.mode || 'dry_run' }}
       TARGET: ${{ inputs.target || 'preprod' }}
       # Токен — client_credentials учёткой пробы CD, как у /lore/version в LORE CD.
-      LORE_OIDC_ISSUER: https://odal.seidrstudio.pro/kc/realms/omilore
+      # realm стенда: препрод принимает токены omilorePreprod (как LORE CD препрода), прод — omilore
+      LORE_OIDC_ISSUER: ${{ inputs.target == 'prod' && 'https://odal.seidrstudio.pro/kc/realms/omilore' || 'https://odal.seidrstudio.pro/kc/realms/omilorePreprod' }}
       PROBE_CLIENT_ID: ${{ secrets.LORE_CD_PROBE_CLIENT_ID }}
       PROBE_CLIENT_SECRET: ${{ secrets.LORE_CD_PROBE_CLIENT_SECRET }}
       # Имена препрода резолвит CoreDNS 131 — curl из сети хоста, как у пробы CD.

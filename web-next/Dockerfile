@@ -26,6 +26,9 @@ COPY web-next/package.json web-next/package-lock.json web-next/.npmrc ./
 # Адрес реестра берётся из web-next/.npmrc (строка @seidr:registry=), а не вписан сюда: имён наших
 # хостов в образе быть не должно (сторож web-next/src/noBakedHosts.test.ts).
 RUN npm ci
+# Нативные бинарники на месте (общая проверка с aida-root, 28.11): npm через kkRepo молча
+# пропускает optional-пакет платформы, если его нет в кэше, и падает уже vite build. Сторож — native-bindings.test.ts.
+RUN node -e "const l=require('./package-lock.json').packages,f=require('fs'),r=process.report.getReport().header,libc=process.platform!=='linux'?null:(r.glibcVersionRuntime?'glibc':'musl'),miss=Object.entries(l).filter(([p,m])=>p&&m.os&&m.os.includes(process.platform)&&m.cpu&&m.cpu.includes(process.arch)&&(!libc||!m.libc||m.libc.includes(libc))&&!f.existsSync(p)).map(([p])=>p.replace(/^.*node_modules\//,''));if(miss.length){console.error('NATIVE-BINDINGS: после npm ci нет пакетов под '+process.platform+'-'+process.arch+(libc?'-'+libc:'')+': '+miss.join(', ')+'. npm пропустил optional-зависимость: в кэше kkRepo её нет — прогрейте.');process.exit(1)}console.log('NATIVE-BINDINGS ok: '+process.platform+'-'+process.arch+(libc?'-'+libc:''))"
 COPY web-next/tsconfig.json web-next/vite.config.ts web-next/index.html ./
 COPY web-next/src ./src
 
