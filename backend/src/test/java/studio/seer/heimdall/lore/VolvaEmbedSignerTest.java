@@ -171,7 +171,9 @@ class VolvaEmbedSignerTest {
         assertEquals("{\"resource\":{\"question\":45},\"params\":{\"project\":[\"a/b\"]},\"exp\":9}",
             VolvaEmbedSigner.payload(charts.get("plain"), "a/b", "en", 9), "без флага lang не уходит");
         assertEquals("ru", VolvaEmbedSigner.langOf(null));
-        assertEquals("ru", VolvaEmbedSigner.langOf("de"), "не ru/en — ru, а не произвольная строка в подписи");
+        assertEquals("pl", VolvaEmbedSigner.langOf("PL"), "языков больше двух — список не зашит");
+        assertEquals("ru", VolvaEmbedSigner.langOf("en\"}"), "не код языка — ru, а не произвольная строка в подписи");
+        assertEquals("ru", VolvaEmbedSigner.langOf(""));
         assertEquals("en", VolvaEmbedSigner.langOf(" en "));
     }
 }

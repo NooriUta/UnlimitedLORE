@@ -81,7 +81,7 @@ export async function volvaEmbedState(
 ): Promise<EmbedFrameState> {
   const lang = opts.lang ?? 'ru';
   // EMB-L6: язык LORE — в подпись (запертый lang у графика с флагом lang), чтобы статусы и надписи
-  // Völva были на том же языке, что и LORE. Бэкенд принимает только ru/en.
+  // Völva были на том же языке, что и LORE. Бэкенд пропускает любой код языка из 2–3 букв (ru, en, pl, …).
   const q = new URLSearchParams();
   if (projects.length) q.set('project', projects.join(','));
   q.set('lang', lang);

@@ -99,10 +99,15 @@ final class VolvaEmbedSigner {
 
     /**
      * Язык подписей графика (EMB-L6, слово владелицы 28.11: статусы и надписи — на языке LORE).
-     * Только ru/en: всё прочее — ru, а не произвольная строка в подписи.
+     * Языков уже три (ru, en, pl) и будет больше — список не зашит: любой код ISO 639 из 2–3
+     * строчных букв проходит как есть, что-то иное — ru. Нет перевода на этот язык — запасной
+     * язык выбирает Völva, а не подпись.
      */
+    private static final Pattern LANG = Pattern.compile("^[a-z]{2,3}$");
+
     static String langOf(String raw) {
-        return raw != null && "en".equalsIgnoreCase(raw.trim()) ? "en" : "ru";
+        String l = raw == null ? "" : raw.trim().toLowerCase(java.util.Locale.ROOT);
+        return LANG.matcher(l).matches() ? l : "ru";
     }
 
     /**
