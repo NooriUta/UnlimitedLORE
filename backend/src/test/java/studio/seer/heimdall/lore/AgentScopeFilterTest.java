@@ -53,7 +53,8 @@ class AgentScopeFilterTest {
         // семейств — строкой матрицы он расширил бы профиль; агенты привязывают через свои *_link.
         // users добавлен AP-07: профиль автора (имя, аватар) — свой меняет человек, чужой — админ, агенту не дан.
         // organization — решение владелицы 19.11.2026: организации заводит и связывает человек (super-admin) в админке.
-        assertEquals(Set.of("dict", "kc", "admin", "user", "users", "news", "record", "model", "organization"), AgentScopeFilter.humanOnlyFamilies(), "model — правка модели LORE, MC-05; users — профиль автора, AP-07; organization — админка");
+        // release-repository — разовая миграция «релиз → репозиторий» (ADR-LORE-066): admin-человек или учётка CD.
+        assertEquals(Set.of("dict", "kc", "admin", "user", "users", "news", "record", "model", "organization", "release-repository"), AgentScopeFilter.humanOnlyFamilies(), "model — правка модели LORE, MC-05; users — профиль автора, AP-07; organization — админка; release-repository — миграция ADR-LORE-066");
     }
 
     @Test
